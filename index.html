@@ -249,6 +249,31 @@
         .badge.extra { background-color: var(--extra-color); }
         .badge.carry { background-color: var(--carry-color); }
 
+        /* Taksit Bar Css */
+        .progress-bar {
+            width: 100%;
+            background-color: #eee;
+            border-radius: 8px;
+            height: 10px;
+            margin: 10px 0;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            background-color: var(--balance-color);
+            border-radius: 8px;
+            transition: width 0.3s;
+        }
+        .loan-stats {
+            display: flex;
+            justify-content: space-between;
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-top: 8px;
+            margin-bottom: 5px;
+        }
+        .loan-stats strong { color: var(--text-main); }
+
     </style>
 </head>
 <body>
@@ -314,6 +339,11 @@
         </div>
     </div>
 
+    <div class="list-card" style="margin-top: 20px;">
+        <h2>Kredi & Taksit Takip Paneli (Otomatik Güncellenir)</h2>
+        <div id="loan-list"></div>
+    </div>
+
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getDatabase, ref, push, onValue, remove, update, set } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
@@ -332,7 +362,7 @@
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
 
-        // Sabit Veriler
+        // Sabit Veriler (Koltuk ve Kredi buradan çıkarıldı, aşağıda Loans kısmına alındı)
         const carryOverAmount = 15000;
 
         const incomes = [
@@ -342,9 +372,29 @@
 
         const fixedExpenses = [
             { name: "Faturalar", amount: 5000, day: 5 },
-            { name: "Aidat", amount: 3700, day: 10 },
-            { name: "Koltuk Kredi Kartı", amount: 5715, day: 15 },
-            { name: "Kredi", amount: 36000, day: 21 }
+            { name: "Aidat", amount: 3700, day: 10 }
+        ];
+
+        // Otomatik Düşecek Taksitli Borçlar Tanımlaması (Mart 2026 baz alınmıştır)
+        const loans = [
+            {
+                name: "Akbank Koltuk Taksidi",
+                amount: 5715,
+                day: 15,
+                totalInstallments: 7,
+                paidBeforeAnchor: 2, // Mart öncesi ödenen
+                anchorMonth: 2, // 0-indeksli Mart Ayı
+                anchorYear: 2026
+            },
+            {
+                name: "Kredi Taksidi",
+                amount: 36000,
+                day: 21,
+                totalInstallments: 120,
+                paidBeforeAnchor: 1, // Mart öncesi ödenen
+                anchorMonth: 2, 
+                anchorYear: 2026
+            }
         ];
 
         // Bugünün tarihi
@@ -372,7 +422,7 @@
             let totalExpense = 0;
             let receivedIncome = 0;
             let paidExpense = 0;
-            let upcomingExpenseTotal = 0; // Gelecek giderleri tutacak değişken
+            let upcomingExpenseTotal = 0; 
             let upcomingItems = [];
             let completedItems = [];
 
@@ -383,8 +433,66 @@
                 type: 'carry'
             });
 
-            const allExpenses = [...fixedExpenses, ...manualExpenses];
+            // Taksitleri (Loans) Hesapla ve Giderlere Dinamik Ekle
+            let allExpenses = [...fixedExpenses, ...manualExpenses];
+            let loanHTML = "";
 
+            loans.forEach(loan => {
+                // Zaman farkını hesapla
+                let monthDiff = (today.getFullYear() - loan.anchorYear) * 12 + (today.getMonth() - loan.anchorMonth);
+                
+                // Bu ay bu taksit aktif mi? (Henüz bitmemiş mi?)
+                let isActiveThisMonth = (monthDiff + loan.paidBeforeAnchor) < loan.totalInstallments;
+
+                let paidCount = loan.paidBeforeAnchor + monthDiff;
+                // Eğer günümüz, ödeme gününü geçtiyse bu ayki de ödenmiş sayılır
+                if (currentDay >= loan.day) {
+                    paidCount += 1;
+                }
+                
+                // Limitleri koru
+                if (paidCount > loan.totalInstallments) paidCount = loan.totalInstallments;
+                if (paidCount < 0) paidCount = 0;
+
+                let remainingCount = loan.totalInstallments - paidCount;
+                let totalAmount = loan.totalInstallments * loan.amount;
+                let paidAmount = paidCount * loan.amount;
+                let remainingAmount = totalAmount - paidAmount;
+                let percent = (paidCount / loan.totalInstallments) * 100;
+
+                // Taksit bitmediyse bu ayki giderler listesine ekle
+                if (isActiveThisMonth) {
+                    allExpenses.push({
+                        name: loan.name,
+                        amount: loan.amount,
+                        day: loan.day,
+                        type: 'expense'
+                    });
+                }
+
+                // Ekrana Çizilecek Taksit Kartı
+                loanHTML += `
+                    <div class="list-item" style="display: block; border-bottom: 1px solid #eee; padding-bottom: 15px; margin-bottom: 10px;">
+                        <div class="item-info">
+                            <span class="item-title">${loan.name} <span class="badge expense">Her Ayın ${loan.day}. Günü</span></span>
+                        </div>
+                        <div class="loan-stats">
+                            <span>Ödenen: <strong>${paidCount} Taksit</strong> (${formatMoney(paidAmount)})</span>
+                            <span>Kalan: <strong>${remainingCount} Taksit</strong> (${formatMoney(remainingAmount)})</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: ${percent}%;"></div>
+                        </div>
+                        <div style="font-size: 11px; text-align: right; color: var(--text-muted);">
+                            Toplam Borç: ${formatMoney(totalAmount)}
+                        </div>
+                    </div>
+                `;
+            });
+
+            document.getElementById('loan-list').innerHTML = loanHTML;
+
+            // Gelirleri İşle
             incomes.forEach(item => {
                 totalIncome += item.amount;
                 const itemObj = { ...item, type: 'income' };
@@ -396,6 +504,7 @@
                 }
             });
 
+            // Giderleri İşle (Sabitler + Manüeller + Aktif Taksitler)
             allExpenses.forEach(item => {
                 totalExpense += item.amount;
                 const itemObj = { ...item, type: item.type || 'expense' };
@@ -403,7 +512,7 @@
                     paidExpense += item.amount;
                     completedItems.push(itemObj);
                 } else {
-                    upcomingExpenseTotal += item.amount; // Sadece yaklaşan GİDERLERİ topluyoruz
+                    upcomingExpenseTotal += item.amount; 
                     upcomingItems.push(itemObj);
                 }
             });
@@ -415,26 +524,24 @@
             window.currentRawBalance = carryOverAmount + receivedIncome - paidExpense;
             window.currentTotalBalance = window.currentRawBalance + kasaFarki;
 
-            // İhtiyaç Durumu Hesaplaması
             const neededAmount = window.currentTotalBalance - upcomingExpenseTotal;
 
-            // Kasa, Gelir ve Gider Yazdırma
+            // Yazdırmalar
             document.getElementById('total-income').innerText = formatMoney(totalIncome);
             document.getElementById('total-expense').innerText = formatMoney(totalExpense);
             document.getElementById('current-balance').innerText = formatMoney(window.currentTotalBalance);
             document.getElementById('current-balance').className = window.currentTotalBalance < 0 ? 'amount text-expense' : 'amount text-balance';
 
-            // İhtiyaç Durumu Yazdırma ve Renk Atama
             const neededEl = document.getElementById('needed-amount');
             const neededSubEl = document.getElementById('needed-subtext');
             
             neededEl.innerText = formatMoney(neededAmount);
             
             if (neededAmount < 0) {
-                neededEl.className = 'amount text-expense'; // Kırmızı
+                neededEl.className = 'amount text-expense'; 
                 neededSubEl.innerText = `İçerdeyiz: ${formatMoney(Math.abs(neededAmount))} daha lazım`;
             } else {
-                neededEl.className = 'amount text-income'; // Yeşil
+                neededEl.className = 'amount text-income'; 
                 neededSubEl.innerText = `Kasa yaklaşan giderleri karşılamak için yeterli`;
             }
 
