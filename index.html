@@ -245,8 +245,8 @@
             <input type="text" id="manual-name" class="form-input" placeholder="Gider Adı (Örn: Ozon)">
             <input type="number" id="manual-amount" class="form-input" placeholder="Tutar (₺)">
             <input type="number" id="manual-day" class="form-input" placeholder="Ayın Günü (1-31)" min="1" max="31">
-            <button class="btn btn-add" onclick="addManualExpense()">Gideri Ekle</button>
-            <button class="btn btn-clear" onclick="clearManualExpenses()">Ekstraları Temizle</button>
+            <button class="btn btn-add" onclick="window.addManualExpense()">Gideri Ekle</button>
+            <button class="btn btn-clear" onclick="window.clearManualExpenses()">Ekstraları Temizle</button>
         </div>
     </div>
 
@@ -262,9 +262,27 @@
         </div>
     </div>
 
-    <script>
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getDatabase, ref, push, onValue, remove } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyAKkEHHeHnfHSN0MpEcJoK4Ix9o2PFbPY8",
+            authDomain: "harita-4b58b.firebaseapp.com",
+            projectId: "harita-4b58b",
+            storageBucket: "harita-4b58b.firebasestorage.app",
+            messagingSenderId: "778047554386",
+            appId: "1:778047554386:web:41f29d854399a1d878b08b",
+            measurementId: "G-ZNSZZC3HVS",
+            databaseURL: "https://harita-4b58b-default-rtdb.firebaseio.com"
+        };
+
+        // Firebase'i Başlat
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
         // Sabit Veriler
-        const carryOverAmount = 15000; // Geçen aydan 21'indeki kredi için devreden
+        const carryOverAmount = 15000;
 
         const incomes = [
             { name: "Maaş", amount: 48600, day: 1 },
@@ -287,19 +305,10 @@
         const options = { year: 'numeric', month: 'long', day: 'numeric' };
         document.getElementById('current-date-display').innerText = `Bugün: ${today.toLocaleDateString('tr-TR', options)}`;
 
-        // Manuel giderleri LocalStorage'dan çek veya yeni ay gelmişse sıfırla
         let manualExpenses = [];
-        const savedMonth = localStorage.getItem('budgetMonth');
-        
-        if (savedMonth === currentMonthKey) {
-            const savedExpenses = localStorage.getItem('manualExpenses');
-            if (savedExpenses) {
-                manualExpenses = JSON.parse(savedExpenses);
-            }
-        } else {
-            localStorage.setItem('budgetMonth', currentMonthKey);
-            localStorage.removeItem('manualExpenses');
-        }
+
+        // Firebase veritabanı referansı (Her aya özel bir klasör açar, örneğin: butce/2-2026)
+        const dbRef = ref(db, `butce/${currentMonthKey}`);
 
         // Para birimi formatlayıcı
         const formatMoney = (amount) => {
@@ -315,18 +324,15 @@
             let upcomingItems = [];
             let completedItems = [];
 
-            // 1. İşlem: Geçen aydan devreden parayı listeye ve kasaya ekle
             completedItems.push({
                 name: "Geçen Aydan Devreden (Kredi İçin)",
                 amount: carryOverAmount,
-                day: 1, // Görsel sıralama için 1 verdik
+                day: 1, 
                 type: 'carry'
             });
 
-            // Tüm giderleri birleştir (Sabitler + Manuel Eklenenler)
             const allExpenses = [...fixedExpenses, ...manualExpenses];
 
-            // Gelirleri İşle
             incomes.forEach(item => {
                 totalIncome += item.amount;
                 const itemObj = { ...item, type: 'income' };
@@ -338,7 +344,6 @@
                 }
             });
 
-            // Giderleri İşle
             allExpenses.forEach(item => {
                 totalExpense += item.amount;
                 const itemObj = { ...item, type: item.type || 'expense' };
@@ -350,33 +355,22 @@
                 }
             });
 
-            // Tarihe göre sırala
             upcomingItems.sort((a, b) => a.day - b.day);
-            // Tamamlananları yeniden eskiye sırala (Devreden para ayın 1'i olduğu için otomatik en alta düşer)
             completedItems.sort((a, b) => b.day - a.day);
 
-            // Özetleri Hesapla
-            // Net Kâr = Bu ay giren toplam para - Bu ay çıkan toplam para
             const currentMonthNet = totalIncome - totalExpense; 
-            
-            // Ay Sonu Kasa = Net Kâr + Devreden Para (Çünkü yeni gelen 15k da kârın içinde)
             const expectedEndBalance = currentMonthNet + carryOverAmount;
-
-            // Anlık Kasa = Devreden Para + Bu ay şu ana kadar gelenler - Bu ay şu ana kadar gidenler
             const currentBalance = carryOverAmount + receivedIncome - paidExpense;
 
-            // Ekrana Yazdır
             document.getElementById('total-income').innerText = formatMoney(totalIncome);
             document.getElementById('total-expense').innerText = formatMoney(totalExpense);
             document.getElementById('end-balance').innerText = formatMoney(expectedEndBalance);
             document.getElementById('current-balance').innerText = formatMoney(currentBalance);
             document.getElementById('net-profit-text').innerText = `Gerçek Net Tasarruf: ${formatMoney(currentMonthNet)}`;
 
-            // Kasa eksiyse kırmızı yap
             document.getElementById('current-balance').className = currentBalance < 0 ? 'amount text-expense' : 'amount text-balance';
             document.getElementById('end-balance').className = expectedEndBalance < 0 ? 'amount text-expense' : 'amount text-balance';
 
-            // HTML Liste Oluşturucu
             const generateListHTML = (items, isCompleted) => {
                 if(items.length === 0) return "<p style='color: #888; font-size: 14px;'>Bu listede işlem bulunmuyor.</p>";
                 
@@ -418,13 +412,33 @@
                 }).join('');
             };
 
-            // Listeleri Ekrana Bas
             document.getElementById('upcoming-list').innerHTML = generateListHTML(upcomingItems, false);
             document.getElementById('completed-list').innerHTML = generateListHTML(completedItems, true);
         };
 
-        // Manuel Gider Ekleme Fonksiyonu
-        const addManualExpense = () => {
+        // Firebase Gerçek Zamanlı Dinleyici
+        onValue(dbRef, (snapshot) => {
+            const data = snapshot.val();
+            manualExpenses = []; // Listeyi sıfırla
+            
+            if (data) {
+                // Firebase'den gelen veriyi bizim formata dönüştür
+                for (let key in data) {
+                    manualExpenses.push({
+                        id: key,
+                        name: data[key].name,
+                        amount: data[key].amount,
+                        day: data[key].day,
+                        type: 'extra'
+                    });
+                }
+            }
+            // Veri geldikten sonra ekranı çiz
+            renderDashboard();
+        });
+
+        // Manuel Gider Ekleme Fonksiyonu (Global window objesine bağlandı)
+        window.addManualExpense = () => {
             const nameInput = document.getElementById('manual-name').value.trim();
             const amountInput = parseFloat(document.getElementById('manual-amount').value);
             const dayInput = parseInt(document.getElementById('manual-day').value);
@@ -437,30 +451,24 @@
             const newExpense = {
                 name: nameInput,
                 amount: amountInput,
-                day: dayInput,
-                type: 'extra'
+                day: dayInput
             };
 
-            manualExpenses.push(newExpense);
-            localStorage.setItem('manualExpenses', JSON.stringify(manualExpenses));
+            // Firebase'e gönder (Lokal listeye manuel eklemeye gerek yok, onValue otomatik tetiklenip sayfayı güncelleyecek)
+            push(dbRef, newExpense);
 
             document.getElementById('manual-name').value = '';
             document.getElementById('manual-amount').value = '';
             document.getElementById('manual-day').value = '';
-
-            renderDashboard();
         };
 
-        const clearManualExpenses = () => {
+        // Ekstraları Temizle Fonksiyonu
+        window.clearManualExpenses = () => {
             if(confirm("Eklediğiniz tüm ekstra giderleri silmek istediğinize emin misiniz?")) {
-                manualExpenses = [];
-                localStorage.removeItem('manualExpenses');
-                renderDashboard();
+                // Firebase'den direkt o ayın kayıtlarını uçur
+                remove(dbRef);
             }
         };
-
-        // Başlat
-        renderDashboard();
 
     </script>
 </body>
