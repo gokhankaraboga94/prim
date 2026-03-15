@@ -13,6 +13,7 @@
             --income-color: #2ecc71;
             --expense-color: #e74c3c;
             --balance-color: #3498db;
+            --extra-color: #f39c12;
             --border-radius: 12px;
         }
 
@@ -27,6 +28,8 @@
             background-color: var(--bg-color);
             color: var(--text-main);
             padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
         }
 
         .header {
@@ -77,6 +80,58 @@
         .text-income { color: var(--income-color); }
         .text-expense { color: var(--expense-color); }
         .text-balance { color: var(--balance-color); }
+
+        /* Form Alanı */
+        .form-card {
+            background-color: var(--card-bg);
+            padding: 20px;
+            border-radius: var(--border-radius);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            margin-bottom: 30px;
+        }
+
+        .form-card h2 {
+            font-size: 18px;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .form-group {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .form-input {
+            padding: 10px 15px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            flex: 1;
+            min-width: 150px;
+            outline: none;
+        }
+        
+        .form-input:focus {
+            border-color: var(--balance-color);
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            color: white;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+
+        .btn-add { background-color: var(--extra-color); }
+        .btn-clear { background-color: #95a5a6; }
+
+        .btn:hover { opacity: 0.85; }
 
         /* Detay Kartları (Listeler) */
         .details-grid {
@@ -141,6 +196,7 @@
         
         .badge.income { background-color: var(--income-color); }
         .badge.expense { background-color: var(--expense-color); }
+        .badge.extra { background-color: var(--extra-color); }
 
     </style>
 </head>
@@ -170,6 +226,17 @@
         </div>
     </div>
 
+    <div class="form-card">
+        <h2>Bu Aya Özel Ekstra Gider Ekle</h2>
+        <div class="form-group">
+            <input type="text" id="manual-name" class="form-input" placeholder="Gider Adı (Örn: Ozon)">
+            <input type="number" id="manual-amount" class="form-input" placeholder="Tutar (₺)">
+            <input type="number" id="manual-day" class="form-input" placeholder="Ayın Günü (1-31)" min="1" max="31">
+            <button class="btn btn-add" onclick="addManualExpense()">Gideri Ekle</button>
+            <button class="btn btn-clear" onclick="clearManualExpenses()">Ekstraları Temizle</button>
+        </div>
+    </div>
+
     <div class="details-grid">
         <div class="list-card">
             <h2>Bu Ay Yaklaşanlar (Henüz Gerçekleşmedi)</h2>
@@ -183,7 +250,7 @@
     </div>
 
     <script>
-        // Veriler
+        // Sabit Veriler
         const incomes = [
             { name: "Maaş", amount: 48600, day: 1 },
             { name: "Setcard", amount: 3500, day: 15 },
@@ -191,110 +258,187 @@
             { name: "Baba Yardımı", amount: 15000, day: 22 }
         ];
 
-        const expenses = [
+        const fixedExpenses = [
             { name: "Faturalar", amount: 5000, day: 5 },
+            { name: "Aidat", amount: 3700, day: 10 },
             { name: "Koltuk Kredi Kartı", amount: 5715, day: 15 },
             { name: "Akbil", amount: 3200, day: 16 },
             { name: "Kredi", amount: 36000, day: 21 }
         ];
 
-        // Bugünün tarihini al
+        // Bugünün tarihi ve ay kontrolü
         const today = new Date();
         const currentDay = today.getDate();
+        const currentMonthKey = today.getMonth() + "-" + today.getFullYear();
         
         // Tarihi ekrana yazdır
         const options = { year: 'numeric', month: 'long', day: 'numeric' };
         document.getElementById('current-date-display').innerText = `Bugün: ${today.toLocaleDateString('tr-TR', options)}`;
 
-        // Hesaplama Değişkenleri
-        let totalIncome = 0;
-        let totalExpense = 0;
-        let receivedIncome = 0;
-        let paidExpense = 0;
-
-        let upcomingItems = [];
-        let completedItems = [];
+        // Manuel giderleri LocalStorage'dan çek veya yeni ay gelmişse sıfırla
+        let manualExpenses = [];
+        const savedMonth = localStorage.getItem('budgetMonth');
+        
+        if (savedMonth === currentMonthKey) {
+            const savedExpenses = localStorage.getItem('manualExpenses');
+            if (savedExpenses) {
+                manualExpenses = JSON.parse(savedExpenses);
+            }
+        } else {
+            // Yeni bir aya girilmiş, hafızayı temizle ve yeni ayı kaydet
+            localStorage.setItem('budgetMonth', currentMonthKey);
+            localStorage.removeItem('manualExpenses');
+        }
 
         // Para birimi formatlayıcı
         const formatMoney = (amount) => {
             return new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY' }).format(amount);
         };
 
-        // Gelirleri İşle
-        incomes.forEach(item => {
-            totalIncome += item.amount;
-            const itemObj = { ...item, type: 'income' };
-            if (currentDay >= item.day) {
-                receivedIncome += item.amount;
-                completedItems.push(itemObj);
+        // Ana Render Fonksiyonu
+        const renderDashboard = () => {
+            let totalIncome = 0;
+            let totalExpense = 0;
+            let receivedIncome = 0;
+            let paidExpense = 0;
+            let upcomingItems = [];
+            let completedItems = [];
+
+            // Tüm giderleri birleştir (Sabitler + Manuel Eklenenler)
+            const allExpenses = [...fixedExpenses, ...manualExpenses];
+
+            // Gelirleri İşle
+            incomes.forEach(item => {
+                totalIncome += item.amount;
+                const itemObj = { ...item, type: 'income' };
+                if (currentDay >= item.day) {
+                    receivedIncome += item.amount;
+                    completedItems.push(itemObj);
+                } else {
+                    upcomingItems.push(itemObj);
+                }
+            });
+
+            // Giderleri İşle
+            allExpenses.forEach(item => {
+                totalExpense += item.amount;
+                // Eğer türü zaten extra olarak gelmediyse 'expense' yap
+                const itemObj = { ...item, type: item.type || 'expense' };
+                if (currentDay >= item.day) {
+                    paidExpense += item.amount;
+                    completedItems.push(itemObj);
+                } else {
+                    upcomingItems.push(itemObj);
+                }
+            });
+
+            // Tarihe göre sırala
+            upcomingItems.sort((a, b) => a.day - b.day);
+            completedItems.sort((a, b) => b.day - a.day);
+
+            // Özetleri Ekrana Yazdır
+            const netBudget = totalIncome - totalExpense;
+            const currentBalance = receivedIncome - paidExpense;
+
+            document.getElementById('total-income').innerText = formatMoney(totalIncome);
+            document.getElementById('total-expense').innerText = formatMoney(totalExpense);
+            document.getElementById('net-budget').innerText = formatMoney(netBudget);
+            document.getElementById('current-balance').innerText = formatMoney(currentBalance);
+
+            // Renk ayarları
+            if(currentBalance < 0) {
+                document.getElementById('current-balance').className = 'amount text-expense';
             } else {
-                upcomingItems.push(itemObj);
+                document.getElementById('current-balance').className = 'amount text-income';
             }
-        });
 
-        // Giderleri İşle
-        expenses.forEach(item => {
-            totalExpense += item.amount;
-            const itemObj = { ...item, type: 'expense' };
-            if (currentDay >= item.day) {
-                paidExpense += item.amount;
-                completedItems.push(itemObj);
-            } else {
-                upcomingItems.push(itemObj);
-            }
-        });
+            // HTML Liste Oluşturucu
+            const generateListHTML = (items, isCompleted) => {
+                if(items.length === 0) return "<p style='color: #888; font-size: 14px;'>Bu listede işlem bulunmuyor.</p>";
+                
+                return items.map(item => {
+                    const isIncome = item.type === 'income';
+                    const isExtra = item.type === 'extra';
+                    
+                    let sign = isIncome ? "+" : "-";
+                    let colorClass = isIncome ? "text-income" : "text-expense";
+                    
+                    let badgeClass = "badge";
+                    let badgeText = "";
+                    
+                    if(isIncome) {
+                        badgeClass += " income"; badgeText = "Gelir";
+                    } else if(isExtra) {
+                        badgeClass += " extra"; badgeText = "Ekstra Gider";
+                    } else {
+                        badgeClass += " expense"; badgeText = "Gider";
+                    }
 
-        // Tarihe göre sırala
-        upcomingItems.sort((a, b) => a.day - b.day);
-        completedItems.sort((a, b) => b.day - a.day); // Tamamlananları yeniden eskiye sırala
+                    const statusText = isCompleted ? "Gerçekleşti" : "Bekleniyor";
 
-        // Özetleri Ekrana Yazdır
-        const netBudget = totalIncome - totalExpense;
-        const currentBalance = receivedIncome - paidExpense;
-
-        document.getElementById('total-income').innerText = formatMoney(totalIncome);
-        document.getElementById('total-expense').innerText = formatMoney(totalExpense);
-        document.getElementById('net-budget').innerText = formatMoney(netBudget);
-        document.getElementById('current-balance').innerText = formatMoney(currentBalance);
-
-        // Renk ayarları (Mevcut bütçe eksiyse kırmızı, artıysa yeşil olsun)
-        if(currentBalance < 0) {
-            document.getElementById('current-balance').className = 'amount text-expense';
-        } else {
-            document.getElementById('current-balance').className = 'amount text-income';
-        }
-
-        // HTML Liste Oluşturucu Fonksiyon
-        const generateListHTML = (items, isCompleted) => {
-            if(items.length === 0) return "<p style='color: #888; font-size: 14px;'>Bu listede işlem bulunmuyor.</p>";
-            
-            return items.map(item => {
-                const isIncome = item.type === 'income';
-                const sign = isIncome ? "+" : "-";
-                const colorClass = isIncome ? "text-income" : "text-expense";
-                const badgeClass = isIncome ? "badge income" : "badge expense";
-                const badgeText = isIncome ? "Gelir" : "Gider";
-                const statusText = isCompleted ? "Gerçekleşti" : "Bekleniyor";
-
-                return `
-                    <div class="list-item">
-                        <div class="item-info">
-                            <span class="item-title">${item.name} <span class="${badgeClass}">${badgeText}</span></span>
-                            <span class="item-date">Ayın ${item.day}. Günü • ${statusText}</span>
+                    return `
+                        <div class="list-item">
+                            <div class="item-info">
+                                <span class="item-title">${item.name} <span class="${badgeClass}">${badgeText}</span></span>
+                                <span class="item-date">Ayın ${item.day}. Günü • ${statusText}</span>
+                            </div>
+                            <div class="item-amount ${colorClass}">
+                                ${sign}${formatMoney(item.amount)}
+                            </div>
                         </div>
-                        <div class="item-amount ${colorClass}">
-                            ${sign}${formatMoney(item.amount)}
-                        </div>
-                    </div>
-                `;
-            }).join('');
+                    `;
+                }).join('');
+            };
+
+            // Listeleri Ekrana Bas
+            document.getElementById('upcoming-list').innerHTML = generateListHTML(upcomingItems, false);
+            document.getElementById('completed-list').innerHTML = generateListHTML(completedItems, true);
         };
 
-        // Listeleri Ekrana Bas
-        document.getElementById('upcoming-list').innerHTML = generateListHTML(upcomingItems, false);
-        document.getElementById('completed-list').innerHTML = generateListHTML(completedItems, true);
+        // Manuel Gider Ekleme Fonksiyonu
+        const addManualExpense = () => {
+            const nameInput = document.getElementById('manual-name').value.trim();
+            const amountInput = parseFloat(document.getElementById('manual-amount').value);
+            const dayInput = parseInt(document.getElementById('manual-day').value);
+
+            if(!nameInput || isNaN(amountInput) || isNaN(dayInput) || dayInput < 1 || dayInput > 31) {
+                alert("Lütfen geçerli bir gider adı, tutar ve gün (1-31 arası) girin.");
+                return;
+            }
+
+            const newExpense = {
+                name: nameInput,
+                amount: amountInput,
+                day: dayInput,
+                type: 'extra' // Özel rozet rengi için
+            };
+
+            manualExpenses.push(newExpense);
+            
+            // Hafızaya kaydet
+            localStorage.setItem('manualExpenses', JSON.stringify(manualExpenses));
+
+            // Formu temizle
+            document.getElementById('manual-name').value = '';
+            document.getElementById('manual-amount').value = '';
+            document.getElementById('manual-day').value = '';
+
+            // Ekranı güncelle
+            renderDashboard();
+        };
+
+        // Manuel Giderleri Temizleme Fonksiyonu
+        const clearManualExpenses = () => {
+            if(confirm("Eklediğiniz tüm ekstra giderleri silmek istediğinize emin misiniz?")) {
+                manualExpenses = [];
+                localStorage.removeItem('manualExpenses');
+                renderDashboard();
+            }
+        };
+
+        // Sayfa yüklendiğinde ilk hesaplamayı yap
+        renderDashboard();
 
     </script>
 </body>
 </html>
-
