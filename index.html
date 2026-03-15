@@ -267,6 +267,15 @@
             <div class="amount text-balance" id="current-balance">0 ₺</div>
             <p class="sub-text">Devreden kredi parası ve düzeltmeler dahildir</p>
         </div>
+        
+        <div class="card">
+            <div class="card-header">
+                <h3>Gelecek Giderler İçin Durum</h3>
+            </div>
+            <div class="amount" id="needed-amount">0 ₺</div>
+            <p class="sub-text" id="needed-subtext">Mevcut Kasa - Yaklaşan Giderler</p>
+        </div>
+
         <div class="card">
             <div class="card-header">
                 <h3>Bu Ayki Toplam Gelir</h3>
@@ -347,9 +356,8 @@
         document.getElementById('current-date-display').innerText = `Bugün: ${today.toLocaleDateString('tr-TR', options)}`;
 
         let manualExpenses = [];
-        let kasaFarki = 0; // Manuel kasa düzeltmesini tutar
+        let kasaFarki = 0;
         
-        // Bu iki değişkeni kasa düzeltme hesabı için dışarıya (global) aktarıyoruz
         window.currentRawBalance = 0; 
         window.currentTotalBalance = 0;
 
@@ -364,6 +372,7 @@
             let totalExpense = 0;
             let receivedIncome = 0;
             let paidExpense = 0;
+            let upcomingExpenseTotal = 0; // Gelecek giderleri tutacak değişken
             let upcomingItems = [];
             let completedItems = [];
 
@@ -394,6 +403,7 @@
                     paidExpense += item.amount;
                     completedItems.push(itemObj);
                 } else {
+                    upcomingExpenseTotal += item.amount; // Sadece yaklaşan GİDERLERİ topluyoruz
                     upcomingItems.push(itemObj);
                 }
             });
@@ -405,11 +415,28 @@
             window.currentRawBalance = carryOverAmount + receivedIncome - paidExpense;
             window.currentTotalBalance = window.currentRawBalance + kasaFarki;
 
+            // İhtiyaç Durumu Hesaplaması
+            const neededAmount = window.currentTotalBalance - upcomingExpenseTotal;
+
+            // Kasa, Gelir ve Gider Yazdırma
             document.getElementById('total-income').innerText = formatMoney(totalIncome);
             document.getElementById('total-expense').innerText = formatMoney(totalExpense);
             document.getElementById('current-balance').innerText = formatMoney(window.currentTotalBalance);
-
             document.getElementById('current-balance').className = window.currentTotalBalance < 0 ? 'amount text-expense' : 'amount text-balance';
+
+            // İhtiyaç Durumu Yazdırma ve Renk Atama
+            const neededEl = document.getElementById('needed-amount');
+            const neededSubEl = document.getElementById('needed-subtext');
+            
+            neededEl.innerText = formatMoney(neededAmount);
+            
+            if (neededAmount < 0) {
+                neededEl.className = 'amount text-expense'; // Kırmızı
+                neededSubEl.innerText = `İçerdeyiz: ${formatMoney(Math.abs(neededAmount))} daha lazım`;
+            } else {
+                neededEl.className = 'amount text-income'; // Yeşil
+                neededSubEl.innerText = `Kasa yaklaşan giderleri karşılamak için yeterli`;
+            }
 
             const generateListHTML = (items, isCompleted) => {
                 if(items.length === 0) return "<p style='color: #888; font-size: 14px;'>Bu listede işlem bulunmuyor.</p>";
@@ -438,7 +465,6 @@
                     const statusText = isCarry ? "Kasada Hazır" : (isCompleted ? "Gerçekleşti" : "Bekleniyor");
                     const dayText = isCarry ? "1. Günden İtibaren" : `Ayın ${item.day}. Günü`;
 
-                    // Eğer manuel eklenmiş bir giderse (id'si varsa) Sil/Düzenle butonlarını oluştur
                     let actionButtonsHTML = "";
                     if (item.id) {
                         actionButtonsHTML = `
@@ -477,12 +503,10 @@
             kasaFarki = 0;
             
             if (data) {
-                // Kasa farkı bilgisini çek
                 if (data.kasa_farki !== undefined) {
                     kasaFarki = data.kasa_farki;
                 }
                 
-                // Diğer giderleri listeye ekle
                 for (let key in data) {
                     if (key !== 'kasa_farki') {
                         manualExpenses.push({
@@ -523,7 +547,6 @@
             if (currentReal !== null && currentReal !== "") {
                 const parsedReal = parseFloat(currentReal);
                 if (!isNaN(parsedReal)) {
-                    // Aradaki farkı bulup Firebase'e kasa_farki olarak kaydediyoruz
                     const newFark = parsedReal - window.currentRawBalance;
                     set(ref(db, `butce/${currentMonthKey}/kasa_farki`), newFark);
                 } else {
