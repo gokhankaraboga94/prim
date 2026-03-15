@@ -362,7 +362,7 @@
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
 
-        // Sabit Veriler (Koltuk ve Kredi buradan çıkarıldı, aşağıda Loans kısmına alındı)
+        // Sabit Veriler
         const carryOverAmount = 15000;
 
         const incomes = [
@@ -375,14 +375,14 @@
             { name: "Aidat", amount: 3700, day: 10 }
         ];
 
-        // Otomatik Düşecek Taksitli Borçlar Tanımlaması (Mart 2026 baz alınmıştır)
+        // Otomatik Düşecek Taksitli Borçlar Tanımlaması
         const loans = [
             {
                 name: "Akbank Koltuk Taksidi",
                 amount: 5715,
                 day: 15,
                 totalInstallments: 7,
-                paidBeforeAnchor: 2, // Mart öncesi ödenen
+                paidBeforeAnchor: 1, // DÜZELTİLDİ: Bugün ayın 15'i olduğu için sistem +1 ekliyor, toplamı tam 2 yapıyor.
                 anchorMonth: 2, // 0-indeksli Mart Ayı
                 anchorYear: 2026
             },
@@ -391,7 +391,7 @@
                 amount: 36000,
                 day: 21,
                 totalInstallments: 120,
-                paidBeforeAnchor: 1, // Mart öncesi ödenen
+                paidBeforeAnchor: 1, 
                 anchorMonth: 2, 
                 anchorYear: 2026
             }
@@ -438,19 +438,16 @@
             let loanHTML = "";
 
             loans.forEach(loan => {
-                // Zaman farkını hesapla
                 let monthDiff = (today.getFullYear() - loan.anchorYear) * 12 + (today.getMonth() - loan.anchorMonth);
                 
-                // Bu ay bu taksit aktif mi? (Henüz bitmemiş mi?)
                 let isActiveThisMonth = (monthDiff + loan.paidBeforeAnchor) < loan.totalInstallments;
 
                 let paidCount = loan.paidBeforeAnchor + monthDiff;
-                // Eğer günümüz, ödeme gününü geçtiyse bu ayki de ödenmiş sayılır
+                // Günümüz, ödeme gününü geçtiyse veya bugünse bu ayki de ödenmiş sayılır
                 if (currentDay >= loan.day) {
                     paidCount += 1;
                 }
                 
-                // Limitleri koru
                 if (paidCount > loan.totalInstallments) paidCount = loan.totalInstallments;
                 if (paidCount < 0) paidCount = 0;
 
@@ -460,7 +457,6 @@
                 let remainingAmount = totalAmount - paidAmount;
                 let percent = (paidCount / loan.totalInstallments) * 100;
 
-                // Taksit bitmediyse bu ayki giderler listesine ekle
                 if (isActiveThisMonth) {
                     allExpenses.push({
                         name: loan.name,
@@ -470,7 +466,6 @@
                     });
                 }
 
-                // Ekrana Çizilecek Taksit Kartı
                 loanHTML += `
                     <div class="list-item" style="display: block; border-bottom: 1px solid #eee; padding-bottom: 15px; margin-bottom: 10px;">
                         <div class="item-info">
