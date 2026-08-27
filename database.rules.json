@@ -1,0 +1,27 @@
+{
+  "rules": {
+    "wall": {
+      ".read": true,
+      ".write": "auth != null && auth.token.email == 'admin@servis.com'"
+    },
+    "settings": {
+      ".read": true,
+      ".write": "auth != null && auth.token.email == 'admin@servis.com'"
+    },
+    "game": {
+      ".read": true,
+      ".write": "auth != null && auth.token.email == 'admin@servis.com'"
+    },
+    "recruits": {
+      ".read": true,
+      "$id": {
+        ".write": "!data.exists() && newData.hasChildren(['username', 'createdAt'])",
+        ".validate": "newData.child('username').isString() && newData.child('username').val().length > 0 && newData.child('username').val().length <= 32 && newData.child('createdAt').isNumber()"
+      }
+    },
+    "reels": {
+      ".read": true,
+      ".write": "auth != null && auth.token.email == 'admin@servis.com'"
+    }
+  }
+}
