@@ -59,7 +59,7 @@ function Terrain() {
   return (
     <group>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
-        <planeGeometry args={[70, 70]} />
+        <planeGeometry args={[140, 140]} />
         <meshLambertMaterial map={grass} color="#5dad45" />
       </mesh>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 10]}>
@@ -81,7 +81,7 @@ function Terrain() {
 function CameraRig() {
   useFrame((state) => {
     const t = state.clock.elapsedTime;
-    state.camera.position.set(Math.sin(t * 0.04) * 2.2, 30, 24);
+    state.camera.position.set(Math.sin(t * 0.04) * 4, 60, 48);
     state.camera.lookAt(0, 0, 1.5);
   });
   return null;
@@ -91,7 +91,7 @@ function SceneContent({ soldiers, level, pressure }: BattleSceneProps) {
   return (
     <>
       <color attach="background" args={["#8ec5e8"]} />
-      <fog attach="fog" args={["#b7d7ef", 45, 85]} />
+      <fog attach="fog" args={["#b7d7ef", 80, 170]} />
       <ambientLight intensity={0.85} color="#fff4d6" />
       <hemisphereLight args={["#d7ecff", "#5d8a3e", 0.7]} />
       <directionalLight position={[18, 28, 12]} intensity={1.35} color="#fff3c8" />
@@ -123,7 +123,7 @@ function BattleSceneInner({ soldiers, level, pressure }: BattleSceneProps) {
         depth: true,
         failIfMajorPerformanceCaveat: false,
       }}
-      camera={{ fov: 40, near: 0.5, far: 120, position: [0, 30, 24] }}
+      camera={{ fov: 40, near: 0.5, far: 220, position: [0, 60, 48] }}
       frameloop={active ? "always" : "demand"}
       style={{ width: "100%", height: "100%", display: "block" }}
       onCreated={({ gl }) => {

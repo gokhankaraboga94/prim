@@ -301,11 +301,13 @@ select:focus {
 }
 
 .btn-follow {
-  background: #ff2e88;
-  color: white;
+  background: linear-gradient(180deg, #f0d48a, #b8892d);
+  color: #1a1308;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  width: 100%;
+  margin-top: 14px;
 }
 
 .btn-ghost {
