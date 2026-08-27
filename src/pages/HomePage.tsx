@@ -7,7 +7,7 @@ import { SceneErrorBoundary } from "../components/SceneErrorBoundary";
 import { useGame } from "../hooks/useGame";
 
 export function HomePage() {
-  const { game, reels, ready, level, power, pressure } = useGame();
+  const { game, reels, ready, level, power, pressure, maxHp, target } = useGame();
   const [mode, setMode] = useState<"battle" | "reels">("battle");
   const handle = game.instagramHandle.replace(/^@/, "");
 
@@ -15,7 +15,7 @@ export function HomePage() {
     <div className="home">
       <div className="scene-wrap">
         <SceneErrorBoundary>
-          <BattleScene soldiers={game.soldiers} level={level} pressure={pressure} />
+          <BattleScene soldiers={game.soldiers} level={level} pressure={Math.round(pressure * 20) / 20} />
         </SceneErrorBoundary>
       </div>
       <div className="vignette" />
@@ -25,6 +25,8 @@ export function HomePage() {
         soldiers={game.soldiers}
         level={level}
         power={power}
+        maxHp={maxHp}
+        target={target}
         pressure={pressure}
       />
 

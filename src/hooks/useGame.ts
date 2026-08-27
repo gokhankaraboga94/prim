@@ -1,35 +1,24 @@
 import { useEffect, useMemo, useState } from "react";
 import { onValue, ref } from "firebase/database";
 import { db } from "../firebase";
-import {
-  DEFAULT_GAME,
-  castlePower,
-  levelForSoldiers,
-  siegePressure,
-  type GameState,
-  type Recruit,
-  type ReelItem,
-} from "../game";
+import { DEFAULT_GAME, parseGame, resolveSiege, type GameState, type Recruit, type ReelItem } from "../game";
 
 export function useGame() {
   const [game, setGame] = useState<GameState>(DEFAULT_GAME);
   const [recruits, setRecruits] = useState<Recruit[]>([]);
   const [reels, setReels] = useState<ReelItem[]>([]);
   const [ready, setReady] = useState(false);
+  const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
     const fail = () => setReady(true);
     const timer = window.setTimeout(fail, 1500);
+    const clock = window.setInterval(() => setNow(Date.now()), 1000);
 
     const unsubGame = onValue(
       ref(db, "game"),
       (snap) => {
-        const v = snap.val() as Partial<GameState> | null;
-        setGame({
-          soldiers: Math.max(0, Math.floor(Number(v?.soldiers) || 0)),
-          instagramHandle: String(v?.instagramHandle || DEFAULT_GAME.instagramHandle),
-          updatedAt: Number(v?.updatedAt) || 0,
-        });
+        setGame(parseGame(snap.val() as Partial<GameState> | null));
         setReady(true);
       },
       fail
@@ -81,18 +70,14 @@ export function useGame() {
 
     return () => {
       window.clearTimeout(timer);
+      window.clearInterval(clock);
       unsubGame();
       unsubRecruits();
       unsubReels();
     };
   }, []);
 
-  const derived = useMemo(() => {
-    const level = levelForSoldiers(game.soldiers);
-    const power = castlePower(level);
-    const pressure = siegePressure(game.soldiers, power);
-    return { level, power, pressure };
-  }, [game.soldiers]);
+  const siege = useMemo(() => resolveSiege(game, now), [game, now]);
 
-  return { game, recruits, reels, ready, ...derived };
+  return { game, recruits, reels, ready, ...siege, power: siege.hp };
 }

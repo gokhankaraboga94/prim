@@ -3,11 +3,11 @@ import { signOut } from "firebase/auth";
 import { push, ref, remove, set } from "firebase/database";
 import { getDownloadURL, ref as storageRef, uploadBytes } from "firebase/storage";
 import { auth, db, storage } from "../firebase";
-import { castlePower, formatCount, levelForSoldiers, normalizeHandle, type ReelItem } from "../game";
+import { formatCount, formatPower, normalizeHandle, targetForLevel, toGameRecord, type ReelItem } from "../game";
 import { useGame } from "../hooks/useGame";
 
 export function AdminPage() {
-  const { game, recruits, reels, level, power, pressure } = useGame();
+  const { game, recruits, reels, level, power, pressure, target } = useGame();
   const [soldiersInput, setSoldiersInput] = useState("");
   const [addInput, setAddInput] = useState("");
   const [handleInput, setHandleInput] = useState("");
@@ -22,16 +22,12 @@ export function AdminPage() {
 
   async function saveSoldiers(next: number) {
     const soldiers = Math.max(0, Math.floor(next));
-    await set(ref(db, "game"), {
-      soldiers,
-      instagramHandle: normalizeHandle(game.instagramHandle) || "inshesabi",
-      updatedAt: Date.now(),
-    });
-    const nextLevel = levelForSoldiers(soldiers);
+    const payload = toGameRecord(game, Date.now(), { soldiers });
+    await set(ref(db, "game"), payload);
     setMsg(
-      nextLevel > level
-        ? `Ordu ${formatCount(soldiers)}. Kale seviye ${nextLevel} oldu — güç ${formatCount(castlePower(nextLevel))}.`
-        : `Ordu güncellendi: ${formatCount(soldiers)} asker.`
+      payload.castleLevel > game.castleLevel
+        ? `Ordu ${formatCount(soldiers)}. Kale seviye ${payload.castleLevel} — hedef ${formatCount(targetForLevel(payload.castleLevel))}.`
+        : `Ordu güncellendi: ${formatCount(soldiers)} asker. Kale gücü ${formatPower(payload.castleHp)}.`
     );
   }
 
@@ -70,11 +66,7 @@ export function AdminPage() {
     }
     setBusy(true);
     try {
-      await set(ref(db, "game"), {
-        soldiers: game.soldiers,
-        instagramHandle,
-        updatedAt: Date.now(),
-      });
+      await set(ref(db, "game"), toGameRecord(game, Date.now(), { instagramHandle }));
       setHandleInput("");
       setMsg(`Anasayfada @${instagramHandle} görünecek.`);
     } catch {
@@ -151,14 +143,16 @@ export function AdminPage() {
         </article>
         <article>
           <span>Kale gücü</span>
-          <b>{formatCount(power)}</b>
+          <b>{formatPower(power)}</b>
         </article>
         <article>
-          <span>Seviye</span>
-          <b>{level}</b>
+          <span>Seviye / hedef</span>
+          <b>
+            {level} · {formatCount(target)}
+          </b>
         </article>
         <article>
-          <span>Kuşatma</span>
+          <span>Yıpranma</span>
           <b>%{Math.round(pressure * 100)}</b>
         </article>
       </section>
@@ -169,7 +163,8 @@ export function AdminPage() {
         <section className="admin-card">
           <h2>Asker sayısı</h2>
           <p className="muted">
-            Instagram takipçi sayınla eşitle. Sayı kaleyi yıkacak kadar büyürse kale otomatik seviye atlar.
+            Instagram takipçi sayınla eşitle. 1. seviye hedef 10.000, 2. seviye 50.000. Kale gücü 24/7
+            yavaşça erir; 10.000 asker yaklaşık 12 günde 1. seviyeyi düşürür.
           </p>
           <form onSubmit={onSetSoldiers}>
             <label>Toplam asker / takipçi</label>
