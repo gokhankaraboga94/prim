@@ -7,11 +7,11 @@ type HUDProps = {
   power: number;
   maxHp: number;
   target: number;
-  pressure: number;
 };
 
-export function HUD({ handle, soldiers, level, power, maxHp, target, pressure }: HUDProps) {
-  const pct = Math.round(pressure * 100);
+export function HUD({ handle, soldiers, level, power, maxHp, target }: HUDProps) {
+  const hpPct = maxHp > 0 ? Math.max(0, Math.min(100, (power / maxHp) * 100)) : 0;
+  const hpPctLabel = (Math.floor(hpPct * 100 + 1e-9) / 100).toFixed(2);
   const href = instagramUrl(handle);
 
   return (
@@ -38,11 +38,9 @@ export function HUD({ handle, soldiers, level, power, maxHp, target, pressure }:
             <b>{formatCount(target)}</b>
           </div>
         </div>
-        <div className="siege-bar" aria-label={`Kuşatma %${pct}`}>
-          <i style={{ width: `${pct}%` }} />
-          <em>
-            Hedef {formatCount(target)} takipçi · kalan {formatPower(power)} / {formatCount(maxHp)}
-          </em>
+        <div className="siege-bar" aria-label={`Kale sağlığı %${hpPctLabel}`}>
+          <i style={{ width: `${hpPct}%` }} />
+          <em>%{hpPctLabel}</em>
         </div>
       </div>
     </header>

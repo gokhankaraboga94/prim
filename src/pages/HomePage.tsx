@@ -27,7 +27,6 @@ export function HomePage() {
         power={power}
         maxHp={maxHp}
         target={target}
-        pressure={pressure}
       />
 
       <div className="home-body">
