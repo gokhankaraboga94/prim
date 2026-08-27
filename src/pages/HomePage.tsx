@@ -3,6 +3,7 @@ import { BattleScene } from "../components/scene/BattleScene";
 import { HUD } from "../components/HUD";
 import { JoinArmy } from "../components/JoinArmy";
 import { ReelsMode } from "../components/ReelsMode";
+import { SceneErrorBoundary } from "../components/SceneErrorBoundary";
 import { useGame } from "../hooks/useGame";
 import { formatCount } from "../game";
 
@@ -13,7 +14,11 @@ export function HomePage() {
 
   return (
     <div className="home">
-      <BattleScene soldiers={game.soldiers} level={level} pressure={pressure} />
+      <div className="scene-wrap">
+        <SceneErrorBoundary>
+          <BattleScene soldiers={game.soldiers} level={level} pressure={pressure} />
+        </SceneErrorBoundary>
+      </div>
       <div className="vignette" />
 
       <HUD

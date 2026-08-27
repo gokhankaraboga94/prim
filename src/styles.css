@@ -47,13 +47,30 @@ select {
   position: relative;
   min-height: 100dvh;
   overflow: hidden;
+  background:
+    radial-gradient(ellipse at 50% 42%, #4a3424 0%, #1a1410 55%, #0c0a08 100%);
 }
 
-.battle-canvas {
-  position: fixed !important;
+.scene-wrap {
+  position: fixed;
   inset: 0;
+  z-index: 0;
+  width: 100%;
+  height: 100dvh;
+  pointer-events: none;
+}
+
+.scene-wrap canvas {
+  display: block;
   width: 100% !important;
   height: 100% !important;
+}
+
+.scene-fallback {
+  width: 100%;
+  height: 100%;
+  background:
+    radial-gradient(circle at 50% 40%, #6b4a2e, #1a1410 62%);
 }
 
 .vignette {
@@ -61,8 +78,8 @@ select {
   position: fixed;
   inset: 0;
   background:
-    radial-gradient(ellipse at center, transparent 35%, rgba(0, 0, 0, 0.55) 100%),
-    linear-gradient(180deg, rgba(7, 6, 10, 0.2), transparent 18%, transparent 62%, rgba(7, 6, 10, 0.72));
+    radial-gradient(ellipse at center, transparent 42%, rgba(0, 0, 0, 0.28) 100%),
+    linear-gradient(180deg, rgba(12, 10, 8, 0.12), transparent 16%, transparent 68%, rgba(12, 10, 8, 0.45));
   z-index: 1;
 }
 
@@ -431,13 +448,18 @@ select:focus {
 
 .boot {
   position: fixed;
-  inset: 0;
+  left: 50%;
+  bottom: 18px;
+  transform: translateX(-50%);
   z-index: 20;
-  display: grid;
-  place-items: center;
-  background: var(--bg);
+  padding: 10px 16px;
+  border-radius: 999px;
+  background: rgba(12, 10, 8, 0.72);
+  border: 1px solid var(--line);
   font-family: var(--display);
-  letter-spacing: 0.18em;
+  letter-spacing: 0.12em;
+  font-size: 13px;
+  pointer-events: none;
 }
 
 .admin-shell,

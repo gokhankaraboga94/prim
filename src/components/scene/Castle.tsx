@@ -11,7 +11,7 @@ function Stone({
   args,
   position,
   rotation,
-  color = "#5b5348",
+  color = "#8a7d6d",
 }: {
   args: [number, number, number];
   position: [number, number, number];
@@ -21,7 +21,7 @@ function Stone({
   return (
     <mesh position={position} rotation={rotation} castShadow={false} receiveShadow={false}>
       <boxGeometry args={args} />
-      <meshStandardMaterial color={color} roughness={0.86} metalness={0.08} />
+      <meshStandardMaterial color={color} roughness={0.82} metalness={0.06} />
     </mesh>
   );
 }
@@ -33,15 +33,17 @@ export function Castle({ level, pressure }: CastleProps) {
   const scale = 1 + Math.min(2.2, (level - 1) * 0.045) + visualTier * 0.04;
   const ember = Math.min(1, pressure * 1.15);
 
-  const firePositions = useMemo(() => {
-    const count = 90;
+  const fireGeom = useMemo(() => {
+    const count = 60;
     const arr = new Float32Array(count * 3);
     for (let i = 0; i < count; i++) {
-      arr[i * 3] = (Math.random() - 0.5) * 10;
-      arr[i * 3 + 1] = Math.random() * 8;
-      arr[i * 3 + 2] = (Math.random() - 0.5) * 6;
+      arr[i * 3] = (Math.random() - 0.5) * 8;
+      arr[i * 3 + 1] = Math.random() * 6;
+      arr[i * 3 + 2] = (Math.random() - 0.5) * 5;
     }
-    return arr;
+    const geom = new THREE.BufferGeometry();
+    geom.setAttribute("position", new THREE.BufferAttribute(arr, 3));
+    return geom;
   }, []);
 
   useFrame((state) => {
@@ -63,16 +65,16 @@ export function Castle({ level, pressure }: CastleProps) {
   const towerH = 7.2 + visualTier * 0.55;
 
   return (
-    <group ref={group} position={[0, 0, -18]} scale={scale}>
+    <group ref={group} position={[0, 0, -7]} scale={scale}>
       <mesh position={[0, -0.2, 0]} rotation={[-Math.PI / 2, 0, 0]}>
         <cylinderGeometry args={[16, 18, 0.6, 8]} />
-        <meshStandardMaterial color="#2a241c" roughness={1} />
+        <meshStandardMaterial color="#4a4036" roughness={1} />
       </mesh>
 
-      <Stone args={[16, wallH, 2.2]} position={[0, wallH / 2, 0]} color="#6a6054" />
+      <Stone args={[16, wallH, 2.2]} position={[0, wallH / 2, 0]} color="#9a8d7a" />
       <Stone args={[2.4, wallH, 12]} position={[-7.2, wallH / 2, 5]} />
       <Stone args={[2.4, wallH, 12]} position={[7.2, wallH / 2, 5]} />
-      <Stone args={[16, wallH * 0.85, 2]} position={[0, (wallH * 0.85) / 2, 11]} color="#4e473e" />
+      <Stone args={[16, wallH * 0.85, 2]} position={[0, (wallH * 0.85) / 2, 11]} color="#7d7163" />
 
       <Tower position={[-8.2, 0, -0.4]} height={towerH} />
       <Tower position={[8.2, 0, -0.4]} height={towerH} />
@@ -99,20 +101,12 @@ export function Castle({ level, pressure }: CastleProps) {
         </mesh>
       ))}
 
-      <points ref={fire} position={[0, 2.2, 4]}>
-        <bufferGeometry>
-          <bufferAttribute
-            attach="attributes-position"
-            count={firePositions.length / 3}
-            array={firePositions}
-            itemSize={3}
-          />
-        </bufferGeometry>
+      <points ref={fire} geometry={fireGeom} position={[0, 2.2, 4]}>
         <pointsMaterial
           color="#ff7a3c"
-          size={0.28}
+          size={0.32}
           transparent
-          opacity={0.25}
+          opacity={0.35}
           depthWrite={false}
           sizeAttenuation
         />
@@ -134,7 +128,7 @@ function Tower({
     <group position={position}>
       <mesh position={[0, height / 2, 0]}>
         <cylinderGeometry args={[keep ? 2.1 : 1.45, keep ? 2.4 : 1.7, height, 8]} />
-        <meshStandardMaterial color={keep ? "#7c7266" : "#5e564c"} roughness={0.88} />
+        <meshStandardMaterial color={keep ? "#b3a48f" : "#8f8374"} roughness={0.82} />
       </mesh>
       <mesh position={[0, height + 0.55, 0]}>
         <cylinderGeometry args={[keep ? 2.5 : 1.85, keep ? 2.2 : 1.55, 1.1, 8]} />

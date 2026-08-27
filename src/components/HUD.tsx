@@ -1,5 +1,4 @@
 import { formatCount, instagramUrl } from "../game";
-import { useAnimatedNumber } from "../hooks/useAnimatedNumber";
 
 type HUDProps = {
   handle: string;
@@ -10,8 +9,6 @@ type HUDProps = {
 };
 
 export function HUD({ handle, soldiers, level, power, pressure }: HUDProps) {
-  const soldiersN = useAnimatedNumber(soldiers);
-  const powerN = useAnimatedNumber(power);
   const pct = Math.round(pressure * 100);
   const href = instagramUrl(handle);
 
@@ -26,12 +23,12 @@ export function HUD({ handle, soldiers, level, power, pressure }: HUDProps) {
         <div className="hud-stats">
           <div className="hud-stat">
             <span>Asker / Takipçi</span>
-            <b>{formatCount(soldiersN)}</b>
+            <b>{formatCount(soldiers)}</b>
           </div>
           <div className="hud-divider" />
           <div className="hud-stat">
             <span>Kale Gücü</span>
-            <b>{formatCount(powerN)}</b>
+            <b>{formatCount(power)}</b>
           </div>
           <div className="hud-divider" />
           <div className="hud-stat">

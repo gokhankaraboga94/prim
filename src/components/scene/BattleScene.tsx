@@ -1,6 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { memo, useEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
-import { AdaptiveDpr, AdaptiveEvents } from "@react-three/drei";
 import * as THREE from "three";
 import { Army } from "./Army";
 import { Castle } from "./Castle";
@@ -11,90 +10,77 @@ type BattleSceneProps = {
   pressure: number;
 };
 
+function makePoints(count: number, place: (i: number, arr: Float32Array) => void) {
+  const arr = new Float32Array(count * 3);
+  for (let i = 0; i < count; i++) place(i, arr);
+  const geom = new THREE.BufferGeometry();
+  geom.setAttribute("position", new THREE.BufferAttribute(arr, 3));
+  return geom;
+}
+
 function Stars() {
   const ref = useRef<THREE.Points>(null);
-  const positions = useMemo(() => {
-    const n = 160;
-    const arr = new Float32Array(n * 3);
-    for (let i = 0; i < n; i++) {
-      arr[i * 3] = (Math.random() - 0.5) * 120;
-      arr[i * 3 + 1] = 12 + Math.random() * 40;
-      arr[i * 3 + 2] = (Math.random() - 0.5) * 80 - 20;
-    }
-    return arr;
-  }, []);
+  const geom = useMemo(
+    () =>
+      makePoints(140, (i, arr) => {
+        arr[i * 3] = (Math.random() - 0.5) * 90;
+        arr[i * 3 + 1] = 8 + Math.random() * 28;
+        arr[i * 3 + 2] = (Math.random() - 0.5) * 50 - 10;
+      }),
+    []
+  );
 
   useFrame((state) => {
-    if (ref.current) ref.current.rotation.y = state.clock.elapsedTime * 0.008;
+    if (ref.current) ref.current.rotation.y = state.clock.elapsedTime * 0.006;
   });
 
   return (
-    <points ref={ref}>
-      <bufferGeometry>
-        <bufferAttribute
-          attach="attributes-position"
-          count={positions.length / 3}
-          array={positions}
-          itemSize={3}
-        />
-      </bufferGeometry>
-      <pointsMaterial color="#f4e2b3" size={0.18} transparent opacity={0.7} depthWrite={false} />
+    <points ref={ref} geometry={geom}>
+      <pointsMaterial color="#ffe9b0" size={0.22} transparent opacity={0.85} depthWrite={false} />
+    </points>
+  );
+}
+
+function EmberField({ pressure }: { pressure: number }) {
+  const ref = useRef<THREE.Points>(null);
+  const geom = useMemo(
+    () =>
+      makePoints(50, (i, arr) => {
+        arr[i * 3] = (Math.random() - 0.5) * 22;
+        arr[i * 3 + 1] = Math.random() * 5;
+        arr[i * 3 + 2] = (Math.random() - 0.5) * 16;
+      }),
+    []
+  );
+
+  useFrame((state) => {
+    if (!ref.current) return;
+    ref.current.position.y = (state.clock.elapsedTime * 0.3) % 1.6;
+    (ref.current.material as THREE.PointsMaterial).opacity = 0.2 + pressure * 0.4;
+  });
+
+  return (
+    <points ref={ref} geometry={geom}>
+      <pointsMaterial color="#ff7a3c" size={0.2} transparent opacity={0.28} depthWrite={false} />
     </points>
   );
 }
 
 function Ground() {
   return (
-    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 4]} receiveShadow={false}>
-      <planeGeometry args={[140, 140]} />
-      <meshStandardMaterial color="#12100e" roughness={1} metalness={0} />
+    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 2]}>
+      <planeGeometry args={[80, 80]} />
+      <meshStandardMaterial color="#2a231c" roughness={1} />
     </mesh>
-  );
-}
-
-function EmberField({ pressure }: { pressure: number }) {
-  const ref = useRef<THREE.Points>(null);
-  const positions = useMemo(() => {
-    const n = 70;
-    const arr = new Float32Array(n * 3);
-    for (let i = 0; i < n; i++) {
-      arr[i * 3] = (Math.random() - 0.5) * 30;
-      arr[i * 3 + 1] = Math.random() * 6;
-      arr[i * 3 + 2] = (Math.random() - 0.5) * 24;
-    }
-    return arr;
-  }, []);
-
-  useFrame((state) => {
-    if (!ref.current) return;
-    ref.current.position.y = (state.clock.elapsedTime * 0.35) % 2;
-    const mat = ref.current.material as THREE.PointsMaterial;
-    mat.opacity = 0.12 + pressure * 0.45;
-  });
-
-  return (
-    <points ref={ref}>
-      <bufferGeometry>
-        <bufferAttribute
-          attach="attributes-position"
-          count={positions.length / 3}
-          array={positions}
-          itemSize={3}
-        />
-      </bufferGeometry>
-      <pointsMaterial color="#ff5a2a" size={0.16} transparent opacity={0.2} depthWrite={false} />
-    </points>
   );
 }
 
 function CameraRig({ pressure }: { pressure: number }) {
   useFrame((state) => {
     const t = state.clock.elapsedTime;
-    const shake = pressure > 0.8 ? Math.sin(t * 42) * 0.05 : 0;
-    state.camera.position.x = Math.sin(t * 0.07) * 3.2 + shake;
-    state.camera.position.y = 9.5 + Math.sin(t * 0.11) * 0.4;
-    state.camera.position.z = 26 + Math.cos(t * 0.07) * 1.4;
-    state.camera.lookAt(0, 3.2, -10);
+    const shake = pressure > 0.85 ? Math.sin(t * 28) * 0.03 : 0;
+    state.camera.position.set(Math.sin(t * 0.05) * 1.8 + shake, 6.4, 14.5);
+    state.camera.lookAt(0, 2.6, -5);
   });
   return null;
 }
@@ -102,13 +88,12 @@ function CameraRig({ pressure }: { pressure: number }) {
 function SceneContent({ soldiers, level, pressure }: BattleSceneProps) {
   return (
     <>
-      <color attach="background" args={["#07060a"]} />
-      <fog attach="fog" args={["#07060a", 18, 72]} />
-      <ambientLight intensity={0.22} color="#6e5a3d" />
-      <hemisphereLight args={["#4a3a28", "#0a0806", 0.55]} />
-      <directionalLight position={[12, 18, 8]} intensity={1.05} color="#ffd7a1" />
-      <pointLight position={[0, 6, -12]} intensity={1.6 + pressure} color="#ff6a32" distance={32} />
-      <pointLight position={[-10, 4, 4]} intensity={0.5} color="#7aa0ff" distance={24} />
+      <color attach="background" args={["#1a1410"]} />
+      <fog attach="fog" args={["#1a1410", 28, 70]} />
+      <ambientLight intensity={0.7} color="#cbb394" />
+      <hemisphereLight args={["#8ea0c8", "#3a2a1c", 0.8]} />
+      <directionalLight position={[8, 14, 10]} intensity={1.8} color="#ffe6b8" />
+      <pointLight position={[0, 5, -6]} intensity={2.2} color="#ff8a4a" distance={28} />
       <Stars />
       <Ground />
       <Castle level={level} pressure={pressure} />
@@ -119,7 +104,7 @@ function SceneContent({ soldiers, level, pressure }: BattleSceneProps) {
   );
 }
 
-export function BattleScene({ soldiers, level, pressure }: BattleSceneProps) {
+function BattleSceneInner({ soldiers, level, pressure }: BattleSceneProps) {
   const [active, setActive] = useState(() => typeof document === "undefined" || !document.hidden);
 
   useEffect(() => {
@@ -130,24 +115,26 @@ export function BattleScene({ soldiers, level, pressure }: BattleSceneProps) {
 
   return (
     <Canvas
-      className="battle-canvas"
-      dpr={[1, 1.5]}
+      dpr={[1, 1.25]}
       gl={{
         antialias: true,
         alpha: false,
         powerPreference: "high-performance",
         stencil: false,
+        failIfMajorPerformanceCaveat: false,
       }}
-      camera={{ fov: 42, near: 0.1, far: 120, position: [0, 10, 26] }}
+      camera={{ fov: 46, near: 0.1, far: 90, position: [0, 6.4, 14.5] }}
       frameloop={active ? "always" : "demand"}
+      style={{ width: "100%", height: "100%", display: "block" }}
       onCreated={({ gl }) => {
         gl.toneMapping = THREE.ACESFilmicToneMapping;
-        gl.toneMappingExposure = 1.12;
+        gl.toneMappingExposure = 1.35;
+        gl.setClearColor("#1a1410", 1);
       }}
     >
-      <AdaptiveDpr pixelated={false} />
-      <AdaptiveEvents />
       <SceneContent soldiers={soldiers} level={level} pressure={pressure} />
     </Canvas>
   );
 }
+
+export const BattleScene = memo(BattleSceneInner);
