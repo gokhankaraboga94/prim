@@ -1,5 +1,6 @@
 import { memo, useEffect, useMemo, useRef, useState } from "react";
-import { Canvas, useFrame } from "@react-three/fiber";
+import { Canvas } from "@react-three/fiber";
+import { OrbitControls } from "@react-three/drei";
 import * as THREE from "three";
 import { Army } from "./Army";
 import { Castle } from "./Castle";
@@ -62,8 +63,8 @@ function Terrain() {
         <planeGeometry args={[140, 140]} />
         <meshLambertMaterial map={grass} color="#5dad45" />
       </mesh>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 10]}>
-        <planeGeometry args={[7, 18]} />
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 12]}>
+        <planeGeometry args={[8, 24]} />
         <meshLambertMaterial color="#c4a36a" />
       </mesh>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.03, 0]}>
@@ -78,15 +79,6 @@ function Terrain() {
   );
 }
 
-function CameraRig() {
-  useFrame((state) => {
-    const t = state.clock.elapsedTime;
-    state.camera.position.set(Math.sin(t * 0.04) * 4, 60, 48);
-    state.camera.lookAt(0, 0, 1.5);
-  });
-  return null;
-}
-
 function SceneContent({ soldiers, level, pressure }: BattleSceneProps) {
   return (
     <>
@@ -98,7 +90,19 @@ function SceneContent({ soldiers, level, pressure }: BattleSceneProps) {
       <Terrain />
       <Castle level={level} pressure={pressure} />
       <Army count={soldiers} pressure={pressure} />
-      <CameraRig />
+      <OrbitControls
+        makeDefault
+        enableDamping
+        dampingFactor={0.08}
+        enablePan={false}
+        minDistance={32}
+        maxDistance={130}
+        minPolarAngle={0.35}
+        maxPolarAngle={1.15}
+        target={[0, 0, 2]}
+        rotateSpeed={0.7}
+        zoomSpeed={0.85}
+      />
     </>
   );
 }

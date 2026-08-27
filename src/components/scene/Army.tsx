@@ -49,11 +49,11 @@ export function Army({ count }: ArmyProps) {
       const phase = seeds[i];
       const x =
         (col - (COLS - 1) / 2) * 1.15 + Math.sin(t * 1.6 + phase * 8) * (row < 2 ? 0.08 : 0.04);
-      const targetZ = 7.1;
-      const startZ = 8.2 + row * 1.05;
-      const march = Math.min(1, ((t * 0.18 + phase) % 4) / 2.2);
+      const targetZ = 11.4;
+      const startZ = 14.8 + row * 1.2;
+      const march = Math.min(1, ((t * 0.16 + phase) % 4) / 2.2);
       const atWall = row < 3;
-      const z = atWall ? targetZ + row * 0.55 : startZ - march * (startZ - targetZ - 1.2);
+      const z = atWall ? targetZ + row * 0.7 : startZ - march * (startZ - targetZ - 1.6);
       const strike = atWall ? Math.abs(Math.sin(t * 7 + phase * 10)) * 0.16 : 0;
       dummy.position.set(x, 0.38 + strike, z);
       dummy.rotation.set(0, Math.PI + (atWall ? Math.sin(t * 6 + phase) * 0.15 : 0), 0);

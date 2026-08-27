@@ -31,6 +31,7 @@ export function HomePage() {
       <div className="home-body">
         <div className="story">
           <h1>Kale yıkılmıyor.</h1>
+          <p className="cam-hint">Sürükle veya pinch ile bakış açısını değiştir</p>
         </div>
         <JoinArmy handle={handle} />
       </div>
