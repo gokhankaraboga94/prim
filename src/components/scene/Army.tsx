@@ -2,27 +2,36 @@ import { useLayoutEffect, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 
-const MAX_SOLDIERS = 80;
+const MAX_SOLDIERS = 5000;
+const MAX_LABELS = 80;
 const MAX_ARROWS = 8;
 const dummy = new THREE.Object3D();
 const VOLLEY_FLIGHT = 1.35;
 const VOLLEY_REST = 2.5;
+const AREA_W = 28;
+const FRONT_Z = 11.15;
 
 type ArmyProps = {
   count: number;
 };
 
-function unitPos(i: number, visible: number, t: number, out: THREE.Vector3) {
-  const cols = Math.min(10, Math.max(1, visible));
+function formation(visible: number) {
+  const n = Math.max(1, visible);
+  const spacing = Math.min(1.25, Math.max(0.34, Math.sqrt((AREA_W * 14) / n)));
+  const cols = Math.max(1, Math.min(n, Math.round(AREA_W / spacing)));
+  const pack = Math.min(1, spacing / 1.05);
+  return { spacing, cols, scale: 0.52 + pack * 0.48 };
+}
+
+function unitPos(i: number, t: number, cols: number, spacing: number, out: THREE.Vector3) {
   const col = i % cols;
   const row = Math.floor(i / cols);
-  const x = (col - (cols - 1) / 2) * 1.2;
-  const targetZ = 11.4;
-  const startZ = 14.8 + row * 1.2;
+  const x = (col - (cols - 1) / 2) * spacing;
   const atWall = row < 3;
-  const z = atWall ? targetZ + row * 0.7 : startZ - Math.min(1, ((t * 0.16) % 4) / 2.2) * 2.4;
-  const strike = atWall ? Math.abs(Math.sin(t * 7 + i)) * 0.14 : 0;
-  out.set(x, 0.38 + strike, z);
+  const z = FRONT_Z + row * spacing * 0.92;
+  const strike = atWall ? Math.abs(Math.sin(t * 7 + i)) * 0.12 : 0;
+  const march = atWall ? 0 : Math.min(1, ((t * 0.16) % 4) / 2.2) * Math.min(spacing * 0.8, 0.55);
+  out.set(x, 0.38 + strike, z - march);
 }
 
 function makeNumberTexture(n: number) {
@@ -57,11 +66,13 @@ export function Army({ count }: ArmyProps) {
   const acc = useRef(0);
   const pos = useMemo(() => new THREE.Vector3(), []);
   const numberMaps = useMemo(
-    () => Array.from({ length: MAX_SOLDIERS }, (_, i) => makeNumberTexture(i + 1)),
+    () => Array.from({ length: MAX_LABELS }, (_, i) => makeNumberTexture(i + 1)),
     []
   );
 
   const visible = Math.min(MAX_SOLDIERS, Math.max(0, Math.floor(count)));
+  const showTags = visible > 0 && visible <= MAX_LABELS;
+  const form = useMemo(() => formation(visible), [visible]);
 
   const seeds = useMemo(() => {
     const arr = new Float32Array(MAX_SOLDIERS);
@@ -84,25 +95,28 @@ export function Army({ count }: ArmyProps) {
     if (acc.current < 1 / 28) return;
     acc.current = 0;
     const t = state.clock.elapsedTime;
+    const { spacing, cols, scale } = form;
 
     if (bodies.current && helms.current) {
       bodies.current.count = visible;
       helms.current.count = visible;
       for (let i = 0; i < visible; i++) {
-        unitPos(i, visible, t + seeds[i], pos);
+        unitPos(i, t + seeds[i], cols, spacing, pos);
         dummy.position.copy(pos);
         dummy.rotation.set(0, Math.PI, 0);
-        dummy.scale.setScalar(1);
+        dummy.scale.setScalar(scale);
         dummy.updateMatrix();
         bodies.current.setMatrixAt(i, dummy.matrix);
-        dummy.position.y += 0.42;
-        dummy.scale.setScalar(0.72);
+        dummy.position.y += 0.42 * scale;
+        dummy.scale.setScalar(0.72 * scale);
         dummy.updateMatrix();
         helms.current.setMatrixAt(i, dummy.matrix);
-        const tag = tags.current?.children[i];
-        if (tag) {
-          tag.visible = true;
-          tag.position.set(pos.x, pos.y + 1.15, pos.z);
+        if (showTags && i < MAX_LABELS) {
+          const tag = tags.current?.children[i];
+          if (tag) {
+            tag.visible = true;
+            tag.position.set(pos.x, pos.y + 0.95 * scale + 0.35, pos.z);
+          }
         }
       }
       bodies.current.instanceMatrix.needsUpdate = true;
@@ -110,8 +124,8 @@ export function Army({ count }: ArmyProps) {
     }
 
     if (tags.current) {
-      for (let i = visible; i < MAX_SOLDIERS; i++) {
-        tags.current.children[i].visible = false;
+      for (let i = 0; i < MAX_LABELS; i++) {
+        if (!showTags || i >= visible) tags.current.children[i].visible = false;
       }
     }
 
@@ -121,7 +135,7 @@ export function Army({ count }: ArmyProps) {
       return;
     }
 
-    const volleySize = Math.min(MAX_ARROWS, Math.max(1, Math.ceil(visible * 0.1)));
+    const volleySize = Math.min(MAX_ARROWS, Math.max(1, Math.ceil(Math.min(visible, 80) * 0.1)));
     const cycle = VOLLEY_FLIGHT + VOLLEY_REST;
     const inCycle = t % cycle;
     if (inCycle > VOLLEY_FLIGHT) {
@@ -136,7 +150,7 @@ export function Army({ count }: ArmyProps) {
 
     for (let i = 0; i < volleySize; i++) {
       const soldier = (start + i) % visible;
-      unitPos(soldier, visible, t, pos);
+      unitPos(soldier, t, cols, spacing, pos);
       dummy.position.set(
         pos.x * (1 - fly),
         0.9 + Math.sin(fly * Math.PI) * 2.4,
