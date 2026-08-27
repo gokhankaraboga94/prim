@@ -10,77 +10,79 @@ type BattleSceneProps = {
   pressure: number;
 };
 
-function makePoints(count: number, place: (i: number, arr: Float32Array) => void) {
-  const arr = new Float32Array(count * 3);
-  for (let i = 0; i < count; i++) place(i, arr);
-  const geom = new THREE.BufferGeometry();
-  geom.setAttribute("position", new THREE.BufferAttribute(arr, 3));
-  return geom;
+function useGrassTexture() {
+  return useMemo(() => {
+    const canvas = document.createElement("canvas");
+    canvas.width = 128;
+    canvas.height = 128;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return null;
+    ctx.fillStyle = "#4f9a3c";
+    ctx.fillRect(0, 0, 128, 128);
+    for (let i = 0; i < 420; i++) {
+      ctx.fillStyle = i % 3 === 0 ? "#68b34a" : i % 3 === 1 ? "#3d7d2e" : "#5aa83f";
+      ctx.fillRect(Math.random() * 128, Math.random() * 128, 2 + Math.random() * 5, 2 + Math.random() * 5);
+    }
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.wrapS = THREE.RepeatWrapping;
+    tex.wrapT = THREE.RepeatWrapping;
+    tex.repeat.set(22, 22);
+    tex.magFilter = THREE.NearestFilter;
+    tex.minFilter = THREE.NearestFilter;
+    tex.colorSpace = THREE.SRGBColorSpace;
+    return tex;
+  }, []);
 }
 
-function Stars() {
-  const ref = useRef<THREE.Points>(null);
-  const geom = useMemo(
-    () =>
-      makePoints(140, (i, arr) => {
-        arr[i * 3] = (Math.random() - 0.5) * 90;
-        arr[i * 3 + 1] = 8 + Math.random() * 28;
-        arr[i * 3 + 2] = (Math.random() - 0.5) * 50 - 10;
-      }),
-    []
-  );
+function Terrain() {
+  const grass = useGrassTexture();
+  const dummy = useMemo(() => new THREE.Object3D(), []);
+  const trees = useRef<THREE.InstancedMesh>(null);
 
-  useFrame((state) => {
-    if (ref.current) ref.current.rotation.y = state.clock.elapsedTime * 0.006;
-  });
+  useEffect(() => {
+    if (!trees.current) return;
+    const spots = [
+      [-18, 12], [-16, -10], [17, 8], [19, -14], [-22, 2], [21, 16],
+      [-14, 18], [12, 20], [-20, -16], [16, -20], [-8, 22], [8, -22],
+      [-24, 8], [23, -6], [-12, -20], [14, 18],
+    ];
+    spots.forEach(([x, z], i) => {
+      dummy.position.set(x, 1.15, z);
+      dummy.scale.setScalar(0.85 + (i % 5) * 0.12);
+      dummy.rotation.set(0, i * 0.7, 0);
+      dummy.updateMatrix();
+      trees.current!.setMatrixAt(i, dummy.matrix);
+    });
+    trees.current.instanceMatrix.needsUpdate = true;
+  }, [dummy]);
 
   return (
-    <points ref={ref} geometry={geom}>
-      <pointsMaterial color="#ffe9b0" size={0.22} transparent opacity={0.85} depthWrite={false} />
-    </points>
+    <group>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
+        <planeGeometry args={[70, 70]} />
+        <meshLambertMaterial map={grass} color="#5dad45" />
+      </mesh>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 10]}>
+        <planeGeometry args={[7, 18]} />
+        <meshLambertMaterial color="#c4a36a" />
+      </mesh>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.03, 0]}>
+        <planeGeometry args={[16, 16]} />
+        <meshLambertMaterial color="#b98d55" />
+      </mesh>
+      <instancedMesh ref={trees} args={[undefined, undefined, 16]}>
+        <coneGeometry args={[1.1, 2.4, 5]} />
+        <meshLambertMaterial color="#2f7a32" />
+      </instancedMesh>
+    </group>
   );
 }
 
-function EmberField({ pressure }: { pressure: number }) {
-  const ref = useRef<THREE.Points>(null);
-  const geom = useMemo(
-    () =>
-      makePoints(50, (i, arr) => {
-        arr[i * 3] = (Math.random() - 0.5) * 22;
-        arr[i * 3 + 1] = Math.random() * 5;
-        arr[i * 3 + 2] = (Math.random() - 0.5) * 16;
-      }),
-    []
-  );
-
-  useFrame((state) => {
-    if (!ref.current) return;
-    ref.current.position.y = (state.clock.elapsedTime * 0.3) % 1.6;
-    (ref.current.material as THREE.PointsMaterial).opacity = 0.2 + pressure * 0.4;
-  });
-
-  return (
-    <points ref={ref} geometry={geom}>
-      <pointsMaterial color="#ff7a3c" size={0.2} transparent opacity={0.28} depthWrite={false} />
-    </points>
-  );
-}
-
-function Ground() {
-  return (
-    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 2]}>
-      <planeGeometry args={[80, 80]} />
-      <meshStandardMaterial color="#2a231c" roughness={1} />
-    </mesh>
-  );
-}
-
-function CameraRig({ pressure }: { pressure: number }) {
+function CameraRig() {
   useFrame((state) => {
     const t = state.clock.elapsedTime;
-    const shake = pressure > 0.85 ? Math.sin(t * 28) * 0.03 : 0;
-    state.camera.position.set(Math.sin(t * 0.05) * 1.8 + shake, 6.4, 14.5);
-    state.camera.lookAt(0, 2.6, -5);
+    state.camera.position.set(Math.sin(t * 0.04) * 2.2, 30, 24);
+    state.camera.lookAt(0, 0, 1.5);
   });
   return null;
 }
@@ -88,18 +90,15 @@ function CameraRig({ pressure }: { pressure: number }) {
 function SceneContent({ soldiers, level, pressure }: BattleSceneProps) {
   return (
     <>
-      <color attach="background" args={["#1a1410"]} />
-      <fog attach="fog" args={["#1a1410", 28, 70]} />
-      <ambientLight intensity={0.7} color="#cbb394" />
-      <hemisphereLight args={["#8ea0c8", "#3a2a1c", 0.8]} />
-      <directionalLight position={[8, 14, 10]} intensity={1.8} color="#ffe6b8" />
-      <pointLight position={[0, 5, -6]} intensity={2.2} color="#ff8a4a" distance={28} />
-      <Stars />
-      <Ground />
+      <color attach="background" args={["#8ec5e8"]} />
+      <fog attach="fog" args={["#b7d7ef", 45, 85]} />
+      <ambientLight intensity={0.85} color="#fff4d6" />
+      <hemisphereLight args={["#d7ecff", "#5d8a3e", 0.7]} />
+      <directionalLight position={[18, 28, 12]} intensity={1.35} color="#fff3c8" />
+      <Terrain />
       <Castle level={level} pressure={pressure} />
       <Army count={soldiers} pressure={pressure} />
-      <EmberField pressure={pressure} />
-      <CameraRig pressure={pressure} />
+      <CameraRig />
     </>
   );
 }
@@ -115,21 +114,21 @@ function BattleSceneInner({ soldiers, level, pressure }: BattleSceneProps) {
 
   return (
     <Canvas
-      dpr={[1, 1.25]}
+      dpr={[1, 1.15]}
       gl={{
-        antialias: true,
+        antialias: false,
         alpha: false,
         powerPreference: "high-performance",
         stencil: false,
+        depth: true,
         failIfMajorPerformanceCaveat: false,
       }}
-      camera={{ fov: 46, near: 0.1, far: 90, position: [0, 6.4, 14.5] }}
+      camera={{ fov: 40, near: 0.5, far: 120, position: [0, 30, 24] }}
       frameloop={active ? "always" : "demand"}
       style={{ width: "100%", height: "100%", display: "block" }}
       onCreated={({ gl }) => {
-        gl.toneMapping = THREE.ACESFilmicToneMapping;
-        gl.toneMappingExposure = 1.35;
-        gl.setClearColor("#1a1410", 1);
+        gl.toneMapping = THREE.NoToneMapping;
+        gl.setClearColor("#8ec5e8", 1);
       }}
     >
       <SceneContent soldiers={soldiers} level={level} pressure={pressure} />
