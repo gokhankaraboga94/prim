@@ -25,12 +25,41 @@ function unitPos(i: number, visible: number, t: number, out: THREE.Vector3) {
   out.set(x, 0.38 + strike, z);
 }
 
+function makeNumberTexture(n: number) {
+  const size = 128;
+  const canvas = document.createElement("canvas");
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return null;
+  ctx.clearRect(0, 0, size, size);
+  ctx.font = n >= 10 ? "700 52px Outfit, system-ui, sans-serif" : "700 72px Outfit, system-ui, sans-serif";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.lineJoin = "round";
+  ctx.lineWidth = 10;
+  ctx.strokeStyle = "rgba(0,0,0,0.88)";
+  ctx.fillStyle = "#fff";
+  ctx.strokeText(String(n), size / 2, size / 2 + 4);
+  ctx.fillText(String(n), size / 2, size / 2 + 4);
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.minFilter = THREE.LinearFilter;
+  tex.magFilter = THREE.LinearFilter;
+  return tex;
+}
+
 export function Army({ count }: ArmyProps) {
   const bodies = useRef<THREE.InstancedMesh>(null);
   const helms = useRef<THREE.InstancedMesh>(null);
   const arrows = useRef<THREE.InstancedMesh>(null);
+  const tags = useRef<THREE.Group>(null);
   const acc = useRef(0);
   const pos = useMemo(() => new THREE.Vector3(), []);
+  const numberMaps = useMemo(
+    () => Array.from({ length: MAX_SOLDIERS }, (_, i) => makeNumberTexture(i + 1)),
+    []
+  );
 
   const visible = Math.min(MAX_SOLDIERS, Math.max(0, Math.floor(count)));
 
@@ -70,9 +99,20 @@ export function Army({ count }: ArmyProps) {
         dummy.scale.setScalar(0.72);
         dummy.updateMatrix();
         helms.current.setMatrixAt(i, dummy.matrix);
+        const tag = tags.current?.children[i];
+        if (tag) {
+          tag.visible = true;
+          tag.position.set(pos.x, pos.y + 1.15, pos.z);
+        }
       }
       bodies.current.instanceMatrix.needsUpdate = true;
       helms.current.instanceMatrix.needsUpdate = true;
+    }
+
+    if (tags.current) {
+      for (let i = visible; i < MAX_SOLDIERS; i++) {
+        tags.current.children[i].visible = false;
+      }
     }
 
     if (!arrows.current) return;
@@ -124,6 +164,18 @@ export function Army({ count }: ArmyProps) {
         <boxGeometry args={[1, 1, 1]} />
         <meshBasicMaterial color="#f2d9a0" />
       </instancedMesh>
+      <group ref={tags}>
+        {numberMaps.map((map, i) => (
+          <sprite key={i} scale={[1.15, 1.15, 1.15]} visible={false} renderOrder={2}>
+            <spriteMaterial
+              map={map ?? undefined}
+              transparent
+              depthTest={false}
+              toneMapped={false}
+            />
+          </sprite>
+        ))}
+      </group>
     </group>
   );
 }
