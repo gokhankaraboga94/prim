@@ -1,6 +1,7 @@
-import { useLayoutEffect, useMemo, useRef } from "react";
+import { useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
+import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 
 const MAX_SOLDIERS = 5000;
 const MAX_LABELS = 80;
@@ -17,7 +18,7 @@ type ArmyProps = {
 
 function formation(visible: number) {
   const n = Math.max(1, visible);
-  const spacing = Math.min(1.25, Math.max(0.34, Math.sqrt((AREA_W * 14) / n)));
+  const spacing = Math.min(1.35, Math.max(0.34, Math.sqrt((AREA_W * 14) / n)));
   const cols = Math.max(1, Math.min(n, Math.round(AREA_W / spacing)));
   const pack = Math.min(1, spacing / 1.05);
   return { spacing, cols, scale: 0.52 + pack * 0.48 };
@@ -29,9 +30,64 @@ function unitPos(i: number, t: number, cols: number, spacing: number, out: THREE
   const x = (col - (cols - 1) / 2) * spacing;
   const atWall = row < 3;
   const z = FRONT_Z + row * spacing * 0.92;
-  const strike = atWall ? Math.abs(Math.sin(t * 7 + i)) * 0.12 : 0;
+  const strike = atWall ? Math.abs(Math.sin(t * 7 + i)) * 0.08 : 0;
   const march = atWall ? 0 : Math.min(1, ((t * 0.16) % 4) / 2.2) * Math.min(spacing * 0.8, 0.55);
-  out.set(x, 0.38 + strike, z - march);
+  out.set(x, strike, z - march);
+}
+
+function colorize(geo: THREE.BufferGeometry, hex: string) {
+  const color = new THREE.Color(hex);
+  const count = geo.attributes.position.count;
+  const arr = new Float32Array(count * 3);
+  for (let i = 0; i < count; i++) {
+    arr[i * 3] = color.r;
+    arr[i * 3 + 1] = color.g;
+    arr[i * 3 + 2] = color.b;
+  }
+  geo.setAttribute("color", new THREE.BufferAttribute(arr, 3));
+  return geo;
+}
+
+function part(
+  geo: THREE.BufferGeometry,
+  hex: string,
+  x: number,
+  y: number,
+  z: number,
+  rx = 0,
+  ry = 0,
+  rz = 0
+) {
+  if (rx) geo.rotateX(rx);
+  if (ry) geo.rotateY(ry);
+  if (rz) geo.rotateZ(rz);
+  geo.translate(x, y, z);
+  return colorize(geo, hex);
+}
+
+function createArcherGeometry() {
+  const pieces = [
+    part(new THREE.BoxGeometry(0.15, 0.16, 0.2), "#1a1410", -0.09, 0.08, 0.03),
+    part(new THREE.BoxGeometry(0.15, 0.16, 0.2), "#1a1410", 0.09, 0.08, 0.03),
+    part(new THREE.BoxGeometry(0.13, 0.3, 0.14), "#161820", -0.09, 0.28, 0),
+    part(new THREE.BoxGeometry(0.13, 0.3, 0.14), "#161820", 0.09, 0.28, 0),
+    part(new THREE.BoxGeometry(0.38, 0.3, 0.24), "#1c2740", 0, 0.54, 0),
+    part(new THREE.BoxGeometry(0.4, 0.28, 0.26), "#4a3220", 0, 0.78, 0.01),
+    part(new THREE.BoxGeometry(0.44, 0.1, 0.28), "#5c636a", 0, 0.94, 0),
+    part(new THREE.BoxGeometry(0.16, 0.22, 0.16), "#3d2a1c", -0.22, 0.74, 0.04, 0, 0, 0.35),
+    part(new THREE.BoxGeometry(0.14, 0.24, 0.14), "#3d2a1c", 0.24, 0.76, 0.08, 0.15, 0, -0.55),
+    part(new THREE.ConeGeometry(0.17, 0.24, 7), "#8b9298", 0, 1.18, 0),
+    part(new THREE.BoxGeometry(0.035, 0.12, 0.07), "#9aa0a6", 0, 1.04, 0.13),
+    part(new THREE.CylinderGeometry(0.055, 0.07, 0.28, 6), "#3a2818", -0.16, 0.82, -0.14, 0.7, 0.4, 0),
+    part(new THREE.BoxGeometry(0.035, 0.82, 0.035), "#5c3a18", 0.28, 0.72, 0.1, 0, 0, 0.18),
+    part(new THREE.BoxGeometry(0.012, 0.7, 0.012), "#c8c2b4", 0.2, 0.72, 0.16),
+  ];
+  const merged = mergeGeometries(pieces, false);
+  pieces.forEach((g) => g.dispose());
+  if (!merged) {
+    return colorize(new THREE.BoxGeometry(0.4, 1.1, 0.28), "#4a3220");
+  }
+  return merged;
 }
 
 function makeNumberTexture(n: number) {
@@ -60,11 +116,11 @@ function makeNumberTexture(n: number) {
 
 export function Army({ count }: ArmyProps) {
   const bodies = useRef<THREE.InstancedMesh>(null);
-  const helms = useRef<THREE.InstancedMesh>(null);
   const arrows = useRef<THREE.InstancedMesh>(null);
   const tags = useRef<THREE.Group>(null);
   const acc = useRef(0);
   const pos = useMemo(() => new THREE.Vector3(), []);
+  const archerGeo = useMemo(() => createArcherGeometry(), []);
   const numberMaps = useMemo(
     () => Array.from({ length: MAX_LABELS }, (_, i) => makeNumberTexture(i + 1)),
     []
@@ -80,16 +136,6 @@ export function Army({ count }: ArmyProps) {
     return arr;
   }, []);
 
-  useLayoutEffect(() => {
-    const color = new THREE.Color();
-    if (!bodies.current) return;
-    for (let i = 0; i < MAX_SOLDIERS; i++) {
-      color.set(i % 7 === 0 ? "#d4b36a" : i % 3 === 0 ? "#6a1d1d" : "#3d4a63");
-      bodies.current.setColorAt(i, color);
-    }
-    if (bodies.current.instanceColor) bodies.current.instanceColor.needsUpdate = true;
-  }, []);
-
   useFrame((state, dt) => {
     acc.current += dt;
     if (acc.current < 1 / 28) return;
@@ -97,9 +143,8 @@ export function Army({ count }: ArmyProps) {
     const t = state.clock.elapsedTime;
     const { spacing, cols, scale } = form;
 
-    if (bodies.current && helms.current) {
+    if (bodies.current) {
       bodies.current.count = visible;
-      helms.current.count = visible;
       for (let i = 0; i < visible; i++) {
         unitPos(i, t + seeds[i], cols, spacing, pos);
         dummy.position.copy(pos);
@@ -107,20 +152,15 @@ export function Army({ count }: ArmyProps) {
         dummy.scale.setScalar(scale);
         dummy.updateMatrix();
         bodies.current.setMatrixAt(i, dummy.matrix);
-        dummy.position.y += 0.42 * scale;
-        dummy.scale.setScalar(0.72 * scale);
-        dummy.updateMatrix();
-        helms.current.setMatrixAt(i, dummy.matrix);
         if (showTags && i < MAX_LABELS) {
           const tag = tags.current?.children[i];
           if (tag) {
             tag.visible = true;
-            tag.position.set(pos.x, pos.y + 0.95 * scale + 0.35, pos.z);
+            tag.position.set(pos.x, pos.y + 1.35 * scale, pos.z);
           }
         }
       }
       bodies.current.instanceMatrix.needsUpdate = true;
-      helms.current.instanceMatrix.needsUpdate = true;
     }
 
     if (tags.current) {
@@ -151,13 +191,9 @@ export function Army({ count }: ArmyProps) {
     for (let i = 0; i < volleySize; i++) {
       const soldier = (start + i) % visible;
       unitPos(soldier, t, cols, spacing, pos);
-      dummy.position.set(
-        pos.x * (1 - fly),
-        0.9 + Math.sin(fly * Math.PI) * 2.4,
-        pos.z + (6.4 - pos.z) * fly
-      );
+      dummy.position.set(pos.x * (1 - fly), 0.95 + Math.sin(fly * Math.PI) * 2.4, pos.z + (6.4 - pos.z) * fly);
       dummy.rotation.set(0.7 - fly, 0, 0);
-      dummy.scale.set(0.12, 0.12, 0.7);
+      dummy.scale.set(0.1, 0.1, 0.85);
       dummy.updateMatrix();
       arrows.current.setMatrixAt(i, dummy.matrix);
     }
@@ -166,17 +202,12 @@ export function Army({ count }: ArmyProps) {
 
   return (
     <group>
-      <instancedMesh ref={bodies} args={[undefined, undefined, MAX_SOLDIERS]} frustumCulled={false}>
-        <boxGeometry args={[0.42, 0.62, 0.42]} />
-        <meshLambertMaterial />
-      </instancedMesh>
-      <instancedMesh ref={helms} args={[undefined, undefined, MAX_SOLDIERS]} frustumCulled={false}>
-        <boxGeometry args={[0.34, 0.22, 0.34]} />
-        <meshLambertMaterial color="#c9b37a" />
+      <instancedMesh ref={bodies} args={[archerGeo, undefined, MAX_SOLDIERS]} frustumCulled={false}>
+        <meshLambertMaterial vertexColors />
       </instancedMesh>
       <instancedMesh ref={arrows} args={[undefined, undefined, MAX_ARROWS]} frustumCulled={false}>
-        <boxGeometry args={[1, 1, 1]} />
-        <meshBasicMaterial color="#f2d9a0" />
+        <cylinderGeometry args={[0.025, 0.01, 1, 5]} />
+        <meshLambertMaterial color="#c4b089" />
       </instancedMesh>
       <group ref={tags}>
         {numberMaps.map((map, i) => (
