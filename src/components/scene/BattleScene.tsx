@@ -18,12 +18,11 @@ function useGroundTexture() {
     canvas.height = 256;
     const ctx = canvas.getContext("2d");
     if (!ctx) return null;
-    ctx.fillStyle = "#6a5e4e";
+    ctx.fillStyle = "#4f9a3c";
     ctx.fillRect(0, 0, 256, 256);
-    for (let i = 0; i < 900; i++) {
-      const n = (i * 13) % 40;
-      ctx.fillStyle = i % 4 === 0 ? "#7a6d5a" : i % 4 === 1 ? "#5a5044" : "#6e6252";
-      ctx.fillRect(Math.random() * 256, Math.random() * 256, 3 + n * 0.15, 2 + Math.random() * 4);
+    for (let i = 0; i < 1100; i++) {
+      ctx.fillStyle = i % 3 === 0 ? "#68b34a" : i % 3 === 1 ? "#3d7d2e" : "#5aa83f";
+      ctx.fillRect(Math.random() * 256, Math.random() * 256, 2 + Math.random() * 6, 2 + Math.random() * 5);
     }
     const tex = new THREE.CanvasTexture(canvas);
     tex.wrapS = THREE.RepeatWrapping;
@@ -76,11 +75,11 @@ function Terrain() {
     <group>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
         <planeGeometry args={[160, 160]} />
-        <meshLambertMaterial map={ground} color="#7a6c58" />
+        <meshLambertMaterial map={ground} color="#5dad45" />
       </mesh>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 13]}>
         <planeGeometry args={[7, 22]} />
-        <meshLambertMaterial color="#8a7458" />
+        <meshLambertMaterial color="#c4a36a" />
       </mesh>
       <instancedMesh ref={rocks} args={[undefined, undefined, 16]}>
         <dodecahedronGeometry args={[0.9, 0]} />
@@ -88,7 +87,7 @@ function Terrain() {
       </instancedMesh>
       <instancedMesh ref={trees} args={[undefined, undefined, 10]}>
         <coneGeometry args={[0.9, 3.2, 6]} />
-        <meshLambertMaterial color="#2a3a22" />
+        <meshLambertMaterial color="#2f7a32" />
       </instancedMesh>
     </group>
   );
@@ -100,7 +99,7 @@ function SceneContent({ soldiers, level, pressure }: BattleSceneProps) {
       <color attach="background" args={["#6d7d92"]} />
       <fog attach="fog" args={["#7a8898", 95, 190]} />
       <ambientLight intensity={0.62} color="#e8e4dc" />
-      <hemisphereLight args={["#b8c8dc", "#6a5c48", 0.55]} />
+      <hemisphereLight args={["#b8c8dc", "#4a7a38", 0.55]} />
       <directionalLight position={[-22, 34, 20]} intensity={2.15} color="#fff6e4" />
       <directionalLight position={[18, 16, 10]} intensity={0.55} color="#c8d4e8" />
       <Terrain />
