@@ -327,13 +327,22 @@ select:focus {
 }
 
 .btn-follow {
-  background: linear-gradient(180deg, #f0d48a, #b8892d);
-  color: #1a1308;
+  background: linear-gradient(45deg, #f9ce34 0%, #ee2a7b 50%, #6228d7 100%);
+  color: #fff;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: 8px;
   width: 100%;
   margin-top: 12px;
+  border-radius: 10px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  box-shadow: 0 8px 22px rgba(238, 42, 123, 0.28);
+}
+
+.btn-follow svg {
+  flex-shrink: 0;
 }
 
 .btn-ghost {

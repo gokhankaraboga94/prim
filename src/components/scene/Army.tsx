@@ -5,12 +5,20 @@ import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js
 
 const MAX_SOLDIERS = 5000;
 const MAX_LABELS = 80;
-const MAX_ARROWS = 8;
+const MAX_ARROWS = 2;
 const dummy = new THREE.Object3D();
-const VOLLEY_FLIGHT = 1.35;
-const VOLLEY_REST = 2.5;
+const ARROW_FLIGHT = 1.7;
 const AREA_W = 28;
 const FRONT_Z = 11.15;
+const GATE = new THREE.Vector3(0, 3.1, 6.35);
+
+type Shot = {
+  soldier: number;
+  born: number;
+  sx: number;
+  sy: number;
+  sz: number;
+};
 
 type ArmyProps = {
   count: number;
@@ -119,6 +127,8 @@ export function Army({ count }: ArmyProps) {
   const arrows = useRef<THREE.InstancedMesh>(null);
   const tags = useRef<THREE.Group>(null);
   const acc = useRef(0);
+  const shots = useRef<Shot[]>([]);
+  const nextShot = useRef(0.6);
   const pos = useMemo(() => new THREE.Vector3(), []);
   const archerGeo = useMemo(() => createArcherGeometry(), []);
   const numberMaps = useMemo(
@@ -137,63 +147,79 @@ export function Army({ count }: ArmyProps) {
   }, []);
 
   useFrame((state, dt) => {
-    acc.current += dt;
-    if (acc.current < 1 / 28) return;
-    acc.current = 0;
     const t = state.clock.elapsedTime;
     const { spacing, cols, scale } = form;
 
-    if (bodies.current) {
-      bodies.current.count = visible;
-      for (let i = 0; i < visible; i++) {
-        unitPos(i, t + seeds[i], cols, spacing, pos);
-        dummy.position.copy(pos);
-        dummy.rotation.set(0, Math.PI, 0);
-        dummy.scale.setScalar(scale);
-        dummy.updateMatrix();
-        bodies.current.setMatrixAt(i, dummy.matrix);
-        if (showTags && i < MAX_LABELS) {
-          const tag = tags.current?.children[i];
-          if (tag) {
-            tag.visible = true;
-            tag.position.set(pos.x, pos.y + 1.35 * scale, pos.z);
+    acc.current += dt;
+    if (acc.current >= 1 / 28) {
+      acc.current = 0;
+      if (bodies.current) {
+        bodies.current.count = visible;
+        for (let i = 0; i < visible; i++) {
+          unitPos(i, t + seeds[i], cols, spacing, pos);
+          dummy.position.copy(pos);
+          dummy.rotation.set(0, Math.PI, 0);
+          dummy.scale.setScalar(scale);
+          dummy.updateMatrix();
+          bodies.current.setMatrixAt(i, dummy.matrix);
+          if (showTags && i < MAX_LABELS) {
+            const tag = tags.current?.children[i];
+            if (tag) {
+              tag.visible = true;
+              tag.position.set(pos.x, pos.y + 1.35 * scale, pos.z);
+            }
           }
         }
+        bodies.current.instanceMatrix.needsUpdate = true;
       }
-      bodies.current.instanceMatrix.needsUpdate = true;
-    }
 
-    if (tags.current) {
-      for (let i = 0; i < MAX_LABELS; i++) {
-        if (!showTags || i >= visible) tags.current.children[i].visible = false;
+      if (tags.current) {
+        for (let i = 0; i < MAX_LABELS; i++) {
+          if (!showTags || i >= visible) tags.current.children[i].visible = false;
+        }
       }
     }
 
     if (!arrows.current) return;
     if (visible <= 0) {
+      shots.current = [];
       arrows.current.count = 0;
       return;
     }
 
-    const volleySize = Math.min(MAX_ARROWS, Math.max(1, Math.ceil(Math.min(visible, 80) * 0.1)));
-    const cycle = VOLLEY_FLIGHT + VOLLEY_REST;
-    const inCycle = t % cycle;
-    if (inCycle > VOLLEY_FLIGHT) {
-      arrows.current.count = 0;
-      return;
+    shots.current = shots.current.filter((s) => t - s.born < ARROW_FLIGHT);
+
+    if (t >= nextShot.current && shots.current.length < MAX_ARROWS) {
+      const pair = visible > 6 && shots.current.length === 0 && Math.random() < 0.38;
+      const n = pair ? 2 : 1;
+      for (let i = 0; i < n && shots.current.length < MAX_ARROWS; i++) {
+        const soldier = Math.floor(Math.random() * visible);
+        unitPos(soldier, t + seeds[soldier], cols, spacing, pos);
+        shots.current.push({
+          soldier,
+          born: t + i * 0.12,
+          sx: pos.x,
+          sy: pos.y + 0.95 * scale,
+          sz: pos.z,
+        });
+      }
+      const pace = 1.25 - Math.min(0.75, (visible / 5000) * 0.75);
+      nextShot.current = t + pace + Math.random() * 0.28;
     }
 
-    const volley = Math.floor(t / cycle);
-    const start = (volley * volleySize) % visible;
-    const fly = inCycle / VOLLEY_FLIGHT;
-    arrows.current.count = volleySize;
-
-    for (let i = 0; i < volleySize; i++) {
-      const soldier = (start + i) % visible;
-      unitPos(soldier, t, cols, spacing, pos);
-      dummy.position.set(pos.x * (1 - fly), 0.95 + Math.sin(fly * Math.PI) * 2.4, pos.z + (6.4 - pos.z) * fly);
-      dummy.rotation.set(0.7 - fly, 0, 0);
-      dummy.scale.set(0.1, 0.1, 0.85);
+    const live = shots.current;
+    arrows.current.count = live.length;
+    for (let i = 0; i < live.length; i++) {
+      const s = live[i];
+      const fly = Math.max(0, Math.min(1, (t - s.born) / ARROW_FLIGHT));
+      dummy.position.set(
+        s.sx + (GATE.x - s.sx) * fly,
+        s.sy + (GATE.y - s.sy) * fly + Math.sin(fly * Math.PI) * 2.6,
+        s.sz + (GATE.z - s.sz) * fly
+      );
+      dummy.lookAt(GATE);
+      dummy.rotateX(Math.PI / 2);
+      dummy.scale.set(1.15, 1.35, 1.15);
       dummy.updateMatrix();
       arrows.current.setMatrixAt(i, dummy.matrix);
     }
@@ -206,8 +232,8 @@ export function Army({ count }: ArmyProps) {
         <meshLambertMaterial vertexColors />
       </instancedMesh>
       <instancedMesh ref={arrows} args={[undefined, undefined, MAX_ARROWS]} frustumCulled={false}>
-        <cylinderGeometry args={[0.025, 0.01, 1, 5]} />
-        <meshLambertMaterial color="#c4b089" />
+        <cylinderGeometry args={[0.055, 0.02, 1.45, 6]} />
+        <meshBasicMaterial color="#ffe7a0" />
       </instancedMesh>
       <group ref={tags}>
         {numberMaps.map((map, i) => (
