@@ -1,5 +1,5 @@
 :root {
-  --bg: #0b0d11;
+  --bg: #5a6574;
   --ink: #f4ead6;
   --muted: #b7a88a;
   --gold: #e8c36a;
@@ -48,7 +48,7 @@ select {
   min-height: 100dvh;
   overflow: hidden;
   background:
-    radial-gradient(ellipse at 50% 38%, #1a1e24 0%, #0c0e12 55%, #07080a 100%);
+    radial-gradient(ellipse at 50% 38%, #7a8696 0%, #5a6574 55%, #4a5564 100%);
 }
 
 .scene-wrap {
@@ -71,7 +71,7 @@ select {
   width: 100%;
   height: 100%;
   background:
-    radial-gradient(circle at 50% 40%, #2a2e34, #0c0e12 62%);
+    radial-gradient(circle at 50% 40%, #7a8696, #5a6574 62%);
 }
 
 .vignette {
@@ -79,8 +79,8 @@ select {
   position: fixed;
   inset: 0;
   background:
-    radial-gradient(ellipse at center, transparent 52%, rgba(0, 0, 0, 0.42) 100%),
-    linear-gradient(180deg, rgba(0, 0, 0, 0.28), transparent 22%, transparent 70%, rgba(0, 0, 0, 0.35));
+    radial-gradient(ellipse at center, transparent 62%, rgba(10, 16, 24, 0.16) 100%),
+    linear-gradient(180deg, rgba(10, 12, 16, 0.12), transparent 20%, transparent 74%, rgba(10, 12, 16, 0.14));
   z-index: 1;
 }
 

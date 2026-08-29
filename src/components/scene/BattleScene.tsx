@@ -18,11 +18,11 @@ function useGroundTexture() {
     canvas.height = 256;
     const ctx = canvas.getContext("2d");
     if (!ctx) return null;
-    ctx.fillStyle = "#2a2622";
+    ctx.fillStyle = "#6a5e4e";
     ctx.fillRect(0, 0, 256, 256);
     for (let i = 0; i < 900; i++) {
       const n = (i * 13) % 40;
-      ctx.fillStyle = i % 4 === 0 ? "#3a3530" : i % 4 === 1 ? "#1f1c19" : "#322e29";
+      ctx.fillStyle = i % 4 === 0 ? "#7a6d5a" : i % 4 === 1 ? "#5a5044" : "#6e6252";
       ctx.fillRect(Math.random() * 256, Math.random() * 256, 3 + n * 0.15, 2 + Math.random() * 4);
     }
     const tex = new THREE.CanvasTexture(canvas);
@@ -76,19 +76,19 @@ function Terrain() {
     <group>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
         <planeGeometry args={[160, 160]} />
-        <meshLambertMaterial map={ground} color="#2c2824" />
+        <meshLambertMaterial map={ground} color="#7a6c58" />
       </mesh>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 13]}>
         <planeGeometry args={[7, 22]} />
-        <meshLambertMaterial color="#3a3228" />
+        <meshLambertMaterial color="#8a7458" />
       </mesh>
       <instancedMesh ref={rocks} args={[undefined, undefined, 16]}>
         <dodecahedronGeometry args={[0.9, 0]} />
-        <meshLambertMaterial color="#3d3a36" />
+        <meshLambertMaterial color="#7a746c" />
       </instancedMesh>
       <instancedMesh ref={trees} args={[undefined, undefined, 10]}>
         <coneGeometry args={[0.9, 3.2, 6]} />
-        <meshLambertMaterial color="#141810" />
+        <meshLambertMaterial color="#2a3a22" />
       </instancedMesh>
     </group>
   );
@@ -97,12 +97,12 @@ function Terrain() {
 function SceneContent({ soldiers, level, pressure }: BattleSceneProps) {
   return (
     <>
-      <color attach="background" args={["#07090d"]} />
-      <fog attach="fog" args={["#0a0d12", 42, 130]} />
-      <ambientLight intensity={0.16} color="#6a7380" />
-      <hemisphereLight args={["#1a2433", "#0c0a08", 0.28]} />
-      <directionalLight position={[-32, 26, 18]} intensity={1.55} color="#d4e0f0" />
-      <directionalLight position={[14, 10, -8]} intensity={0.22} color="#3a2a18" />
+      <color attach="background" args={["#6d7d92"]} />
+      <fog attach="fog" args={["#7a8898", 95, 190]} />
+      <ambientLight intensity={0.62} color="#e8e4dc" />
+      <hemisphereLight args={["#b8c8dc", "#6a5c48", 0.55]} />
+      <directionalLight position={[-22, 34, 20]} intensity={2.15} color="#fff6e4" />
+      <directionalLight position={[18, 16, 10]} intensity={0.55} color="#c8d4e8" />
       <Terrain />
       <Castle level={level} pressure={pressure} />
       <Army count={soldiers} />
@@ -148,8 +148,8 @@ function BattleSceneInner({ soldiers, level, pressure }: BattleSceneProps) {
       style={{ width: "100%", height: "100%", display: "block" }}
       onCreated={({ gl }) => {
         gl.toneMapping = THREE.ACESFilmicToneMapping;
-        gl.toneMappingExposure = 1.05;
-        gl.setClearColor("#07090d", 1);
+        gl.toneMappingExposure = 1.35;
+        gl.setClearColor("#6d7d92", 1);
       }}
     >
       <SceneContent soldiers={soldiers} level={level} pressure={pressure} />

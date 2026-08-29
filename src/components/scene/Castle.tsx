@@ -6,10 +6,10 @@ type CastleProps = {
   pressure: number;
 };
 
-const STONE = "#6a6560";
-const STONE_2 = "#58544f";
-const STONE_3 = "#7a746c";
-const STONE_DARK = "#3f3c39";
+const STONE = "#8a847c";
+const STONE_2 = "#766f68";
+const STONE_3 = "#9a948c";
+const STONE_DARK = "#4a4642";
 
 function useStoneTexture() {
   return useMemo(() => {
@@ -18,7 +18,7 @@ function useStoneTexture() {
     canvas.height = 256;
     const ctx = canvas.getContext("2d");
     if (!ctx) return null;
-    ctx.fillStyle = "#4a4641";
+    ctx.fillStyle = "#7a746c";
     ctx.fillRect(0, 0, 256, 256);
     const cols = 8;
     const rows = 6;
@@ -28,9 +28,9 @@ function useStoneTexture() {
       const ox = (y % 2) * (bw * 0.5);
       for (let x = -1; x <= cols; x++) {
         const n = (x * 19 + y * 37 + 11) % 36;
-        const r = 88 + n;
-        const g = 84 + n * 0.7;
-        const b = 76 + n * 0.45;
+        const r = 130 + n;
+        const g = 124 + n * 0.7;
+        const b = 112 + n * 0.45;
         ctx.fillStyle = `rgb(${r | 0},${g | 0},${b | 0})`;
         ctx.fillRect(x * bw + ox + 1, y * bh + 1, bw - 2, bh - 2);
         ctx.fillStyle = "rgba(0,0,0,0.18)";
@@ -174,7 +174,7 @@ export function Castle({ level, pressure }: CastleProps) {
     <group position={[0, 0, 0]} scale={scale}>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.03, 0]}>
         <planeGeometry args={[15.4, 15.4]} />
-        <meshLambertMaterial color="#3a3530" map={stone ?? undefined} />
+        <meshLambertMaterial color="#6a6258" map={stone ?? undefined} />
       </mesh>
 
       <Block args={[15.2, wallH, 1.7]} position={[0, wallH / 2, -6.55]} color={STONE} map={stone} />
