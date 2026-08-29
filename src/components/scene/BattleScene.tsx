@@ -142,7 +142,7 @@ function BattleSceneInner({ soldiers, level, pressure }: BattleSceneProps) {
         depth: true,
         failIfMajorPerformanceCaveat: false,
       }}
-      camera={{ fov: 38, near: 0.5, far: 220, position: [16, 28, 36] }}
+      camera={{ fov: 38, near: 0.5, far: 220, position: [20, 34, 46] }}
       frameloop={active ? "always" : "demand"}
       style={{ width: "100%", height: "100%", display: "block" }}
       onCreated={({ gl }) => {
