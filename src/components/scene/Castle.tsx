@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import * as THREE from "three";
+import { Defenders } from "./Defenders";
 
 type CastleProps = {
   level: number;
@@ -171,27 +172,30 @@ export function Castle({ level, pressure }: CastleProps) {
   const merlonCount = 11;
 
   return (
+    <group>
     <group position={[0, 0, 0]} scale={[3.25 * grow, 2 * grow, 2.15 * grow]}>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.03, 0]}>
-        <planeGeometry args={[22.4, 15.4]} />
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.03, -3.3]}>
+        <planeGeometry args={[22.4, 20.2]} />
         <meshLambertMaterial color="#6a6258" map={stone ?? undefined} />
       </mesh>
 
-      <Block args={[22.2, wallH, 1.7]} position={[0, wallH / 2, -6.55]} color={STONE} map={stone} />
+      <Block args={[22.2, wallH, 1.7]} position={[0, wallH / 2, -13.2]} color={STONE} map={stone} />
       <Block args={[8.85, wallH, 1.7]} position={[-6.55, wallH / 2, 6.55]} color={STONE} map={stone} />
       <Block args={[8.85, wallH, 1.7]} position={[6.55, wallH / 2, 6.55]} color={STONE} map={stone} />
-      <Block args={[1.7, wallH, 15.2]} position={[-10.05, wallH / 2, 0]} color={STONE} map={stone} />
-      <Block args={[1.7, wallH, 15.2]} position={[10.05, wallH / 2, 0]} color={STONE} map={stone} />
+      <Block args={[1.7, wallH, 20.2]} position={[-10.05, wallH / 2, -3.325]} color={STONE} map={stone} />
+      <Block args={[1.7, wallH, 20.2]} position={[10.05, wallH / 2, -3.325]} color={STONE} map={stone} />
 
-      <Merlons count={merlonCount} width={21.2} y={wallH + 0.32} z={-6.55} map={stone} />
+      <Merlons count={merlonCount} width={21.2} y={wallH + 0.32} z={-13.2} map={stone} />
       <group position={[-6.55, 0, 0]}>
         <Merlons count={5} width={8} y={wallH + 0.32} z={6.55} map={stone} />
       </group>
       <group position={[6.55, 0, 0]}>
         <Merlons count={5} width={8} y={wallH + 0.32} z={6.55} map={stone} />
       </group>
-      <Merlons count={merlonCount} width={14} y={wallH + 0.32} z={-10.05} axis="z" map={stone} />
-      <Merlons count={merlonCount} width={14} y={wallH + 0.32} z={10.05} axis="z" map={stone} />
+      <group position={[0, 0, -3.3]}>
+        <Merlons count={13} width={19.4} y={wallH + 0.32} z={-10.05} axis="z" map={stone} />
+        <Merlons count={13} width={19.4} y={wallH + 0.32} z={10.05} axis="z" map={stone} />
+      </group>
 
       <Block args={[0.95, wallH, 0.95]} position={[-2.05, wallH / 2, 6.55]} color={STONE_2} map={stone} />
       <Block args={[0.95, wallH, 0.95]} position={[2.05, wallH / 2, 6.55]} color={STONE_2} map={stone} />
@@ -214,13 +218,13 @@ export function Castle({ level, pressure }: CastleProps) {
         <boxGeometry args={[0.18, 0.55, 0.1]} />
         <meshLambertMaterial color={STONE_DARK} />
       </mesh>
-      <mesh position={[0, wallH * 0.72, -6.42]}>
+      <mesh position={[0, wallH * 0.72, -13.05]}>
         <boxGeometry args={[0.2, 0.62, 0.1]} />
         <meshLambertMaterial color={STONE_DARK} />
       </mesh>
 
-      <SquareTower position={[-10.2, 0, -6.7]} height={6.2} size={2.55} map={stone} />
-      <SquareTower position={[10.2, 0, -6.7]} height={6.4} size={2.7} map={stone} />
+      <SquareTower position={[-10.2, 0, -13.4]} height={6.2} size={2.55} map={stone} />
+      <SquareTower position={[10.2, 0, -13.4]} height={6.4} size={2.7} map={stone} />
       <SquareTower position={[-10.2, 0, 6.7]} height={5.6} size={2.45} map={stone} />
       <SquareTower position={[10.2, 0, 6.7]} height={5.8} size={2.5} map={stone} />
       <RoundTower position={[-2.1, 0, -2.4]} height={7.1} radius={1.55} map={stone} />
@@ -264,6 +268,8 @@ export function Castle({ level, pressure }: CastleProps) {
       </mesh>
 
       <pointLight position={[0, 2.4, 7.1]} color="#ff6a2a" intensity={0.55 + fire * 1.1} distance={12} />
+    </group>
+    <Defenders grow={grow} wallH={wallH} />
     </group>
   );
 }
