@@ -108,7 +108,7 @@ function SceneContent({ soldiers, level, pressure }: BattleSceneProps) {
       <directionalLight position={[18, 16, 10]} intensity={0.55} color="#c8d4e8" />
       <Terrain />
       <Castle level={level} pressure={pressure} />
-      <SallyRaid level={level} />
+      <SallyRaid />
       <Army count={soldiers} />
       <OrbitControls
         makeDefault

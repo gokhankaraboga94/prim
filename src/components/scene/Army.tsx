@@ -2,7 +2,7 @@ import { useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
-import { sallyDuck, sallyLocal } from "../../siegeEvent";
+import { sallyLocal, sallyRaiderAt } from "../../siegeEvent";
 
 const MAX_SOLDIERS = 5000;
 const MAX_LABELS = 80;
@@ -19,6 +19,10 @@ type Shot = {
   sx: number;
   sy: number;
   sz: number;
+  tx: number;
+  ty: number;
+  tz: number;
+  flight: number;
 };
 
 type ArmyProps = {
@@ -169,7 +173,8 @@ export function Army({ count }: ArmyProps) {
   useFrame((state, dt) => {
     const t = state.clock.elapsedTime;
     const { spacing, cols, scale } = form;
-    const duck = sallyDuck(sallyLocal(t));
+    const sally = sallyLocal(t);
+    const hunt = sally > 1.6 && sally < 6.4;
 
     acc.current += dt;
     if (acc.current >= 1 / 28) {
@@ -178,9 +183,8 @@ export function Army({ count }: ArmyProps) {
         bodies.current.count = visible;
         for (let i = 0; i < visible; i++) {
           unitPos(i, t + seeds[i], cols, spacing, pos);
-          const lean = duck * (0.72 + seeds[i] * 0.28);
-          dummy.position.set(pos.x, pos.y - lean * 0.28 * scale, pos.z);
-          dummy.rotation.set(lean * 0.85, Math.PI, 0);
+          dummy.position.copy(pos);
+          dummy.rotation.set(0, Math.PI, 0);
           dummy.scale.setScalar(scale);
           dummy.updateMatrix();
           bodies.current.setMatrixAt(i, dummy.matrix);
@@ -209,37 +213,42 @@ export function Army({ count }: ArmyProps) {
       return;
     }
 
-    shots.current = shots.current.filter((s) => t - s.born < ARROW_FLIGHT);
+    shots.current = shots.current.filter((s) => t - s.born < s.flight);
 
     if (t >= nextShot.current && shots.current.length < MAX_ARROWS) {
-      const pair = visible > 6 && shots.current.length === 0 && Math.random() < 0.38;
+      const pair = visible > 6 && shots.current.length === 0 && (hunt || Math.random() < 0.38);
       const n = pair ? 2 : 1;
       for (let i = 0; i < n && shots.current.length < MAX_ARROWS; i++) {
         const soldier = Math.floor(Math.random() * visible);
         unitPos(soldier, t + seeds[soldier], cols, spacing, pos);
+        const prey = hunt ? sallyRaiderAt(sally, (soldier + i) % 4) : null;
         shots.current.push({
           soldier,
-          born: t + i * 0.12,
+          born: t + i * 0.08,
           sx: pos.x,
           sy: pos.y + 1.25 * scale,
           sz: pos.z,
+          tx: prey ? prey.x : GATE.x,
+          ty: prey ? 1.1 : GATE.y,
+          tz: prey ? prey.z : GATE.z,
+          flight: prey ? 0.72 : ARROW_FLIGHT,
         });
       }
-      const pace = 1.25 - Math.min(0.75, (visible / 5000) * 0.75);
-      nextShot.current = t + pace + Math.random() * 0.28;
+      const pace = hunt ? 0.28 : 1.25 - Math.min(0.75, (visible / 5000) * 0.75);
+      nextShot.current = t + pace + Math.random() * (hunt ? 0.08 : 0.28);
     }
 
     const live = shots.current;
     arrows.current.count = live.length;
     for (let i = 0; i < live.length; i++) {
       const s = live[i];
-      const fly = Math.max(0, Math.min(1, (t - s.born) / ARROW_FLIGHT));
+      const fly = Math.max(0, Math.min(1, (t - s.born) / s.flight));
       dummy.position.set(
-        s.sx + (GATE.x - s.sx) * fly,
-        s.sy + (GATE.y - s.sy) * fly + Math.sin(fly * Math.PI) * 2.6,
-        s.sz + (GATE.z - s.sz) * fly
+        s.sx + (s.tx - s.sx) * fly,
+        s.sy + (s.ty - s.sy) * fly + Math.sin(fly * Math.PI) * (hunt ? 1.4 : 2.6),
+        s.sz + (s.tz - s.sz) * fly
       );
-      dummy.lookAt(GATE);
+      dummy.lookAt(s.tx, s.ty, s.tz);
       dummy.rotateX(Math.PI / 2);
       dummy.scale.set(1.15, 1.35, 1.15);
       dummy.updateMatrix();
