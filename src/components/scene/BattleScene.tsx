@@ -117,7 +117,7 @@ function SceneContent({ soldiers, level, pressure }: BattleSceneProps) {
         maxDistance={260}
         minPolarAngle={0.12}
         maxPolarAngle={1.48}
-        target={[0, 9, 2]}
+        target={[0, 10, 8]}
         rotateSpeed={0.95}
         zoomSpeed={1}
       />
@@ -145,7 +145,7 @@ function BattleSceneInner({ soldiers, level, pressure }: BattleSceneProps) {
         depth: true,
         failIfMajorPerformanceCaveat: false,
       }}
-      camera={{ fov: 38, near: 0.5, far: 700, position: [26, 42, 58] }}
+      camera={{ fov: 36, near: 0.5, far: 700, position: [5, 22, 92] }}
       frameloop={active ? "always" : "demand"}
       style={{ width: "100%", height: "100%", display: "block" }}
       onCreated={({ gl }) => {
