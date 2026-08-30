@@ -27,7 +27,7 @@ function useGroundTexture() {
     const tex = new THREE.CanvasTexture(canvas);
     tex.wrapS = THREE.RepeatWrapping;
     tex.wrapT = THREE.RepeatWrapping;
-    tex.repeat.set(18, 18);
+    tex.repeat.set(56, 56);
     tex.colorSpace = THREE.SRGBColorSpace;
     return tex;
   }, []);
@@ -44,7 +44,8 @@ function Terrain() {
       const spots = [
         [-10, 14], [9, 16], [-14, 10], [13, 11], [-8, 20], [11, 19],
         [-20, 6], [19, 8], [-16, -8], [17, -11], [-22, 14], [21, 15],
-        [-6, 18], [7, 22], [-18, 18], [16, 21],
+        [-6, 18], [7, 22], [-18, 18], [16, 21], [-38, 28], [42, 24],
+        [-44, -18], [36, -32], [-28, 48], [52, -8], [-56, 12], [48, 40],
       ];
       spots.forEach(([x, z], i) => {
         dummy.position.set(x, 0.25 + (i % 3) * 0.12, z);
@@ -58,7 +59,9 @@ function Terrain() {
     if (trees.current) {
       const spots = [
         [-22, 8], [23, -8], [-20, -14], [21, 16], [-26, 2], [25, -4],
-        [-18, 22], [19, -18], [-24, 16], [22, 20],
+        [-18, 22], [19, -18], [-24, 16], [22, 20], [-48, 18], [52, -22],
+        [-60, -8], [58, 14], [-36, 55], [40, 62], [-70, 32], [66, -40],
+        [-42, -52], [74, 8], [-80, 20], [28, -68],
       ];
       spots.forEach(([x, z], i) => {
         dummy.position.set(x, 1.4, z);
@@ -74,18 +77,18 @@ function Terrain() {
   return (
     <group>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
-        <planeGeometry args={[160, 160]} />
+        <planeGeometry args={[720, 720]} />
         <meshLambertMaterial map={ground} color="#5dad45" />
       </mesh>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 13]}>
         <planeGeometry args={[7, 22]} />
         <meshLambertMaterial color="#c4a36a" />
       </mesh>
-      <instancedMesh ref={rocks} args={[undefined, undefined, 16]}>
+      <instancedMesh ref={rocks} args={[undefined, undefined, 24]}>
         <dodecahedronGeometry args={[0.9, 0]} />
         <meshLambertMaterial color="#7a746c" />
       </instancedMesh>
-      <instancedMesh ref={trees} args={[undefined, undefined, 10]}>
+      <instancedMesh ref={trees} args={[undefined, undefined, 22]}>
         <coneGeometry args={[0.9, 3.2, 6]} />
         <meshLambertMaterial color="#2f7a32" />
       </instancedMesh>
@@ -97,7 +100,7 @@ function SceneContent({ soldiers, level, pressure }: BattleSceneProps) {
   return (
     <>
       <color attach="background" args={["#6d7d92"]} />
-      <fog attach="fog" args={["#7a8898", 95, 190]} />
+      <fog attach="fog" args={["#7a8898", 160, 420]} />
       <ambientLight intensity={0.62} color="#e8e4dc" />
       <hemisphereLight args={["#b8c8dc", "#4a7a38", 0.55]} />
       <directionalLight position={[-22, 34, 20]} intensity={2.15} color="#fff6e4" />
@@ -111,7 +114,7 @@ function SceneContent({ soldiers, level, pressure }: BattleSceneProps) {
         dampingFactor={0.08}
         enablePan={false}
         minDistance={16}
-        maxDistance={180}
+        maxDistance={260}
         minPolarAngle={0.12}
         maxPolarAngle={1.48}
         target={[0, 5, 2]}
@@ -142,7 +145,7 @@ function BattleSceneInner({ soldiers, level, pressure }: BattleSceneProps) {
         depth: true,
         failIfMajorPerformanceCaveat: false,
       }}
-      camera={{ fov: 38, near: 0.5, far: 280, position: [26, 42, 58] }}
+      camera={{ fov: 38, near: 0.5, far: 700, position: [26, 42, 58] }}
       frameloop={active ? "always" : "demand"}
       style={{ width: "100%", height: "100%", display: "block" }}
       onCreated={({ gl }) => {
