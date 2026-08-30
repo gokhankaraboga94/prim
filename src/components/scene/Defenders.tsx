@@ -100,7 +100,7 @@ export function Defenders({ grow, wallH }: DefendersProps) {
   const mesh = useRef<THREE.InstancedMesh>(null);
   const geo = useMemo(() => createSwordsmanGeometry(), []);
   const sx = 3.25 * grow;
-  const sy = 2 * grow;
+  const sy = 4 * grow;
   const sz = 2.15 * grow;
   const list = useMemo(() => posts(wallH, sx, sy, sz), [wallH, sx, sy, sz]);
 

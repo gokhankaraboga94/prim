@@ -265,7 +265,7 @@ export function Castle({ level, pressure }: CastleProps) {
 
   return (
     <group>
-    <group position={[0, 0, 0]} scale={[3.25 * grow, 2 * grow, 2.15 * grow]}>
+    <group position={[0, 0, 0]} scale={[3.25 * grow, 4 * grow, 2.15 * grow]}>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.03, -3.3]}>
         <planeGeometry args={[22.4, 20.2]} />
         <meshLambertMaterial color="#6a6258" map={stone ?? undefined} />

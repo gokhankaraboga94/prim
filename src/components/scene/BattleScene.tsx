@@ -117,7 +117,7 @@ function SceneContent({ soldiers, level, pressure }: BattleSceneProps) {
         maxDistance={260}
         minPolarAngle={0.12}
         maxPolarAngle={1.48}
-        target={[0, 5, 2]}
+        target={[0, 9, 2]}
         rotateSpeed={0.95}
         zoomSpeed={1}
       />

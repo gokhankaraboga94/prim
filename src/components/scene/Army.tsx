@@ -10,7 +10,7 @@ const dummy = new THREE.Object3D();
 const ARROW_FLIGHT = 3.2;
 const AREA_W = 42;
 const FRONT_Z = 52;
-const GATE = new THREE.Vector3(0, 6.2, 16.4);
+const GATE = new THREE.Vector3(0, 10.5, 16.4);
 
 type Shot = {
   soldier: number;
