@@ -2,9 +2,8 @@ import { useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
-import { RAID_X, sallyLocal, sallyRaiderAt } from "../../siegeEvent";
+import { MAX_RAIDERS, raidCount, sallyLocal, sallyRaiderAt } from "../../siegeEvent";
 
-const RAIDERS = RAID_X.length;
 const dummy = new THREE.Object3D();
 
 function colorize(geo: THREE.BufferGeometry, hex: string) {
@@ -56,31 +55,40 @@ function createRaiderGeometry() {
   return merged ?? colorize(new THREE.BoxGeometry(0.4, 1.2, 0.28), "#9a1c1c");
 }
 
-export function SallyRaid() {
+type SallyRaidProps = {
+  soldiers: number;
+};
+
+export function SallyRaid({ soldiers }: SallyRaidProps) {
   const bodies = useRef<THREE.InstancedMesh>(null);
   const geo = useMemo(() => createRaiderGeometry(), []);
+  const n = raidCount(soldiers);
 
   useFrame((state) => {
     if (!bodies.current) return;
     const p = sallyLocal(state.clock.elapsedTime);
-    let n = 0;
-    for (let i = 0; i < RAIDERS; i++) {
-      const r = sallyRaiderAt(p, i);
+    if (n <= 0 || p < 1.2 || p >= 14.4) {
+      bodies.current.count = 0;
+      return;
+    }
+    let shown = 0;
+    for (let i = 0; i < n; i++) {
+      const r = sallyRaiderAt(p, i, n);
       if (!r.visible) continue;
-      const step = r.fall < 1 ? Math.sin(state.clock.elapsedTime * 7 + i) * 0.05 * (1 - r.fall) : 0;
+      const step = r.fall < 1 ? Math.sin(state.clock.elapsedTime * 8 + i) * 0.05 * (1 - r.fall) : 0;
       dummy.position.set(r.x, r.fall * 0.18 + step, r.z);
       dummy.rotation.set(r.fall * 1.45, 0, r.fall * 0.35);
-      dummy.scale.setScalar(1.2);
+      dummy.scale.setScalar(1.15);
       dummy.updateMatrix();
-      bodies.current.setMatrixAt(n, dummy.matrix);
-      n += 1;
+      bodies.current.setMatrixAt(shown, dummy.matrix);
+      shown += 1;
     }
-    bodies.current.count = n;
+    bodies.current.count = shown;
     bodies.current.instanceMatrix.needsUpdate = true;
   });
 
   return (
-    <instancedMesh ref={bodies} args={[geo, undefined, RAIDERS]} frustumCulled={false}>
+    <instancedMesh ref={bodies} args={[geo, undefined, MAX_RAIDERS]} frustumCulled={false}>
       <meshLambertMaterial vertexColors />
     </instancedMesh>
   );
