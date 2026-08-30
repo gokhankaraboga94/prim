@@ -126,6 +126,98 @@ function SquareTower({
   );
 }
 
+function Gatehouse({
+  wallH,
+  fire,
+  stone,
+}: {
+  wallH: number;
+  fire: number;
+  stone: THREE.Texture | null;
+}) {
+  const bars = useMemo(() => Array.from({ length: 7 }, (_, i) => i), []);
+  const rails = useMemo(() => Array.from({ length: 4 }, (_, i) => i), []);
+  return (
+    <group position={[0, 0, 6.85]}>
+      <Block args={[1.35, wallH + 1.15, 2.6]} position={[-2.05, (wallH + 1.15) / 2, 0.15]} color={STONE} map={stone} />
+      <Block args={[1.35, wallH + 1.15, 2.6]} position={[2.05, (wallH + 1.15) / 2, 0.15]} color={STONE} map={stone} />
+      <Block args={[5.6, 1.25, 2.75]} position={[0, wallH + 0.95, 0.18]} color={STONE_2} map={stone} />
+      <Block args={[5.9, 0.28, 3]} position={[0, wallH + 1.62, 0.22]} color={STONE_3} map={stone} />
+      <Merlons count={5} width={5.2} y={wallH + 2.05} z={1.45} map={stone} />
+      <Merlons count={5} width={5.2} y={wallH + 2.05} z={-1.05} map={stone} />
+
+      <mesh position={[0, 2.55, 1.42]} rotation={[Math.PI / 2, 0, 0]}>
+        <torusGeometry args={[1.28, 0.26, 8, 18, Math.PI]} />
+        <meshLambertMaterial color={STONE_3} map={stone ?? undefined} />
+      </mesh>
+      <Block args={[2.7, 0.32, 0.55]} position={[0, 2.52, 1.42]} color={STONE_2} map={stone} />
+
+      <mesh position={[0, 1.2, 0.05]}>
+        <boxGeometry args={[2.2, 2.4, 2.1]} />
+        <meshLambertMaterial color="#0c0907" />
+      </mesh>
+
+      <mesh position={[-0.58, 1.12, 1.28]} rotation={[0, 0.12, 0]}>
+        <boxGeometry args={[1.12, 2.2, 0.14]} />
+        <meshLambertMaterial color="#4a2a14" />
+      </mesh>
+      <mesh position={[0.58, 1.12, 1.28]} rotation={[0, -0.12, 0]}>
+        <boxGeometry args={[1.12, 2.2, 0.14]} />
+        <meshLambertMaterial color="#3f2412" />
+      </mesh>
+      {[-0.58, 0.58].map((x) =>
+        [0.45, 1.12, 1.78].map((y) => (
+          <mesh key={`band-${x}-${y}`} position={[x, y, 1.36]}>
+            <boxGeometry args={[1.05, 0.07, 0.04]} />
+            <meshLambertMaterial color="#2a2c30" />
+          </mesh>
+        ))
+      )}
+      {[-0.9, -0.25, 0.25, 0.9].map((x) =>
+        [0.55, 1.25, 1.85].map((y) => (
+          <mesh key={`stud-${x}-${y}`} position={[x, y, 1.38]}>
+            <sphereGeometry args={[0.04, 5, 4]} />
+            <meshLambertMaterial color="#6a7076" />
+          </mesh>
+        ))
+      )}
+
+      <group position={[0, 1.35, 1.18]}>
+        {bars.map((i) => (
+          <mesh key={`v-${i}`} position={[-1.05 + i * 0.35, 0, 0]}>
+            <boxGeometry args={[0.055, 2.35, 0.055]} />
+            <meshLambertMaterial color="#2c3034" />
+          </mesh>
+        ))}
+        {rails.map((i) => (
+          <mesh key={`h-${i}`} position={[0, -0.85 + i * 0.55, 0]}>
+            <boxGeometry args={[2.2, 0.05, 0.05]} />
+            <meshLambertMaterial color="#35383c" />
+          </mesh>
+        ))}
+      </group>
+
+      <mesh position={[0, 0.08, 2.15]} rotation={[-0.08, 0, 0]}>
+        <boxGeometry args={[2.6, 0.12, 2.4]} />
+        <meshLambertMaterial color="#5a4630" />
+      </mesh>
+
+      <mesh position={[0, 1.15, 1.05]}>
+        <boxGeometry args={[0.35, 1.6, 0.08]} />
+        <meshLambertMaterial color="#8b1d1d" emissive="#4a0808" emissiveIntensity={0.25 + fire * 0.8} />
+      </mesh>
+      <mesh position={[-1.55, wallH * 0.72, 1.48]}>
+        <boxGeometry args={[0.16, 0.5, 0.1]} />
+        <meshLambertMaterial color={STONE_DARK} />
+      </mesh>
+      <mesh position={[1.55, wallH * 0.72, 1.48]}>
+        <boxGeometry args={[0.16, 0.5, 0.1]} />
+        <meshLambertMaterial color={STONE_DARK} />
+      </mesh>
+    </group>
+  );
+}
+
 function RoundTower({
   position,
   height,
@@ -197,27 +289,7 @@ export function Castle({ level, pressure }: CastleProps) {
         <Merlons count={13} width={19.4} y={wallH + 0.32} z={10.05} axis="z" map={stone} />
       </group>
 
-      <Block args={[0.95, wallH, 0.95]} position={[-2.05, wallH / 2, 6.55]} color={STONE_2} map={stone} />
-      <Block args={[0.95, wallH, 0.95]} position={[2.05, wallH / 2, 6.55]} color={STONE_2} map={stone} />
-      <mesh position={[0, 2.35, 6.62]} rotation={[Math.PI / 2, 0, 0]}>
-        <torusGeometry args={[1.15, 0.32, 6, 14, Math.PI]} />
-        <meshLambertMaterial color={STONE_3} map={stone ?? undefined} />
-      </mesh>
-      <mesh position={[0, 1.15, 6.72]}>
-        <boxGeometry args={[1.7, 2.25, 0.18]} />
-        <meshLambertMaterial color="#1a100c" emissive="#3a0808" emissiveIntensity={0.2 + fire * 0.7} />
-      </mesh>
-      <Block args={[0.18, 2.1, 0.12]} position={[-0.55, 1.15, 6.82]} color="#2a1a12" />
-      <Block args={[0.18, 2.1, 0.12]} position={[0.55, 1.15, 6.82]} color="#2a1a12" />
-
-      <mesh position={[-0.72, wallH * 0.62, 6.42]}>
-        <boxGeometry args={[0.18, 0.55, 0.1]} />
-        <meshLambertMaterial color={STONE_DARK} />
-      </mesh>
-      <mesh position={[0.72, wallH * 0.62, 6.42]}>
-        <boxGeometry args={[0.18, 0.55, 0.1]} />
-        <meshLambertMaterial color={STONE_DARK} />
-      </mesh>
+      <Gatehouse wallH={wallH} fire={fire} stone={stone} />
       <mesh position={[0, wallH * 0.72, -13.05]}>
         <boxGeometry args={[0.2, 0.62, 0.1]} />
         <meshLambertMaterial color={STONE_DARK} />

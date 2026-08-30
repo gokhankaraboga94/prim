@@ -100,7 +100,7 @@ function SceneContent({ soldiers, level, pressure }: BattleSceneProps) {
   return (
     <>
       <color attach="background" args={["#6d7d92"]} />
-      <fog attach="fog" args={["#7a8898", 160, 420]} />
+      <fog attach="fog" args={["#7a8898", 340, 720]} />
       <ambientLight intensity={0.62} color="#e8e4dc" />
       <hemisphereLight args={["#b8c8dc", "#4a7a38", 0.55]} />
       <directionalLight position={[-22, 34, 20]} intensity={2.15} color="#fff6e4" />
