@@ -165,33 +165,33 @@ function RoundTower({
 export function Castle({ level, pressure }: CastleProps) {
   const stone = useStoneTexture();
   const visualTier = ((level - 1) % 5) + 1;
-  const scale = 2 * (1 + Math.min(0.35, (level - 1) * 0.02));
+  const grow = 1 + Math.min(0.35, (level - 1) * 0.02);
   const wallH = 3.15 + visualTier * 0.14;
   const fire = Math.min(1, pressure);
-  const merlonCount = 9;
+  const merlonCount = 11;
 
   return (
-    <group position={[0, 0, 0]} scale={scale}>
+    <group position={[0, 0, 0]} scale={[3.25 * grow, 2 * grow, 2.15 * grow]}>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.03, 0]}>
-        <planeGeometry args={[15.4, 15.4]} />
+        <planeGeometry args={[22.4, 15.4]} />
         <meshLambertMaterial color="#6a6258" map={stone ?? undefined} />
       </mesh>
 
-      <Block args={[15.2, wallH, 1.7]} position={[0, wallH / 2, -6.55]} color={STONE} map={stone} />
-      <Block args={[5.35, wallH, 1.7]} position={[-4.55, wallH / 2, 6.55]} color={STONE} map={stone} />
-      <Block args={[5.35, wallH, 1.7]} position={[4.55, wallH / 2, 6.55]} color={STONE} map={stone} />
-      <Block args={[1.7, wallH, 15.2]} position={[-6.55, wallH / 2, 0]} color={STONE} map={stone} />
-      <Block args={[1.7, wallH, 15.2]} position={[6.55, wallH / 2, 0]} color={STONE} map={stone} />
+      <Block args={[22.2, wallH, 1.7]} position={[0, wallH / 2, -6.55]} color={STONE} map={stone} />
+      <Block args={[8.85, wallH, 1.7]} position={[-6.55, wallH / 2, 6.55]} color={STONE} map={stone} />
+      <Block args={[8.85, wallH, 1.7]} position={[6.55, wallH / 2, 6.55]} color={STONE} map={stone} />
+      <Block args={[1.7, wallH, 15.2]} position={[-10.05, wallH / 2, 0]} color={STONE} map={stone} />
+      <Block args={[1.7, wallH, 15.2]} position={[10.05, wallH / 2, 0]} color={STONE} map={stone} />
 
-      <Merlons count={merlonCount} width={14.2} y={wallH + 0.32} z={-6.55} map={stone} />
-      <group position={[-4.55, 0, 0]}>
-        <Merlons count={4} width={4.6} y={wallH + 0.32} z={6.55} map={stone} />
+      <Merlons count={merlonCount} width={21.2} y={wallH + 0.32} z={-6.55} map={stone} />
+      <group position={[-6.55, 0, 0]}>
+        <Merlons count={5} width={8} y={wallH + 0.32} z={6.55} map={stone} />
       </group>
-      <group position={[4.55, 0, 0]}>
-        <Merlons count={4} width={4.6} y={wallH + 0.32} z={6.55} map={stone} />
+      <group position={[6.55, 0, 0]}>
+        <Merlons count={5} width={8} y={wallH + 0.32} z={6.55} map={stone} />
       </group>
-      <Merlons count={merlonCount} width={14} y={wallH + 0.32} z={-6.55} axis="z" map={stone} />
-      <Merlons count={merlonCount} width={14} y={wallH + 0.32} z={6.55} axis="z" map={stone} />
+      <Merlons count={merlonCount} width={14} y={wallH + 0.32} z={-10.05} axis="z" map={stone} />
+      <Merlons count={merlonCount} width={14} y={wallH + 0.32} z={10.05} axis="z" map={stone} />
 
       <Block args={[0.95, wallH, 0.95]} position={[-2.05, wallH / 2, 6.55]} color={STONE_2} map={stone} />
       <Block args={[0.95, wallH, 0.95]} position={[2.05, wallH / 2, 6.55]} color={STONE_2} map={stone} />
@@ -219,10 +219,10 @@ export function Castle({ level, pressure }: CastleProps) {
         <meshLambertMaterial color={STONE_DARK} />
       </mesh>
 
-      <SquareTower position={[-6.7, 0, -6.7]} height={6.2} size={2.55} map={stone} />
-      <SquareTower position={[6.7, 0, -6.7]} height={6.4} size={2.7} map={stone} />
-      <SquareTower position={[-6.7, 0, 6.7]} height={5.6} size={2.45} map={stone} />
-      <SquareTower position={[6.7, 0, 6.7]} height={5.8} size={2.5} map={stone} />
+      <SquareTower position={[-10.2, 0, -6.7]} height={6.2} size={2.55} map={stone} />
+      <SquareTower position={[10.2, 0, -6.7]} height={6.4} size={2.7} map={stone} />
+      <SquareTower position={[-10.2, 0, 6.7]} height={5.6} size={2.45} map={stone} />
+      <SquareTower position={[10.2, 0, 6.7]} height={5.8} size={2.5} map={stone} />
       <RoundTower position={[-2.1, 0, -2.4]} height={7.1} radius={1.55} map={stone} />
 
       <group position={[1.1, 0, -1.15]}>
@@ -246,19 +246,19 @@ export function Castle({ level, pressure }: CastleProps) {
         </mesh>
       </group>
 
-      <mesh position={[-3.15, wallH + 1.05, 6.35]}>
+      <mesh position={[-5.4, wallH + 1.05, 6.35]}>
         <boxGeometry args={[0.08, 2.1, 0.08]} />
         <meshLambertMaterial color="#3a2a18" />
       </mesh>
-      <mesh position={[-2.85, wallH + 0.7, 6.35]}>
+      <mesh position={[-5.1, wallH + 0.7, 6.35]}>
         <planeGeometry args={[0.85, 1.15]} />
         <meshLambertMaterial color="#6a1212" />
       </mesh>
-      <mesh position={[3.15, wallH + 1.05, 6.35]}>
+      <mesh position={[5.4, wallH + 1.05, 6.35]}>
         <boxGeometry args={[0.08, 2.1, 0.08]} />
         <meshLambertMaterial color="#3a2a18" />
       </mesh>
-      <mesh position={[3.45, wallH + 0.7, 6.35]}>
+      <mesh position={[5.7, wallH + 0.7, 6.35]}>
         <planeGeometry args={[0.85, 1.15]} />
         <meshLambertMaterial color="#6a1212" />
       </mesh>

@@ -110,13 +110,13 @@ function SceneContent({ soldiers, level, pressure }: BattleSceneProps) {
         enableDamping
         dampingFactor={0.08}
         enablePan={false}
-        minDistance={24}
-        maxDistance={160}
-        minPolarAngle={0.42}
-        maxPolarAngle={1.22}
+        minDistance={16}
+        maxDistance={180}
+        minPolarAngle={0.12}
+        maxPolarAngle={1.48}
         target={[0, 5, 2]}
-        rotateSpeed={0.7}
-        zoomSpeed={0.85}
+        rotateSpeed={0.95}
+        zoomSpeed={1}
       />
     </>
   );

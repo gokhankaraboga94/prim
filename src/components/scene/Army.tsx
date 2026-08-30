@@ -8,7 +8,7 @@ const MAX_LABELS = 80;
 const MAX_ARROWS = 2;
 const dummy = new THREE.Object3D();
 const ARROW_FLIGHT = 2.4;
-const AREA_W = 32;
+const AREA_W = 42;
 const FRONT_Z = 26;
 const GATE = new THREE.Vector3(0, 6.2, 12.7);
 
