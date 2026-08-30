@@ -1,5 +1,7 @@
-import { useMemo } from "react";
+import { useMemo, useRef } from "react";
+import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
+import { sallyGate, sallyLocal } from "../../siegeEvent";
 import { Defenders } from "./Defenders";
 
 type CastleProps = {
@@ -137,6 +139,17 @@ function Gatehouse({
 }) {
   const bars = useMemo(() => Array.from({ length: 7 }, (_, i) => i), []);
   const rails = useMemo(() => Array.from({ length: 4 }, (_, i) => i), []);
+  const leftDoor = useRef<THREE.Group>(null);
+  const rightDoor = useRef<THREE.Group>(null);
+  const grate = useRef<THREE.Group>(null);
+
+  useFrame((state) => {
+    const open = sallyGate(sallyLocal(state.clock.elapsedTime));
+    if (leftDoor.current) leftDoor.current.rotation.y = 0.12 + open * 1.35;
+    if (rightDoor.current) rightDoor.current.rotation.y = -0.12 - open * 1.35;
+    if (grate.current) grate.current.position.y = 1.35 + open * 2.35;
+  });
+
   return (
     <group position={[0, 0, 6.85]}>
       <Block args={[1.35, wallH + 1.15, 2.6]} position={[-2.05, (wallH + 1.15) / 2, 0.15]} color={STONE} map={stone} />
@@ -157,32 +170,32 @@ function Gatehouse({
         <meshLambertMaterial color="#0c0907" />
       </mesh>
 
-      <mesh position={[-0.58, 1.12, 1.28]} rotation={[0, 0.12, 0]}>
-        <boxGeometry args={[1.12, 2.2, 0.14]} />
-        <meshLambertMaterial color="#4a2a14" />
-      </mesh>
-      <mesh position={[0.58, 1.12, 1.28]} rotation={[0, -0.12, 0]}>
-        <boxGeometry args={[1.12, 2.2, 0.14]} />
-        <meshLambertMaterial color="#3f2412" />
-      </mesh>
-      {[-0.58, 0.58].map((x) =>
-        [0.45, 1.12, 1.78].map((y) => (
-          <mesh key={`band-${x}-${y}`} position={[x, y, 1.36]}>
+      <group ref={leftDoor} position={[-1.14, 1.12, 1.28]}>
+        <mesh position={[0.56, 0, 0]}>
+          <boxGeometry args={[1.12, 2.2, 0.14]} />
+          <meshLambertMaterial color="#4a2a14" />
+        </mesh>
+        {[ -0.15, 0.55].map((y) => (
+          <mesh key={`lb-${y}`} position={[0.56, y, 0.08]}>
             <boxGeometry args={[1.05, 0.07, 0.04]} />
             <meshLambertMaterial color="#2a2c30" />
           </mesh>
-        ))
-      )}
-      {[-0.9, -0.25, 0.25, 0.9].map((x) =>
-        [0.55, 1.25, 1.85].map((y) => (
-          <mesh key={`stud-${x}-${y}`} position={[x, y, 1.38]}>
-            <sphereGeometry args={[0.04, 5, 4]} />
-            <meshLambertMaterial color="#6a7076" />
+        ))}
+      </group>
+      <group ref={rightDoor} position={[1.14, 1.12, 1.28]}>
+        <mesh position={[-0.56, 0, 0]}>
+          <boxGeometry args={[1.12, 2.2, 0.14]} />
+          <meshLambertMaterial color="#3f2412" />
+        </mesh>
+        {[-0.15, 0.55].map((y) => (
+          <mesh key={`rb-${y}`} position={[-0.56, y, 0.08]}>
+            <boxGeometry args={[1.05, 0.07, 0.04]} />
+            <meshLambertMaterial color="#2a2c30" />
           </mesh>
-        ))
-      )}
+        ))}
+      </group>
 
-      <group position={[0, 1.35, 1.18]}>
+      <group ref={grate} position={[0, 1.35, 1.18]}>
         {bars.map((i) => (
           <mesh key={`v-${i}`} position={[-1.05 + i * 0.35, 0, 0]}>
             <boxGeometry args={[0.055, 2.35, 0.055]} />

@@ -2,6 +2,7 @@ import { useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
+import { sallyDuck, sallyLocal } from "../../siegeEvent";
 
 const MAX_SOLDIERS = 5000;
 const MAX_LABELS = 80;
@@ -168,6 +169,7 @@ export function Army({ count }: ArmyProps) {
   useFrame((state, dt) => {
     const t = state.clock.elapsedTime;
     const { spacing, cols, scale } = form;
+    const duck = sallyDuck(sallyLocal(t));
 
     acc.current += dt;
     if (acc.current >= 1 / 28) {
@@ -176,8 +178,9 @@ export function Army({ count }: ArmyProps) {
         bodies.current.count = visible;
         for (let i = 0; i < visible; i++) {
           unitPos(i, t + seeds[i], cols, spacing, pos);
-          dummy.position.copy(pos);
-          dummy.rotation.set(0, Math.PI, 0);
+          const lean = duck * (0.72 + seeds[i] * 0.28);
+          dummy.position.set(pos.x, pos.y - lean * 0.28 * scale, pos.z);
+          dummy.rotation.set(lean * 0.85, Math.PI, 0);
           dummy.scale.setScalar(scale);
           dummy.updateMatrix();
           bodies.current.setMatrixAt(i, dummy.matrix);
