@@ -7,9 +7,9 @@ const MAX_SOLDIERS = 5000;
 const MAX_LABELS = 80;
 const MAX_ARROWS = 2;
 const dummy = new THREE.Object3D();
-const ARROW_FLIGHT = 2.8;
+const ARROW_FLIGHT = 3.2;
 const AREA_W = 42;
-const FRONT_Z = 38;
+const FRONT_Z = 52;
 const GATE = new THREE.Vector3(0, 6.2, 16.4);
 
 type Shot = {
