@@ -67,7 +67,7 @@ export function SallyRaid() {
     for (let i = 0; i < RAIDERS; i++) {
       const r = sallyRaiderAt(p, i);
       if (!r.visible) continue;
-      const step = r.fall < 1 ? Math.sin(state.clock.elapsedTime * 14 + i) * 0.06 * (1 - r.fall) : 0;
+      const step = r.fall < 1 ? Math.sin(state.clock.elapsedTime * 7 + i) * 0.05 * (1 - r.fall) : 0;
       dummy.position.set(r.x, r.fall * 0.18 + step, r.z);
       dummy.rotation.set(r.fall * 1.45, 0, r.fall * 0.35);
       dummy.scale.setScalar(1.2);

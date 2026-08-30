@@ -57,32 +57,50 @@ function createSwordsmanGeometry() {
 
 type Post = { x: number; y: number; z: number; rot: number };
 
+function line(
+  x0: number,
+  z0: number,
+  x1: number,
+  z1: number,
+  n: number,
+  y: number,
+  rot: number,
+  out: [number, number, number, number][]
+) {
+  for (let i = 0; i < n; i++) {
+    const t = n === 1 ? 0.5 : i / (n - 1);
+    out.push([x0 + (x1 - x0) * t, y, z0 + (z1 - z0) * t, rot]);
+  }
+}
+
 function posts(wallH: number, sx: number, sy: number, sz: number): Post[] {
-  const local: [number, number, number, number][] = [
-    [-8.6, wallH + 0.04, 6.15, 0],
-    [-4.8, wallH + 0.04, 6.15, 0],
-    [4.8, wallH + 0.04, 6.15, 0],
-    [8.6, wallH + 0.04, 6.15, 0],
-    [-8.2, wallH + 0.04, -12.85, Math.PI],
-    [-3.4, wallH + 0.04, -12.85, Math.PI],
-    [2.2, wallH + 0.04, -12.85, Math.PI],
-    [7.6, wallH + 0.04, -12.85, Math.PI],
-    [-9.7, wallH + 0.04, 3.1, -Math.PI / 2],
-    [-9.7, wallH + 0.04, -1.8, -Math.PI / 2],
-    [-9.7, wallH + 0.04, -6.8, -Math.PI / 2],
-    [-9.7, wallH + 0.04, -11.2, -Math.PI / 2],
-    [9.7, wallH + 0.04, 2.6, Math.PI / 2],
-    [9.7, wallH + 0.04, -2.4, Math.PI / 2],
-    [9.7, wallH + 0.04, -7.4, Math.PI / 2],
-    [9.7, wallH + 0.04, -11.4, Math.PI / 2],
-    [-10.2, 6.45, -13.4, Math.PI],
-    [10.2, 6.65, -13.4, Math.PI],
-    [-10.2, 5.85, 6.7, 0],
-    [10.2, 6.05, 6.7, 0],
-    [-2.1, 7.25, -2.4, 0.4],
-    [1.1, 8.62, -1.15, 0.2],
-    [0.4, 8.62, -2.4, Math.PI],
-  ];
+  const walk = wallH + 0.04;
+  const local: [number, number, number, number][] = [];
+
+  line(-9.4, 6.15, -2.55, 6.15, 10, walk, 0, local);
+  line(2.55, 6.15, 9.4, 6.15, 10, walk, 0, local);
+  line(-9.2, -12.85, 9.2, -12.85, 14, walk, Math.PI, local);
+  line(-9.7, 4.6, -9.7, -11.6, 12, walk, -Math.PI / 2, local);
+  line(9.7, 4.6, 9.7, -11.6, 12, walk, Math.PI / 2, local);
+
+  local.push(
+    [-10.45, 6.45, -13.15, Math.PI],
+    [-9.95, 6.52, -13.55, Math.PI * 0.85],
+    [9.95, 6.65, -13.15, Math.PI],
+    [10.45, 6.72, -13.55, Math.PI * 1.15],
+    [-10.45, 5.85, 6.45, 0],
+    [-9.95, 5.92, 6.95, 0.2],
+    [9.95, 6.05, 6.45, 0],
+    [10.45, 6.12, 6.95, -0.2],
+    [-2.35, 7.25, -2.15, 0.4],
+    [-1.7, 7.32, -2.7, 0.15],
+    [0.15, 8.62, -1.05, 0.25],
+    [1.35, 8.62, -1.35, -0.15],
+    [0.55, 8.68, -2.55, Math.PI],
+    [1.7, 8.55, -2.2, Math.PI * 0.9],
+    [-0.7, 8.58, -1.85, 0.55]
+  );
+
   return local.map(([x, y, z, rot]) => ({
     x: x * sx,
     y: y * sy,

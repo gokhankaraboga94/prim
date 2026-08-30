@@ -174,7 +174,7 @@ export function Army({ count }: ArmyProps) {
     const t = state.clock.elapsedTime;
     const { spacing, cols, scale } = form;
     const sally = sallyLocal(t);
-    const hunt = sally > 1.6 && sally < 6.4;
+    const hunt = sally > 1.6 && sally < 13.4;
 
     acc.current += dt;
     if (acc.current >= 1 / 28) {

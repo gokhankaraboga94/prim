@@ -1,5 +1,5 @@
 export const SALLY_CYCLE = 30;
-export const SALLY_LEN = 9;
+export const SALLY_LEN = 17;
 export const RAID_X = [-4.2, -1.4, 1.4, 4.2];
 export const RAID_INSIDE_Z = 18;
 export const RAID_OUT_Z = 44;
@@ -20,16 +20,16 @@ export function sallyLocal(now: number) {
 export function sallyGate(p: number) {
   if (p >= SALLY_LEN) return 0;
   if (p < 1.5) return smooth01(p / 1.5);
-  if (p < 6.8) return 1;
-  return 1 - smooth01((p - 6.8) / 2.2);
+  if (p < 13.8) return 1;
+  return 1 - smooth01((p - 13.8) / 3.2);
 }
 
 export function sallyHitAt(i: number) {
-  return 2.55 + i * 0.42;
+  return 10.6 + i * 0.7;
 }
 
 export function sallyRun(p: number, i: number) {
-  const start = 1.4;
+  const start = 1.55;
   const hit = sallyHitAt(i);
   if (p < start) return 0;
   if (p >= hit) return 1;
@@ -50,6 +50,6 @@ export function sallyRaiderAt(p: number, i: number) {
     y: 0,
     z: RAID_INSIDE_Z + (RAID_OUT_Z - RAID_INSIDE_Z) * run,
     fall,
-    visible: p >= 1.25 && p < 8.4,
+    visible: p >= 1.25 && p < 15.4,
   };
 }
