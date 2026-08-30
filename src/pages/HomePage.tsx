@@ -31,7 +31,11 @@ export function HomePage() {
 
       <div className="home-body">
         <div className="story">
+          <p className="join-kicker">Wargame 2028</p>
           <h1>Kale yıkılmıyor.</h1>
+          <p className="seo-lead">
+            Online wargame: kaleyi kuşat, asker ol, orduya katıl.
+          </p>
           <p className="cam-hint">Sürükle veya pinch ile bakış açısını değiştir</p>
         </div>
         <JoinArmy handle={handle} />

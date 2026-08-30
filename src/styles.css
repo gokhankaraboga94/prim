@@ -227,6 +227,12 @@ select {
   text-shadow: 0 8px 40px rgba(0, 0, 0, 0.6);
 }
 
+.seo-lead {
+  margin: 0 0 8px;
+  font-size: 15px;
+  color: #ddd1b8;
+}
+
 .story p,
 .join-copy {
   color: #ddd1b8;

@@ -165,7 +165,7 @@ function RoundTower({
 export function Castle({ level, pressure }: CastleProps) {
   const stone = useStoneTexture();
   const visualTier = ((level - 1) % 5) + 1;
-  const scale = 1 + Math.min(0.35, (level - 1) * 0.02);
+  const scale = 2 * (1 + Math.min(0.35, (level - 1) * 0.02));
   const wallH = 3.15 + visualTier * 0.14;
   const fire = Math.min(1, pressure);
   const merlonCount = 9;
