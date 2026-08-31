@@ -11,10 +11,10 @@ const IDLE_ARROWS = 2;
 const dummy = new THREE.Object3D();
 const ARROW_FLIGHT = 3.2;
 const FRONT_Z = 46;
-const FILE = 1.64;
-const RANK = 2.18;
+const FILE = 2.55;
+const RANK = 2.9;
 const COMP_FILES = 8;
-const COMP_GAP = 2.7;
+const COMP_GAP = 3.2;
 const GATE = new THREE.Vector3(0, 10.5, 16.4);
 
 type Shot = {
@@ -302,7 +302,7 @@ export function Army({ count, names = [] }: ArmyProps) {
       </instancedMesh>
       <group ref={tags}>
         {nameMaps.map((map, i) => (
-          <sprite key={`${labeled[i]}-${names[labeled[i]]}`} scale={[2.35, 0.88, 1]} visible={false} renderOrder={2}>
+          <sprite key={`${labeled[i]}-${names[labeled[i]]}`} scale={[2.15, 0.78, 1]} visible={false} renderOrder={2}>
             <spriteMaterial
               map={map ?? undefined}
               transparent
