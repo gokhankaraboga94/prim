@@ -3,7 +3,7 @@ import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import { isCommander } from "../../game";
-import { raidCount, sallyHunting, sallyLiveIndex, sallyLocal, sallyRaiderAt } from "../../siegeEvent";
+import { raidCount, sallyHunting, sallyLiveIndex, sallyLocal, sallyRaiderAt, swordSwingU } from "../../siegeEvent";
 
 const MAX_SOLDIERS = 5000;
 const MAX_LABELS = 80;
@@ -202,6 +202,10 @@ function getCommanderGeometry() {
     part(new THREE.BoxGeometry(0.2, 0.06, 0.1), "#e8c868", 0, 1.12, -0.08),
     part(new THREE.SphereGeometry(0.05, 7, 6), "#f0d478", -0.12, 1.12, -0.06),
     part(new THREE.SphereGeometry(0.05, 7, 6), "#f0d478", 0.12, 1.12, -0.06),
+    part(new THREE.BoxGeometry(0.08, 1.42, 0.1), "#d8dee6", 0.48, 1.05, 0.22, 0.55, 0, -0.55),
+    part(new THREE.BoxGeometry(0.16, 0.08, 0.2), "#c9a227", 0.42, 0.52, 0.14),
+    part(new THREE.BoxGeometry(0.07, 0.24, 0.07), "#3a2414", 0.4, 0.38, 0.1),
+    part(new THREE.BoxGeometry(0.12, 0.12, 0.04), "#e8c868", 0.4, 0.26, 0.1),
   ];
   const cape = mergeGeometries(capeParts, false);
   capeParts.forEach((g) => g.dispose());
@@ -328,11 +332,29 @@ export function Army({ count, names = [], commanders = [] }: ArmyProps) {
     if (chiefs.current) {
       const n = Math.min(MAX_COMMANDERS, layout.cmd.length);
       chiefs.current.count = n;
+      const swing = swordSwingU(sallyLocal(t), n);
       for (let k = 0; k < n; k++) {
         const soldier = layout.cmd[k];
         commanderPos(k, layout.cmd.length, t, soldier, pos);
         dummy.position.copy(pos);
-        dummy.rotation.set(0, Math.PI, 0);
+        let rx = 0;
+        let ry = Math.PI;
+        let rz = 0;
+        if (swing > 0) {
+          if (swing < 0.32) {
+            const w = swing / 0.32;
+            rx = -0.18 * w;
+            rz = -0.85 * w;
+            ry = Math.PI - 0.22 * w;
+          } else {
+            const s = (swing - 0.32) / 0.68;
+            const e = 1 - (1 - s) * (1 - s);
+            rx = -0.18 + 0.62 * e;
+            rz = -0.85 + 2.15 * e;
+            ry = Math.PI - 0.22 + 0.6 * e;
+          }
+        }
+        dummy.rotation.set(rx, ry, rz);
         dummy.scale.setScalar(scale * 1.12);
         dummy.updateMatrix();
         chiefs.current.setMatrixAt(k, dummy.matrix);
@@ -387,10 +409,12 @@ export function Army({ count, names = [], commanders = [] }: ArmyProps) {
       const pair = visible > 6 && shots.current.length === 0 && (hunt || Math.random() < 0.38);
       const burst = hunt ? (pair ? 3 : 2) : pair ? 2 : 1;
       for (let i = 0; i < burst && shots.current.length < cap; i++) {
-        const soldier = Math.floor(Math.random() * visible);
+        if (layout.rest.length <= 0) break;
+        const soldier = layout.rest[Math.floor(Math.random() * layout.rest.length)];
         poseSoldier(soldier, t);
-        const idx = hunt ? sallyLiveIndex(sally, enemies, soldier + i * 11) : -1;
-        const prey = idx >= 0 ? sallyRaiderAt(sally, idx, enemies) : null;
+        const cmdN = layout.cmd.length;
+        const idx = hunt ? sallyLiveIndex(sally, enemies, soldier + i * 11, cmdN) : -1;
+        const prey = idx >= 0 ? sallyRaiderAt(sally, idx, enemies, cmdN) : null;
         shots.current.push({
           soldier,
           born: t + i * 0.04,

@@ -190,7 +190,7 @@ function SceneContent({
       <directionalLight position={[18, 16, 10]} intensity={0.55} color="#c8d4e8" />
       <Terrain />
       <Castle level={level} pressure={pressure} />
-      <SallyRaid soldiers={soldiers} />
+      <SallyRaid soldiers={soldiers} commanders={commanders.length} />
       <Army count={soldiers} names={names} commanders={commanders} />
       {cinematic ? (
         <CinematicCam

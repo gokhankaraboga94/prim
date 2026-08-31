@@ -64,9 +64,10 @@ function getRaiderGeometry() {
 
 type SallyRaidProps = {
   soldiers: number;
+  commanders?: number;
 };
 
-export function SallyRaid({ soldiers }: SallyRaidProps) {
+export function SallyRaid({ soldiers, commanders = 0 }: SallyRaidProps) {
   const bodies = useRef<THREE.InstancedMesh>(null);
   const geo = useMemo(() => getRaiderGeometry(), []);
   const n = raidCount(soldiers);
@@ -81,11 +82,15 @@ export function SallyRaid({ soldiers }: SallyRaidProps) {
     }
     let shown = 0;
     for (let i = 0; i < n; i++) {
-      const r = sallyRaiderAt(p, i, n);
+      const r = sallyRaiderAt(p, i, n, commanders);
       if (!r.visible) continue;
-      const step = r.fall < 1 ? Math.sin(state.clock.elapsedTime * 8 + i) * 0.05 * (1 - r.fall) : 0;
-      dummy.position.set(r.x, r.fall * 0.18 + step, r.z);
-      dummy.rotation.set(r.fall * 1.45, 0, r.fall * 0.35);
+      const step = !r.flung && r.fall < 1 ? Math.sin(state.clock.elapsedTime * 8 + i) * 0.05 * (1 - r.fall) : 0;
+      dummy.position.set(r.x, (r.flung ? 0 : r.fall * 0.18) + r.y + step, r.z);
+      dummy.rotation.set(
+        r.fall * (r.flung ? 3.4 : 1.45),
+        r.flung ? r.fall * 2.6 : 0,
+        r.fall * (r.flung ? 2.1 : 0.35)
+      );
       dummy.scale.setScalar(1.15);
       dummy.updateMatrix();
       bodies.current.setMatrixAt(shown, dummy.matrix);

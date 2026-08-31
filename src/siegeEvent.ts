@@ -27,7 +27,28 @@ export function sallyGate(p: number) {
 }
 
 export function raidCount(soldiers: number) {
-  return Math.min(MAX_RAIDERS, Math.max(0, Math.floor(soldiers) * 2));
+  return Math.min(MAX_RAIDERS, Math.max(0, Math.floor(soldiers) * 3));
+}
+
+export const SWORD_START = 3.55;
+export const SWORD_EVERY = 0.7;
+export const SWORD_SWING = 0.36;
+
+export function swordPairCount(n: number, commanders: number) {
+  if (commanders <= 0 || n <= 0) return 0;
+  const swings = Math.max(1, Math.floor((11.2 - SWORD_START) / SWORD_EVERY) * commanders);
+  return Math.min(Math.floor(n / 2), swings);
+}
+
+export function isSwordVictim(i: number, n: number, commanders: number) {
+  return commanders > 0 && i >= 0 && i < swordPairCount(n, commanders) * 2;
+}
+
+export function swordSwingU(p: number, commanders = 1) {
+  if (commanders <= 0 || p < SWORD_START || p > 11.4) return 0;
+  const local = (p - SWORD_START) % SWORD_EVERY;
+  if (local > SWORD_SWING) return 0;
+  return local / SWORD_SWING;
 }
 
 export function raidCols(n: number) {
@@ -42,11 +63,19 @@ export function raidSlotX(i: number, n: number) {
   return (col - (cols - 1) / 2) * (span / Math.max(1, cols - 1)) + jitter;
 }
 
-export function sallyHitAt(i: number, n: number) {
+export function sallyHitAt(i: number, n: number, commanders = 0) {
+  if (isSwordVictim(i, n, commanders)) {
+    const perSwing = 2 * Math.max(1, commanders);
+    const wave = Math.floor(i / perSwing);
+    return SWORD_START + wave * SWORD_EVERY + SWORD_SWING * 0.42;
+  }
   const first = 3.05;
   const last = 11.15;
   if (n <= 1) return last;
-  return first + (last - first) * (i / (n - 1));
+  const swordN = swordPairCount(n, commanders) * 2;
+  const rest = Math.max(1, n - swordN);
+  const k = Math.max(0, i - swordN);
+  return first + (last - first) * (k / Math.max(1, rest - 1));
 }
 
 export function sallyStartAt(i: number, n: number) {
@@ -54,18 +83,19 @@ export function sallyStartAt(i: number, n: number) {
   return 1.5 + Math.min(1.6, row * 0.035);
 }
 
-export function sallyRun(p: number, i: number, n: number) {
+export function sallyRun(p: number, i: number, n: number, commanders = 0) {
   const start = sallyStartAt(i, n);
-  const hit = sallyHitAt(i, n);
+  const hit = sallyHitAt(i, n, commanders);
   if (p < start) return 0;
   if (p >= hit) return 1;
   return smooth01((p - start) / Math.max(0.2, hit - start));
 }
 
-export function sallyFall(p: number, i: number, n: number) {
-  const hit = sallyHitAt(i, n);
+export function sallyFall(p: number, i: number, n: number, commanders = 0) {
+  const hit = sallyHitAt(i, n, commanders);
   if (p < hit) return 0;
-  return smooth01((p - hit) / 0.45);
+  const dur = isSwordVictim(i, n, commanders) ? 0.85 : 0.45;
+  return smooth01((p - hit) / dur);
 }
 
 export type RaidPose = {
@@ -74,32 +104,52 @@ export type RaidPose = {
   z: number;
   fall: number;
   visible: boolean;
+  flung: boolean;
 };
 
-const _pose: RaidPose = { x: 0, y: 0, z: 0, fall: 0, visible: false };
+const _pose: RaidPose = { x: 0, y: 0, z: 0, fall: 0, visible: false, flung: false };
 
-export function sallyRaiderAt(p: number, i: number, n: number, out: RaidPose = _pose): RaidPose {
+export function sallyRaiderAt(
+  p: number,
+  i: number,
+  n: number,
+  commanders = 0,
+  out: RaidPose = _pose
+): RaidPose {
   if (n <= 0 || i < 0 || i >= n) {
     out.visible = false;
     out.fall = 1;
+    out.flung = false;
     return out;
   }
-  const run = sallyRun(p, i, n);
-  const fall = sallyFall(p, i, n);
+  const sword = isSwordVictim(i, n, commanders);
+  const run = sallyRun(p, i, n, commanders);
+  const fall = sallyFall(p, i, n, commanders);
   const row = Math.floor(i / raidCols(n));
+  const reach = sword ? RAID_OUT_Z + 2.1 : RAID_OUT_Z - Math.min(4.5, row * 0.35);
   out.x = raidSlotX(i, n) * (0.2 + 0.8 * run);
   out.y = 0;
-  out.z = RAID_INSIDE_Z + (RAID_OUT_Z - RAID_INSIDE_Z - Math.min(4.5, row * 0.35)) * run;
+  out.z = RAID_INSIDE_Z + (reach - RAID_INSIDE_Z) * run;
   out.fall = fall;
+  out.flung = false;
   out.visible = p >= 1.2 && p < 14.4;
+  if (sword && fall > 0) {
+    const side = i % 2 === 0 ? -1 : 1;
+    const u = fall;
+    out.x += side * (1.2 + u * 10);
+    out.y = Math.sin(u * Math.PI) * 5.2 + u * 0.35;
+    out.z -= u * 19;
+    out.flung = true;
+  }
   return out;
 }
 
-export function sallyLiveIndex(p: number, n: number, salt: number) {
+export function sallyLiveIndex(p: number, n: number, salt: number, commanders = 0) {
   if (n <= 0) return -1;
   for (let k = 0; k < 8; k++) {
     const i = (Math.abs(salt) + k * 19) % n;
-    if (sallyFall(p, i, n) < 0.8) return i;
+    if (isSwordVictim(i, n, commanders)) continue;
+    if (sallyFall(p, i, n, commanders) < 0.8) return i;
   }
   return Math.abs(salt) % n;
 }
