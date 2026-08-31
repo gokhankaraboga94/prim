@@ -48,19 +48,16 @@ function pickCols(n: number) {
   return 64;
 }
 
-function formation(visible: number) {
-  const n = Math.max(1, visible);
-  return { cols: pickCols(n), scale: 1.14 };
-}
-
-export function armyFrame(count: number) {
+export function armyFrame(count: number, commanderCount = 0) {
   const n = Math.max(1, Math.min(MAX_SOLDIERS, Math.floor(count)));
-  const cols = pickCols(n);
-  const rows = Math.ceil(n / cols);
+  const chiefs = Math.max(0, Math.min(MAX_COMMANDERS, Math.floor(commanderCount)));
+  const rankN = Math.max(1, n - chiefs);
+  const cols = pickCols(rankN);
+  const rows = Math.ceil(rankN / cols);
   const companies = Math.max(1, Math.ceil(cols / COMP_FILES));
   const pitch = (COMP_FILES - 1) * FILE + COMP_GAP;
   const width = (companies - 1) * pitch + (COMP_FILES - 1) * FILE + FILE * 0.55;
-  const front = FRONT_Z;
+  const front = chiefs > 0 ? FRONT_Z - RANK : FRONT_Z;
   const back = FRONT_Z + (rows - 1) * RANK;
   return { width, front, back, midZ: (front + back) / 2, height: 3.5 };
 }
@@ -87,40 +84,30 @@ function unitPos(i: number, t: number, cols: number, n: number, out: THREE.Vecto
   out.set(x, strike, z - march);
 }
 
-function frontSlots(n: number, cols: number, k: number): number[] {
-  const rowLen = Math.min(cols, Math.max(0, n));
-  const mid = (rowLen - 1) / 2;
-  const row = Array.from({ length: rowLen }, (_, i) => i).sort(
-    (a, b) => Math.abs(a - mid) - Math.abs(b - mid) || a - b
-  );
-  const slots: number[] = [];
-  for (const col of row) {
-    if (slots.length >= k) break;
-    slots.push(col);
-  }
-  for (let i = rowLen; i < n && slots.length < k; i++) slots.push(i);
-  return slots;
+function commanderPos(k: number, cmdCount: number, t: number, id: number, out: THREE.Vector3) {
+  const mid = (Math.max(1, cmdCount) - 1) / 2;
+  const x = (k - mid) * FILE * 1.2;
+  const z = FRONT_Z - RANK;
+  const strike = Math.abs(Math.sin(t * 7 + id)) * 0.07;
+  out.set(x, strike, z);
 }
 
-function buildLayout(names: string[], commanders: string[], n: number, cols: number) {
+function buildLayout(names: string[], commanders: string[], n: number) {
   const cmd: number[] = [];
   const rest: number[] = [];
   for (let i = 0; i < n; i++) {
     if (names[i] && isCommander(names[i], commanders)) cmd.push(i);
     else rest.push(i);
   }
-  const soldierAt = new Array<number>(n);
-  const front = frontSlots(n, cols, cmd.length);
-  cmd.forEach((soldier, k) => {
-    soldierAt[front[k] ?? k] = soldier;
+  const slotOf = new Array<number>(n).fill(-1);
+  rest.forEach((soldier, i) => {
+    slotOf[soldier] = i;
   });
-  let r = 0;
-  for (let slot = 0; slot < n; slot++) {
-    if (soldierAt[slot] == null) soldierAt[slot] = rest[r++];
-  }
-  const slotOf = new Array<number>(n);
-  for (let slot = 0; slot < n; slot++) slotOf[soldierAt[slot]] = slot;
-  return { soldierAt, slotOf, cmdCount: cmd.length };
+  const cmdOf = new Array<number>(n).fill(-1);
+  cmd.forEach((soldier, i) => {
+    cmdOf[soldier] = i;
+  });
+  return { cmd, rest, slotOf, cmdOf, cols: pickCols(Math.max(1, rest.length)) };
 }
 
 function colorize(geo: THREE.BufferGeometry, hex: string) {
@@ -209,9 +196,9 @@ let commanderGeoCache: THREE.BufferGeometry | null = null;
 function getCommanderGeometry() {
   if (commanderGeoCache) return commanderGeoCache;
   const capeParts = [
-    part(new THREE.BoxGeometry(0.62, 0.98, 0.12), "#6e1426", 0, 0.68, -0.26),
-    part(new THREE.BoxGeometry(0.52, 0.5, 0.1), "#4a0e1a", 0, 0.28, -0.32),
-    part(new THREE.BoxGeometry(0.66, 0.12, 0.14), "#8c1c32", 0, 1.08, -0.2),
+    part(new THREE.BoxGeometry(0.62, 0.98, 0.12), "#153a72", 0, 0.68, -0.26),
+    part(new THREE.BoxGeometry(0.52, 0.5, 0.1), "#0c244c", 0, 0.28, -0.32),
+    part(new THREE.BoxGeometry(0.66, 0.12, 0.14), "#1d4c8a", 0, 1.08, -0.2),
     part(new THREE.BoxGeometry(0.2, 0.06, 0.1), "#e8c868", 0, 1.12, -0.08),
     part(new THREE.SphereGeometry(0.05, 7, 6), "#f0d478", -0.12, 1.12, -0.06),
     part(new THREE.SphereGeometry(0.05, 7, 6), "#f0d478", 0.12, 1.12, -0.06),
@@ -286,11 +273,8 @@ export function Army({ count, names = [], commanders = [] }: ArmyProps) {
 
   const visible = Math.min(MAX_SOLDIERS, Math.max(0, Math.floor(count)));
   const instanceCap = Math.min(MAX_SOLDIERS, Math.max(visible, 1));
-  const form = useMemo(() => formation(visible), [visible]);
-  const layout = useMemo(
-    () => buildLayout(names, commanders, visible, form.cols),
-    [names, commanders, visible, form.cols]
-  );
+  const layout = useMemo(() => buildLayout(names, commanders, visible), [names, commanders, visible]);
+  const form = useMemo(() => ({ cols: layout.cols, scale: 1.14 }), [layout.cols]);
   const labeled = useMemo(() => {
     const ids: number[] = [];
     const seen = new Set<number>();
@@ -316,32 +300,43 @@ export function Army({ count, names = [], commanders = [] }: ArmyProps) {
     return arr;
   }, []);
 
-  function placeBodies(t: number) {
-    const { cols, scale } = form;
-    let regular = 0;
-    let chief = 0;
-    for (let slot = 0; slot < visible; slot++) {
-      const soldier = layout.soldierAt[slot] ?? slot;
-      unitPos(slot, t + seeds[soldier], cols, visible, pos);
-      dummy.position.copy(pos);
-      dummy.rotation.set(0, Math.PI, 0);
-      const cmd = Boolean(names[soldier] && isCommander(names[soldier], commanders));
-      dummy.scale.setScalar(cmd ? scale * 1.12 : scale);
-      dummy.updateMatrix();
-      if (cmd && chiefs.current && chief < MAX_COMMANDERS) {
-        chiefs.current.setMatrixAt(chief, dummy.matrix);
-        chief += 1;
-      } else if (bodies.current) {
-        bodies.current.setMatrixAt(regular, dummy.matrix);
-        regular += 1;
-      }
+  function poseSoldier(soldier: number, t: number) {
+    const cmdK = layout.cmdOf[soldier];
+    if (cmdK >= 0) {
+      commanderPos(cmdK, layout.cmd.length, t, soldier, pos);
+      return;
     }
+    const slot = layout.slotOf[soldier];
+    unitPos(slot >= 0 ? slot : soldier, t + seeds[soldier], form.cols, Math.max(1, layout.rest.length), pos);
+  }
+
+  function placeBodies(t: number) {
+    const { scale } = form;
     if (bodies.current) {
-      bodies.current.count = regular;
+      bodies.current.count = layout.rest.length;
+      for (let i = 0; i < layout.rest.length; i++) {
+        const soldier = layout.rest[i];
+        unitPos(i, t + seeds[soldier], form.cols, Math.max(1, layout.rest.length), pos);
+        dummy.position.copy(pos);
+        dummy.rotation.set(0, Math.PI, 0);
+        dummy.scale.setScalar(scale);
+        dummy.updateMatrix();
+        bodies.current.setMatrixAt(i, dummy.matrix);
+      }
       bodies.current.instanceMatrix.needsUpdate = true;
     }
     if (chiefs.current) {
-      chiefs.current.count = chief;
+      const n = Math.min(MAX_COMMANDERS, layout.cmd.length);
+      chiefs.current.count = n;
+      for (let k = 0; k < n; k++) {
+        const soldier = layout.cmd[k];
+        commanderPos(k, layout.cmd.length, t, soldier, pos);
+        dummy.position.copy(pos);
+        dummy.rotation.set(0, Math.PI, 0);
+        dummy.scale.setScalar(scale * 1.12);
+        dummy.updateMatrix();
+        chiefs.current.setMatrixAt(k, dummy.matrix);
+      }
       chiefs.current.instanceMatrix.needsUpdate = true;
     }
     if (!tags.current) return;
@@ -353,9 +348,8 @@ export function Army({ count, names = [], commanders = [] }: ArmyProps) {
         tag.visible = false;
         continue;
       }
-      const slot = layout.slotOf[idx] ?? idx;
-      const cmd = isCommander(names[idx], commanders);
-      unitPos(slot, t + seeds[idx], cols, visible, pos);
+      const cmd = layout.cmdOf[idx] >= 0;
+      poseSoldier(idx, t);
       tag.visible = true;
       tag.position.set(pos.x, pos.y + (cmd ? 2.08 : 1.9) * scale, pos.z);
       tag.scale.set(tagData.sx, tagData.sy, 1);
@@ -368,7 +362,7 @@ export function Army({ count, names = [], commanders = [] }: ArmyProps) {
 
   useFrame((state, dt) => {
     const t = state.clock.elapsedTime;
-    const { cols, scale } = form;
+    const { scale } = form;
     const sally = sallyLocal(t);
     const hunt = sallyHunting(sally);
     const enemies = raidCount(visible);
@@ -394,8 +388,7 @@ export function Army({ count, names = [], commanders = [] }: ArmyProps) {
       const burst = hunt ? (pair ? 3 : 2) : pair ? 2 : 1;
       for (let i = 0; i < burst && shots.current.length < cap; i++) {
         const soldier = Math.floor(Math.random() * visible);
-        const slot = layout.slotOf[soldier] ?? soldier;
-        unitPos(slot, t + seeds[soldier], cols, visible, pos);
+        poseSoldier(soldier, t);
         const idx = hunt ? sallyLiveIndex(sally, enemies, soldier + i * 11) : -1;
         const prey = idx >= 0 ? sallyRaiderAt(sally, idx, enemies) : null;
         shots.current.push({

@@ -40,10 +40,12 @@ function CinematicCam({
   duration,
   soldiers,
   level,
+  commanders = 0,
 }: {
   duration: number;
   soldiers: number;
   level: number;
+  commanders?: number;
 }) {
   const look = useMemo(() => new THREE.Vector3(), []);
   useFrame(({ camera, clock, size }) => {
@@ -54,7 +56,7 @@ function CinematicCam({
     const u = recT <= hook ? 0 : Math.min(1, (recT - hook) / zoomDur);
     const e = 1 - Math.pow(1 - u, 2.35);
 
-    const army = armyFrame(soldiers);
+    const army = armyFrame(soldiers, commanders);
     const castle = castleFrame(level);
 
     const startDist = distToFit(army.width, army.height + 2.4, aspect, 1.28);
@@ -191,7 +193,12 @@ function SceneContent({
       <SallyRaid soldiers={soldiers} />
       <Army count={soldiers} names={names} commanders={commanders} />
       {cinematic ? (
-        <CinematicCam duration={duration ?? 8} soldiers={soldiers} level={level} />
+        <CinematicCam
+          duration={duration ?? 8}
+          soldiers={soldiers}
+          level={level}
+          commanders={commanders.length}
+        />
       ) : (
         <OrbitControls
           makeDefault
