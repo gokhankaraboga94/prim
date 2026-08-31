@@ -21,7 +21,7 @@ import { ReelCapture } from "../components/ReelCapture";
 import { REEL_DURATIONS, type ReelDuration } from "../recordCanvas";
 
 export function AdminPage() {
-  const { game, recruits, reels, level, power, pressure, target } = useGame();
+  const { game, recruits, reels, level, power, pressure, target, maxHp } = useGame();
   const [soldiersInput, setSoldiersInput] = useState("");
   const [addInput, setAddInput] = useState("");
   const [namesInput, setNamesInput] = useState("");
@@ -483,6 +483,8 @@ export function AdminPage() {
           names={game.names}
           level={level}
           pressure={pressure}
+          hp={power}
+          maxHp={maxHp}
           seconds={reelSeconds}
           onClose={() => setCapturing(false)}
         />

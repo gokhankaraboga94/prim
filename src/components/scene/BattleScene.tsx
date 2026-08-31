@@ -5,6 +5,7 @@ import * as THREE from "three";
 import { Army, armyFrame } from "./Army";
 import { Castle } from "./Castle";
 import { SallyRaid } from "./SallyRaid";
+import { CaptureHpHud } from "./CaptureHpHud";
 import { castleFrame } from "../../castleLayout";
 
 type BattleSceneProps = {
@@ -12,6 +13,8 @@ type BattleSceneProps = {
   names?: string[];
   level: number;
   pressure: number;
+  hp?: number;
+  maxHp?: number;
   cinematic?: boolean;
   duration?: number;
   onReady?: (canvas: HTMLCanvasElement) => void;
@@ -157,6 +160,8 @@ function SceneContent({
   names = [],
   level,
   pressure,
+  hp,
+  maxHp,
   cinematic,
   duration,
 }: BattleSceneProps) {
@@ -189,6 +194,9 @@ function SceneContent({
           zoomSpeed={1}
         />
       )}
+      {cinematic && maxHp != null && hp != null && (
+        <CaptureHpHud hp={hp} maxHp={maxHp} soldiers={soldiers} />
+      )}
     </>
   );
 }
@@ -198,6 +206,8 @@ function BattleSceneInner({
   names,
   level,
   pressure,
+  hp,
+  maxHp,
   cinematic,
   duration,
   onReady,
@@ -237,6 +247,8 @@ function BattleSceneInner({
         names={names}
         level={level}
         pressure={pressure}
+        hp={hp}
+        maxHp={maxHp}
         cinematic={cinematic}
         duration={duration}
       />
