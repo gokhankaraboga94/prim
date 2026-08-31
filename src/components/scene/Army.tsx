@@ -173,39 +173,41 @@ type NameTag = {
 
 function makeHandleTexture(name: string): NameTag | null {
   const label = `@${name}`;
-  const height = 128;
-  const maxW = 1024;
+  const height = 384;
+  const maxW = 2048;
   const probe = document.createElement("canvas").getContext("2d");
   if (!probe) return null;
-  let fontSize = 62;
-  probe.font = `700 ${fontSize}px Outfit, system-ui, sans-serif`;
+  let fontSize = 168;
+  probe.font = `800 ${fontSize}px Outfit, system-ui, sans-serif`;
   let textW = probe.measureText(label).width;
-  while (textW + 40 > maxW && fontSize > 18) {
-    fontSize -= 1;
-    probe.font = `700 ${fontSize}px Outfit, system-ui, sans-serif`;
+  while (textW + 64 > maxW && fontSize > 36) {
+    fontSize -= 2;
+    probe.font = `800 ${fontSize}px Outfit, system-ui, sans-serif`;
     textW = probe.measureText(label).width;
   }
-  const width = Math.min(maxW, Math.max(256, Math.ceil(textW + 40)));
+  const width = Math.min(maxW, Math.max(384, Math.ceil(textW + 64)));
   const canvas = document.createElement("canvas");
   canvas.width = width;
   canvas.height = height;
   const ctx = canvas.getContext("2d");
   if (!ctx) return null;
   ctx.clearRect(0, 0, width, height);
-  ctx.font = `700 ${fontSize}px Outfit, system-ui, sans-serif`;
+  ctx.font = `800 ${fontSize}px Outfit, system-ui, sans-serif`;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   ctx.lineJoin = "round";
-  ctx.lineWidth = Math.max(6, fontSize * 0.2);
-  ctx.strokeStyle = "rgba(0,0,0,0.92)";
+  ctx.miterLimit = 2;
+  ctx.lineWidth = Math.max(10, fontSize * 0.18);
+  ctx.strokeStyle = "rgba(0,0,0,0.94)";
   ctx.fillStyle = "#fff";
-  ctx.strokeText(label, width / 2, height / 2 + 4);
-  ctx.fillText(label, width / 2, height / 2 + 4);
+  ctx.strokeText(label, width / 2, height / 2);
+  ctx.fillText(label, width / 2, height / 2);
   const map = new THREE.CanvasTexture(canvas);
   map.colorSpace = THREE.SRGBColorSpace;
-  map.generateMipmaps = true;
-  map.minFilter = THREE.LinearMipmapLinearFilter;
+  map.generateMipmaps = false;
+  map.minFilter = THREE.LinearFilter;
   map.magFilter = THREE.LinearFilter;
+  map.anisotropy = 8;
   const sy = 0.88;
   const sx = Math.min(FILE * 0.82, sy * (width / height));
   return { map, sx, sy };

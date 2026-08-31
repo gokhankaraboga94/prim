@@ -176,12 +176,12 @@ function SceneContent({
   return (
     <>
       {warLook && <WarGrade />}
-      <color attach="background" args={["#6d7d92"]} />
-      <fog attach="fog" args={["#7a8898", 340, 720]} />
-      <ambientLight intensity={0.62} color="#e8e4dc" />
-      <hemisphereLight args={["#b8c8dc", "#4a7a38", 0.55]} />
-      <directionalLight position={[-22, 34, 20]} intensity={2.15} color="#fff6e4" />
-      <directionalLight position={[18, 16, 10]} intensity={0.55} color="#c8d4e8" />
+      <color attach="background" args={[warLook ? "#5a5648" : "#6d7d92"]} />
+      <fog attach="fog" args={[warLook ? "#625c50" : "#7a8898", warLook ? 240 : 340, warLook ? 580 : 720]} />
+      <ambientLight intensity={warLook ? 0.46 : 0.62} color={warLook ? "#d4c4a4" : "#e8e4dc"} />
+      <hemisphereLight args={warLook ? ["#9aa898", "#3a4828", 0.4] : ["#b8c8dc", "#4a7a38", 0.55]} />
+      <directionalLight position={[-22, 34, 20]} intensity={warLook ? 1.7 : 2.15} color={warLook ? "#ffc07a" : "#fff6e4"} />
+      <directionalLight position={[18, 16, 10]} intensity={warLook ? 0.28 : 0.55} color={warLook ? "#6a8884" : "#c8d4e8"} />
       <Terrain />
       <Castle level={level} pressure={pressure} />
       <SallyRaid soldiers={soldiers} />
@@ -204,10 +204,10 @@ function SceneContent({
         />
       )}
       {cinematic && maxHp != null && hp != null && (
-        <CaptureHpHud hp={hp} maxHp={maxHp} soldiers={soldiers} />
+        <CaptureHpHud hp={hp} maxHp={maxHp} soldiers={soldiers} overlay={warLook} />
       )}
       {cinematic && showTitles && (
-        <ReelTitles soldiers={soldiers} duration={duration ?? 8} />
+        <ReelTitles soldiers={soldiers} duration={duration ?? 8} overlay={warLook} />
       )}
     </>
   );

@@ -68,6 +68,7 @@ type CaptureHpHudProps = {
   hp: number;
   maxHp: number;
   soldiers: number;
+  overlay?: boolean;
 };
 
 function HpPlate({ hp, maxHp, soldiers }: CaptureHpHudProps) {
@@ -112,9 +113,9 @@ function HpPlate({ hp, maxHp, soldiers }: CaptureHpHudProps) {
   );
 }
 
-export function CaptureHpHud(props: CaptureHpHudProps) {
+export function CaptureHpHud({ overlay, ...props }: CaptureHpHudProps) {
   return (
-    <Hud renderPriority={1}>
+    <Hud renderPriority={overlay ? 2 : 1}>
       <OrthographicCamera makeDefault position={[0, 0, 10]} />
       <HpPlate {...props} />
     </Hud>
@@ -168,6 +169,7 @@ function drawTitles(
 type ReelTitlesProps = {
   soldiers: number;
   duration: number;
+  overlay?: boolean;
 };
 
 function TitlesPlate({ soldiers, duration }: ReelTitlesProps) {
@@ -239,9 +241,9 @@ function TitlesPlate({ soldiers, duration }: ReelTitlesProps) {
   );
 }
 
-export function ReelTitles(props: ReelTitlesProps) {
+export function ReelTitles({ overlay, ...props }: ReelTitlesProps) {
   return (
-    <Hud renderPriority={2}>
+    <Hud renderPriority={overlay ? 3 : 2}>
       <OrthographicCamera makeDefault position={[0, 0, 10]} />
       <TitlesPlate {...props} />
     </Hud>

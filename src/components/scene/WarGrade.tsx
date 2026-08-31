@@ -3,8 +3,8 @@ import { useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 
 /**
- * Teal-shadow / amber-highlight grade that bakes into the canvas capture.
- * Takes over R3F's render (priority 1) so Hud overlays still draw on top.
+ * War-film grade baked into the canvas. Must run at useFrame priority 1.
+ * drei Hud at priority 1 re-renders the ungraded scene — overlays must be 2+.
  */
 export function WarGrade() {
   const { gl, scene, camera, size } = useThree();
@@ -42,28 +42,28 @@ export function WarGrade() {
         void main() {
           vec3 col = texture2D(tDiffuse, vUv).rgb;
           float y = luma(col);
-          col = mix(vec3(y), col, 0.62);
+          col = mix(vec3(y), col, 0.34);
 
-          vec3 shadow = vec3(0.70, 0.86, 0.84);
-          vec3 mid = vec3(1.02, 0.94, 0.82);
-          vec3 high = vec3(1.18, 0.98, 0.70);
-          float s = smoothstep(0.08, 0.42, y);
-          float h = smoothstep(0.48, 0.88, y);
+          vec3 shadow = vec3(0.52, 0.70, 0.62);
+          vec3 mid = vec3(1.05, 0.96, 0.74);
+          vec3 high = vec3(1.28, 1.02, 0.62);
+          float s = smoothstep(0.05, 0.38, y);
+          float h = smoothstep(0.42, 0.86, y);
           col *= mix(shadow, mix(mid, high, h), s);
 
-          col = (col - 0.5) * 1.22 + 0.46;
-          col = pow(max(col, 0.0), vec3(1.08));
-          col.r *= 1.04;
-          col.b *= 0.92;
+          col = (col - 0.5) * 1.38 + 0.40;
+          col = pow(max(col, 0.0), vec3(1.12));
+          col.g *= 1.06;
+          col.b *= 0.82;
 
           vec2 p = vUv * 2.0 - 1.0;
           p.x *= resolution.x / max(resolution.y, 1.0);
-          float vig = 1.0 - dot(p, p) * 0.18;
-          col *= clamp(vig, 0.42, 1.0);
+          float vig = 1.0 - dot(p, p) * 0.32;
+          col *= clamp(vig, 0.28, 1.0);
 
-          vec2 gp = vUv * resolution;
-          float n = fract(sin(dot(gp + time * 19.0, vec2(12.9898, 78.233))) * 43758.5453);
-          col += (n - 0.5) * 0.045;
+          vec2 gp = gl_FragCoord.xy + time * 37.0;
+          float n = fract(sin(dot(gp, vec2(12.9898, 78.233))) * 43758.5453);
+          col += (n - 0.5) * 0.08;
 
           gl_FragColor = vec4(clamp(col, 0.0, 1.0), 1.0);
         }
@@ -80,12 +80,15 @@ export function WarGrade() {
   }, []);
 
   useEffect(() => {
+    const prev = gl.toneMappingExposure;
+    gl.toneMappingExposure = 1.05;
     return () => {
+      gl.toneMappingExposure = prev;
       pass.rt.dispose();
       pass.mat.dispose();
       pass.quad.geometry.dispose();
     };
-  }, [pass]);
+  }, [gl, pass]);
 
   useFrame((state) => {
     const dpr = gl.getPixelRatio();
