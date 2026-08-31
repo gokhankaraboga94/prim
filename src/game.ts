@@ -2,6 +2,7 @@ export type GameState = {
   soldiers: number;
   instagramHandle: string;
   names: string[];
+  commanders: string[];
   updatedAt: number;
   castleLevel: number;
   castleHp: number;
@@ -37,6 +38,7 @@ export const DEFAULT_GAME: GameState = {
   soldiers: 0,
   instagramHandle: "inshesabi",
   names: [],
+  commanders: [],
   updatedAt: 0,
   castleLevel: 1,
   castleHp: LEVEL_HP[1],
@@ -69,10 +71,12 @@ export function parseGame(v: Partial<GameState> | null): GameState {
     rawNames.map((item) => normalizeHandle(String(item || ""))),
     soldiers
   );
+  const commanders = compactCommanders(coerceNames(v?.commanders), names);
   return {
     soldiers,
     instagramHandle,
     names,
+    commanders,
     updatedAt,
     castleLevel,
     castleHp: hasHp ? Math.max(0, Number(v?.castleHp)) : maxHpForLevel(castleLevel),
@@ -109,14 +113,16 @@ export function resolveSiege(game: GameState, now = Date.now()): SiegeView {
 export function toGameRecord(
   game: GameState,
   now: number,
-  patch: Partial<Pick<GameState, "soldiers" | "instagramHandle" | "names">> = {}
+  patch: Partial<Pick<GameState, "soldiers" | "instagramHandle" | "names" | "commanders">> = {}
 ): GameState {
   const siege = resolveSiege(game, now);
   const soldiers = patch.soldiers ?? game.soldiers;
+  const names = compactNames(patch.names ?? game.names, soldiers);
   return {
     soldiers,
     instagramHandle: patch.instagramHandle ?? game.instagramHandle,
-    names: compactNames(patch.names ?? game.names, soldiers),
+    names,
+    commanders: compactCommanders(patch.commanders ?? game.commanders, names),
     updatedAt: now,
     castleLevel: siege.level,
     castleHp: siege.hp,
@@ -191,6 +197,41 @@ export function namedCount(names: string[], soldiers: number): number {
   const cap = Math.max(0, soldiers);
   for (let i = 0; i < cap && i < names.length; i++) if (names[i]) n += 1;
   return n;
+}
+
+export function compactCommanders(commanders: string[] | undefined, names: string[]): string[] {
+  const allowed = new Set(names.map((n) => normalizeHandle(n).toLowerCase()).filter(Boolean));
+  const out: string[] = [];
+  const seen = new Set<string>();
+  for (const raw of commanders || []) {
+    const handle = normalizeHandle(raw);
+    const key = handle.toLowerCase();
+    if (!handle || !allowed.has(key) || seen.has(key)) continue;
+    seen.add(key);
+    out.push(handle);
+  }
+  return out;
+}
+
+export function isCommander(handle: string, commanders: string[] | undefined): boolean {
+  const key = normalizeHandle(handle).toLowerCase();
+  if (!key) return false;
+  return (commanders || []).some((c) => normalizeHandle(c).toLowerCase() === key);
+}
+
+export function toggleCommander(commanders: string[] | undefined, names: string[], handle: string): string[] {
+  const next = compactCommanders(commanders, names);
+  const key = normalizeHandle(handle).toLowerCase();
+  const idx = next.findIndex((c) => c.toLowerCase() === key);
+  if (idx >= 0) next.splice(idx, 1);
+  else next.push(normalizeHandle(handle));
+  return compactCommanders(next, names);
+}
+
+export function retargetCommander(commanders: string[] | undefined, prev: string, nextName: string): string[] {
+  const from = normalizeHandle(prev).toLowerCase();
+  const to = normalizeHandle(nextName);
+  return (commanders || []).map((c) => (normalizeHandle(c).toLowerCase() === from ? to : c));
 }
 
 export function assignNames(existing: string[], soldiers: number, incoming: string[]): string[] {

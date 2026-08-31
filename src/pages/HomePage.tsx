@@ -18,6 +18,7 @@ export function HomePage() {
           <BattleScene
             soldiers={game.soldiers}
             names={game.names}
+            commanders={game.commanders}
             level={level}
             pressure={Math.round(pressure * 20) / 20}
           />

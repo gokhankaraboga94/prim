@@ -6,6 +6,9 @@ import { auth, db, storage } from "../firebase";
 import {
   assignNames,
   formatCount,
+  isCommander,
+  toggleCommander,
+  retargetCommander,
   formatPower,
   namedCount,
   normalizeHandle,
@@ -111,10 +114,10 @@ export function AdminPage() {
     }
   }
 
-  async function saveNames(names: string[], ok: string) {
+  async function saveNames(names: string[], ok: string, commanders = game.commanders) {
     setBusy(true);
     try {
-      await set(ref(db, "game"), toGameRecord(game, Date.now(), { names }));
+      await set(ref(db, "game"), toGameRecord(game, Date.now(), { names, commanders }));
       setEditIndex(null);
       setEditValue("");
       setMsg(ok);
@@ -143,7 +146,28 @@ export function AdminPage() {
       setMsg(`@${next} zaten listede.`);
       return;
     }
-    await saveNames(renameSoldier(game.names, game.soldiers, editIndex, next), `@${next} güncellendi.`);
+    await saveNames(
+      renameSoldier(game.names, game.soldiers, editIndex, next),
+      `@${next} güncellendi.`,
+      retargetCommander(game.commanders, game.names[editIndex], next)
+    );
+  }
+
+  async function onToggleCommander(name: string) {
+    setBusy(true);
+    try {
+      const commanders = toggleCommander(game.commanders, game.names, name);
+      await set(ref(db, "game"), toGameRecord(game, Date.now(), { commanders }));
+      setMsg(
+        isCommander(name, commanders)
+          ? `@${name} komutan atandı. En önde, pelerinle durur.`
+          : `@${name} komutanlıktan alındı.`
+      );
+    } catch {
+      setMsg("Komutan kaydedilemedi.");
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function onDeleteName(index: number, name: string) {
@@ -314,7 +338,8 @@ export function AdminPage() {
           </form>
           <p className="muted">
             {namedCount(game.names, game.soldiers)} isimli ·{" "}
-            {Math.max(0, game.soldiers - namedCount(game.names, game.soldiers))} isimsiz
+            {Math.max(0, game.soldiers - namedCount(game.names, game.soldiers))} isimsiz ·{" "}
+            {game.commanders.length} komutan
           </p>
           <ul className="name-list">
             {game.names.map((name, index) =>
@@ -344,7 +369,16 @@ export function AdminPage() {
                     </form>
                   ) : (
                     <>
-                      <span>@{name}</span>
+                      <span className={isCommander(name, game.commanders) ? "cmd" : undefined}>@{name}</span>
+                      <label className="cmd-tick">
+                        <input
+                          type="checkbox"
+                          checked={isCommander(name, game.commanders)}
+                          disabled={busy}
+                          onChange={() => void onToggleCommander(name)}
+                        />
+                        Komutan
+                      </label>
                       <button
                         type="button"
                         className="btn-ghost"
@@ -510,6 +544,7 @@ export function AdminPage() {
         <ReelCapture
           soldiers={game.soldiers}
           names={game.names}
+          commanders={game.commanders}
           level={level}
           pressure={pressure}
           hp={power}

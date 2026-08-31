@@ -13,6 +13,7 @@ import { REEL_HOLD, reelHook, reelZoomDur } from "../../recordCanvas";
 type BattleSceneProps = {
   soldiers: number;
   names?: string[];
+  commanders?: string[];
   level: number;
   pressure: number;
   hp?: number;
@@ -165,6 +166,7 @@ function Terrain() {
 function SceneContent({
   soldiers,
   names = [],
+  commanders = [],
   level,
   pressure,
   hp,
@@ -187,7 +189,7 @@ function SceneContent({
       <Terrain />
       <Castle level={level} pressure={pressure} />
       <SallyRaid soldiers={soldiers} />
-      <Army count={soldiers} names={names} />
+      <Army count={soldiers} names={names} commanders={commanders} />
       {cinematic ? (
         <CinematicCam duration={duration ?? 8} soldiers={soldiers} level={level} />
       ) : (
@@ -219,6 +221,7 @@ function SceneContent({
 function BattleSceneInner({
   soldiers,
   names,
+  commanders,
   level,
   pressure,
   hp,
@@ -263,6 +266,7 @@ function BattleSceneInner({
       <SceneContent
         soldiers={soldiers}
         names={names}
+        commanders={commanders}
         level={level}
         pressure={pressure}
         hp={hp}

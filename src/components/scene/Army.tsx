@@ -2,10 +2,12 @@ import { useLayoutEffect, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
+import { isCommander } from "../../game";
 import { raidCount, sallyHunting, sallyLiveIndex, sallyLocal, sallyRaiderAt } from "../../siegeEvent";
 
 const MAX_SOLDIERS = 5000;
 const MAX_LABELS = 80;
+const MAX_COMMANDERS = 24;
 const MAX_ARROWS = 16;
 const IDLE_ARROWS = 2;
 const dummy = new THREE.Object3D();
@@ -33,6 +35,7 @@ type Shot = {
 type ArmyProps = {
   count: number;
   names?: string[];
+  commanders?: string[];
 };
 
 function pickCols(n: number) {
@@ -82,6 +85,42 @@ function unitPos(i: number, t: number, cols: number, n: number, out: THREE.Vecto
   const strike = front ? Math.abs(Math.sin(t * 7 + i)) * 0.07 : 0;
   const march = front ? 0 : Math.min(1, ((t * 0.13) % 4) / 2.4) * 0.32;
   out.set(x, strike, z - march);
+}
+
+function frontSlots(n: number, cols: number, k: number): number[] {
+  const rowLen = Math.min(cols, Math.max(0, n));
+  const mid = (rowLen - 1) / 2;
+  const row = Array.from({ length: rowLen }, (_, i) => i).sort(
+    (a, b) => Math.abs(a - mid) - Math.abs(b - mid) || a - b
+  );
+  const slots: number[] = [];
+  for (const col of row) {
+    if (slots.length >= k) break;
+    slots.push(col);
+  }
+  for (let i = rowLen; i < n && slots.length < k; i++) slots.push(i);
+  return slots;
+}
+
+function buildLayout(names: string[], commanders: string[], n: number, cols: number) {
+  const cmd: number[] = [];
+  const rest: number[] = [];
+  for (let i = 0; i < n; i++) {
+    if (names[i] && isCommander(names[i], commanders)) cmd.push(i);
+    else rest.push(i);
+  }
+  const soldierAt = new Array<number>(n);
+  const front = frontSlots(n, cols, cmd.length);
+  cmd.forEach((soldier, k) => {
+    soldierAt[front[k] ?? k] = soldier;
+  });
+  let r = 0;
+  for (let slot = 0; slot < n; slot++) {
+    if (soldierAt[slot] == null) soldierAt[slot] = rest[r++];
+  }
+  const slotOf = new Array<number>(n);
+  for (let slot = 0; slot < n; slot++) slotOf[soldierAt[slot]] = slot;
+  return { soldierAt, slotOf, cmdCount: cmd.length };
 }
 
 function colorize(geo: THREE.BufferGeometry, hex: string) {
@@ -165,27 +204,47 @@ function getArcherGeometry() {
   return archerGeoCache;
 }
 
+let commanderGeoCache: THREE.BufferGeometry | null = null;
+
+function getCommanderGeometry() {
+  if (commanderGeoCache) return commanderGeoCache;
+  const capeParts = [
+    part(new THREE.BoxGeometry(0.62, 0.98, 0.12), "#6e1426", 0, 0.68, -0.26),
+    part(new THREE.BoxGeometry(0.52, 0.5, 0.1), "#4a0e1a", 0, 0.28, -0.32),
+    part(new THREE.BoxGeometry(0.66, 0.12, 0.14), "#8c1c32", 0, 1.08, -0.2),
+    part(new THREE.BoxGeometry(0.2, 0.06, 0.1), "#e8c868", 0, 1.12, -0.08),
+    part(new THREE.SphereGeometry(0.05, 7, 6), "#f0d478", -0.12, 1.12, -0.06),
+    part(new THREE.SphereGeometry(0.05, 7, 6), "#f0d478", 0.12, 1.12, -0.06),
+  ];
+  const cape = mergeGeometries(capeParts, false);
+  capeParts.forEach((g) => g.dispose());
+  const merged = mergeGeometries([getArcherGeometry().clone(), cape || getArcherGeometry().clone()], false);
+  cape?.dispose();
+  commanderGeoCache = merged || getArcherGeometry().clone();
+  return commanderGeoCache;
+}
+
 type NameTag = {
   map: THREE.CanvasTexture;
   sx: number;
   sy: number;
 };
 
-function makeHandleTexture(name: string): NameTag | null {
+function makeHandleTexture(name: string, commander = false): NameTag | null {
   const label = `@${name}`;
-  const height = 384;
+  const height = 512;
   const maxW = 2048;
   const probe = document.createElement("canvas").getContext("2d");
   if (!probe) return null;
-  let fontSize = 168;
+  let fontSize = 200;
   probe.font = `800 ${fontSize}px Outfit, system-ui, sans-serif`;
   let textW = probe.measureText(label).width;
-  while (textW + 64 > maxW && fontSize > 36) {
+  while (textW + 72 > maxW && fontSize > 40) {
     fontSize -= 2;
     probe.font = `800 ${fontSize}px Outfit, system-ui, sans-serif`;
     textW = probe.measureText(label).width;
   }
-  const width = Math.min(maxW, Math.max(384, Math.ceil(textW + 64)));
+  const width = Math.min(maxW, Math.max(512, Math.ceil(textW + 72)));
   const canvas = document.createElement("canvas");
   canvas.width = width;
   canvas.height = height;
@@ -197,24 +256,25 @@ function makeHandleTexture(name: string): NameTag | null {
   ctx.textBaseline = "middle";
   ctx.lineJoin = "round";
   ctx.miterLimit = 2;
-  ctx.lineWidth = Math.max(10, fontSize * 0.18);
-  ctx.strokeStyle = "rgba(0,0,0,0.94)";
-  ctx.fillStyle = "#fff";
+  ctx.lineWidth = Math.max(14, fontSize * 0.2);
+  ctx.strokeStyle = commander ? "rgba(6, 28, 12, 0.96)" : "rgba(0,0,0,0.94)";
+  ctx.fillStyle = commander ? "#b6ffa8" : "#fff";
   ctx.strokeText(label, width / 2, height / 2);
   ctx.fillText(label, width / 2, height / 2);
   const map = new THREE.CanvasTexture(canvas);
   map.colorSpace = THREE.SRGBColorSpace;
-  map.generateMipmaps = false;
-  map.minFilter = THREE.LinearFilter;
+  map.generateMipmaps = true;
+  map.minFilter = THREE.LinearMipmapLinearFilter;
   map.magFilter = THREE.LinearFilter;
-  map.anisotropy = 8;
-  const sy = 0.88;
-  const sx = Math.min(FILE * 0.82, sy * (width / height));
+  map.anisotropy = 16;
+  const sy = commander ? 1.12 : 1.02;
+  const sx = Math.min(FILE * (commander ? 0.95 : 0.88), sy * (width / height));
   return { map, sx, sy };
 }
 
-export function Army({ count, names = [] }: ArmyProps) {
+export function Army({ count, names = [], commanders = [] }: ArmyProps) {
   const bodies = useRef<THREE.InstancedMesh>(null);
+  const chiefs = useRef<THREE.InstancedMesh>(null);
   const arrows = useRef<THREE.InstancedMesh>(null);
   const tags = useRef<THREE.Group>(null);
   const acc = useRef(0);
@@ -222,18 +282,33 @@ export function Army({ count, names = [] }: ArmyProps) {
   const nextShot = useRef(0.6);
   const pos = useMemo(() => new THREE.Vector3(), []);
   const archerGeo = useMemo(() => getArcherGeometry(), []);
+  const commanderGeo = useMemo(() => getCommanderGeometry(), []);
 
   const visible = Math.min(MAX_SOLDIERS, Math.max(0, Math.floor(count)));
   const instanceCap = Math.min(MAX_SOLDIERS, Math.max(visible, 1));
+  const form = useMemo(() => formation(visible), [visible]);
+  const layout = useMemo(
+    () => buildLayout(names, commanders, visible, form.cols),
+    [names, commanders, visible, form.cols]
+  );
   const labeled = useMemo(() => {
     const ids: number[] = [];
+    const seen = new Set<number>();
     for (let i = 0; i < visible && ids.length < MAX_LABELS; i++) {
-      if (names[i]) ids.push(i);
+      if (names[i] && isCommander(names[i], commanders)) {
+        ids.push(i);
+        seen.add(i);
+      }
+    }
+    for (let i = 0; i < visible && ids.length < MAX_LABELS; i++) {
+      if (names[i] && !seen.has(i)) ids.push(i);
     }
     return ids;
-  }, [names, visible]);
-  const nameMaps = useMemo(() => labeled.map((i) => makeHandleTexture(names[i])), [labeled, names]);
-  const form = useMemo(() => formation(visible), [visible]);
+  }, [names, commanders, visible]);
+  const nameMaps = useMemo(
+    () => labeled.map((i) => makeHandleTexture(names[i], isCommander(names[i], commanders))),
+    [labeled, names, commanders]
+  );
 
   const seeds = useMemo(() => {
     const arr = new Float32Array(MAX_SOLDIERS);
@@ -243,17 +318,31 @@ export function Army({ count, names = [] }: ArmyProps) {
 
   function placeBodies(t: number) {
     const { cols, scale } = form;
-    if (bodies.current) {
-      bodies.current.count = visible;
-      for (let i = 0; i < visible; i++) {
-        unitPos(i, t + seeds[i], cols, visible, pos);
-        dummy.position.copy(pos);
-        dummy.rotation.set(0, Math.PI, 0);
-        dummy.scale.setScalar(scale);
-        dummy.updateMatrix();
-        bodies.current.setMatrixAt(i, dummy.matrix);
+    let regular = 0;
+    let chief = 0;
+    for (let slot = 0; slot < visible; slot++) {
+      const soldier = layout.soldierAt[slot] ?? slot;
+      unitPos(slot, t + seeds[soldier], cols, visible, pos);
+      dummy.position.copy(pos);
+      dummy.rotation.set(0, Math.PI, 0);
+      const cmd = Boolean(names[soldier] && isCommander(names[soldier], commanders));
+      dummy.scale.setScalar(cmd ? scale * 1.12 : scale);
+      dummy.updateMatrix();
+      if (cmd && chiefs.current && chief < MAX_COMMANDERS) {
+        chiefs.current.setMatrixAt(chief, dummy.matrix);
+        chief += 1;
+      } else if (bodies.current) {
+        bodies.current.setMatrixAt(regular, dummy.matrix);
+        regular += 1;
       }
+    }
+    if (bodies.current) {
+      bodies.current.count = regular;
       bodies.current.instanceMatrix.needsUpdate = true;
+    }
+    if (chiefs.current) {
+      chiefs.current.count = chief;
+      chiefs.current.instanceMatrix.needsUpdate = true;
     }
     if (!tags.current) return;
     for (let k = 0; k < tags.current.children.length; k++) {
@@ -264,9 +353,11 @@ export function Army({ count, names = [] }: ArmyProps) {
         tag.visible = false;
         continue;
       }
-      unitPos(idx, t + seeds[idx], cols, visible, pos);
+      const slot = layout.slotOf[idx] ?? idx;
+      const cmd = isCommander(names[idx], commanders);
+      unitPos(slot, t + seeds[idx], cols, visible, pos);
       tag.visible = true;
-      tag.position.set(pos.x, pos.y + 1.86 * scale, pos.z);
+      tag.position.set(pos.x, pos.y + (cmd ? 2.08 : 1.9) * scale, pos.z);
       tag.scale.set(tagData.sx, tagData.sy, 1);
     }
   }
@@ -303,7 +394,8 @@ export function Army({ count, names = [] }: ArmyProps) {
       const burst = hunt ? (pair ? 3 : 2) : pair ? 2 : 1;
       for (let i = 0; i < burst && shots.current.length < cap; i++) {
         const soldier = Math.floor(Math.random() * visible);
-        unitPos(soldier, t + seeds[soldier], cols, visible, pos);
+        const slot = layout.slotOf[soldier] ?? soldier;
+        unitPos(slot, t + seeds[soldier], cols, visible, pos);
         const idx = hunt ? sallyLiveIndex(sally, enemies, soldier + i * 11) : -1;
         const prey = idx >= 0 ? sallyRaiderAt(sally, idx, enemies) : null;
         shots.current.push({
@@ -345,6 +437,9 @@ export function Army({ count, names = [] }: ArmyProps) {
   return (
     <group>
       <instancedMesh key={instanceCap} ref={bodies} args={[archerGeo, undefined, instanceCap]} frustumCulled={false}>
+        <meshLambertMaterial vertexColors />
+      </instancedMesh>
+      <instancedMesh ref={chiefs} args={[commanderGeo, undefined, MAX_COMMANDERS]} frustumCulled={false}>
         <meshLambertMaterial vertexColors />
       </instancedMesh>
       <instancedMesh ref={arrows} args={[undefined, undefined, MAX_ARROWS]} frustumCulled={false}>

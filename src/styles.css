@@ -778,6 +778,30 @@ select:focus {
   font-weight: 600;
 }
 
+.name-list span.cmd {
+  color: #b6ffa8;
+}
+
+.cmd-tick {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: 12px;
+  letter-spacing: 0;
+  text-transform: none;
+  color: #b6ffa8;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.cmd-tick input {
+  width: 16px;
+  height: 16px;
+  flex: none;
+  accent-color: #6fcf4a;
+}
+
 .name-list .btn-ghost {
   padding: 6px 10px;
   font-size: 12px;

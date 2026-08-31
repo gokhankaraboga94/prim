@@ -6,6 +6,7 @@ import { recordCanvas, saveReelBlob, wait } from "../recordCanvas";
 type ReelCaptureProps = {
   soldiers: number;
   names: string[];
+  commanders?: string[];
   level: number;
   pressure: number;
   hp: number;
@@ -17,7 +18,7 @@ type ReelCaptureProps = {
   onClose: () => void;
 };
 
-export function ReelCapture({ soldiers, names, level, pressure, hp, maxHp, seconds, showTitles = true, warLook = false, day = 0, onClose }: ReelCaptureProps) {
+export function ReelCapture({ soldiers, names, commanders = [], level, pressure, hp, maxHp, seconds, showTitles = true, warLook = false, day = 0, onClose }: ReelCaptureProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [phase, setPhase] = useState<"boot" | "rec" | "done" | "err">("boot");
   const [blob, setBlob] = useState<Blob | null>(null);
@@ -89,6 +90,7 @@ export function ReelCapture({ soldiers, names, level, pressure, hp, maxHp, secon
           <BattleScene
             soldiers={soldiers}
             names={names}
+            commanders={commanders}
             level={level}
             pressure={pressure}
             hp={hp}
