@@ -60,9 +60,11 @@ function CinematicCam({
     const castle = castleFrame(level);
 
     const startDist = distToFit(army.width, army.height + 2.4, aspect, 1.28);
-    const startLookZ = army.midZ;
-    const startZ = army.back + startDist * 0.88;
-    const startY = 2.2 + startDist * 0.16;
+    const startX = Math.min(7.2, army.width * 0.16);
+    const startY = 4.6 + startDist * 0.2;
+    const startZ = army.back + startDist * 0.8;
+    const startLookY = 2.15;
+    const startLookZ = army.front + (army.midZ - army.front) * 0.28;
 
     const endDist = distToFit(castle.width, castle.height, aspect, 1.22);
     const endLookZ = castle.midZ;
@@ -70,11 +72,11 @@ function CinematicCam({
     const endY = castle.midY + endDist * 0.36;
 
     camera.position.set(
-      0,
+      startX * (1 - e),
       startY + (endY - startY) * e,
       startZ + (endZ - startZ) * e
     );
-    look.set(0, 1.7 + (castle.midY - 1.7) * e, startLookZ + (endLookZ - startLookZ) * e);
+    look.set(0, startLookY + (castle.midY - startLookY) * e, startLookZ + (endLookZ - startLookZ) * e);
     camera.lookAt(look);
   });
   return null;

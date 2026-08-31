@@ -31,8 +31,8 @@ export function raidCount(soldiers: number) {
 }
 
 export const SWORD_START = 3.55;
-export const SWORD_EVERY = 0.7;
-export const SWORD_SWING = 0.36;
+export const SWORD_EVERY = 1.45;
+export const SWORD_SWING = 0.42;
 
 export function swordPairCount(n: number, commanders: number) {
   if (commanders <= 0 || n <= 0) return 0;
@@ -136,9 +136,9 @@ export function sallyRaiderAt(
   if (sword && fall > 0) {
     const side = i % 2 === 0 ? -1 : 1;
     const u = fall;
-    out.x += side * (1.2 + u * 10);
-    out.y = Math.sin(u * Math.PI) * 5.2 + u * 0.35;
-    out.z -= u * 19;
+    out.x += side * (0.6 + u * 5);
+    out.y = Math.sin(u * Math.PI) * 2.6 + u * 0.18;
+    out.z -= u * 9.5;
     out.flung = true;
   }
   return out;
