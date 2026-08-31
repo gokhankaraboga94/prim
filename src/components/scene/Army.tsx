@@ -50,6 +50,18 @@ function formation(visible: number) {
   return { cols: pickCols(n), scale: 1.14 };
 }
 
+export function armyFrame(count: number) {
+  const n = Math.max(1, Math.min(MAX_SOLDIERS, Math.floor(count)));
+  const cols = pickCols(n);
+  const rows = Math.ceil(n / cols);
+  const companies = Math.max(1, Math.ceil(cols / COMP_FILES));
+  const pitch = (COMP_FILES - 1) * FILE + COMP_GAP;
+  const width = (companies - 1) * pitch + (COMP_FILES - 1) * FILE + FILE * 0.55;
+  const front = FRONT_Z;
+  const back = FRONT_Z + (rows - 1) * RANK;
+  return { width, front, back, midZ: (front + back) / 2, height: 3.5 };
+}
+
 function unitPos(i: number, t: number, cols: number, n: number, out: THREE.Vector3) {
   const col = i % cols;
   const row = Math.floor(i / cols);

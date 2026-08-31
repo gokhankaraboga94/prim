@@ -87,7 +87,7 @@ export function ReelCapture({ soldiers, names, level, pressure, seconds, onClose
             level={level}
             pressure={pressure}
             cinematic
-            duration={seconds + 2}
+            duration={seconds}
             onReady={(canvas) => {
               canvasRef.current = canvas;
             }}
@@ -95,11 +95,9 @@ export function ReelCapture({ soldiers, names, level, pressure, seconds, onClose
         </SceneErrorBoundary>
       </div>
 
-      {phase !== "done" && (
+      {phase === "err" && (
         <div className="reel-capture-hud">
-          {phase === "boot" && <p>Anasayfa kuşatmasına geçiliyor…</p>}
-          {phase === "rec" && <p>Kayıt alınıyor · {seconds} sn</p>}
-          {phase === "err" && <p>{err}</p>}
+          <p>{err}</p>
         </div>
       )}
 
@@ -116,7 +114,7 @@ export function ReelCapture({ soldiers, names, level, pressure, seconds, onClose
         </div>
       )}
 
-      {phase !== "done" && (
+      {(phase === "boot" || phase === "err") && (
         <button type="button" className="btn-ghost reel-capture-close" onClick={onClose}>
           İptal
         </button>

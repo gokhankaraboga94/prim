@@ -2,9 +2,10 @@ import { memo, useEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
 import * as THREE from "three";
-import { Army } from "./Army";
+import { Army, armyFrame } from "./Army";
 import { Castle } from "./Castle";
 import { SallyRaid } from "./SallyRaid";
+import { castleFrame } from "../../castleLayout";
 
 type BattleSceneProps = {
   soldiers: number;
@@ -16,24 +17,52 @@ type BattleSceneProps = {
   onReady?: (canvas: HTMLCanvasElement) => void;
 };
 
-function CinematicCam({ duration }: { duration: number }) {
-  useFrame(({ camera, clock }) => {
-    const t = Math.min(1, clock.elapsedTime / Math.max(1, duration));
-    const u = t * t * (3 - 2 * t);
-    const p1 = { x: 9, y: 20, z: 94 };
-    const p2 = { x: 36, y: 18, z: 72 };
-    const p3 = { x: -28, y: 16, z: 68 };
-    const p4 = { x: 6, y: 26, z: 108 };
-    const seg = u < 0.34 ? 0 : u < 0.67 ? 1 : 2;
-    const local = seg === 0 ? u / 0.34 : seg === 1 ? (u - 0.34) / 0.33 : (u - 0.67) / 0.33;
-    const a = seg === 0 ? p1 : seg === 1 ? p2 : p3;
-    const b = seg === 0 ? p2 : seg === 1 ? p3 : p4;
+const CAM_FOV = 36 * (Math.PI / 180);
+const REEL_HOLD = 1.05;
+
+function distToFit(width: number, height: number, aspect: number, margin = 1.2) {
+  const vHalf = Math.tan(CAM_FOV / 2);
+  const hHalf = vHalf * Math.max(0.35, aspect);
+  const dH = (height * margin) / (2 * vHalf);
+  const dW = (width * margin) / (2 * hHalf);
+  return Math.max(dH, dW);
+}
+
+function CinematicCam({
+  duration,
+  soldiers,
+  level,
+}: {
+  duration: number;
+  soldiers: number;
+  level: number;
+}) {
+  const look = useMemo(() => new THREE.Vector3(), []);
+  useFrame(({ camera, clock, size }) => {
+    const aspect = size.width / Math.max(1, size.height);
+    const u = Math.min(1, Math.max(0, (clock.elapsedTime - REEL_HOLD) / Math.max(0.05, duration)));
+    const e = u * u * (3 - 2 * u);
+
+    const army = armyFrame(soldiers);
+    const castle = castleFrame(level);
+
+    const startDist = distToFit(army.width, army.height + 2.4, aspect, 1.28);
+    const startLookZ = army.midZ;
+    const startZ = army.back + startDist * 0.88;
+    const startY = 2.2 + startDist * 0.16;
+
+    const endDist = distToFit(castle.width, castle.height, aspect, 1.22);
+    const endLookZ = castle.midZ;
+    const endZ = castle.front + endDist * 0.78;
+    const endY = castle.midY + endDist * 0.36;
+
     camera.position.set(
-      a.x + (b.x - a.x) * local,
-      a.y + (b.y - a.y) * local,
-      a.z + (b.z - a.z) * local
+      0,
+      startY + (endY - startY) * e,
+      startZ + (endZ - startZ) * e
     );
-    camera.lookAt(0, 6.5, 24);
+    look.set(0, 1.7 + (castle.midY - 1.7) * e, startLookZ + (endLookZ - startLookZ) * e);
+    camera.lookAt(look);
   });
   return null;
 }
@@ -144,7 +173,7 @@ function SceneContent({
       <SallyRaid soldiers={soldiers} />
       <Army count={soldiers} names={names} />
       {cinematic ? (
-        <CinematicCam duration={duration ?? 8} />
+        <CinematicCam duration={duration ?? 8} soldiers={soldiers} level={level} />
       ) : (
         <OrbitControls
           makeDefault

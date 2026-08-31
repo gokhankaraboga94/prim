@@ -15,3 +15,18 @@ export function castleAxes(grow: number) {
   const zShift = CASTLE_FRONT_LOCAL * (CASTLE_OLD_SZ - CASTLE_SZ) * grow;
   return { sx, sy, sz, zShift };
 }
+
+export function castleFrame(level: number) {
+  const grow = castleGrow(level);
+  const { sx, sy, sz, zShift } = castleAxes(grow);
+  const front = 6.85 * sz + zShift;
+  const back = -13.4 * sz + zShift;
+  return {
+    width: 22.4 * sx,
+    height: 9.3 * sy,
+    front,
+    back,
+    midZ: (front + back) / 2,
+    midY: 4.4 * sy,
+  };
+}
