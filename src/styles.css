@@ -757,21 +757,47 @@ select:focus {
   }
 }
 
-.name-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin: 10px 0 0;
-  padding: 0;
+.name-list {
   list-style: none;
+  padding: 0;
+  margin: 16px 0 0;
 }
 
-.name-chips li {
-  font-size: 12px;
-  padding: 4px 8px;
-  border-radius: 99px;
-  background: rgba(255, 255, 255, 0.08);
+.name-list li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.name-list span {
+  flex: 1;
+  min-width: 0;
   color: #fff;
+  font-weight: 600;
+}
+
+.name-list .btn-ghost {
+  padding: 6px 10px;
+  font-size: 12px;
+}
+
+.name-edit {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  width: 100%;
+  align-items: center;
+}
+
+.name-edit input {
+  flex: 1;
+  min-width: 120px;
+}
+
+.name-edit .btn-gold {
+  margin-top: 0;
 }
 
 .dur-pills {

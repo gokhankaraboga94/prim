@@ -10,6 +10,8 @@ import {
   namedCount,
   normalizeHandle,
   parseNameList,
+  removeSoldierName,
+  renameSoldier,
   targetForLevel,
   toGameRecord,
   type ReelItem,
@@ -32,6 +34,8 @@ export function AdminPage() {
   const [busy, setBusy] = useState(false);
   const [reelSeconds, setReelSeconds] = useState<ReelDuration>(7);
   const [capturing, setCapturing] = useState(false);
+  const [editIndex, setEditIndex] = useState<number | null>(null);
+  const [editValue, setEditValue] = useState("");
 
   const handle = handleInput || game.instagramHandle;
 
@@ -102,6 +106,45 @@ export function AdminPage() {
     } finally {
       setBusy(false);
     }
+  }
+
+  async function saveNames(names: string[], ok: string) {
+    setBusy(true);
+    try {
+      await set(ref(db, "game"), toGameRecord(game, Date.now(), { names }));
+      setEditIndex(null);
+      setEditValue("");
+      setMsg(ok);
+    } catch {
+      setMsg("İsim güncellenemedi.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function startEdit(index: number, name: string) {
+    setEditIndex(index);
+    setEditValue(name);
+  }
+
+  async function onSaveEdit(e: FormEvent) {
+    e.preventDefault();
+    if (editIndex == null) return;
+    const next = normalizeHandle(editValue);
+    if (!next) {
+      setMsg("Kullanıcı adı boş olamaz. Silmek için Sil’e bas.");
+      return;
+    }
+    const clash = game.names.findIndex((n, i) => i !== editIndex && n.toLowerCase() === next.toLowerCase());
+    if (clash >= 0) {
+      setMsg(`@${next} zaten listede.`);
+      return;
+    }
+    await saveNames(renameSoldier(game.names, game.soldiers, editIndex, next), `@${next} güncellendi.`);
+  }
+
+  async function onDeleteName(index: number, name: string) {
+    await saveNames(removeSoldierName(game.names, game.soldiers, index), `@${name} silindi.`);
   }
 
   async function onSaveHandle(e: FormEvent) {
@@ -270,10 +313,56 @@ export function AdminPage() {
             {namedCount(game.names, game.soldiers)} isimli ·{" "}
             {Math.max(0, game.soldiers - namedCount(game.names, game.soldiers))} isimsiz
           </p>
-          <ul className="name-chips">
-            {game.names.filter(Boolean).map((name) => (
-              <li key={name}>@{name}</li>
-            ))}
+          <ul className="name-list">
+            {game.names.map((name, index) =>
+              name ? (
+                <li key={`${index}-${name}`}>
+                  {editIndex === index ? (
+                    <form className="name-edit" onSubmit={(e) => void onSaveEdit(e)}>
+                      <input
+                        value={editValue}
+                        onChange={(e) => setEditValue(e.target.value)}
+                        autoFocus
+                        aria-label="Kullanıcı adını düzenle"
+                      />
+                      <button className="btn-gold" disabled={busy}>
+                        Kaydet
+                      </button>
+                      <button
+                        type="button"
+                        className="btn-ghost"
+                        onClick={() => {
+                          setEditIndex(null);
+                          setEditValue("");
+                        }}
+                      >
+                        İptal
+                      </button>
+                    </form>
+                  ) : (
+                    <>
+                      <span>@{name}</span>
+                      <button
+                        type="button"
+                        className="btn-ghost"
+                        disabled={busy}
+                        onClick={() => startEdit(index, name)}
+                      >
+                        Düzenle
+                      </button>
+                      <button
+                        type="button"
+                        className="btn-ghost"
+                        disabled={busy}
+                        onClick={() => void onDeleteName(index, name)}
+                      >
+                        Sil
+                      </button>
+                    </>
+                  )}
+                </li>
+              ) : null
+            )}
           </ul>
         </section>
 
