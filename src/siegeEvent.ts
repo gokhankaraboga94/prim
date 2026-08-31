@@ -1,6 +1,6 @@
 export const SALLY_CYCLE = 30;
 export const SALLY_LEN = 16;
-export const SALLY_START_DELAY = 3;
+export const SALLY_START_DELAY = 5;
 export const RAID_INSIDE_Z = 18;
 export const RAID_OUT_Z = 41;
 export const MAX_RAIDERS = 10000;
