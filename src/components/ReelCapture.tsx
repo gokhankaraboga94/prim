@@ -10,11 +10,12 @@ type ReelCaptureProps = {
   pressure: number;
   hp: number;
   maxHp: number;
+  handle: string;
   seconds: number;
   onClose: () => void;
 };
 
-export function ReelCapture({ soldiers, names, level, pressure, hp, maxHp, seconds, onClose }: ReelCaptureProps) {
+export function ReelCapture({ soldiers, names, level, pressure, hp, maxHp, handle, seconds, onClose }: ReelCaptureProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [phase, setPhase] = useState<"boot" | "rec" | "done" | "err">("boot");
   const [blob, setBlob] = useState<Blob | null>(null);
@@ -90,6 +91,7 @@ export function ReelCapture({ soldiers, names, level, pressure, hp, maxHp, secon
             pressure={pressure}
             hp={hp}
             maxHp={maxHp}
+            handle={handle}
             cinematic
             duration={seconds}
             onReady={(canvas) => {

@@ -5,7 +5,7 @@ import * as THREE from "three";
 import { Army, armyFrame } from "./Army";
 import { Castle } from "./Castle";
 import { SallyRaid } from "./SallyRaid";
-import { CaptureHpHud, ReelShutter } from "./CaptureHpHud";
+import { CaptureHpHud, ReelTitles } from "./CaptureHpHud";
 import { castleFrame } from "../../castleLayout";
 
 type BattleSceneProps = {
@@ -17,6 +17,7 @@ type BattleSceneProps = {
   maxHp?: number;
   cinematic?: boolean;
   duration?: number;
+  handle?: string;
   onReady?: (canvas: HTMLCanvasElement) => void;
 };
 
@@ -167,6 +168,7 @@ function SceneContent({
   maxHp,
   cinematic,
   duration,
+  handle,
 }: BattleSceneProps) {
   return (
     <>
@@ -200,7 +202,9 @@ function SceneContent({
       {cinematic && maxHp != null && hp != null && (
         <CaptureHpHud hp={hp} maxHp={maxHp} soldiers={soldiers} />
       )}
-      {cinematic && <ReelShutter duration={duration ?? 8} />}
+      {cinematic && (
+        <ReelTitles soldiers={soldiers} handle={handle ?? ""} duration={duration ?? 8} />
+      )}
     </>
   );
 }
@@ -214,6 +218,7 @@ function BattleSceneInner({
   maxHp,
   cinematic,
   duration,
+  handle,
   onReady,
 }: BattleSceneProps) {
   const [active, setActive] = useState(() => typeof document === "undefined" || !document.hidden);
@@ -255,6 +260,7 @@ function BattleSceneInner({
         maxHp={maxHp}
         cinematic={cinematic}
         duration={duration}
+        handle={handle}
       />
     </Canvas>
   );

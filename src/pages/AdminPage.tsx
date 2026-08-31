@@ -485,6 +485,7 @@ export function AdminPage() {
           pressure={pressure}
           hp={power}
           maxHp={maxHp}
+          handle={game.instagramHandle}
           seconds={reelSeconds}
           onClose={() => setCapturing(false)}
         />
