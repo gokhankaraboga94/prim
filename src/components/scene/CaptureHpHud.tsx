@@ -29,22 +29,22 @@ function drawHp(canvas: HTMLCanvasElement, pct: number, label: string) {
   const h = canvas.height;
   ctx.clearRect(0, 0, w, h);
 
-  roundRect(ctx, 20, 12, w - 40, h - 24, 28);
-  ctx.fillStyle = "rgba(8, 6, 4, 0.55)";
+  roundRect(ctx, 16, 10, w - 32, h - 20, 32);
+  ctx.fillStyle = "rgba(8, 6, 4, 0.62)";
   ctx.fill();
 
-  ctx.font = "700 34px Outfit, system-ui, sans-serif";
+  ctx.font = "800 56px Outfit, system-ui, sans-serif";
   ctx.fillStyle = "#fff";
   ctx.textBaseline = "middle";
   ctx.textAlign = "left";
-  ctx.fillText("Kalan sağlık", 52, 58);
+  ctx.fillText("Kalan sağlık", 48, 72);
   ctx.textAlign = "right";
-  ctx.fillText(`%${label}`, w - 52, 58);
+  ctx.fillText(`%${label}`, w - 48, 72);
 
-  const bx = 52;
-  const by = 92;
-  const bw = w - 104;
-  const bh = 40;
+  const bx = 48;
+  const by = 118;
+  const bw = w - 96;
+  const bh = 56;
   roundRect(ctx, bx, by, bw, bh, 20);
   ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
   ctx.fill();
@@ -70,11 +70,11 @@ type CaptureHpHudProps = {
 };
 
 function HpPlate({ hp, maxHp, soldiers }: CaptureHpHudProps) {
-  const viewport = useThree((s) => s.viewport);
+  const size = useThree((s) => s.size);
   const canvas = useMemo(() => {
     const c = document.createElement("canvas");
-    c.width = 1024;
-    c.height = 192;
+    c.width = 1080;
+    c.height = 240;
     return c;
   }, []);
   const tex = useMemo(() => {
@@ -99,9 +99,9 @@ function HpPlate({ hp, maxHp, soldiers }: CaptureHpHudProps) {
     tex.needsUpdate = true;
   });
 
-  const width = viewport.width * 0.9;
-  const height = Math.min(viewport.height * 0.16, 1.55);
-  const y = viewport.height / 2 - height / 2 - viewport.height * 0.035;
+  const width = size.width * 0.94;
+  const height = Math.max(96, size.height * 0.16);
+  const y = size.height / 2 - height / 2 - Math.max(12, size.height * 0.02);
 
   return (
     <mesh position={[0, y, 0]} renderOrder={20}>
@@ -156,18 +156,18 @@ function drawTitles(
   ctx.textBaseline = "middle";
   if (phase === "hook") {
     const count = formatCount(soldiers);
-    const big = count.length > 6 ? 96 : count.length > 4 ? 120 : 152;
+    const big = count.length > 6 ? 160 : count.length > 4 ? 200 : 240;
     ctx.font = `800 ${big}px Outfit, system-ui, sans-serif`;
-    strokeFill(ctx, count, w / 2, 88, 18);
-    ctx.font = "700 42px Outfit, system-ui, sans-serif";
-    strokeFill(ctx, "ASKER", w / 2, 168, 10);
-    ctx.font = "700 48px Outfit, system-ui, sans-serif";
-    strokeFill(ctx, "Bu kale düşecek mi?", w / 2, 248, 12);
+    strokeFill(ctx, count, w / 2, 130, 28);
+    ctx.font = "800 72px Outfit, system-ui, sans-serif";
+    strokeFill(ctx, "ASKER", w / 2, 250, 16);
+    ctx.font = "800 64px Outfit, system-ui, sans-serif";
+    strokeFill(ctx, "Bu kale düşecek mi?", w / 2, 360, 16);
   } else {
-    ctx.font = "800 52px Outfit, system-ui, sans-serif";
-    strokeFill(ctx, "Takip et, asker ol", w / 2, 120, 14);
-    ctx.font = "700 44px Outfit, system-ui, sans-serif";
-    strokeFill(ctx, `@${handle.replace(/^@/, "")}`, w / 2, 200, 12);
+    ctx.font = "800 72px Outfit, system-ui, sans-serif";
+    strokeFill(ctx, "Takip et, asker ol", w / 2, 170, 18);
+    ctx.font = "800 64px Outfit, system-ui, sans-serif";
+    strokeFill(ctx, `@${handle.replace(/^@/, "")}`, w / 2, 290, 16);
   }
   ctx.globalAlpha = 1;
 }
@@ -179,11 +179,11 @@ type ReelTitlesProps = {
 };
 
 function TitlesPlate({ soldiers, handle, duration }: ReelTitlesProps) {
-  const viewport = useThree((s) => s.viewport);
+  const size = useThree((s) => s.size);
   const canvas = useMemo(() => {
     const c = document.createElement("canvas");
-    c.width = 1024;
-    c.height = 320;
+    c.width = 1080;
+    c.height = 480;
     return c;
   }, []);
   const tex = useMemo(() => {
@@ -224,9 +224,9 @@ function TitlesPlate({ soldiers, handle, duration }: ReelTitlesProps) {
     if (mat.current) mat.current.opacity = alpha;
   });
 
-  const width = viewport.width * 0.92;
-  const height = Math.min(viewport.height * 0.34, 3.2);
-  const y = -viewport.height * 0.16;
+  const width = size.width * 0.96;
+  const height = Math.max(180, size.height * 0.42);
+  const y = -size.height * 0.12;
 
   return (
     <mesh position={[0, y, 0]} renderOrder={25}>
