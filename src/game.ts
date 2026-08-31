@@ -139,7 +139,7 @@ export function formatPower(n: number): string {
 }
 
 export function normalizeHandle(raw: string): string {
-  return raw.trim().replace(/^@+/, "").replace(/[^\w.]/g, "").slice(0, 30);
+  return raw.trim().replace(/^@+/, "").replace(/[^\w.]/g, "");
 }
 
 function coerceNames(v: unknown): string[] {

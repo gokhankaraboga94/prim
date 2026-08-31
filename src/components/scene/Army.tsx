@@ -146,30 +146,49 @@ function createArcherGeometry() {
   return merged;
 }
 
-function makeHandleTexture(name: string) {
+type NameTag = {
+  map: THREE.CanvasTexture;
+  sx: number;
+  sy: number;
+};
+
+function makeHandleTexture(name: string): NameTag | null {
   const label = `@${name}`;
-  const size = 256;
+  const height = 96;
+  const maxW = 768;
+  const probe = document.createElement("canvas").getContext("2d");
+  if (!probe) return null;
+  let fontSize = 46;
+  probe.font = `700 ${fontSize}px Outfit, system-ui, sans-serif`;
+  let textW = probe.measureText(label).width;
+  while (textW + 32 > maxW && fontSize > 14) {
+    fontSize -= 1;
+    probe.font = `700 ${fontSize}px Outfit, system-ui, sans-serif`;
+    textW = probe.measureText(label).width;
+  }
+  const width = Math.min(maxW, Math.max(192, Math.ceil(textW + 32)));
   const canvas = document.createElement("canvas");
-  canvas.width = size;
-  canvas.height = 96;
+  canvas.width = width;
+  canvas.height = height;
   const ctx = canvas.getContext("2d");
   if (!ctx) return null;
-  ctx.clearRect(0, 0, size, 96);
-  const fontSize = label.length > 16 ? 28 : label.length > 11 ? 34 : 42;
+  ctx.clearRect(0, 0, width, height);
   ctx.font = `700 ${fontSize}px Outfit, system-ui, sans-serif`;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   ctx.lineJoin = "round";
-  ctx.lineWidth = 8;
+  ctx.lineWidth = Math.max(4, fontSize * 0.18);
   ctx.strokeStyle = "rgba(0,0,0,0.88)";
   ctx.fillStyle = "#fff";
-  ctx.strokeText(label, size / 2, 52);
-  ctx.fillText(label, size / 2, 52);
-  const tex = new THREE.CanvasTexture(canvas);
-  tex.colorSpace = THREE.SRGBColorSpace;
-  tex.minFilter = THREE.LinearFilter;
-  tex.magFilter = THREE.LinearFilter;
-  return tex;
+  ctx.strokeText(label, width / 2, 52);
+  ctx.fillText(label, width / 2, 52);
+  const map = new THREE.CanvasTexture(canvas);
+  map.colorSpace = THREE.SRGBColorSpace;
+  map.minFilter = THREE.LinearFilter;
+  map.magFilter = THREE.LinearFilter;
+  const sy = 0.78;
+  const sx = Math.min(2.48, sy * (width / height));
+  return { map, sx, sy };
 }
 
 export function Army({ count, names = [] }: ArmyProps) {
@@ -301,16 +320,18 @@ export function Army({ count, names = [] }: ArmyProps) {
         <meshBasicMaterial color="#ffe7a0" />
       </instancedMesh>
       <group ref={tags}>
-        {nameMaps.map((map, i) => (
-          <sprite key={`${labeled[i]}-${names[labeled[i]]}`} scale={[2.15, 0.78, 1]} visible={false} renderOrder={2}>
+        {nameMaps.map((tag, i) =>
+          tag ? (
+          <sprite key={`${labeled[i]}-${names[labeled[i]]}`} scale={[tag.sx, tag.sy, 1]} visible={false} renderOrder={2}>
             <spriteMaterial
-              map={map ?? undefined}
+              map={tag.map}
               transparent
               depthTest={false}
               toneMapped={false}
             />
           </sprite>
-        ))}
+          ) : null
+        )}
       </group>
     </group>
   );
