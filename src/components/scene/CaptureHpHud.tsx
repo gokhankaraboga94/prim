@@ -184,9 +184,9 @@ function drawTitles(
       size -= 2;
       ctx.font = `800 ${size}px Outfit, system-ui, sans-serif`;
     }
-    strokeFill(ctx, line1, w / 2, 280, 14);
+    strokeFill(ctx, line1, w / 2, 200, 14);
     ctx.font = `800 ${Math.min(52, size)}px Outfit, system-ui, sans-serif`;
-    strokeFill(ctx, line2, w / 2, 370, 14);
+    strokeFill(ctx, line2, w / 2, 290, 14);
   }
 }
 
@@ -243,7 +243,7 @@ function TitlesPlate({ soldiers, duration, day = 0 }: ReelTitlesProps) {
     }
     if (mat.current) mat.current.opacity = alpha;
     if (mesh.current) {
-      mesh.current.position.y = phase === "cta" ? -size.height * 0.44 : -size.height * 0.26;
+      mesh.current.position.y = phase === "cta" ? -size.height * 0.32 : -size.height * 0.26;
     }
   });
 
