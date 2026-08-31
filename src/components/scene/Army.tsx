@@ -1,4 +1,4 @@
-import { useMemo, useRef } from "react";
+import { useLayoutEffect, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
@@ -146,6 +146,13 @@ function createArcherGeometry() {
   return merged;
 }
 
+let archerGeoCache: THREE.BufferGeometry | null = null;
+
+function getArcherGeometry() {
+  if (!archerGeoCache) archerGeoCache = createArcherGeometry();
+  return archerGeoCache;
+}
+
 type NameTag = {
   map: THREE.CanvasTexture;
   sx: number;
@@ -154,19 +161,19 @@ type NameTag = {
 
 function makeHandleTexture(name: string): NameTag | null {
   const label = `@${name}`;
-  const height = 96;
-  const maxW = 768;
+  const height = 128;
+  const maxW = 1024;
   const probe = document.createElement("canvas").getContext("2d");
   if (!probe) return null;
-  let fontSize = 46;
+  let fontSize = 62;
   probe.font = `700 ${fontSize}px Outfit, system-ui, sans-serif`;
   let textW = probe.measureText(label).width;
-  while (textW + 32 > maxW && fontSize > 14) {
+  while (textW + 40 > maxW && fontSize > 18) {
     fontSize -= 1;
     probe.font = `700 ${fontSize}px Outfit, system-ui, sans-serif`;
     textW = probe.measureText(label).width;
   }
-  const width = Math.min(maxW, Math.max(192, Math.ceil(textW + 32)));
+  const width = Math.min(maxW, Math.max(256, Math.ceil(textW + 40)));
   const canvas = document.createElement("canvas");
   canvas.width = width;
   canvas.height = height;
@@ -177,17 +184,18 @@ function makeHandleTexture(name: string): NameTag | null {
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   ctx.lineJoin = "round";
-  ctx.lineWidth = Math.max(4, fontSize * 0.18);
-  ctx.strokeStyle = "rgba(0,0,0,0.88)";
+  ctx.lineWidth = Math.max(6, fontSize * 0.2);
+  ctx.strokeStyle = "rgba(0,0,0,0.92)";
   ctx.fillStyle = "#fff";
-  ctx.strokeText(label, width / 2, 52);
-  ctx.fillText(label, width / 2, 52);
+  ctx.strokeText(label, width / 2, height / 2 + 4);
+  ctx.fillText(label, width / 2, height / 2 + 4);
   const map = new THREE.CanvasTexture(canvas);
   map.colorSpace = THREE.SRGBColorSpace;
-  map.minFilter = THREE.LinearFilter;
+  map.generateMipmaps = true;
+  map.minFilter = THREE.LinearMipmapLinearFilter;
   map.magFilter = THREE.LinearFilter;
-  const sy = 0.78;
-  const sx = Math.min(2.48, sy * (width / height));
+  const sy = 0.95;
+  const sx = Math.min(2.7, sy * (width / height));
   return { map, sx, sy };
 }
 
@@ -199,9 +207,10 @@ export function Army({ count, names = [] }: ArmyProps) {
   const shots = useRef<Shot[]>([]);
   const nextShot = useRef(0.6);
   const pos = useMemo(() => new THREE.Vector3(), []);
-  const archerGeo = useMemo(() => createArcherGeometry(), []);
+  const archerGeo = useMemo(() => getArcherGeometry(), []);
 
   const visible = Math.min(MAX_SOLDIERS, Math.max(0, Math.floor(count)));
+  const instanceCap = Math.min(MAX_SOLDIERS, Math.max(visible, 1));
   const labeled = useMemo(() => {
     const ids: number[] = [];
     for (let i = 0; i < visible && ids.length < MAX_LABELS; i++) {
@@ -218,6 +227,45 @@ export function Army({ count, names = [] }: ArmyProps) {
     return arr;
   }, []);
 
+  function placeBodies(t: number, camX = 9, camY = 21, camZ = 96) {
+    const { cols, scale } = form;
+    if (bodies.current) {
+      bodies.current.count = visible;
+      for (let i = 0; i < visible; i++) {
+        unitPos(i, t + seeds[i], cols, visible, pos);
+        dummy.position.copy(pos);
+        dummy.rotation.set(0, Math.PI, 0);
+        dummy.scale.setScalar(scale);
+        dummy.updateMatrix();
+        bodies.current.setMatrixAt(i, dummy.matrix);
+      }
+      bodies.current.instanceMatrix.needsUpdate = true;
+    }
+    if (!tags.current) return;
+    for (let k = 0; k < tags.current.children.length; k++) {
+      const idx = labeled[k];
+      const tag = tags.current.children[k];
+      const tagData = nameMaps[k];
+      if (idx == null || !tagData) {
+        tag.visible = false;
+        continue;
+      }
+      unitPos(idx, t + seeds[idx], cols, visible, pos);
+      tag.visible = true;
+      tag.position.set(pos.x, pos.y + 1.86 * scale, pos.z);
+      const dx = camX - pos.x;
+      const dy = camY - pos.y;
+      const dz = camZ - pos.z;
+      const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
+      const boost = Math.min(2.35, Math.max(1.2, dist / 42));
+      tag.scale.set(tagData.sx * boost, tagData.sy * boost, 1);
+    }
+  }
+
+  useLayoutEffect(() => {
+    placeBodies(0);
+  }, [visible, instanceCap, labeled]);
+
   useFrame((state, dt) => {
     const t = state.clock.elapsedTime;
     const { cols, scale } = form;
@@ -228,32 +276,7 @@ export function Army({ count, names = [] }: ArmyProps) {
     acc.current += dt;
     if (acc.current >= 1 / 28) {
       acc.current = 0;
-      if (bodies.current) {
-        bodies.current.count = visible;
-        for (let i = 0; i < visible; i++) {
-          unitPos(i, t + seeds[i], cols, visible, pos);
-          dummy.position.copy(pos);
-          dummy.rotation.set(0, Math.PI, 0);
-          dummy.scale.setScalar(scale);
-          dummy.updateMatrix();
-          bodies.current.setMatrixAt(i, dummy.matrix);
-        }
-        bodies.current.instanceMatrix.needsUpdate = true;
-      }
-
-      if (tags.current) {
-        for (let k = 0; k < tags.current.children.length; k++) {
-          const idx = labeled[k];
-          const tag = tags.current.children[k];
-          if (idx == null) {
-            tag.visible = false;
-            continue;
-          }
-          unitPos(idx, t + seeds[idx], cols, visible, pos);
-          tag.visible = true;
-          tag.position.set(pos.x, pos.y + 1.78 * scale, pos.z);
-        }
-      }
+      placeBodies(t, state.camera.position.x, state.camera.position.y, state.camera.position.z);
     }
 
     if (!arrows.current) return;
@@ -312,7 +335,7 @@ export function Army({ count, names = [] }: ArmyProps) {
 
   return (
     <group>
-      <instancedMesh ref={bodies} args={[archerGeo, undefined, MAX_SOLDIERS]} frustumCulled={false}>
+      <instancedMesh key={instanceCap} ref={bodies} args={[archerGeo, undefined, instanceCap]} frustumCulled={false}>
         <meshLambertMaterial vertexColors />
       </instancedMesh>
       <instancedMesh ref={arrows} args={[undefined, undefined, MAX_ARROWS]} frustumCulled={false}>

@@ -3,11 +3,31 @@ import { onValue, ref } from "firebase/database";
 import { db } from "../firebase";
 import { DEFAULT_GAME, parseGame, resolveSiege, type GameState, type Recruit, type ReelItem } from "../game";
 
+const CACHE_KEY = "wars-game-v1";
+
+function readCache(): GameState | null {
+  try {
+    const raw = localStorage.getItem(CACHE_KEY);
+    if (!raw) return null;
+    return parseGame(JSON.parse(raw) as Partial<GameState>);
+  } catch {
+    return null;
+  }
+}
+
+function writeCache(game: GameState) {
+  try {
+    localStorage.setItem(CACHE_KEY, JSON.stringify(game));
+  } catch {
+    /* quota / private mode */
+  }
+}
+
 export function useGame() {
-  const [game, setGame] = useState<GameState>(DEFAULT_GAME);
+  const [game, setGame] = useState<GameState>(() => readCache() ?? DEFAULT_GAME);
   const [recruits, setRecruits] = useState<Recruit[]>([]);
   const [reels, setReels] = useState<ReelItem[]>([]);
-  const [ready, setReady] = useState(false);
+  const [ready, setReady] = useState(() => Boolean(readCache()));
   const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
@@ -18,7 +38,9 @@ export function useGame() {
     const unsubGame = onValue(
       ref(db, "game"),
       (snap) => {
-        setGame(parseGame(snap.val() as Partial<GameState> | null));
+        const next = parseGame(snap.val() as Partial<GameState> | null);
+        setGame(next);
+        writeCache(next);
         setReady(true);
       },
       fail

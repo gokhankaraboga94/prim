@@ -55,14 +55,22 @@ function createRaiderGeometry() {
   return merged ?? colorize(new THREE.BoxGeometry(0.4, 1.2, 0.28), "#9a1c1c");
 }
 
+let raiderGeoCache: THREE.BufferGeometry | null = null;
+
+function getRaiderGeometry() {
+  if (!raiderGeoCache) raiderGeoCache = createRaiderGeometry();
+  return raiderGeoCache;
+}
+
 type SallyRaidProps = {
   soldiers: number;
 };
 
 export function SallyRaid({ soldiers }: SallyRaidProps) {
   const bodies = useRef<THREE.InstancedMesh>(null);
-  const geo = useMemo(() => createRaiderGeometry(), []);
+  const geo = useMemo(() => getRaiderGeometry(), []);
   const n = raidCount(soldiers);
+  const cap = Math.min(MAX_RAIDERS, Math.max(n, 1));
 
   useFrame((state) => {
     if (!bodies.current) return;
@@ -88,7 +96,7 @@ export function SallyRaid({ soldiers }: SallyRaidProps) {
   });
 
   return (
-    <instancedMesh ref={bodies} args={[geo, undefined, MAX_RAIDERS]} frustumCulled={false}>
+    <instancedMesh key={cap} ref={bodies} args={[geo, undefined, cap]} frustumCulled={false}>
       <meshLambertMaterial vertexColors />
     </instancedMesh>
   );
