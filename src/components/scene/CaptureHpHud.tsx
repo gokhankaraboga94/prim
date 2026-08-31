@@ -176,17 +176,17 @@ function drawTitles(
     }
   } else {
     const count = formatCount(soldiers);
-    const line1 = `${count} takipçimi ${count} asker`;
-    let size = 56;
+    const line1 = `${count} asker bir başına kuşatmaya`;
+    const line2 = "katılmak için takip et";
+    let size = 52;
     ctx.font = `800 ${size}px Outfit, system-ui, sans-serif`;
     while (ctx.measureText(line1).width > w - 72 && size > 34) {
       size -= 2;
       ctx.font = `800 ${size}px Outfit, system-ui, sans-serif`;
     }
-    strokeFill(ctx, line1, w / 2, 240, 14);
-    ctx.font = "800 48px Outfit, system-ui, sans-serif";
-    strokeFill(ctx, "Bir başına kuşatmaya", w / 2, 330, 14);
-    strokeFill(ctx, "katılmak için takip et", w / 2, 400, 14);
+    strokeFill(ctx, line1, w / 2, 280, 14);
+    ctx.font = `800 ${Math.min(52, size)}px Outfit, system-ui, sans-serif`;
+    strokeFill(ctx, line2, w / 2, 370, 14);
   }
 }
 
