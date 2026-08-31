@@ -6,6 +6,7 @@ import { Army, armyFrame } from "./Army";
 import { Castle } from "./Castle";
 import { SallyRaid } from "./SallyRaid";
 import { CaptureHpHud, ReelTitles } from "./CaptureHpHud";
+import { WarGrade } from "./WarGrade";
 import { castleFrame } from "../../castleLayout";
 import { REEL_HOLD, reelHook, reelZoomDur } from "../../recordCanvas";
 
@@ -19,6 +20,7 @@ type BattleSceneProps = {
   cinematic?: boolean;
   duration?: number;
   showTitles?: boolean;
+  warLook?: boolean;
   onReady?: (canvas: HTMLCanvasElement) => void;
 };
 
@@ -169,9 +171,11 @@ function SceneContent({
   cinematic,
   duration,
   showTitles = true,
+  warLook = false,
 }: BattleSceneProps) {
   return (
     <>
+      {warLook && <WarGrade />}
       <color attach="background" args={["#6d7d92"]} />
       <fog attach="fog" args={["#7a8898", 340, 720]} />
       <ambientLight intensity={0.62} color="#e8e4dc" />
@@ -219,6 +223,7 @@ function BattleSceneInner({
   cinematic,
   duration,
   showTitles,
+  warLook,
   onReady,
 }: BattleSceneProps) {
   const [active, setActive] = useState(() => typeof document === "undefined" || !document.hidden);
@@ -261,6 +266,7 @@ function BattleSceneInner({
         cinematic={cinematic}
         duration={duration}
         showTitles={showTitles}
+        warLook={warLook}
       />
     </Canvas>
   );
