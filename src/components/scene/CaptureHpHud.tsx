@@ -219,7 +219,7 @@ function TitlesPlate({ soldiers, duration, day = 0 }: ReelTitlesProps) {
 
   useFrame(({ clock }) => {
     const recT = clock.elapsedTime - REEL_HOLD;
-    const hook = reelHook(duration);
+    const hook = reelHook(duration) + 0.5;
     const ctaLen = Math.min(2, Math.max(0.8, duration * 0.28));
     const ctaAt = duration - ctaLen;
     let phase: "hook" | "cta" | "none" = "none";
@@ -243,7 +243,7 @@ function TitlesPlate({ soldiers, duration, day = 0 }: ReelTitlesProps) {
     }
     if (mat.current) mat.current.opacity = alpha;
     if (mesh.current) {
-      mesh.current.position.y = phase === "cta" ? -size.height * 0.34 : -size.height * 0.26;
+      mesh.current.position.y = phase === "cta" ? -size.height * 0.44 : -size.height * 0.26;
     }
   });
 
