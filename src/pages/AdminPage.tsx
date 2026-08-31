@@ -3,13 +3,26 @@ import { signOut } from "firebase/auth";
 import { push, ref, remove, set } from "firebase/database";
 import { getDownloadURL, ref as storageRef, uploadBytes } from "firebase/storage";
 import { auth, db, storage } from "../firebase";
-import { formatCount, formatPower, normalizeHandle, targetForLevel, toGameRecord, type ReelItem } from "../game";
+import {
+  assignNames,
+  formatCount,
+  formatPower,
+  namedCount,
+  normalizeHandle,
+  parseNameList,
+  targetForLevel,
+  toGameRecord,
+  type ReelItem,
+} from "../game";
 import { useGame } from "../hooks/useGame";
+import { ReelCapture } from "../components/ReelCapture";
+import { REEL_DURATIONS, type ReelDuration } from "../recordCanvas";
 
 export function AdminPage() {
   const { game, recruits, reels, level, power, pressure, target } = useGame();
   const [soldiersInput, setSoldiersInput] = useState("");
   const [addInput, setAddInput] = useState("");
+  const [namesInput, setNamesInput] = useState("");
   const [handleInput, setHandleInput] = useState("");
   const [reelUrl, setReelUrl] = useState("");
   const [reelCaption, setReelCaption] = useState("");
@@ -17,6 +30,8 @@ export function AdminPage() {
   const [preview, setPreview] = useState<ReelItem | null>(null);
   const [msg, setMsg] = useState("");
   const [busy, setBusy] = useState(false);
+  const [reelSeconds, setReelSeconds] = useState<ReelDuration>(7);
+  const [capturing, setCapturing] = useState(false);
 
   const handle = handleInput || game.instagramHandle;
 
@@ -48,10 +63,42 @@ export function AdminPage() {
     e.preventDefault();
     setBusy(true);
     try {
-      await saveSoldiers(game.soldiers + Number(addInput || 0));
+      const extra = Math.max(0, Math.floor(Number(addInput || 0)));
+      const incoming = parseNameList(namesInput);
+      const soldiers = game.soldiers + extra;
+      const names = incoming.length ? assignNames(game.names, soldiers, incoming) : game.names;
+      const payload = toGameRecord(game, Date.now(), { soldiers, names });
+      await set(ref(db, "game"), payload);
       setAddInput("");
+      if (incoming.length) setNamesInput("");
+      setMsg(
+        incoming.length
+          ? `${extra} asker eklendi, ${incoming.length} isim isimsizlere atandı.`
+          : `Orduya ${extra} asker eklendi.`
+      );
     } catch {
       setMsg("Asker eklenemedi.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function onAssignNames(e: FormEvent) {
+    e.preventDefault();
+    const incoming = parseNameList(namesInput);
+    if (!incoming.length) {
+      setMsg("Virgül, boşluk veya alt alta kullanıcı adı yaz.");
+      return;
+    }
+    setBusy(true);
+    try {
+      const names = assignNames(game.names, game.soldiers, incoming);
+      await set(ref(db, "game"), toGameRecord(game, Date.now(), { names }));
+      setNamesInput("");
+      const filled = namedCount(names, game.soldiers) - namedCount(game.names, game.soldiers);
+      setMsg(`${Math.max(0, filled)} isim rastgele isimsiz askerlere yazıldı.`);
+    } catch {
+      setMsg("İsimler kaydedilemedi.");
     } finally {
       setBusy(false);
     }
@@ -155,6 +202,12 @@ export function AdminPage() {
           <span>Yıpranma</span>
           <b>%{Math.round(pressure * 100)}</b>
         </article>
+        <article>
+          <span>İsimli asker</span>
+          <b>
+            {namedCount(game.names, game.soldiers)} / {formatCount(game.soldiers)}
+          </b>
+        </article>
       </section>
 
       {msg && <p className="admin-msg">{msg}</p>}
@@ -195,6 +248,36 @@ export function AdminPage() {
         </section>
 
         <section className="admin-card">
+          <h2>Asker kullanıcı adları</h2>
+          <p className="muted">
+            Virgül, boşluk veya alt alta yaz. İsimsiz askerlere rastgele dağılır. 13 takipçi adı
+            yazarsan 13 isimsiz askerin üstüne @ad gelir. Yeni 5 asker ekleyip 5 isim verirsen
+            o isimsizler bu adları alır.
+          </p>
+          <form onSubmit={onAssignNames}>
+            <label>@kullanıcıadları</label>
+            <textarea
+              rows={6}
+              placeholder={"kullanici1\nkullanici2\nkullanici3"}
+              value={namesInput}
+              onChange={(e) => setNamesInput(e.target.value)}
+            />
+            <button className="btn-gold" disabled={busy}>
+              İsimleri ata
+            </button>
+          </form>
+          <p className="muted">
+            {namedCount(game.names, game.soldiers)} isimli ·{" "}
+            {Math.max(0, game.soldiers - namedCount(game.names, game.soldiers))} isimsiz
+          </p>
+          <ul className="name-chips">
+            {game.names.filter(Boolean).map((name) => (
+              <li key={name}>@{name}</li>
+            ))}
+          </ul>
+        </section>
+
+        <section className="admin-card">
           <h2>Instagram hesabı</h2>
           <p className="muted">Anasayfanın üstünde ve “takip et” butonunda bu ad yazılır.</p>
           <form onSubmit={onSaveHandle}>
@@ -210,6 +293,30 @@ export function AdminPage() {
             </button>
           </form>
           <p className="muted">Şu an: @{handle.replace(/^@/, "")}</p>
+        </section>
+
+        <section className="admin-card">
+          <h2>Ekran kaydı</h2>
+          <p className="muted">
+            iPhone’da Kaydı başlat: anasayfa kuşatması tam ekran açılır, en iyi kamera açısıyla
+            otomatik kayıt alınır. Bitince Kaydet / Paylaş ile cihaza indir.
+          </p>
+          <label>Süre</label>
+          <div className="dur-pills">
+            {REEL_DURATIONS.map((sec) => (
+              <button
+                key={sec}
+                type="button"
+                className={reelSeconds === sec ? "on" : ""}
+                onClick={() => setReelSeconds(sec)}
+              >
+                {sec} sn
+              </button>
+            ))}
+          </div>
+          <button type="button" className="btn-gold" onClick={() => setCapturing(true)}>
+            Kaydı başlat
+          </button>
         </section>
 
         <section className="admin-card admin-span">
@@ -279,6 +386,17 @@ export function AdminPage() {
             <img src={preview.url} alt={preview.caption || "Reels"} />
           )}
         </div>
+      )}
+
+      {capturing && (
+        <ReelCapture
+          soldiers={game.soldiers}
+          names={game.names}
+          level={level}
+          pressure={pressure}
+          seconds={reelSeconds}
+          onClose={() => setCapturing(false)}
+        />
       )}
     </div>
   );

@@ -2,6 +2,7 @@ import { useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { sallyGate, sallyLocal } from "../../siegeEvent";
+import { castleAxes, castleGrow } from "../../castleLayout";
 import { Defenders } from "./Defenders";
 
 type CastleProps = {
@@ -271,14 +272,15 @@ function RoundTower({
 export function Castle({ level, pressure }: CastleProps) {
   const stone = useStoneTexture();
   const visualTier = ((level - 1) % 5) + 1;
-  const grow = 1 + Math.min(0.35, (level - 1) * 0.02);
+  const grow = castleGrow(level);
+  const { sx, sy, sz, zShift } = castleAxes(grow);
   const wallH = 3.15 + visualTier * 0.14;
   const fire = Math.min(1, pressure);
   const merlonCount = 11;
 
   return (
     <group>
-    <group position={[0, 0, 0]} scale={[3.25 * grow, 4 * grow, 2.15 * grow]}>
+    <group position={[0, 0, zShift]} scale={[sx, sy, sz]}>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.03, -3.3]}>
         <planeGeometry args={[22.4, 20.2]} />
         <meshLambertMaterial color="#6a6258" map={stone ?? undefined} />

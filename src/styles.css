@@ -535,7 +535,7 @@ select:focus {
   max-width: 1080px;
   margin: 0 auto 18px;
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   gap: 12px;
 }
 
@@ -755,4 +755,91 @@ select:focus {
     right: 10px;
     transform: none;
   }
+}
+
+.name-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.name-chips li {
+  font-size: 12px;
+  padding: 4px 8px;
+  border-radius: 99px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+}
+
+.dur-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 4px 0 12px;
+}
+
+.dur-pills button {
+  appearance: none;
+  border: 1px solid var(--line);
+  background: rgba(0, 0, 0, 0.35);
+  color: var(--ink);
+  border-radius: 99px;
+  padding: 8px 12px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.dur-pills button.on {
+  border-color: var(--gold);
+  background: linear-gradient(180deg, #f0d48a, #b8892d);
+  color: #1a1308;
+}
+
+.reel-capture {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  background: #000;
+}
+
+.reel-capture-scene {
+  position: absolute;
+  inset: 0;
+}
+
+.reel-capture-hud,
+.reel-capture-done {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 24px;
+  z-index: 2;
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  padding: 0 20px;
+  text-align: center;
+}
+
+.reel-capture-hud p,
+.reel-capture-done p {
+  margin: 0;
+  color: #fff;
+  text-shadow: 0 1px 8px #000;
+}
+
+.reel-capture-done video {
+  width: min(280px, 70vw);
+  border-radius: 12px;
+  background: #000;
+}
+
+.reel-capture-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 3;
 }

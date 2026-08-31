@@ -1,4 +1,5 @@
 import { useLayoutEffect, useMemo, useRef } from "react";
+import { castleAxes } from "../../castleLayout";
 import * as THREE from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 
@@ -117,10 +118,15 @@ type DefendersProps = {
 export function Defenders({ grow, wallH }: DefendersProps) {
   const mesh = useRef<THREE.InstancedMesh>(null);
   const geo = useMemo(() => createSwordsmanGeometry(), []);
-  const sx = 3.25 * grow;
-  const sy = 4 * grow;
-  const sz = 2.15 * grow;
-  const list = useMemo(() => posts(wallH, sx, sy, sz), [wallH, sx, sy, sz]);
+  const { sx, sy, sz, zShift } = castleAxes(grow);
+  const list = useMemo(
+    () =>
+      posts(wallH, sx, sy, sz).map((p) => ({
+        ...p,
+        z: p.z + zShift,
+      })),
+    [wallH, sx, sy, sz, zShift]
+  );
 
   useLayoutEffect(() => {
     if (!mesh.current) return;

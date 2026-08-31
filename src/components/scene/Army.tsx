@@ -10,8 +10,11 @@ const MAX_ARROWS = 16;
 const IDLE_ARROWS = 2;
 const dummy = new THREE.Object3D();
 const ARROW_FLIGHT = 3.2;
-const AREA_W = 42;
-const FRONT_Z = 52;
+const FRONT_Z = 46;
+const FILE = 1.64;
+const RANK = 2.18;
+const COMP_FILES = 8;
+const COMP_GAP = 2.7;
 const GATE = new THREE.Vector3(0, 10.5, 16.4);
 
 type Shot = {
@@ -29,24 +32,43 @@ type Shot = {
 
 type ArmyProps = {
   count: number;
+  names?: string[];
 };
+
+function pickCols(n: number) {
+  if (n <= 8) return n;
+  if (n <= 40) return 8;
+  if (n <= 96) return 16;
+  if (n <= 200) return 24;
+  if (n <= 500) return 32;
+  if (n <= 1500) return 48;
+  return 64;
+}
 
 function formation(visible: number) {
   const n = Math.max(1, visible);
-  const spacing = Math.min(1.35, Math.max(0.34, Math.sqrt((AREA_W * 14) / n)));
-  const cols = Math.max(1, Math.min(n, Math.round(AREA_W / spacing)));
-  const pack = Math.min(1, spacing / 1.05);
-  return { spacing, cols, scale: 0.92 + pack * 0.38 };
+  return { cols: pickCols(n), scale: 1.14 };
 }
 
-function unitPos(i: number, t: number, cols: number, spacing: number, out: THREE.Vector3) {
+function unitPos(i: number, t: number, cols: number, n: number, out: THREE.Vector3) {
   const col = i % cols;
   const row = Math.floor(i / cols);
-  const x = (col - (cols - 1) / 2) * spacing;
-  const atWall = row < 3;
-  const z = FRONT_Z + row * spacing * 0.92;
-  const strike = atWall ? Math.abs(Math.sin(t * 7 + i)) * 0.08 : 0;
-  const march = atWall ? 0 : Math.min(1, ((t * 0.16) % 4) / 2.2) * Math.min(spacing * 0.8, 0.55);
+  const companies = Math.max(1, Math.ceil(cols / COMP_FILES));
+  const company = Math.floor(col / COMP_FILES);
+  const file = col % COMP_FILES;
+  const stagger = (row % 2) * FILE * 0.46;
+  const pitch = (COMP_FILES - 1) * FILE + COMP_GAP;
+  const width = (companies - 1) * pitch + (COMP_FILES - 1) * FILE;
+  let x = company * pitch + file * FILE - width / 2 + stagger;
+  const rows = Math.max(1, Math.ceil(n / cols));
+  const lastCount = n - (rows - 1) * cols;
+  if (row === rows - 1 && lastCount > 0 && lastCount < cols) {
+    x += ((cols - lastCount) * FILE) / 2;
+  }
+  const z = FRONT_Z + row * RANK;
+  const front = row < 2;
+  const strike = front ? Math.abs(Math.sin(t * 7 + i)) * 0.07 : 0;
+  const march = front ? 0 : Math.min(1, ((t * 0.13) % 4) / 2.4) * 0.32;
   out.set(x, strike, z - march);
 }
 
@@ -124,23 +146,25 @@ function createArcherGeometry() {
   return merged;
 }
 
-function makeNumberTexture(n: number) {
-  const size = 128;
+function makeHandleTexture(name: string) {
+  const label = `@${name}`;
+  const size = 256;
   const canvas = document.createElement("canvas");
   canvas.width = size;
-  canvas.height = size;
+  canvas.height = 96;
   const ctx = canvas.getContext("2d");
   if (!ctx) return null;
-  ctx.clearRect(0, 0, size, size);
-  ctx.font = n >= 10 ? "700 52px Outfit, system-ui, sans-serif" : "700 72px Outfit, system-ui, sans-serif";
+  ctx.clearRect(0, 0, size, 96);
+  const fontSize = label.length > 16 ? 28 : label.length > 11 ? 34 : 42;
+  ctx.font = `700 ${fontSize}px Outfit, system-ui, sans-serif`;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   ctx.lineJoin = "round";
-  ctx.lineWidth = 10;
+  ctx.lineWidth = 8;
   ctx.strokeStyle = "rgba(0,0,0,0.88)";
   ctx.fillStyle = "#fff";
-  ctx.strokeText(String(n), size / 2, size / 2 + 4);
-  ctx.fillText(String(n), size / 2, size / 2 + 4);
+  ctx.strokeText(label, size / 2, 52);
+  ctx.fillText(label, size / 2, 52);
   const tex = new THREE.CanvasTexture(canvas);
   tex.colorSpace = THREE.SRGBColorSpace;
   tex.minFilter = THREE.LinearFilter;
@@ -148,7 +172,7 @@ function makeNumberTexture(n: number) {
   return tex;
 }
 
-export function Army({ count }: ArmyProps) {
+export function Army({ count, names = [] }: ArmyProps) {
   const bodies = useRef<THREE.InstancedMesh>(null);
   const arrows = useRef<THREE.InstancedMesh>(null);
   const tags = useRef<THREE.Group>(null);
@@ -157,13 +181,16 @@ export function Army({ count }: ArmyProps) {
   const nextShot = useRef(0.6);
   const pos = useMemo(() => new THREE.Vector3(), []);
   const archerGeo = useMemo(() => createArcherGeometry(), []);
-  const numberMaps = useMemo(
-    () => Array.from({ length: MAX_LABELS }, (_, i) => makeNumberTexture(i + 1)),
-    []
-  );
 
   const visible = Math.min(MAX_SOLDIERS, Math.max(0, Math.floor(count)));
-  const showTags = visible > 0 && visible <= MAX_LABELS;
+  const labeled = useMemo(() => {
+    const ids: number[] = [];
+    for (let i = 0; i < visible && ids.length < MAX_LABELS; i++) {
+      if (names[i]) ids.push(i);
+    }
+    return ids;
+  }, [names, visible]);
+  const nameMaps = useMemo(() => labeled.map((i) => makeHandleTexture(names[i])), [labeled, names]);
   const form = useMemo(() => formation(visible), [visible]);
 
   const seeds = useMemo(() => {
@@ -174,7 +201,7 @@ export function Army({ count }: ArmyProps) {
 
   useFrame((state, dt) => {
     const t = state.clock.elapsedTime;
-    const { spacing, cols, scale } = form;
+    const { cols, scale } = form;
     const sally = sallyLocal(t);
     const hunt = sallyHunting(sally);
     const enemies = raidCount(visible);
@@ -185,26 +212,27 @@ export function Army({ count }: ArmyProps) {
       if (bodies.current) {
         bodies.current.count = visible;
         for (let i = 0; i < visible; i++) {
-          unitPos(i, t + seeds[i], cols, spacing, pos);
+          unitPos(i, t + seeds[i], cols, visible, pos);
           dummy.position.copy(pos);
           dummy.rotation.set(0, Math.PI, 0);
           dummy.scale.setScalar(scale);
           dummy.updateMatrix();
           bodies.current.setMatrixAt(i, dummy.matrix);
-          if (showTags && i < MAX_LABELS) {
-            const tag = tags.current?.children[i];
-            if (tag) {
-              tag.visible = true;
-              tag.position.set(pos.x, pos.y + 1.72 * scale, pos.z);
-            }
-          }
         }
         bodies.current.instanceMatrix.needsUpdate = true;
       }
 
       if (tags.current) {
-        for (let i = 0; i < MAX_LABELS; i++) {
-          if (!showTags || i >= visible) tags.current.children[i].visible = false;
+        for (let k = 0; k < tags.current.children.length; k++) {
+          const idx = labeled[k];
+          const tag = tags.current.children[k];
+          if (idx == null) {
+            tag.visible = false;
+            continue;
+          }
+          unitPos(idx, t + seeds[idx], cols, visible, pos);
+          tag.visible = true;
+          tag.position.set(pos.x, pos.y + 1.78 * scale, pos.z);
         }
       }
     }
@@ -224,7 +252,7 @@ export function Army({ count }: ArmyProps) {
       const burst = hunt ? (pair ? 3 : 2) : pair ? 2 : 1;
       for (let i = 0; i < burst && shots.current.length < cap; i++) {
         const soldier = Math.floor(Math.random() * visible);
-        unitPos(soldier, t + seeds[soldier], cols, spacing, pos);
+        unitPos(soldier, t + seeds[soldier], cols, visible, pos);
         const idx = hunt ? sallyLiveIndex(sally, enemies, soldier + i * 11) : -1;
         const prey = idx >= 0 ? sallyRaiderAt(sally, idx, enemies) : null;
         shots.current.push({
@@ -273,8 +301,8 @@ export function Army({ count }: ArmyProps) {
         <meshBasicMaterial color="#ffe7a0" />
       </instancedMesh>
       <group ref={tags}>
-        {numberMaps.map((map, i) => (
-          <sprite key={i} scale={[1.15, 1.15, 1.15]} visible={false} renderOrder={2}>
+        {nameMaps.map((map, i) => (
+          <sprite key={`${labeled[i]}-${names[labeled[i]]}`} scale={[2.35, 0.88, 1]} visible={false} renderOrder={2}>
             <spriteMaterial
               map={map ?? undefined}
               transparent

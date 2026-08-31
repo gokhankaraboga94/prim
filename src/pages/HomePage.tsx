@@ -15,7 +15,12 @@ export function HomePage() {
     <div className="home">
       <div className="scene-wrap">
         <SceneErrorBoundary>
-          <BattleScene soldiers={game.soldiers} level={level} pressure={Math.round(pressure * 20) / 20} />
+          <BattleScene
+            soldiers={game.soldiers}
+            names={game.names}
+            level={level}
+            pressure={Math.round(pressure * 20) / 20}
+          />
         </SceneErrorBoundary>
       </div>
       <div className="vignette" />
