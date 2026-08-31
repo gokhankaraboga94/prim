@@ -33,11 +33,11 @@ function drawHp(canvas: HTMLCanvasElement, pct: number, label: string) {
   ctx.fillStyle = "rgba(8, 6, 4, 0.62)";
   ctx.fill();
 
-  ctx.font = "800 56px Outfit, system-ui, sans-serif";
+  ctx.font = "800 48px Outfit, system-ui, sans-serif";
   ctx.fillStyle = "#fff";
   ctx.textBaseline = "middle";
   ctx.textAlign = "left";
-  ctx.fillText("Kalan sağlık", 48, 72);
+  ctx.fillText("Kalan kale sağlığı", 48, 72);
   ctx.textAlign = "right";
   ctx.fillText(`%${label}`, w - 48, 72);
 
@@ -226,7 +226,7 @@ function TitlesPlate({ soldiers, handle, duration }: ReelTitlesProps) {
 
   const width = size.width * 0.96;
   const height = Math.max(180, size.height * 0.42);
-  const y = -size.height * 0.12;
+  const y = -size.height * 0.26;
 
   return (
     <mesh position={[0, y, 0]} renderOrder={25}>
