@@ -175,8 +175,18 @@ function drawTitles(
       strokeFill(ctx, "Bu kale düşecek mi?", w / 2, 360, 16);
     }
   } else {
-    ctx.font = "800 72px Outfit, system-ui, sans-serif";
-    strokeFill(ctx, "Takip et, asker ol", w / 2, 340, 18);
+    const count = formatCount(soldiers);
+    const line1 = `${count} takipçimi ${count} asker`;
+    let size = 56;
+    ctx.font = `800 ${size}px Outfit, system-ui, sans-serif`;
+    while (ctx.measureText(line1).width > w - 72 && size > 34) {
+      size -= 2;
+      ctx.font = `800 ${size}px Outfit, system-ui, sans-serif`;
+    }
+    strokeFill(ctx, line1, w / 2, 240, 14);
+    ctx.font = "800 48px Outfit, system-ui, sans-serif";
+    strokeFill(ctx, "Bir başına kuşatmaya", w / 2, 330, 14);
+    strokeFill(ctx, "katılmak için takip et", w / 2, 400, 14);
   }
 }
 
