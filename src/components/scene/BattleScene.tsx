@@ -5,7 +5,7 @@ import * as THREE from "three";
 import { Army, armyFrame } from "./Army";
 import { Castle } from "./Castle";
 import { SallyRaid } from "./SallyRaid";
-import { CaptureHpHud } from "./CaptureHpHud";
+import { CaptureHpHud, ReelShutter } from "./CaptureHpHud";
 import { castleFrame } from "../../castleLayout";
 
 type BattleSceneProps = {
@@ -43,7 +43,10 @@ function CinematicCam({
   const look = useMemo(() => new THREE.Vector3(), []);
   useFrame(({ camera, clock, size }) => {
     const aspect = size.width / Math.max(1, size.height);
-    const u = Math.min(1, Math.max(0, (clock.elapsedTime - REEL_HOLD) / Math.max(0.05, duration)));
+    const recT = clock.elapsedTime - REEL_HOLD;
+    const hook = Math.min(3, Math.max(0.9, duration * 0.4));
+    const zoomDur = Math.max(0.45, duration - hook);
+    const u = recT <= hook ? 0 : Math.min(1, (recT - hook) / zoomDur);
     const e = u * u * (3 - 2 * u);
 
     const army = armyFrame(soldiers);
@@ -197,6 +200,7 @@ function SceneContent({
       {cinematic && maxHp != null && hp != null && (
         <CaptureHpHud hp={hp} maxHp={maxHp} soldiers={soldiers} />
       )}
+      {cinematic && <ReelShutter duration={duration ?? 8} />}
     </>
   );
 }

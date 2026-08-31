@@ -119,3 +119,57 @@ export function CaptureHpHud(props: CaptureHpHudProps) {
     </Hud>
   );
 }
+
+const REEL_HOLD = 1.05;
+
+function smooth01(x: number) {
+  const t = Math.max(0, Math.min(1, x));
+  return t * t * (3 - 2 * t);
+}
+
+function blinkOpacity(elapsed: number, duration: number) {
+  const recT = elapsed - REEL_HOLD;
+  if (recT < 0) return 1;
+  let o = 0;
+  if (recT < 0.08) o = 1;
+  else if (recT < 0.5) o = 1 - smooth01((recT - 0.08) / 0.42);
+
+  const hook = Math.min(3, Math.max(0.9, duration * 0.4));
+  if (duration >= 5) {
+    const half = 0.11;
+    if (recT >= hook - half && recT <= hook + half) {
+      o = Math.max(o, Math.sin(((recT - (hook - half)) / (half * 2)) * Math.PI));
+    }
+  }
+  if (duration >= 10) {
+    const t2 = hook + (duration - hook) * 0.55;
+    const half = 0.1;
+    if (recT >= t2 - half && recT <= t2 + half) {
+      o = Math.max(o, Math.sin(((recT - (t2 - half)) / (half * 2)) * Math.PI) * 0.9);
+    }
+  }
+  return o;
+}
+
+function ShutterPlate({ duration }: { duration: number }) {
+  const viewport = useThree((s) => s.viewport);
+  const mat = useRef<THREE.MeshBasicMaterial>(null);
+  useFrame(({ clock }) => {
+    if (mat.current) mat.current.opacity = blinkOpacity(clock.elapsedTime, duration);
+  });
+  return (
+    <mesh renderOrder={40}>
+      <planeGeometry args={[viewport.width * 2.2, viewport.height * 2.2]} />
+      <meshBasicMaterial ref={mat} color="#050302" transparent opacity={1} depthTest={false} />
+    </mesh>
+  );
+}
+
+export function ReelShutter({ duration }: { duration: number }) {
+  return (
+    <Hud renderPriority={2}>
+      <OrthographicCamera makeDefault position={[0, 0, 10]} />
+      <ShutterPlate duration={duration} />
+    </Hud>
+  );
+}
