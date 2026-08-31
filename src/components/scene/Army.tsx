@@ -3,7 +3,7 @@ import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import { isCommander } from "../../game";
-import { raidCount, sallyHunting, sallyLiveIndex, sallyLocal, sallyRaiderAt, swordSwingU } from "../../siegeEvent";
+import { raidCount, sallyHunting, sallyLiveIndex, sallyLocal, sallyRaiderAt, swordStyleAt, swordSwingPose, swordSwingU } from "../../siegeEvent";
 
 const MAX_SOLDIERS = 5000;
 const MAX_LABELS = 80;
@@ -12,7 +12,7 @@ const MAX_ARROWS = 16;
 const IDLE_ARROWS = 2;
 const dummy = new THREE.Object3D();
 const ARROW_FLIGHT = 3.2;
-const FRONT_Z = 46;
+const FRONT_Z = 52;
 const FILE = 2.55;
 const RANK = 2.9;
 const COMP_FILES = 8;
@@ -332,28 +332,13 @@ export function Army({ count, names = [], commanders = [] }: ArmyProps) {
     if (chiefs.current) {
       const n = Math.min(MAX_COMMANDERS, layout.cmd.length);
       chiefs.current.count = n;
-      const swing = swordSwingU(sallyLocal(t), n);
+      const p = sallyLocal(t);
+      const swing = swordSwingU(p, n);
       for (let k = 0; k < n; k++) {
         const soldier = layout.cmd[k];
         commanderPos(k, layout.cmd.length, t, soldier, pos);
         dummy.position.copy(pos);
-        let rx = 0;
-        let ry = Math.PI;
-        let rz = 0;
-        if (swing > 0) {
-          if (swing < 0.32) {
-            const w = swing / 0.32;
-            rx = -0.18 * w;
-            rz = -0.85 * w;
-            ry = Math.PI - 0.22 * w;
-          } else {
-            const s = (swing - 0.32) / 0.68;
-            const e = 1 - (1 - s) * (1 - s);
-            rx = -0.18 + 0.62 * e;
-            rz = -0.85 + 2.15 * e;
-            ry = Math.PI - 0.22 + 0.6 * e;
-          }
-        }
+        const [rx, ry, rz] = swordSwingPose(swordStyleAt(p, k), swing);
         dummy.rotation.set(rx, ry, rz);
         dummy.scale.setScalar(scale * 1.12);
         dummy.updateMatrix();

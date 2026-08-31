@@ -2,7 +2,7 @@ export const SALLY_CYCLE = 30;
 export const SALLY_LEN = 16;
 export const SALLY_START_DELAY = 3.5;
 export const RAID_INSIDE_Z = 18;
-export const RAID_OUT_Z = 41;
+export const RAID_OUT_Z = 47;
 export const MAX_RAIDERS = 10000;
 
 function clamp01(v: number) {
@@ -51,6 +51,32 @@ export function swordSwingU(p: number, commanders = 1) {
   return local / SWORD_SWING;
 }
 
+export type SwordStyle = "power" | "side" | "overhead";
+
+export function swordStyleAt(p: number, cmdK = 0): SwordStyle {
+  const wave = Math.max(0, Math.floor((p - SWORD_START) / SWORD_EVERY));
+  const k = Math.abs(wave * 5 + cmdK * 11 + 3) % 3;
+  return k === 0 ? "power" : k === 1 ? "side" : "overhead";
+}
+
+export function swordSwingPose(style: SwordStyle, u: number): [number, number, number] {
+  if (u <= 0) return [0, Math.PI, 0];
+  const wind = Math.min(1, u / 0.34);
+  const slash = u <= 0.34 ? 0 : 1 - (1 - (u - 0.34) / 0.66) ** 2;
+  if (style === "side") {
+    return [0.08 * slash, Math.PI - 0.9 * wind + 1.75 * slash, -0.22 * wind + 0.12 * slash];
+  }
+  if (style === "overhead") {
+    return [-1.05 * wind + 1.45 * slash, Math.PI + 0.1 * slash, 0.12 * wind];
+  }
+  return [-0.32 * wind + 0.82 * slash, Math.PI - 0.18 * wind + 0.5 * slash, -1.02 * wind + 2.25 * slash];
+}
+
+function hash01(i: number, salt: number) {
+  const x = Math.sin(i * 127.1 + salt * 311.7) * 43758.5453;
+  return x - Math.floor(x);
+}
+
 export function raidCols(n: number) {
   return Math.max(2, Math.min(24, Math.round(Math.sqrt(Math.max(1, n) * 1.35))));
 }
@@ -67,7 +93,7 @@ export function sallyHitAt(i: number, n: number, commanders = 0) {
   if (isSwordVictim(i, n, commanders)) {
     const perSwing = 2 * Math.max(1, commanders);
     const wave = Math.floor(i / perSwing);
-    return SWORD_START + wave * SWORD_EVERY + SWORD_SWING * 0.42;
+    return SWORD_START + wave * SWORD_EVERY + SWORD_SWING * 0.42 + (hash01(i, 9) - 0.5) * 0.16;
   }
   const first = 3.05;
   const last = 11.15;
@@ -134,11 +160,13 @@ export function sallyRaiderAt(
   out.flung = false;
   out.visible = p >= 1.2 && p < 14.4;
   if (sword && fall > 0) {
-    const side = i % 2 === 0 ? -1 : 1;
     const u = fall;
-    out.x += side * (0.6 + u * 5);
-    out.y = Math.sin(u * Math.PI) * 2.6 + u * 0.18;
-    out.z -= u * 9.5;
+    const ang = (hash01(i, 1) - 0.5) * 2.6;
+    const dist = 5.2 + hash01(i, 2) * 5.5;
+    const lift = 1.3 + hash01(i, 3) * 2.4;
+    out.x += Math.sin(ang) * dist * u;
+    out.z -= Math.cos(ang) * dist * u;
+    out.y = Math.sin(u * Math.PI) * lift;
     out.flung = true;
   }
   return out;
