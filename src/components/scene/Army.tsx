@@ -206,8 +206,8 @@ function makeHandleTexture(name: string): NameTag | null {
   map.generateMipmaps = true;
   map.minFilter = THREE.LinearMipmapLinearFilter;
   map.magFilter = THREE.LinearFilter;
-  const sy = 0.95;
-  const sx = Math.min(2.7, sy * (width / height));
+  const sy = 0.88;
+  const sx = Math.min(FILE * 0.82, sy * (width / height));
   return { map, sx, sy };
 }
 
@@ -239,7 +239,7 @@ export function Army({ count, names = [] }: ArmyProps) {
     return arr;
   }, []);
 
-  function placeBodies(t: number, camX = 9, camY = 21, camZ = 96) {
+  function placeBodies(t: number) {
     const { cols, scale } = form;
     if (bodies.current) {
       bodies.current.count = visible;
@@ -265,12 +265,7 @@ export function Army({ count, names = [] }: ArmyProps) {
       unitPos(idx, t + seeds[idx], cols, visible, pos);
       tag.visible = true;
       tag.position.set(pos.x, pos.y + 1.86 * scale, pos.z);
-      const dx = camX - pos.x;
-      const dy = camY - pos.y;
-      const dz = camZ - pos.z;
-      const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
-      const boost = Math.min(2.35, Math.max(1.2, dist / 42));
-      tag.scale.set(tagData.sx * boost, tagData.sy * boost, 1);
+      tag.scale.set(tagData.sx, tagData.sy, 1);
     }
   }
 
@@ -288,7 +283,7 @@ export function Army({ count, names = [] }: ArmyProps) {
     acc.current += dt;
     if (acc.current >= 1 / 28) {
       acc.current = 0;
-      placeBodies(t, state.camera.position.x, state.camera.position.y, state.camera.position.z);
+      placeBodies(t);
     }
 
     if (!arrows.current) return;
