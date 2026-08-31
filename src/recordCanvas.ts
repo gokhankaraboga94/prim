@@ -14,6 +14,14 @@ export function reelZoomDur(duration: number) {
   return Math.min(2.05, Math.max(0.55, duration * 0.28));
 }
 
+/** End fade to black. ~0.6s on 3s clips, ~1s on 7s, 1.15s cap on longer ones. */
+export function reelFade(duration: number) {
+  return Math.min(1.15, Math.max(0.6, duration * 0.14));
+}
+
+/** Full-black hold after the fade so the recorder doesn't cut mid-grey. */
+export const REEL_FADE_HOLD = 0.15;
+
 function pickMime() {
   if (typeof MediaRecorder === "undefined") return "";
   const types = [

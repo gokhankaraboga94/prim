@@ -5,7 +5,7 @@ import * as THREE from "three";
 import { Army, armyFrame } from "./Army";
 import { Castle } from "./Castle";
 import { SallyRaid } from "./SallyRaid";
-import { CaptureHpHud, ReelTitles } from "./CaptureHpHud";
+import { CaptureHpHud, ReelFade, ReelTitles } from "./CaptureHpHud";
 import { WarGrade } from "./WarGrade";
 import { castleFrame } from "../../castleLayout";
 import { REEL_HOLD, reelHook, reelZoomDur } from "../../recordCanvas";
@@ -209,6 +209,7 @@ function SceneContent({
       {cinematic && showTitles && (
         <ReelTitles soldiers={soldiers} duration={duration ?? 8} overlay={warLook} />
       )}
+      {cinematic && <ReelFade duration={duration ?? 8} />}
     </>
   );
 }

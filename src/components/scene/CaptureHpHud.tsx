@@ -3,7 +3,7 @@ import { useFrame, useThree } from "@react-three/fiber";
 import { Hud, OrthographicCamera } from "@react-three/drei";
 import * as THREE from "three";
 import { DPS_PER_SOLDIER, formatCount } from "../../game";
-import { REEL_HOLD, reelHook } from "../../recordCanvas";
+import { REEL_FADE_HOLD, REEL_HOLD, reelFade, reelHook } from "../../recordCanvas";
 
 function roundRect(
   ctx: CanvasRenderingContext2D,
@@ -246,6 +246,48 @@ export function ReelTitles({ overlay, ...props }: ReelTitlesProps) {
     <Hud renderPriority={overlay ? 3 : 2}>
       <OrthographicCamera makeDefault position={[0, 0, 10]} />
       <TitlesPlate {...props} />
+    </Hud>
+  );
+}
+
+function FadePlate({ duration }: { duration: number }) {
+  const size = useThree((s) => s.size);
+  const mat = useRef<THREE.MeshBasicMaterial>(null);
+
+  useFrame(({ clock }) => {
+    const recT = clock.elapsedTime - REEL_HOLD;
+    const fade = reelFade(duration);
+    const start = duration - fade;
+    const end = duration - REEL_FADE_HOLD;
+    let a = 0;
+    if (recT >= end) a = 1;
+    else if (recT > start) {
+      const u = (recT - start) / Math.max(0.08, end - start);
+      a = u * u;
+    }
+    if (mat.current) mat.current.opacity = a;
+  });
+
+  return (
+    <mesh position={[0, 0, 2]} renderOrder={80}>
+      <planeGeometry args={[size.width * 2, size.height * 2]} />
+      <meshBasicMaterial
+        ref={mat}
+        color="#000000"
+        transparent
+        opacity={0}
+        depthTest={false}
+        toneMapped={false}
+      />
+    </mesh>
+  );
+}
+
+export function ReelFade({ duration }: { duration: number }) {
+  return (
+    <Hud renderPriority={4}>
+      <OrthographicCamera makeDefault position={[0, 0, 10]} />
+      <FadePlate duration={duration} />
     </Hud>
   );
 }
