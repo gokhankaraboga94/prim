@@ -21,6 +21,7 @@ type BattleSceneProps = {
   duration?: number;
   showTitles?: boolean;
   warLook?: boolean;
+  day?: number;
   onReady?: (canvas: HTMLCanvasElement) => void;
 };
 
@@ -172,6 +173,7 @@ function SceneContent({
   duration,
   showTitles = true,
   warLook = false,
+  day = 0,
 }: BattleSceneProps) {
   return (
     <>
@@ -207,7 +209,7 @@ function SceneContent({
         <CaptureHpHud hp={hp} maxHp={maxHp} soldiers={soldiers} overlay={warLook} />
       )}
       {cinematic && showTitles && (
-        <ReelTitles soldiers={soldiers} duration={duration ?? 8} overlay={warLook} />
+        <ReelTitles soldiers={soldiers} duration={duration ?? 8} overlay={warLook} day={day} />
       )}
       {cinematic && <ReelFade duration={duration ?? 8} />}
     </>
@@ -225,6 +227,7 @@ function BattleSceneInner({
   duration,
   showTitles,
   warLook,
+  day,
   onReady,
 }: BattleSceneProps) {
   const [active, setActive] = useState(() => typeof document === "undefined" || !document.hidden);
@@ -268,6 +271,7 @@ function BattleSceneInner({
         duration={duration}
         showTitles={showTitles}
         warLook={warLook}
+        day={day}
       />
     </Canvas>
   );

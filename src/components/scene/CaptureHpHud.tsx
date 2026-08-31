@@ -141,7 +141,8 @@ function strokeFill(
 function drawTitles(
   canvas: HTMLCanvasElement,
   phase: "hook" | "cta" | "none",
-  soldiers: number
+  soldiers: number,
+  day: number
 ) {
   const ctx = canvas.getContext("2d");
   if (!ctx) return;
@@ -153,13 +154,26 @@ function drawTitles(
   ctx.textBaseline = "middle";
   if (phase === "hook") {
     const count = formatCount(soldiers);
-    const big = count.length > 6 ? 160 : count.length > 4 ? 200 : 240;
-    ctx.font = `800 ${big}px Outfit, system-ui, sans-serif`;
-    strokeFill(ctx, count, w / 2, 130, 28);
-    ctx.font = "800 72px Outfit, system-ui, sans-serif";
-    strokeFill(ctx, "takipçi", w / 2, 250, 16);
-    ctx.font = "800 64px Outfit, system-ui, sans-serif";
-    strokeFill(ctx, "Bu kale düşecek mi?", w / 2, 360, 16);
+    const dayLabel = day > 0 ? `${day}. gün` : "";
+    if (dayLabel) {
+      ctx.font = "800 64px Outfit, system-ui, sans-serif";
+      strokeFill(ctx, dayLabel, w / 2, 72, 16);
+      const big = count.length > 6 ? 140 : count.length > 4 ? 180 : 210;
+      ctx.font = `800 ${big}px Outfit, system-ui, sans-serif`;
+      strokeFill(ctx, count, w / 2, 195, 26);
+      ctx.font = "800 72px Outfit, system-ui, sans-serif";
+      strokeFill(ctx, "takipçi", w / 2, 310, 16);
+      ctx.font = "800 64px Outfit, system-ui, sans-serif";
+      strokeFill(ctx, "Bu kale düşecek mi?", w / 2, 410, 16);
+    } else {
+      const big = count.length > 6 ? 160 : count.length > 4 ? 200 : 240;
+      ctx.font = `800 ${big}px Outfit, system-ui, sans-serif`;
+      strokeFill(ctx, count, w / 2, 130, 28);
+      ctx.font = "800 72px Outfit, system-ui, sans-serif";
+      strokeFill(ctx, "takipçi", w / 2, 250, 16);
+      ctx.font = "800 64px Outfit, system-ui, sans-serif";
+      strokeFill(ctx, "Bu kale düşecek mi?", w / 2, 360, 16);
+    }
   } else {
     ctx.font = "800 72px Outfit, system-ui, sans-serif";
     strokeFill(ctx, "Takip et, asker ol", w / 2, 340, 18);
@@ -170,25 +184,26 @@ type ReelTitlesProps = {
   soldiers: number;
   duration: number;
   overlay?: boolean;
+  day?: number;
 };
 
-function TitlesPlate({ soldiers, duration }: ReelTitlesProps) {
+function TitlesPlate({ soldiers, duration, day = 0 }: ReelTitlesProps) {
   const size = useThree((s) => s.size);
   const mesh = useRef<THREE.Mesh>(null);
   const canvas = useMemo(() => {
     const c = document.createElement("canvas");
     c.width = 1080;
-    c.height = 480;
+    c.height = 520;
     return c;
   }, []);
   const tex = useMemo(() => {
-    drawTitles(canvas, "hook", soldiers);
+    drawTitles(canvas, "hook", soldiers, day);
     const t = new THREE.CanvasTexture(canvas);
     t.colorSpace = THREE.SRGBColorSpace;
     t.minFilter = THREE.LinearFilter;
     t.magFilter = THREE.LinearFilter;
     return t;
-  }, [canvas, soldiers]);
+  }, [canvas, soldiers, day]);
   const last = useRef("");
   const mat = useRef<THREE.MeshBasicMaterial>(null);
 
@@ -210,10 +225,10 @@ function TitlesPlate({ soldiers, duration }: ReelTitlesProps) {
       if (into < 0.35) alpha = into / 0.35;
       else alpha = 1;
     }
-    const key = `${phase}:${soldiers}`;
+    const key = `${phase}:${soldiers}:${day}`;
     if (last.current !== key) {
       last.current = key;
-      drawTitles(canvas, phase, soldiers);
+      drawTitles(canvas, phase, soldiers, day);
       tex.needsUpdate = true;
     }
     if (mat.current) mat.current.opacity = alpha;

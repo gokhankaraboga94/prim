@@ -35,6 +35,7 @@ export function AdminPage() {
   const [reelSeconds, setReelSeconds] = useState<ReelDuration>(7);
   const [reelText, setReelText] = useState(true);
   const [reelWarLook, setReelWarLook] = useState(false);
+  const [reelDay, setReelDay] = useState("1");
   const [capturing, setCapturing] = useState(false);
   const [editIndex, setEditIndex] = useState<number | null>(null);
   const [editValue, setEditValue] = useState("");
@@ -405,6 +406,16 @@ export function AdminPage() {
               </button>
             ))}
           </div>
+          <label>Gün</label>
+          <input
+            type="number"
+            inputMode="numeric"
+            min={1}
+            step={1}
+            value={reelDay}
+            onChange={(e) => setReelDay(e.target.value)}
+            placeholder="5"
+          />
           <label className="check-row">
             <input
               type="checkbox"
@@ -506,6 +517,7 @@ export function AdminPage() {
           seconds={reelSeconds}
           showTitles={reelText}
           warLook={reelWarLook}
+          day={Math.max(0, Math.floor(Number(reelDay)) || 0)}
           onClose={() => setCapturing(false)}
         />
       )}
