@@ -7,6 +7,7 @@ import { Castle } from "./Castle";
 import { SallyRaid } from "./SallyRaid";
 import { CaptureHpHud, ReelTitles } from "./CaptureHpHud";
 import { castleFrame } from "../../castleLayout";
+import { REEL_HOLD, reelHook, reelZoomDur } from "../../recordCanvas";
 
 type BattleSceneProps = {
   soldiers: number;
@@ -17,12 +18,11 @@ type BattleSceneProps = {
   maxHp?: number;
   cinematic?: boolean;
   duration?: number;
-  handle?: string;
+  showTitles?: boolean;
   onReady?: (canvas: HTMLCanvasElement) => void;
 };
 
 const CAM_FOV = 36 * (Math.PI / 180);
-const REEL_HOLD = 1.05;
 
 function distToFit(width: number, height: number, aspect: number, margin = 1.2) {
   const vHalf = Math.tan(CAM_FOV / 2);
@@ -45,10 +45,10 @@ function CinematicCam({
   useFrame(({ camera, clock, size }) => {
     const aspect = size.width / Math.max(1, size.height);
     const recT = clock.elapsedTime - REEL_HOLD;
-    const hook = Math.min(3, Math.max(0.9, duration * 0.4));
-    const zoomDur = Math.max(0.45, duration - hook);
+    const hook = reelHook(duration);
+    const zoomDur = reelZoomDur(duration);
     const u = recT <= hook ? 0 : Math.min(1, (recT - hook) / zoomDur);
-    const e = u * u * (3 - 2 * u);
+    const e = 1 - Math.pow(1 - u, 2.35);
 
     const army = armyFrame(soldiers);
     const castle = castleFrame(level);
@@ -168,7 +168,7 @@ function SceneContent({
   maxHp,
   cinematic,
   duration,
-  handle,
+  showTitles = true,
 }: BattleSceneProps) {
   return (
     <>
@@ -202,8 +202,8 @@ function SceneContent({
       {cinematic && maxHp != null && hp != null && (
         <CaptureHpHud hp={hp} maxHp={maxHp} soldiers={soldiers} />
       )}
-      {cinematic && (
-        <ReelTitles soldiers={soldiers} handle={handle ?? ""} duration={duration ?? 8} />
+      {cinematic && showTitles && (
+        <ReelTitles soldiers={soldiers} duration={duration ?? 8} />
       )}
     </>
   );
@@ -218,7 +218,7 @@ function BattleSceneInner({
   maxHp,
   cinematic,
   duration,
-  handle,
+  showTitles,
   onReady,
 }: BattleSceneProps) {
   const [active, setActive] = useState(() => typeof document === "undefined" || !document.hidden);
@@ -260,7 +260,7 @@ function BattleSceneInner({
         maxHp={maxHp}
         cinematic={cinematic}
         duration={duration}
-        handle={handle}
+        showTitles={showTitles}
       />
     </Canvas>
   );

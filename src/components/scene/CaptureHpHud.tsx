@@ -3,6 +3,7 @@ import { useFrame, useThree } from "@react-three/fiber";
 import { Hud, OrthographicCamera } from "@react-three/drei";
 import * as THREE from "three";
 import { DPS_PER_SOLDIER, formatCount } from "../../game";
+import { REEL_HOLD, reelHook } from "../../recordCanvas";
 
 function roundRect(
   ctx: CanvasRenderingContext2D,
@@ -120,8 +121,6 @@ export function CaptureHpHud(props: CaptureHpHudProps) {
   );
 }
 
-const REEL_HOLD = 1.05;
-
 function strokeFill(
   ctx: CanvasRenderingContext2D,
   text: string,
@@ -141,17 +140,14 @@ function strokeFill(
 function drawTitles(
   canvas: HTMLCanvasElement,
   phase: "hook" | "cta" | "none",
-  alpha: number,
-  soldiers: number,
-  handle: string
+  soldiers: number
 ) {
   const ctx = canvas.getContext("2d");
   if (!ctx) return;
   const w = canvas.width;
   const h = canvas.height;
   ctx.clearRect(0, 0, w, h);
-  if (phase === "none" || alpha < 0.02) return;
-  ctx.globalAlpha = alpha;
+  if (phase === "none") return;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   if (phase === "hook") {
@@ -160,26 +156,23 @@ function drawTitles(
     ctx.font = `800 ${big}px Outfit, system-ui, sans-serif`;
     strokeFill(ctx, count, w / 2, 130, 28);
     ctx.font = "800 72px Outfit, system-ui, sans-serif";
-    strokeFill(ctx, "ASKER", w / 2, 250, 16);
+    strokeFill(ctx, "takipçi", w / 2, 250, 16);
     ctx.font = "800 64px Outfit, system-ui, sans-serif";
     strokeFill(ctx, "Bu kale düşecek mi?", w / 2, 360, 16);
   } else {
     ctx.font = "800 72px Outfit, system-ui, sans-serif";
-    strokeFill(ctx, "Takip et, asker ol", w / 2, 170, 18);
-    ctx.font = "800 64px Outfit, system-ui, sans-serif";
-    strokeFill(ctx, `@${handle.replace(/^@/, "")}`, w / 2, 290, 16);
+    strokeFill(ctx, "Takip et, asker ol", w / 2, 340, 18);
   }
-  ctx.globalAlpha = 1;
 }
 
 type ReelTitlesProps = {
   soldiers: number;
-  handle: string;
   duration: number;
 };
 
-function TitlesPlate({ soldiers, handle, duration }: ReelTitlesProps) {
+function TitlesPlate({ soldiers, duration }: ReelTitlesProps) {
   const size = useThree((s) => s.size);
+  const mesh = useRef<THREE.Mesh>(null);
   const canvas = useMemo(() => {
     const c = document.createElement("canvas");
     c.width = 1080;
@@ -187,19 +180,19 @@ function TitlesPlate({ soldiers, handle, duration }: ReelTitlesProps) {
     return c;
   }, []);
   const tex = useMemo(() => {
-    drawTitles(canvas, "hook", 1, soldiers, handle);
+    drawTitles(canvas, "hook", soldiers);
     const t = new THREE.CanvasTexture(canvas);
     t.colorSpace = THREE.SRGBColorSpace;
     t.minFilter = THREE.LinearFilter;
     t.magFilter = THREE.LinearFilter;
     return t;
-  }, [canvas, soldiers, handle]);
+  }, [canvas, soldiers]);
   const last = useRef("");
   const mat = useRef<THREE.MeshBasicMaterial>(null);
 
   useFrame(({ clock }) => {
     const recT = clock.elapsedTime - REEL_HOLD;
-    const hook = Math.min(3, Math.max(0.9, duration * 0.4));
+    const hook = reelHook(duration);
     const ctaLen = Math.min(2, Math.max(0.8, duration * 0.28));
     const ctaAt = duration - ctaLen;
     let phase: "hook" | "cta" | "none" = "none";
@@ -215,13 +208,16 @@ function TitlesPlate({ soldiers, handle, duration }: ReelTitlesProps) {
       if (into < 0.35) alpha = into / 0.35;
       else alpha = 1;
     }
-    const key = `${phase}:${alpha.toFixed(2)}:${soldiers}:${handle}`;
+    const key = `${phase}:${soldiers}`;
     if (last.current !== key) {
       last.current = key;
-      drawTitles(canvas, phase, 1, soldiers, handle);
+      drawTitles(canvas, phase, soldiers);
       tex.needsUpdate = true;
     }
     if (mat.current) mat.current.opacity = alpha;
+    if (mesh.current) {
+      mesh.current.position.y = phase === "cta" ? -size.height * 0.34 : -size.height * 0.26;
+    }
   });
 
   const width = size.width * 0.96;
@@ -229,7 +225,7 @@ function TitlesPlate({ soldiers, handle, duration }: ReelTitlesProps) {
   const y = -size.height * 0.26;
 
   return (
-    <mesh position={[0, y, 0]} renderOrder={25}>
+    <mesh ref={mesh} position={[0, y, 0]} renderOrder={25}>
       <planeGeometry args={[width, height]} />
       <meshBasicMaterial
         ref={mat}

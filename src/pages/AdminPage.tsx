@@ -33,6 +33,7 @@ export function AdminPage() {
   const [msg, setMsg] = useState("");
   const [busy, setBusy] = useState(false);
   const [reelSeconds, setReelSeconds] = useState<ReelDuration>(7);
+  const [reelText, setReelText] = useState(true);
   const [capturing, setCapturing] = useState(false);
   const [editIndex, setEditIndex] = useState<number | null>(null);
   const [editValue, setEditValue] = useState("");
@@ -403,6 +404,14 @@ export function AdminPage() {
               </button>
             ))}
           </div>
+          <label className="check-row">
+            <input
+              type="checkbox"
+              checked={reelText}
+              onChange={(e) => setReelText(e.target.checked)}
+            />
+            Yazı olsun mu
+          </label>
           <button type="button" className="btn-gold" onClick={() => setCapturing(true)}>
             Kaydı başlat
           </button>
@@ -485,8 +494,8 @@ export function AdminPage() {
           pressure={pressure}
           hp={power}
           maxHp={maxHp}
-          handle={game.instagramHandle}
           seconds={reelSeconds}
+          showTitles={reelText}
           onClose={() => setCapturing(false)}
         />
       )}

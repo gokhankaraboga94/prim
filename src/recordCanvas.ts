@@ -1,6 +1,19 @@
 export const REEL_DURATIONS = [3, 5, 6, 7, 10, 15] as const;
 export type ReelDuration = (typeof REEL_DURATIONS)[number];
 
+/** Warmup before MediaRecorder starts — keep in sync with ReelCapture wait. */
+export const REEL_HOLD = 1.05;
+
+/** Army close-up length. 7s clips hold ~2.1s then pull back. */
+export function reelHook(duration: number) {
+  return Math.min(2.1, Math.max(0.7, duration * 0.3));
+}
+
+/** Pullback length — finishes mid-clip so the castle holds, especially on 7s. */
+export function reelZoomDur(duration: number) {
+  return Math.min(2.05, Math.max(0.55, duration * 0.28));
+}
+
 function pickMime() {
   if (typeof MediaRecorder === "undefined") return "";
   const types = [

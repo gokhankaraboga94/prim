@@ -824,6 +824,27 @@ select:focus {
   color: #1a1308;
 }
 
+.check-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 4px 0 16px;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.check-row input {
+  width: 20px;
+  height: 20px;
+  flex: none;
+  accent-color: #c9a227;
+  cursor: pointer;
+}
+
 .reel-capture {
   position: fixed;
   inset: 0;
