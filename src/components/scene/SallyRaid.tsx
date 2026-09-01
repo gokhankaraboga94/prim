@@ -76,7 +76,7 @@ export function SallyRaid({ soldiers, commanders = 0 }: SallyRaidProps) {
   useFrame((state) => {
     if (!bodies.current) return;
     const p = sallyLocal(state.clock.elapsedTime);
-    if (n <= 0 || p < 1.2 || p >= 14.4) {
+    if (n <= 0 || p < 2.4 || p >= 28.8) {
       bodies.current.count = 0;
       return;
     }
