@@ -193,13 +193,11 @@ function SkyDome() {
           varying vec3 vPos;
           void main() {
             float h = normalize(vPos).y;
-            vec3 zenith = vec3(0.28, 0.52, 0.86);
-            vec3 mid = vec3(0.55, 0.74, 0.92);
-            vec3 horizon = vec3(0.86, 0.88, 0.9);
-            vec3 glow = vec3(1.0, 0.86, 0.62);
-            vec3 col = mix(horizon, mid, smoothstep(-0.08, 0.22, h));
-            col = mix(col, zenith, smoothstep(0.18, 0.78, h));
-            col = mix(col, glow, exp(-pow((h - 0.04) * 7.0, 2.0)) * 0.32);
+            vec3 zenith = vec3(0.38, 0.66, 0.96);
+            vec3 mid = vec3(0.58, 0.80, 0.98);
+            vec3 horizon = vec3(0.70, 0.86, 0.98);
+            vec3 col = mix(horizon, mid, smoothstep(-0.12, 0.18, h));
+            col = mix(col, zenith, smoothstep(0.16, 0.82, h));
             gl_FragColor = vec4(col, 1.0);
           }
         `,
@@ -316,8 +314,8 @@ function SceneContent({
 }: BattleSceneProps) {
   return (
     <>
-      <color attach="background" args={["#87a7c8"]} />
-      <fog attach="fog" args={["#c5d4e0", 560, 1600]} />
+      <color attach="background" args={["#8ec6f4"]} />
+      <fog attach="fog" args={["#b9d8f4", 560, 1600]} />
       <SkyDome />
       <DayLights />
       <Terrain />
@@ -414,7 +412,7 @@ function BattleSceneInner({
       onCreated={({ gl }) => {
         gl.toneMapping = THREE.ACESFilmicToneMapping;
         gl.toneMappingExposure = 1.32;
-        gl.setClearColor("#87a7c8", 1);
+        gl.setClearColor("#8ec6f4", 1);
         onReady?.(gl.domElement);
       }}
     >
