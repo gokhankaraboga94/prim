@@ -10,16 +10,15 @@ export function reelFade(duration: number) {
   return Math.min(1.15, Math.max(0.6, duration * 0.14));
 }
 
-/** Face hold until the sword is up, then a short army beat, then a long pull. */
+/** Face hold until the sword is up, a slow turn, then pull as the sally starts. */
 export function reelBeats(duration: number) {
   const fade = reelFade(duration);
   const cmd = REEL_SWORD_START - REEL_SALLY_AT + SWORD_SWING * 0.3;
-  const turn = Math.min(0.95, Math.max(0.62, duration * 0.08));
-  const army = Math.min(1.8, Math.max(0.65, duration * 0.12));
+  const turn = Math.min(2.4, Math.max(1.45, duration * 0.17));
+  const army = Math.min(0.5, Math.max(0.28, duration * 0.035));
   let pullStart = cmd + turn + army;
-  const pullFloor = duration - Math.max(1.2, fade + 0.55);
-  if (pullStart > pullFloor) pullStart = Math.max(cmd + turn + 0.4, pullFloor);
-  return { cmd, turn, army: pullStart - cmd - turn, pullStart, fade };
+  if (pullStart > duration - fade) pullStart = Math.max(cmd + turn, duration - fade);
+  return { cmd, turn, army: Math.max(0, pullStart - cmd - turn), pullStart, fade };
 }
 
 export function reelHook(duration: number) {

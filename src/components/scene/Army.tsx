@@ -3,6 +3,7 @@ import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import { isCommander } from "../../game";
+import { REEL_HOLD, reelBeats } from "../../recordCanvas";
 import { raidCount, sallyHunting, sallyLiveIndex, sallyLocal, sallyRaiderAt, swordStyleAt, swordSwingPose, swordSwingU } from "../../siegeEvent";
 
 const MAX_SOLDIERS = 5000;
@@ -15,6 +16,7 @@ const ARROW_FLIGHT = 3.2;
 const FRONT_Z = 52;
 const FILE = 2.55;
 const RANK = 2.9;
+const CMD_STEP = RANK * 2;
 const GATE = new THREE.Vector3(0, 10.5, 16.4);
 
 type Shot = {
@@ -35,6 +37,7 @@ type ArmyProps = {
   names?: string[];
   commanders?: string[];
   cinematic?: boolean;
+  duration?: number;
 };
 
 const MAX_RANKS = 4;
@@ -63,7 +66,7 @@ export function armyFrame(count: number, commanderCount = 0) {
   const cols = sizes.length ? Math.max(...sizes) : 1;
   const rows = Math.max(1, sizes.length);
   const width = Math.max(FILE, (cols - 1) * FILE + FILE * 0.55);
-  const front = chiefs > 0 ? FRONT_Z - RANK : FRONT_Z;
+  const front = chiefs > 0 ? FRONT_Z - CMD_STEP : FRONT_Z;
   const back = FRONT_Z + (rows - 1) * RANK;
   return { width, front, back, midZ: (front + back) / 2, height: 3.5 };
 }
@@ -86,7 +89,7 @@ function unitPos(i: number, t: number, sizes: number[], out: THREE.Vector3) {
 
 function commanderPos(t: number, id: number, out: THREE.Vector3) {
   const strike = Math.abs(Math.sin(t * 7 + id)) * 0.07;
-  out.set(0, strike, FRONT_Z - RANK);
+  out.set(0, strike, FRONT_Z - CMD_STEP);
 }
 
 function buildLayout(names: string[], commanders: string[], n: number) {
@@ -139,68 +142,72 @@ function part(
 
 function soldierHelm() {
   return [
-    part(new THREE.SphereGeometry(0.175, 10, 8), "#101012", 0, 1.35, 0.02),
-    part(new THREE.CylinderGeometry(0.155, 0.185, 0.2, 8), "#0b0b0d", 0, 1.22, 0.03),
-    part(new THREE.ConeGeometry(0.15, 0.22, 8), "#161618", 0, 1.54, 0.01),
-    part(new THREE.BoxGeometry(0.22, 0.24, 0.14), "#08080a", 0, 1.27, 0.13),
-    part(new THREE.BoxGeometry(0.15, 0.022, 0.035), "#2c2c32", 0, 1.33, 0.21),
-    part(new THREE.BoxGeometry(0.06, 0.18, 0.12), "#0c0c0e", -0.12, 1.23, 0.1),
-    part(new THREE.BoxGeometry(0.06, 0.18, 0.12), "#0c0c0e", 0.12, 1.23, 0.1),
-    part(new THREE.CylinderGeometry(0.2, 0.175, 0.04, 8), "#070709", 0, 1.14, 0.02),
-    part(new THREE.SphereGeometry(0.038, 6, 5), "#1a1210", 0, 1.65, 0),
-    part(new THREE.BoxGeometry(0.042, 0.28, 0.042), "#1c100c", 0.03, 1.6, -0.1, 0.55, 0, 0.22),
-    part(new THREE.BoxGeometry(0.034, 0.22, 0.034), "#2a1612", 0.06, 1.48, -0.17, 0.88, 0, 0.16),
-    part(new THREE.BoxGeometry(0.026, 0.15, 0.026), "#0a0a0c", 0.07, 1.37, -0.22, 1.1, 0, 0.1),
+    part(new THREE.SphereGeometry(0.155, 10, 8), "#8a929c", 0, 1.4, 0.02),
+    part(new THREE.CylinderGeometry(0.14, 0.16, 0.13, 10), "#6e767e", 0, 1.28, 0.02),
+    part(new THREE.ConeGeometry(0.11, 0.15, 8), "#9aa2aa", 0, 1.54, 0.01),
+    part(new THREE.CylinderGeometry(0.19, 0.16, 0.028, 10), "#b4bcc4", 0, 1.21, 0.02),
+    part(new THREE.CylinderGeometry(0.09, 0.11, 0.08, 8), "#5a6068", 0, 1.18, 0.02),
+    part(new THREE.BoxGeometry(0.048, 0.15, 0.1), "#7a828a", -0.125, 1.26, 0.09),
+    part(new THREE.BoxGeometry(0.048, 0.15, 0.1), "#7a828a", 0.125, 1.26, 0.09),
+    part(new THREE.BoxGeometry(0.032, 0.15, 0.038), "#c4ccd4", 0, 1.28, 0.155),
+    part(new THREE.BoxGeometry(0.11, 0.07, 0.03), "#1a1c22", 0, 1.31, 0.15),
+    part(new THREE.BoxGeometry(0.09, 0.014, 0.018), "#e4e8ee", 0, 1.325, 0.168),
+    part(new THREE.SphereGeometry(0.016, 5, 4), "#d0d4d8", -0.1, 1.22, 0.12),
+    part(new THREE.SphereGeometry(0.016, 5, 4), "#d0d4d8", 0.1, 1.22, 0.12),
+    part(new THREE.SphereGeometry(0.028, 6, 5), "#8a2018", 0, 1.62, 0),
+    part(new THREE.BoxGeometry(0.032, 0.22, 0.032), "#7a1c18", 0.04, 1.56, -0.09, 0.5, 0, 0.2),
+    part(new THREE.BoxGeometry(0.024, 0.16, 0.024), "#4a1014", 0.07, 1.45, -0.15, 0.85, 0, 0.14),
   ];
 }
 
 function commanderHelm() {
   return [
-    part(new THREE.ConeGeometry(0.13, 0.32, 8), "#1a1a20", 0, 1.68, 0.01),
-    part(new THREE.TorusGeometry(0.175, 0.028, 6, 12), "#c9a227", 0, 1.43, 0.02, Math.PI / 2),
-    part(new THREE.BoxGeometry(0.24, 0.045, 0.07), "#c9a227", 0, 1.39, 0.16),
-    part(new THREE.BoxGeometry(0.26, 0.28, 0.12), "#07070a", 0, 1.25, 0.17),
-    part(new THREE.BoxGeometry(0.045, 0.18, 0.06), "#1c1c22", 0, 1.22, 0.22),
-    part(new THREE.SphereGeometry(0.05, 6, 5), "#c9a227", 0, 1.82, 0),
-    part(new THREE.BoxGeometry(0.07, 0.46, 0.07), "#3a0c12", -0.03, 1.84, -0.08, 0.28, 0, -0.18),
-    part(new THREE.BoxGeometry(0.055, 0.36, 0.055), "#1a080c", 0.03, 1.78, -0.14, 0.5, 0, 0.12),
-    part(new THREE.BoxGeometry(0.04, 0.22, 0.04), "#0c0c10", 0.05, 1.64, -0.2, 0.75, 0, 0.08),
+    part(new THREE.ConeGeometry(0.095, 0.24, 8), "#a8b0b8", 0, 1.66, 0.01),
+    part(new THREE.TorusGeometry(0.15, 0.02, 6, 12), "#e0c040", 0, 1.43, 0.02, Math.PI / 2),
+    part(new THREE.BoxGeometry(0.18, 0.03, 0.045), "#e0c040", 0, 1.37, 0.15),
+    part(new THREE.BoxGeometry(0.18, 0.16, 0.05), "#8a929a", 0, 1.27, 0.16),
+    part(new THREE.BoxGeometry(0.07, 0.04, 0.025), "#14161c", -0.035, 1.31, 0.19),
+    part(new THREE.BoxGeometry(0.07, 0.04, 0.025), "#14161c", 0.035, 1.31, 0.19),
+    part(new THREE.SphereGeometry(0.036, 6, 5), "#e0c040", 0, 1.78, 0),
+    part(new THREE.BoxGeometry(0.055, 0.38, 0.055), "#9a1822", -0.02, 1.8, -0.08, 0.22, 0, -0.14),
+    part(new THREE.BoxGeometry(0.042, 0.28, 0.042), "#5c1018", 0.03, 1.72, -0.14, 0.42, 0, 0.1),
   ];
 }
 
 function createArcherGeometry() {
   const pieces = [
-    part(new THREE.BoxGeometry(0.15, 0.18, 0.26), "#3a2416", -0.1, 0.09, 0.05),
-    part(new THREE.BoxGeometry(0.15, 0.18, 0.26), "#3a2416", 0.1, 0.09, 0.05),
-    part(new THREE.BoxGeometry(0.13, 0.3, 0.15), "#16181e", -0.1, 0.32, 0.02),
-    part(new THREE.BoxGeometry(0.13, 0.3, 0.15), "#16181e", 0.1, 0.32, 0.02),
-    part(new THREE.BoxGeometry(0.16, 0.26, 0.17), "#1a1c24", -0.1, 0.58, 0),
-    part(new THREE.BoxGeometry(0.16, 0.26, 0.17), "#1a1c24", 0.1, 0.58, 0),
-    part(new THREE.CylinderGeometry(0.24, 0.28, 0.36, 8), "#1b2a48", 0, 0.68, 0.01),
-    part(new THREE.BoxGeometry(0.4, 0.34, 0.28), "#6a4224", 0, 0.94, 0.03),
-    part(new THREE.BoxGeometry(0.42, 0.045, 0.3), "#2c1c10", 0, 0.84, 0.04),
-    part(new THREE.BoxGeometry(0.42, 0.045, 0.3), "#2c1c10", 0, 0.96, 0.04),
-    part(new THREE.BoxGeometry(0.42, 0.045, 0.3), "#2c1c10", 0, 1.08, 0.04),
-    part(new THREE.BoxGeometry(0.46, 0.1, 0.32), "#8a5a30", 0, 0.72, 0.04),
-    part(new THREE.BoxGeometry(0.38, 0.08, 0.26), "#3a2a18", 0, 0.62, 0.02),
-    part(new THREE.SphereGeometry(0.055, 7, 6), "#d8c070", 0.16, 0.8, 0.16),
+    part(new THREE.BoxGeometry(0.12, 0.09, 0.2), "#1c1410", -0.1, 0.055, 0.06),
+    part(new THREE.BoxGeometry(0.12, 0.09, 0.2), "#1c1410", 0.1, 0.055, 0.06),
+    part(new THREE.CylinderGeometry(0.048, 0.068, 0.24, 8), "#2a1c14", -0.1, 0.22, 0.04),
+    part(new THREE.CylinderGeometry(0.048, 0.068, 0.24, 8), "#2a1c14", 0.1, 0.22, 0.04),
+    part(new THREE.SphereGeometry(0.052, 7, 6), "#3a2a1c", -0.1, 0.36, 0.04),
+    part(new THREE.SphereGeometry(0.052, 7, 6), "#3a2a1c", 0.1, 0.36, 0.04),
+    part(new THREE.CylinderGeometry(0.072, 0.088, 0.26, 8), "#4a3224", -0.1, 0.52, 0.03),
+    part(new THREE.CylinderGeometry(0.072, 0.088, 0.26, 8), "#4a3224", 0.1, 0.52, 0.03),
+    part(new THREE.BoxGeometry(0.34, 0.15, 0.2), "#3a281c", 0, 0.7, 0.02),
+    part(new THREE.BoxGeometry(0.36, 0.055, 0.22), "#241810", 0, 0.78, 0.03),
+    part(new THREE.BoxGeometry(0.07, 0.08, 0.05), "#c4a030", 0, 0.78, 0.14),
+    part(new THREE.CylinderGeometry(0.125, 0.155, 0.16, 8), "#6a3e26", 0, 0.9, 0.03),
+    part(new THREE.SphereGeometry(0.1, 8, 6), "#7a4a2c", -0.085, 1.08, 0.08),
+    part(new THREE.SphereGeometry(0.1, 8, 6), "#7a4a2c", 0.085, 1.08, 0.08),
+    part(new THREE.BoxGeometry(0.32, 0.16, 0.14), "#3d4824", 0, 1.08, 0),
+    part(new THREE.SphereGeometry(0.085, 8, 6), "#6a4228", -0.2, 1.14, 0.02),
+    part(new THREE.SphereGeometry(0.085, 8, 6), "#6a4228", 0.2, 1.14, 0.02),
+    part(new THREE.CylinderGeometry(0.048, 0.06, 0.2, 8), "#5a3a24", -0.26, 0.98, 0.04, 0, 0, 0.38),
+    part(new THREE.CylinderGeometry(0.048, 0.06, 0.2, 8), "#5a3a24", 0.28, 1.0, 0.1, 0.22, 0, -0.5),
+    part(new THREE.CylinderGeometry(0.04, 0.046, 0.17, 8), "#4a3220", -0.34, 0.84, 0.08, 0.12, 0, 0.22),
+    part(new THREE.CylinderGeometry(0.04, 0.046, 0.17, 8), "#4a3220", 0.28, 0.92, 0.24, 0.38, 0, -0.12),
+    part(new THREE.BoxGeometry(0.065, 0.065, 0.075), "#6a727a", -0.38, 0.74, 0.12),
+    part(new THREE.BoxGeometry(0.065, 0.065, 0.075), "#6a727a", 0.24, 0.86, 0.34),
     ...soldierHelm(),
-    part(new THREE.BoxGeometry(0.15, 0.22, 0.15), "#3d2a1c", -0.28, 0.96, 0.04, 0, 0, 0.55),
-    part(new THREE.BoxGeometry(0.11, 0.2, 0.11), "#4a3220", -0.38, 0.86, 0.08, 0.1, 0, 0.25),
-    part(new THREE.BoxGeometry(0.1, 0.16, 0.1), "#3a2818", -0.4, 0.72, 0.14),
-    part(new THREE.BoxGeometry(0.14, 0.22, 0.14), "#3d2a1c", 0.3, 0.98, 0.1, 0.25, 0, -0.75),
-    part(new THREE.BoxGeometry(0.11, 0.2, 0.11), "#4a3220", 0.28, 0.94, 0.24, 0.45, 0, -0.2),
-    part(new THREE.BoxGeometry(0.1, 0.14, 0.1), "#3a2818", 0.24, 0.9, 0.36),
-    part(new THREE.TorusGeometry(0.52, 0.02, 5, 14, Math.PI), "#8a5a28", 0.26, 0.88, 0.22, 0, 0.15, Math.PI / 2),
+    part(new THREE.TorusGeometry(0.5, 0.018, 5, 14, Math.PI), "#8a5a28", 0.26, 0.88, 0.22, 0, 0.15, Math.PI / 2),
     part(new THREE.BoxGeometry(0.012, 0.98, 0.012), "#e8e0c8", 0.16, 0.88, 0.3),
-    part(new THREE.CylinderGeometry(0.055, 0.07, 0.38, 7), "#3a2414", -0.16, 1.02, -0.16, 0.95, 0.45, 0.1),
-    part(new THREE.BoxGeometry(0.018, 0.26, 0.018), "#d8c898", -0.14, 1.2, -0.24, 0.25, 0, 0.2),
-    part(new THREE.BoxGeometry(0.018, 0.24, 0.018), "#d8c898", -0.19, 1.18, -0.22, 0.15, 0, -0.12),
-    part(new THREE.BoxGeometry(0.018, 0.22, 0.018), "#d8c898", -0.12, 1.16, -0.2, 0.1, 0, 0.08),
-    part(new THREE.BoxGeometry(0.055, 0.62, 0.055), "#3a3c42", -0.2, 0.7, -0.1, 0.12, 0, 0.25),
-    part(new THREE.BoxGeometry(0.04, 0.12, 0.09), "#8a9098", -0.2, 1.02, -0.12),
-    part(new THREE.BoxGeometry(0.08, 0.08, 0.08), "#121214", -0.42, 0.64, 0.16),
-    part(new THREE.BoxGeometry(0.08, 0.08, 0.08), "#121214", 0.22, 0.86, 0.42),
+    part(new THREE.CylinderGeometry(0.05, 0.065, 0.36, 7), "#3a2414", -0.16, 1.0, -0.15, 0.95, 0.45, 0.1),
+    part(new THREE.BoxGeometry(0.016, 0.24, 0.016), "#d8c898", -0.14, 1.18, -0.22, 0.25, 0, 0.2),
+    part(new THREE.BoxGeometry(0.016, 0.22, 0.016), "#d8c898", -0.18, 1.16, -0.2, 0.15, 0, -0.12),
+    part(new THREE.BoxGeometry(0.016, 0.2, 0.016), "#d8c898", -0.12, 1.14, -0.18, 0.1, 0, 0.08),
+    part(new THREE.BoxGeometry(0.05, 0.58, 0.05), "#3a3c42", -0.2, 0.68, -0.1, 0.12, 0, 0.25),
+    part(new THREE.BoxGeometry(0.038, 0.1, 0.08), "#8a9098", -0.2, 0.98, -0.12),
   ];
   const merged = mergeGeometries(pieces, false);
   pieces.forEach((g) => g.dispose());
@@ -222,16 +229,20 @@ let commanderGeoCache: THREE.BufferGeometry | null = null;
 function getCommanderGeometry() {
   if (commanderGeoCache) return commanderGeoCache;
   const capeParts = [
-    part(new THREE.BoxGeometry(0.68, 1.05, 0.14), "#1c4e94", 0, 0.7, -0.28),
-    part(new THREE.BoxGeometry(0.56, 0.54, 0.12), "#0e2c5c", 0, 0.28, -0.34),
-    part(new THREE.BoxGeometry(0.72, 0.14, 0.16), "#2a62b0", 0, 1.1, -0.22),
-    part(new THREE.BoxGeometry(0.22, 0.07, 0.12), "#e8c868", 0, 1.14, -0.08),
-    part(new THREE.SphereGeometry(0.05, 7, 6), "#f0d478", -0.14, 1.14, -0.06),
-    part(new THREE.SphereGeometry(0.05, 7, 6), "#f0d478", 0.14, 1.14, -0.06),
-    part(new THREE.BoxGeometry(0.09, 1.48, 0.11), "#d8dee6", 0.5, 1.08, 0.24, 0.55, 0, -0.55),
-    part(new THREE.BoxGeometry(0.18, 0.09, 0.22), "#c9a227", 0.44, 0.52, 0.14),
-    part(new THREE.BoxGeometry(0.08, 0.26, 0.08), "#3a2414", 0.42, 0.38, 0.1),
-    part(new THREE.BoxGeometry(0.13, 0.13, 0.045), "#e8c868", 0.42, 0.26, 0.1),
+    part(new THREE.BoxGeometry(0.62, 1.02, 0.12), "#1c4e94", 0, 0.68, -0.26),
+    part(new THREE.BoxGeometry(0.5, 0.48, 0.1), "#0e2c5c", 0, 0.28, -0.32),
+    part(new THREE.BoxGeometry(0.58, 0.12, 0.14), "#2a62b0", 0, 1.12, -0.2),
+    part(new THREE.SphereGeometry(0.1, 8, 6), "#8a5434", -0.1, 1.12, 0.1),
+    part(new THREE.SphereGeometry(0.1, 8, 6), "#8a5434", 0.1, 1.12, 0.1),
+    part(new THREE.SphereGeometry(0.095, 8, 6), "#7a4a2c", -0.24, 1.16, 0.03),
+    part(new THREE.SphereGeometry(0.095, 8, 6), "#7a4a2c", 0.24, 1.16, 0.03),
+    part(new THREE.BoxGeometry(0.2, 0.06, 0.1), "#e8c868", 0, 1.16, -0.08),
+    part(new THREE.SphereGeometry(0.045, 6, 5), "#f0d478", -0.12, 1.16, -0.05),
+    part(new THREE.SphereGeometry(0.045, 6, 5), "#f0d478", 0.12, 1.16, -0.05),
+    part(new THREE.BoxGeometry(0.085, 1.46, 0.1), "#d8dee6", 0.5, 1.06, 0.22, 0.55, 0, -0.55),
+    part(new THREE.BoxGeometry(0.16, 0.08, 0.2), "#c9a227", 0.44, 0.5, 0.14),
+    part(new THREE.BoxGeometry(0.07, 0.24, 0.07), "#3a2414", 0.42, 0.36, 0.1),
+    part(new THREE.BoxGeometry(0.12, 0.12, 0.04), "#e8c868", 0.42, 0.24, 0.1),
     ...commanderHelm(),
   ];
   const cape = mergeGeometries(capeParts, false);
@@ -249,7 +260,7 @@ function SwordFlash() {
     const hit = u > 0.4 ? Math.sin(((u - 0.4) / 0.6) * Math.PI) : 0;
     if (light.current) {
       light.current.intensity = hit * 8.5;
-      light.current.position.set(0, 2.35, FRONT_Z - RANK - 1.5);
+      light.current.position.set(0, 2.35, FRONT_Z - CMD_STEP - 1.5);
     }
   });
   return <pointLight ref={light} color="#ffe8c8" intensity={0} distance={18} decay={2} />;
@@ -313,7 +324,7 @@ function makeHandleTexture(name: string, commander = false): NameTag | null {
   return { map, sx, sy };
 }
 
-export function Army({ count, names = [], commanders = [] }: ArmyProps) {
+export function Army({ count, names = [], commanders = [], cinematic, duration = 8 }: ArmyProps) {
   const bodies = useRef<THREE.InstancedMesh>(null);
   const chiefs = useRef<THREE.InstancedMesh>(null);
   const arrows = useRef<THREE.InstancedMesh>(null);
@@ -400,7 +411,13 @@ export function Army({ count, names = [], commanders = [] }: ArmyProps) {
       }
       const cmd = layout.cmdOf[idx] >= 0;
       poseSoldier(idx, t);
-      tag.visible = true;
+      let namesOn = true;
+      if (cinematic) {
+        const recT = t - REEL_HOLD;
+        const beats = reelBeats(duration);
+        namesOn = recT >= beats.cmd + beats.turn;
+      }
+      tag.visible = namesOn;
       let lift = 2.22;
       if (!cmd) {
         const slot = layout.slotOf[idx];
@@ -488,10 +505,10 @@ export function Army({ count, names = [], commanders = [] }: ArmyProps) {
   return (
     <group>
       <instancedMesh key={instanceCap} ref={bodies} args={[archerGeo, undefined, instanceCap]} frustumCulled={false}>
-        <meshStandardMaterial vertexColors roughness={0.7} metalness={0.06} />
+        <meshStandardMaterial vertexColors roughness={0.52} metalness={0.2} />
       </instancedMesh>
       <instancedMesh ref={chiefs} args={[commanderGeo, undefined, MAX_COMMANDERS]} frustumCulled={false}>
-        <meshStandardMaterial vertexColors roughness={0.62} metalness={0.12} />
+        <meshStandardMaterial vertexColors roughness={0.42} metalness={0.28} />
       </instancedMesh>
       <instancedMesh ref={arrows} args={[undefined, undefined, MAX_ARROWS]} frustumCulled={false}>
         <cylinderGeometry args={[0.055, 0.02, 1.45, 6]} />

@@ -74,13 +74,13 @@ function CinematicCam({
 
     const cmdZ = form.front;
     const a = {
-      x: 1.35,
-      y: 2.08,
-      z: cmdZ - 8.2,
-      lx: 0.04,
-      ly: 1.22,
+      x: 1.05,
+      y: 1.92,
+      z: cmdZ - 7.6,
+      lx: 0.03,
+      ly: 1.16,
       lz: cmdZ,
-      fov: 32,
+      fov: 30,
     };
     const spanX = Math.max(form.width, 12);
     const spanZ = Math.max(8, form.back - form.front + 6);
@@ -94,15 +94,15 @@ function CinematicCam({
       lz: form.midZ,
       fov: 48,
     };
-    const wide = distToFit(Math.max(form.width, castle.width * 0.42), 16, aspect, 1.08);
+    const castleFit = distToFit(castle.width, castle.height, aspect, 1.18);
     const c = {
-      x: 16,
-      y: 17 + wide * 0.05,
-      z: form.back + 22,
+      x: castle.width * 0.05,
+      y: castle.midY + 10,
+      z: castle.midZ + castleFit,
       lx: 0,
-      ly: 2.8,
-      lz: 24,
-      fov: 40,
+      ly: castle.midY,
+      lz: castle.midZ,
+      fov: 38,
     };
 
     let t = 0;
@@ -323,7 +323,7 @@ function SceneContent({
       <Terrain />
       <Castle level={level} pressure={pressure} />
       <SallyRaid soldiers={soldiers} commanders={commanders.length} />
-      <Army count={soldiers} names={names} commanders={commanders} cinematic={cinematic} />
+      <Army count={soldiers} names={names} commanders={commanders} cinematic={cinematic} duration={duration} />
       {cinematic ? (
         <CinematicCam
           duration={duration ?? 8}
