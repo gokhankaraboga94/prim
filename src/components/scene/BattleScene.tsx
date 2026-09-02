@@ -97,17 +97,27 @@ function CinematicCam({
   return null;
 }
 
-function useGroundTexture() {
+function useGroundTexture(night: boolean) {
   return useMemo(() => {
     const canvas = document.createElement("canvas");
     canvas.width = 256;
     canvas.height = 256;
     const ctx = canvas.getContext("2d");
     if (!ctx) return null;
-    ctx.fillStyle = "#1a2412";
+    ctx.fillStyle = night ? "#1a2412" : "#4f9a3c";
     ctx.fillRect(0, 0, 256, 256);
     for (let i = 0; i < 1100; i++) {
-      ctx.fillStyle = i % 3 === 0 ? "#2a3a18" : i % 3 === 1 ? "#121a0c" : "#243214";
+      ctx.fillStyle = night
+        ? i % 3 === 0
+          ? "#2a3a18"
+          : i % 3 === 1
+            ? "#121a0c"
+            : "#243214"
+        : i % 3 === 0
+          ? "#68b34a"
+          : i % 3 === 1
+            ? "#3d7d2e"
+            : "#5aa83f";
       ctx.fillRect(Math.random() * 256, Math.random() * 256, 2 + Math.random() * 6, 2 + Math.random() * 5);
     }
     const tex = new THREE.CanvasTexture(canvas);
@@ -116,11 +126,11 @@ function useGroundTexture() {
     tex.repeat.set(56, 56);
     tex.colorSpace = THREE.SRGBColorSpace;
     return tex;
-  }, []);
+  }, [night]);
 }
 
-function Terrain() {
-  const ground = useGroundTexture();
+function Terrain({ night }: { night: boolean }) {
+  const ground = useGroundTexture(night);
   const dummy = useMemo(() => new THREE.Object3D(), []);
   const rocks = useRef<THREE.InstancedMesh>(null);
   const trees = useRef<THREE.InstancedMesh>(null);
@@ -164,19 +174,19 @@ function Terrain() {
     <group>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
         <planeGeometry args={[720, 720]} />
-        <meshLambertMaterial map={ground} color="#243218" />
+        <meshLambertMaterial map={ground} color={night ? "#243218" : "#5dad45"} />
       </mesh>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 13]}>
         <planeGeometry args={[7, 22]} />
-        <meshLambertMaterial color="#3a2818" />
+        <meshLambertMaterial color={night ? "#3a2818" : "#c4a36a"} />
       </mesh>
       <instancedMesh ref={rocks} args={[undefined, undefined, 24]}>
         <dodecahedronGeometry args={[0.9, 0]} />
-        <meshLambertMaterial color="#3a3630" />
+        <meshLambertMaterial color={night ? "#3a3630" : "#7a746c"} />
       </instancedMesh>
       <instancedMesh ref={trees} args={[undefined, undefined, 22]}>
         <coneGeometry args={[0.9, 3.2, 6]} />
-        <meshLambertMaterial color="#0f2414" />
+        <meshLambertMaterial color={night ? "#0f2414" : "#2f7a32"} />
       </instancedMesh>
     </group>
   );
@@ -221,6 +231,17 @@ function Embers() {
   );
 }
 
+function DayLights() {
+  return (
+    <>
+      <ambientLight intensity={0.62} color="#e8e4dc" />
+      <hemisphereLight args={["#b8c8dc", "#4a7a38", 0.55]} />
+      <directionalLight position={[-22, 34, 20]} intensity={2.15} color="#fff6e4" />
+      <directionalLight position={[18, 16, 10]} intensity={0.55} color="#c8d4e8" />
+    </>
+  );
+}
+
 function NightLights({ pressure }: { pressure: number }) {
   const fire = 1.4 + pressure * 1.8;
   return (
@@ -253,14 +274,15 @@ function SceneContent({
   warLook = false,
   day = 0,
 }: BattleSceneProps) {
+  const night = Boolean(cinematic);
   return (
     <>
       {warLook && <WarGrade />}
-      <color attach="background" args={["#07050c"]} />
-      <fog attach="fog" args={["#100c12", 90, 420]} />
-      <NightLights pressure={pressure} />
-      <Terrain />
-      <Embers />
+      <color attach="background" args={[night ? "#07050c" : "#6d7d92"]} />
+      <fog attach="fog" args={[night ? "#100c12" : "#7a8898", night ? 90 : 340, night ? 420 : 720]} />
+      {night ? <NightLights pressure={pressure} /> : <DayLights />}
+      <Terrain night={night} />
+      {night && <Embers />}
       <Castle level={level} pressure={pressure} />
       <SallyRaid soldiers={soldiers} commanders={commanders.length} />
       <Army count={soldiers} names={names} commanders={commanders} cinematic={cinematic} />
@@ -338,13 +360,13 @@ function BattleSceneInner({
         preserveDrawingBuffer: Boolean(cinematic),
         failIfMajorPerformanceCaveat: false,
       }}
-      camera={{ fov: 36, near: 0.5, far: 700, position: [12, 11, 74] }}
+      camera={{ fov: 36, near: 0.5, far: 700, position: cinematic ? [12, 11, 74] : [9, 21, 96] }}
       frameloop={active ? "always" : "demand"}
       style={{ width: "100%", height: "100%", display: "block" }}
       onCreated={({ gl }) => {
         gl.toneMapping = THREE.ACESFilmicToneMapping;
-        gl.toneMappingExposure = 1.18;
-        gl.setClearColor("#07050c", 1);
+        gl.toneMappingExposure = cinematic ? 1.18 : 1.35;
+        gl.setClearColor(cinematic ? "#07050c" : "#6d7d92", 1);
         onReady?.(gl.domElement);
       }}
     >
