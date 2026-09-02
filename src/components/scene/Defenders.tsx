@@ -144,7 +144,7 @@ export function Defenders({ grow, wallH }: DefendersProps) {
 
   return (
     <instancedMesh ref={mesh} args={[geo, undefined, list.length]} frustumCulled={false}>
-      <meshLambertMaterial vertexColors />
+      <meshStandardMaterial vertexColors roughness={0.7} metalness={0.1} />
     </instancedMesh>
   );
 }

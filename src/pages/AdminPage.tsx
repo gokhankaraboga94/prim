@@ -32,7 +32,6 @@ export function AdminPage() {
   const [busy, setBusy] = useState(false);
   const [reelSeconds, setReelSeconds] = useState<ReelDuration>(7);
   const [reelText, setReelText] = useState(true);
-  const [reelWarLook, setReelWarLook] = useState(false);
   const [reelDay, setReelDay] = useState("1");
   const [capturing, setCapturing] = useState(false);
   const [editIndex, setEditIndex] = useState<number | null>(null);
@@ -431,14 +430,6 @@ export function AdminPage() {
             />
             Yazı olsun mu
           </label>
-          <label className="check-row">
-            <input
-              type="checkbox"
-              checked={reelWarLook}
-              onChange={(e) => setReelWarLook(e.target.checked)}
-            />
-            Savaş filmi rengi
-          </label>
           <button type="button" className="btn-gold" onClick={() => setCapturing(true)}>
             Kaydı başlat
           </button>
@@ -466,7 +457,6 @@ export function AdminPage() {
           maxHp={maxHp}
           seconds={reelSeconds}
           showTitles={reelText}
-          warLook={reelWarLook}
           day={Math.max(0, Math.floor(Number(reelDay)) || 0)}
           onClose={() => setCapturing(false)}
         />

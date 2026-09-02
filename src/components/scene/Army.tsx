@@ -6,7 +6,7 @@ import { isCommander } from "../../game";
 import { raidCount, sallyHunting, sallyLiveIndex, sallyLocal, sallyRaiderAt, swordStyleAt, swordSwingPose, swordSwingU } from "../../siegeEvent";
 
 const MAX_SOLDIERS = 5000;
-const MAX_LABELS = 5;
+const MAX_LABELS = 2000;
 const MAX_COMMANDERS = 24;
 const MAX_ARROWS = 16;
 const IDLE_ARROWS = 2;
@@ -150,7 +150,9 @@ function createArcherGeometry() {
     part(new THREE.BoxGeometry(0.42, 0.045, 0.3), "#2c1c10", 0, 0.84, 0.04),
     part(new THREE.BoxGeometry(0.42, 0.045, 0.3), "#2c1c10", 0, 0.96, 0.04),
     part(new THREE.BoxGeometry(0.42, 0.045, 0.3), "#2c1c10", 0, 1.08, 0.04),
-    part(new THREE.BoxGeometry(0.44, 0.08, 0.22), "#6a4a28", 0, 0.78, 0.02),
+    part(new THREE.BoxGeometry(0.46, 0.1, 0.32), "#8a5a30", 0, 0.72, 0.04),
+    part(new THREE.BoxGeometry(0.38, 0.08, 0.26), "#3a2a18", 0, 0.62, 0.02),
+    part(new THREE.SphereGeometry(0.055, 7, 6), "#d8c070", 0.16, 0.8, 0.16),
     part(new THREE.CylinderGeometry(0.2, 0.24, 0.18, 8), "#d4dce4", 0, 1.14, 0.01),
     part(new THREE.SphereGeometry(0.12, 8, 6), "#c4a07a", 0, 1.26, 0.03),
     part(new THREE.SphereGeometry(0.16, 9, 7), "#c5ccd4", 0, 1.34, 0.01),
@@ -231,21 +233,31 @@ type NameTag = {
   sy: number;
 };
 
+function slotCoord(i: number, sizes: number[]) {
+  let row = 0;
+  let col = i;
+  while (row < sizes.length - 1 && col >= sizes[row]) {
+    col -= sizes[row];
+    row += 1;
+  }
+  return { row, col };
+}
+
 function makeHandleTexture(name: string, commander = false): NameTag | null {
   const label = `@${name}`;
-  const height = 512;
-  const maxW = 2048;
+  const height = 160;
+  const maxW = 1024;
   const probe = document.createElement("canvas").getContext("2d");
   if (!probe) return null;
-  let fontSize = 200;
+  let fontSize = 78;
   probe.font = `800 ${fontSize}px Outfit, system-ui, sans-serif`;
   let textW = probe.measureText(label).width;
-  while (textW + 72 > maxW && fontSize > 40) {
+  while (textW + 36 > maxW && fontSize > 28) {
     fontSize -= 2;
     probe.font = `800 ${fontSize}px Outfit, system-ui, sans-serif`;
     textW = probe.measureText(label).width;
   }
-  const width = Math.min(maxW, Math.max(512, Math.ceil(textW + 72)));
+  const width = Math.min(maxW, Math.max(160, Math.ceil(textW + 36)));
   const canvas = document.createElement("canvas");
   canvas.width = width;
   canvas.height = height;
@@ -257,9 +269,9 @@ function makeHandleTexture(name: string, commander = false): NameTag | null {
   ctx.textBaseline = "middle";
   ctx.lineJoin = "round";
   ctx.miterLimit = 2;
-  ctx.lineWidth = Math.max(22, fontSize * 0.24);
-  ctx.strokeStyle = commander ? "rgba(4, 18, 8, 0.96)" : "rgba(0,0,0,0.96)";
-  ctx.fillStyle = commander ? "#c8ffb0" : "#fff6e8";
+  ctx.lineWidth = Math.max(10, fontSize * 0.2);
+  ctx.strokeStyle = commander ? "rgba(4, 18, 8, 0.96)" : "rgba(0,0,0,0.94)";
+  ctx.fillStyle = commander ? "#c8ffb0" : "#fff";
   ctx.strokeText(label, width / 2, height / 2);
   ctx.fillText(label, width / 2, height / 2);
   const map = new THREE.CanvasTexture(canvas);
@@ -267,13 +279,13 @@ function makeHandleTexture(name: string, commander = false): NameTag | null {
   map.generateMipmaps = true;
   map.minFilter = THREE.LinearMipmapLinearFilter;
   map.magFilter = THREE.LinearFilter;
-  map.anisotropy = 16;
-  const sy = commander ? 2.55 : 2.12;
-  const sx = Math.min(FILE * 2.85, sy * (width / height) * 1.08);
+  map.anisotropy = 8;
+  const sy = commander ? 0.82 : 0.7;
+  const sx = Math.min(FILE * 0.78, sy * (width / height));
   return { map, sx, sy };
 }
 
-export function Army({ count, names = [], commanders = [], cinematic = false }: ArmyProps) {
+export function Army({ count, names = [], commanders = [] }: ArmyProps) {
   const bodies = useRef<THREE.InstancedMesh>(null);
   const chiefs = useRef<THREE.InstancedMesh>(null);
   const arrows = useRef<THREE.InstancedMesh>(null);
@@ -291,30 +303,11 @@ export function Army({ count, names = [], commanders = [], cinematic = false }: 
   const form = useMemo(() => ({ sizes: layout.sizes, scale: 1.14 }), [layout.sizes]);
   const labeled = useMemo(() => {
     const ids: number[] = [];
-    const seen = new Set<number>();
     for (let i = 0; i < visible && ids.length < MAX_LABELS; i++) {
-      if (names[i] && isCommander(names[i], commanders)) {
-        ids.push(i);
-        seen.add(i);
-      }
-    }
-    const frontW = layout.sizes[0] || 0;
-    for (let i = 0; i < visible && ids.length < MAX_LABELS; i++) {
-      if (!names[i] || seen.has(i)) continue;
-      const slot = layout.slotOf[i];
-      if (slot >= 0 && slot < frontW) {
-        ids.push(i);
-        seen.add(i);
-      }
-    }
-    for (let i = 0; i < visible && ids.length < MAX_LABELS; i++) {
-      if (names[i] && !seen.has(i)) {
-        ids.push(i);
-        seen.add(i);
-      }
+      if (names[i]) ids.push(i);
     }
     return ids;
-  }, [names, commanders, visible, layout]);
+  }, [names, visible]);
   const nameMaps = useMemo(
     () => labeled.map((i) => makeHandleTexture(names[i], isCommander(names[i], commanders))),
     [labeled, names, commanders]
@@ -380,9 +373,14 @@ export function Army({ count, names = [], commanders = [], cinematic = false }: 
       const cmd = layout.cmdOf[idx] >= 0;
       poseSoldier(idx, t);
       tag.visible = true;
-      const boost = cinematic ? 1.28 : 1;
-      tag.position.set(pos.x, pos.y + (cmd ? 2.35 : 2.12) * scale, pos.z);
-      tag.scale.set(tagData.sx * boost, tagData.sy * boost, 1);
+      let lift = 2.08;
+      if (!cmd) {
+        const slot = layout.slotOf[idx];
+        const { row, col } = slotCoord(slot >= 0 ? slot : 0, form.sizes);
+        lift = 1.68 + row * 0.5 + (col % 2) * 0.2;
+      }
+      tag.position.set(pos.x, pos.y + lift * scale, pos.z);
+      tag.scale.set(tagData.sx, tagData.sy, 1);
     }
   }
 
@@ -462,10 +460,10 @@ export function Army({ count, names = [], commanders = [], cinematic = false }: 
   return (
     <group>
       <instancedMesh key={instanceCap} ref={bodies} args={[archerGeo, undefined, instanceCap]} frustumCulled={false}>
-        <meshLambertMaterial vertexColors />
+        <meshStandardMaterial vertexColors roughness={0.7} metalness={0.06} />
       </instancedMesh>
       <instancedMesh ref={chiefs} args={[commanderGeo, undefined, MAX_COMMANDERS]} frustumCulled={false}>
-        <meshLambertMaterial vertexColors />
+        <meshStandardMaterial vertexColors roughness={0.62} metalness={0.12} />
       </instancedMesh>
       <instancedMesh ref={arrows} args={[undefined, undefined, MAX_ARROWS]} frustumCulled={false}>
         <cylinderGeometry args={[0.055, 0.02, 1.45, 6]} />

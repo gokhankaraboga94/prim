@@ -102,7 +102,7 @@ export function SallyRaid({ soldiers, commanders = 0 }: SallyRaidProps) {
 
   return (
     <instancedMesh key={cap} ref={bodies} args={[geo, undefined, cap]} frustumCulled={false}>
-      <meshLambertMaterial vertexColors />
+      <meshStandardMaterial vertexColors roughness={0.72} metalness={0.08} />
     </instancedMesh>
   );
 }

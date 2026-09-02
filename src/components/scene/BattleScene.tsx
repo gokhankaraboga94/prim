@@ -6,7 +6,6 @@ import { Army, armyFrame } from "./Army";
 import { Castle } from "./Castle";
 import { SallyRaid } from "./SallyRaid";
 import { CaptureHpHud, ReelFade, ReelTitles } from "./CaptureHpHud";
-import { WarGrade } from "./WarGrade";
 import { castleFrame } from "../../castleLayout";
 import { REEL_HOLD, reelHook, reelZoomDur } from "../../recordCanvas";
 import { cinematicSallyOrigin, sallyLocal, setSallyOrigin, swordSwingU } from "../../siegeEvent";
@@ -97,43 +96,80 @@ function CinematicCam({
   return null;
 }
 
-function useGroundTexture(night: boolean) {
+function useGroundTexture() {
   return useMemo(() => {
     const canvas = document.createElement("canvas");
-    canvas.width = 256;
-    canvas.height = 256;
+    canvas.width = 512;
+    canvas.height = 512;
     const ctx = canvas.getContext("2d");
     if (!ctx) return null;
-    ctx.fillStyle = night ? "#1a2412" : "#4f9a3c";
-    ctx.fillRect(0, 0, 256, 256);
-    for (let i = 0; i < 1100; i++) {
-      ctx.fillStyle = night
-        ? i % 3 === 0
-          ? "#2a3a18"
-          : i % 3 === 1
-            ? "#121a0c"
-            : "#243214"
-        : i % 3 === 0
-          ? "#68b34a"
-          : i % 3 === 1
-            ? "#3d7d2e"
-            : "#5aa83f";
-      ctx.fillRect(Math.random() * 256, Math.random() * 256, 2 + Math.random() * 6, 2 + Math.random() * 5);
+    ctx.fillStyle = "#4a8f38";
+    ctx.fillRect(0, 0, 512, 512);
+    for (let i = 0; i < 4200; i++) {
+      const n = i % 5;
+      ctx.fillStyle = n === 0 ? "#63b34a" : n === 1 ? "#3d7a2c" : n === 2 ? "#5aa83f" : n === 3 ? "#2f6a22" : "#7cbc58";
+      ctx.fillRect(Math.random() * 512, Math.random() * 512, 2 + Math.random() * 7, 2 + Math.random() * 6);
+    }
+    for (let i = 0; i < 80; i++) {
+      ctx.fillStyle = "rgba(90, 70, 40, 0.18)";
+      ctx.beginPath();
+      ctx.ellipse(Math.random() * 512, Math.random() * 512, 8 + Math.random() * 22, 5 + Math.random() * 14, 0, 0, Math.PI * 2);
+      ctx.fill();
     }
     const tex = new THREE.CanvasTexture(canvas);
     tex.wrapS = THREE.RepeatWrapping;
     tex.wrapT = THREE.RepeatWrapping;
-    tex.repeat.set(56, 56);
+    tex.repeat.set(42, 42);
+    tex.anisotropy = 8;
     tex.colorSpace = THREE.SRGBColorSpace;
     return tex;
-  }, [night]);
+  }, []);
 }
 
-function Terrain({ night }: { night: boolean }) {
-  const ground = useGroundTexture(night);
+function SkyDome() {
+  const mat = useMemo(
+    () =>
+      new THREE.ShaderMaterial({
+        side: THREE.BackSide,
+        depthWrite: false,
+        fog: false,
+        vertexShader: `
+          varying vec3 vPos;
+          void main() {
+            vPos = position;
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+          }
+        `,
+        fragmentShader: `
+          varying vec3 vPos;
+          void main() {
+            float h = normalize(vPos).y;
+            vec3 zenith = vec3(0.28, 0.52, 0.86);
+            vec3 mid = vec3(0.55, 0.74, 0.92);
+            vec3 horizon = vec3(0.86, 0.88, 0.9);
+            vec3 glow = vec3(1.0, 0.86, 0.62);
+            vec3 col = mix(horizon, mid, smoothstep(-0.08, 0.22, h));
+            col = mix(col, zenith, smoothstep(0.18, 0.78, h));
+            col = mix(col, glow, exp(-pow((h - 0.04) * 7.0, 2.0)) * 0.32);
+            gl_FragColor = vec4(col, 1.0);
+          }
+        `,
+      }),
+    []
+  );
+  return (
+    <mesh material={mat} frustumCulled={false}>
+      <sphereGeometry args={[520, 48, 28]} />
+    </mesh>
+  );
+}
+
+function Terrain() {
+  const ground = useGroundTexture();
   const dummy = useMemo(() => new THREE.Object3D(), []);
   const rocks = useRef<THREE.InstancedMesh>(null);
-  const trees = useRef<THREE.InstancedMesh>(null);
+  const trunks = useRef<THREE.InstancedMesh>(null);
+  const canopy = useRef<THREE.InstancedMesh>(null);
 
   useEffect(() => {
     if (rocks.current) {
@@ -152,110 +188,74 @@ function Terrain({ night }: { night: boolean }) {
       });
       rocks.current.instanceMatrix.needsUpdate = true;
     }
-    if (trees.current) {
-      const spots = [
-        [-22, 8], [23, -8], [-20, -14], [21, 16], [-26, 2], [25, -4],
-        [-18, 22], [19, -18], [-24, 16], [22, 20], [-48, 18], [52, -22],
-        [-60, -8], [58, 14], [-36, 55], [40, 62], [-70, 32], [66, -40],
-        [-42, -52], [74, 8], [-80, 20], [28, -68],
-      ];
-      spots.forEach(([x, z], i) => {
-        dummy.position.set(x, 1.4, z);
-        dummy.scale.setScalar(0.9 + (i % 4) * 0.18);
+    const trees = [
+      [-22, 8], [23, -8], [-20, -14], [21, 16], [-26, 2], [25, -4],
+      [-18, 22], [19, -18], [-24, 16], [22, 20], [-48, 18], [52, -22],
+      [-60, -8], [58, 14], [-36, 55], [40, 62], [-70, 32], [66, -40],
+      [-42, -52], [74, 8], [-80, 20], [28, -68],
+    ];
+    trees.forEach(([x, z], i) => {
+      const s = 0.9 + (i % 4) * 0.18;
+      if (trunks.current) {
+        dummy.position.set(x, 0.7 * s, z);
+        dummy.scale.set(s * 0.35, s, s * 0.35);
+        dummy.rotation.set(0, i * 0.4, 0);
+        dummy.updateMatrix();
+        trunks.current.setMatrixAt(i, dummy.matrix);
+      }
+      if (canopy.current) {
+        dummy.position.set(x, 2.15 * s, z);
+        dummy.scale.setScalar(s);
         dummy.rotation.set(0, i * 0.7, 0);
         dummy.updateMatrix();
-        trees.current!.setMatrixAt(i, dummy.matrix);
-      });
-      trees.current.instanceMatrix.needsUpdate = true;
-    }
+        canopy.current.setMatrixAt(i, dummy.matrix);
+      }
+    });
+    if (trunks.current) trunks.current.instanceMatrix.needsUpdate = true;
+    if (canopy.current) canopy.current.instanceMatrix.needsUpdate = true;
   }, [dummy]);
 
   return (
     <group>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
         <planeGeometry args={[720, 720]} />
-        <meshLambertMaterial map={ground} color={night ? "#243218" : "#5dad45"} />
+        <meshStandardMaterial map={ground} color="#6bb34f" roughness={0.92} />
       </mesh>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 13]}>
-        <planeGeometry args={[7, 22]} />
-        <meshLambertMaterial color={night ? "#3a2818" : "#c4a36a"} />
+        <planeGeometry args={[7.4, 24]} />
+        <meshStandardMaterial color="#c4a36a" roughness={0.88} />
       </mesh>
       <instancedMesh ref={rocks} args={[undefined, undefined, 24]}>
-        <dodecahedronGeometry args={[0.9, 0]} />
-        <meshLambertMaterial color={night ? "#3a3630" : "#7a746c"} />
+        <dodecahedronGeometry args={[0.9, 1]} />
+        <meshStandardMaterial color="#8a8478" roughness={0.95} />
       </instancedMesh>
-      <instancedMesh ref={trees} args={[undefined, undefined, 22]}>
-        <coneGeometry args={[0.9, 3.2, 6]} />
-        <meshLambertMaterial color={night ? "#0f2414" : "#2f7a32"} />
+      <instancedMesh ref={trunks} args={[undefined, undefined, 22]}>
+        <cylinderGeometry args={[0.22, 0.32, 1.5, 7]} />
+        <meshStandardMaterial color="#5a3a22" roughness={0.9} />
       </instancedMesh>
+      <instancedMesh ref={canopy} args={[undefined, undefined, 22]}>
+        <sphereGeometry args={[1.15, 8, 6]} />
+        <meshStandardMaterial color="#2f8a38" roughness={0.82} />
+      </instancedMesh>
+      <mesh position={[-28, 38, -40]}>
+        <sphereGeometry args={[18, 10, 8]} />
+        <meshBasicMaterial color="#f4f7fb" transparent opacity={0.55} />
+      </mesh>
+      <mesh position={[36, 42, -28]} scale={[1.6, 0.55, 1]}>
+        <sphereGeometry args={[16, 10, 8]} />
+        <meshBasicMaterial color="#eef3f8" transparent opacity={0.5} />
+      </mesh>
     </group>
-  );
-}
-
-function Embers() {
-  const geo = useMemo(() => {
-    const g = new THREE.BufferGeometry();
-    const n = 70;
-    const pos = new Float32Array(n * 3);
-    const speed = new Float32Array(n);
-    for (let i = 0; i < n; i++) {
-      pos[i * 3] = (Math.random() - 0.5) * 38;
-      pos[i * 3 + 1] = Math.random() * 15;
-      pos[i * 3 + 2] = -6 + Math.random() * 40;
-      speed[i] = 0.55 + Math.random() * 0.9;
-    }
-    g.setAttribute("position", new THREE.BufferAttribute(pos, 3));
-    g.userData.speed = speed;
-    return g;
-  }, []);
-
-  useFrame((_, dt) => {
-    const arr = geo.attributes.position.array as Float32Array;
-    const speed = geo.userData.speed as Float32Array;
-    for (let i = 0; i < speed.length; i++) {
-      arr[i * 3 + 1] += dt * speed[i] * 1.6;
-      arr[i * 3] += Math.sin(arr[i * 3 + 1] * 0.4 + i) * dt * 0.35;
-      if (arr[i * 3 + 1] > 16) {
-        arr[i * 3 + 1] = 0.2;
-        arr[i * 3] = (Math.random() - 0.5) * 38;
-        arr[i * 3 + 2] = -6 + Math.random() * 40;
-      }
-    }
-    geo.attributes.position.needsUpdate = true;
-  });
-
-  return (
-    <points geometry={geo} frustumCulled={false}>
-      <pointsMaterial color="#ffb060" size={0.28} transparent opacity={0.82} depthWrite={false} sizeAttenuation />
-    </points>
   );
 }
 
 function DayLights() {
   return (
     <>
-      <ambientLight intensity={0.62} color="#e8e4dc" />
-      <hemisphereLight args={["#b8c8dc", "#4a7a38", 0.55]} />
-      <directionalLight position={[-22, 34, 20]} intensity={2.15} color="#fff6e4" />
-      <directionalLight position={[18, 16, 10]} intensity={0.55} color="#c8d4e8" />
-    </>
-  );
-}
-
-function NightLights({ pressure }: { pressure: number }) {
-  const fire = 1.4 + pressure * 1.8;
-  return (
-    <>
-      <ambientLight intensity={0.22} color="#3a2a22" />
-      <hemisphereLight args={["#2a3048", "#120a06", 0.32]} />
-      <directionalLight position={[48, 42, -18]} intensity={0.28} color="#8aa0c8" />
-      <directionalLight position={[-16, 22, 28]} intensity={0.55} color="#ff8a3a" />
-      <pointLight position={[0, 7.5, 8]} color="#ff6a22" intensity={fire * 2.4} distance={42} decay={2} />
-      <pointLight position={[-18, 9, 14]} color="#ff7a28" intensity={1.6} distance={26} decay={2} />
-      <pointLight position={[18, 9, 14]} color="#ff7a28" intensity={1.6} distance={26} decay={2} />
-      <pointLight position={[0, 5.5, 50]} color="#ffb060" intensity={2.8} distance={24} decay={2} />
-      <pointLight position={[0, 4.2, 36]} color="#ff8a40" intensity={2.4} distance={22} decay={2} />
-      <pointLight position={[4.2, 3.2, 49]} color="#ffe0a8" intensity={1.1} distance={12} decay={2} />
+      <ambientLight intensity={0.58} color="#e8e4dc" />
+      <hemisphereLight args={["#b8c8dc", "#4a7a38", 0.62]} />
+      <directionalLight position={[-22, 38, 20]} intensity={2.35} color="#fff6e4" />
+      <directionalLight position={[18, 16, 10]} intensity={0.7} color="#c8d4e8" />
     </>
   );
 }
@@ -271,18 +271,15 @@ function SceneContent({
   cinematic,
   duration,
   showTitles = true,
-  warLook = false,
   day = 0,
 }: BattleSceneProps) {
-  const night = Boolean(cinematic);
   return (
     <>
-      {warLook && <WarGrade />}
-      <color attach="background" args={[night ? "#07050c" : "#6d7d92"]} />
-      <fog attach="fog" args={[night ? "#100c12" : "#7a8898", night ? 90 : 340, night ? 420 : 720]} />
-      {night ? <NightLights pressure={pressure} /> : <DayLights />}
-      <Terrain night={night} />
-      {night && <Embers />}
+      <color attach="background" args={["#87a7c8"]} />
+      <fog attach="fog" args={["#b8c8d6", 220, 640]} />
+      <SkyDome />
+      <DayLights />
+      <Terrain />
       <Castle level={level} pressure={pressure} />
       <SallyRaid soldiers={soldiers} commanders={commanders.length} />
       <Army count={soldiers} names={names} commanders={commanders} cinematic={cinematic} />
@@ -350,7 +347,7 @@ function BattleSceneInner({
 
   return (
     <Canvas
-      dpr={[1, cinematic ? 1.5 : 1.25]}
+      dpr={[1, cinematic ? 2 : 1.75]}
       gl={{
         antialias: true,
         alpha: false,
@@ -365,8 +362,8 @@ function BattleSceneInner({
       style={{ width: "100%", height: "100%", display: "block" }}
       onCreated={({ gl }) => {
         gl.toneMapping = THREE.ACESFilmicToneMapping;
-        gl.toneMappingExposure = cinematic ? 1.18 : 1.35;
-        gl.setClearColor(cinematic ? "#07050c" : "#6d7d92", 1);
+        gl.toneMappingExposure = 1.32;
+        gl.setClearColor("#87a7c8", 1);
         onReady?.(gl.domElement);
       }}
     >
@@ -389,3 +386,4 @@ function BattleSceneInner({
 }
 
 export const BattleScene = memo(BattleSceneInner);
+

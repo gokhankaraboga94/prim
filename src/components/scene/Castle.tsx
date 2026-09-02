@@ -18,32 +18,39 @@ const STONE_DARK = "#4a4642";
 function useStoneTexture() {
   return useMemo(() => {
     const canvas = document.createElement("canvas");
-    canvas.width = 256;
-    canvas.height = 256;
+    canvas.width = 512;
+    canvas.height = 512;
     const ctx = canvas.getContext("2d");
     if (!ctx) return null;
-    ctx.fillStyle = "#7a746c";
-    ctx.fillRect(0, 0, 256, 256);
-    const cols = 8;
-    const rows = 6;
-    const bw = 256 / cols;
-    const bh = 256 / rows;
+    ctx.fillStyle = "#6e6860";
+    ctx.fillRect(0, 0, 512, 512);
+    const cols = 10;
+    const rows = 8;
+    const bw = 512 / cols;
+    const bh = 512 / rows;
     for (let y = 0; y < rows; y++) {
       const ox = (y % 2) * (bw * 0.5);
       for (let x = -1; x <= cols; x++) {
-        const n = (x * 19 + y * 37 + 11) % 36;
-        const r = 130 + n;
-        const g = 124 + n * 0.7;
-        const b = 112 + n * 0.45;
+        const n = (x * 19 + y * 37 + 11) % 40;
+        const r = 128 + n;
+        const g = 120 + n * 0.65;
+        const b = 108 + n * 0.4;
         ctx.fillStyle = `rgb(${r | 0},${g | 0},${b | 0})`;
-        ctx.fillRect(x * bw + ox + 1, y * bh + 1, bw - 2, bh - 2);
-        ctx.fillStyle = "rgba(0,0,0,0.18)";
-        ctx.fillRect(x * bw + ox + 1, y * bh + bh - 4, bw - 2, 3);
+        ctx.fillRect(x * bw + ox + 2, y * bh + 2, bw - 4, bh - 4);
+        ctx.fillStyle = "rgba(255,255,255,0.08)";
+        ctx.fillRect(x * bw + ox + 2, y * bh + 2, bw - 4, 3);
+        ctx.fillStyle = "rgba(0,0,0,0.22)";
+        ctx.fillRect(x * bw + ox + 2, y * bh + bh - 6, bw - 4, 4);
       }
+    }
+    for (let i = 0; i < 120; i++) {
+      ctx.fillStyle = "rgba(50, 80, 40, 0.12)";
+      ctx.fillRect(Math.random() * 512, Math.random() * 512, 3 + Math.random() * 8, 2);
     }
     const tex = new THREE.CanvasTexture(canvas);
     tex.wrapS = THREE.RepeatWrapping;
     tex.wrapT = THREE.RepeatWrapping;
+    tex.anisotropy = 8;
     tex.colorSpace = THREE.SRGBColorSpace;
     tex.repeat.set(3, 2);
     return tex;
@@ -89,7 +96,7 @@ function Block({
   return (
     <mesh position={position} rotation={rotation} castShadow={false}>
       <boxGeometry args={args} />
-      <meshLambertMaterial color={color} map={map ?? undefined} />
+      <meshStandardMaterial color={color} map={map ?? undefined} roughness={0.88} metalness={0.04} />
     </mesh>
   );
 }
@@ -142,11 +149,11 @@ function SquareTower({
       <Merlons count={3} width={size - 0.2} y={top + 0.4} z={-(size / 2 + 0.06)} axis="z" map={map} />
       <mesh position={[0, height * 0.55, size / 2 + 0.02]}>
         <boxGeometry args={[0.22, 0.7, 0.08]} />
-        <meshLambertMaterial color={STONE_DARK} />
+        <meshStandardMaterial color={STONE_DARK} />
       </mesh>
       <mesh position={[0.55, height * 0.38, size / 2 + 0.02]}>
         <boxGeometry args={[0.16, 0.42, 0.08]} />
-        <meshLambertMaterial color={STONE_DARK} />
+        <meshStandardMaterial color={STONE_DARK} />
       </mesh>
     </group>
   );
@@ -185,36 +192,36 @@ function Gatehouse({
 
       <mesh position={[0, 2.55, 1.42]} rotation={[Math.PI / 2, 0, 0]}>
         <torusGeometry args={[1.28, 0.26, 8, 18, Math.PI]} />
-        <meshLambertMaterial color={STONE_3} map={stone ?? undefined} />
+        <meshStandardMaterial color={STONE_3} map={stone ?? undefined} />
       </mesh>
       <Block args={[2.7, 0.32, 0.55]} position={[0, 2.52, 1.42]} color={STONE_2} map={stone} />
 
       <mesh position={[0, 1.2, 0.05]}>
         <boxGeometry args={[2.2, 2.4, 2.1]} />
-        <meshLambertMaterial color="#0c0907" />
+        <meshStandardMaterial color="#0c0907" />
       </mesh>
 
       <group ref={leftDoor} position={[-1.14, 1.12, 1.28]}>
         <mesh position={[0.56, 0, 0]}>
           <boxGeometry args={[1.12, 2.2, 0.14]} />
-          <meshLambertMaterial color="#4a2a14" />
+          <meshStandardMaterial color="#4a2a14" />
         </mesh>
         {[ -0.15, 0.55].map((y) => (
           <mesh key={`lb-${y}`} position={[0.56, y, 0.08]}>
             <boxGeometry args={[1.05, 0.07, 0.04]} />
-            <meshLambertMaterial color="#2a2c30" />
+            <meshStandardMaterial color="#2a2c30" />
           </mesh>
         ))}
       </group>
       <group ref={rightDoor} position={[1.14, 1.12, 1.28]}>
         <mesh position={[-0.56, 0, 0]}>
           <boxGeometry args={[1.12, 2.2, 0.14]} />
-          <meshLambertMaterial color="#3f2412" />
+          <meshStandardMaterial color="#3f2412" />
         </mesh>
         {[-0.15, 0.55].map((y) => (
           <mesh key={`rb-${y}`} position={[-0.56, y, 0.08]}>
             <boxGeometry args={[1.05, 0.07, 0.04]} />
-            <meshLambertMaterial color="#2a2c30" />
+            <meshStandardMaterial color="#2a2c30" />
           </mesh>
         ))}
       </group>
@@ -223,36 +230,36 @@ function Gatehouse({
         {bars.map((i) => (
           <mesh key={`v-${i}`} position={[-1.05 + i * 0.35, 0, 0]}>
             <boxGeometry args={[0.055, 2.35, 0.055]} />
-            <meshLambertMaterial color="#2c3034" />
+            <meshStandardMaterial color="#2c3034" />
           </mesh>
         ))}
         {rails.map((i) => (
           <mesh key={`h-${i}`} position={[0, -0.85 + i * 0.55, 0]}>
             <boxGeometry args={[2.2, 0.05, 0.05]} />
-            <meshLambertMaterial color="#35383c" />
+            <meshStandardMaterial color="#35383c" />
           </mesh>
         ))}
       </group>
 
       <mesh position={[0, 0.08, 2.15]} rotation={[-0.08, 0, 0]}>
         <boxGeometry args={[2.6, 0.12, 2.4]} />
-        <meshLambertMaterial color="#5a4630" />
+        <meshStandardMaterial color="#5a4630" />
       </mesh>
 
       <mesh position={[0, 1.15, 1.05]}>
         <boxGeometry args={[0.35, 1.6, 0.08]} />
-        <meshLambertMaterial color="#8b1d1d" emissive="#ff4a12" emissiveIntensity={0.55 + fire * 1.4} />
+        <meshStandardMaterial color="#8b1d1d" emissive="#ff4a12" emissiveIntensity={0.12 + fire * 0.3} roughness={0.7} />
       </mesh>
       <Flame position={[0, 2.05, 1.55]} scale={1.15} />
       <Flame position={[-1.55, wallH * 0.72, 1.62]} scale={0.72} />
       <Flame position={[1.55, wallH * 0.72, 1.62]} scale={0.72} />
       <mesh position={[-1.55, wallH * 0.72, 1.48]}>
         <boxGeometry args={[0.16, 0.5, 0.1]} />
-        <meshLambertMaterial color={STONE_DARK} />
+        <meshStandardMaterial color={STONE_DARK} />
       </mesh>
       <mesh position={[1.55, wallH * 0.72, 1.48]}>
         <boxGeometry args={[0.16, 0.5, 0.1]} />
-        <meshLambertMaterial color={STONE_DARK} />
+        <meshStandardMaterial color={STONE_DARK} />
       </mesh>
     </group>
   );
@@ -274,11 +281,11 @@ function RoundTower({
     <group position={position}>
       <mesh position={[0, height / 2, 0]}>
         <cylinderGeometry args={[radius, radius + 0.12, height, 10]} />
-        <meshLambertMaterial color={STONE_2} map={map ?? undefined} />
+        <meshStandardMaterial color={STONE_2} map={map ?? undefined} />
       </mesh>
       <mesh position={[0, height + 0.08, 0]}>
         <cylinderGeometry args={[radius + 0.16, radius + 0.1, 0.22, 10]} />
-        <meshLambertMaterial color={STONE_3} />
+        <meshStandardMaterial color={STONE_3} />
       </mesh>
       {Array.from({ length: merlonN }, (_, i) => {
         const a = (i / merlonN) * Math.PI * 2;
@@ -309,7 +316,7 @@ export function Castle({ level, pressure }: CastleProps) {
     <group position={[0, 0, zShift]} scale={[sx, sy, sz]}>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.03, -3.3]}>
         <planeGeometry args={[22.4, 20.2]} />
-        <meshLambertMaterial color="#6a6258" map={stone ?? undefined} />
+        <meshStandardMaterial color="#6a6258" map={stone ?? undefined} />
       </mesh>
 
       <Block args={[22.2, wallH, 1.7]} position={[0, wallH / 2, -13.2]} color={STONE} map={stone} />
@@ -333,7 +340,7 @@ export function Castle({ level, pressure }: CastleProps) {
       <Gatehouse wallH={wallH} fire={fire} stone={stone} />
       <mesh position={[0, wallH * 0.72, -13.05]}>
         <boxGeometry args={[0.2, 0.62, 0.1]} />
-        <meshLambertMaterial color={STONE_DARK} />
+        <meshStandardMaterial color={STONE_DARK} />
       </mesh>
 
       <SquareTower position={[-10.2, 0, -13.4]} height={6.2} size={2.55} map={stone} />
@@ -354,37 +361,37 @@ export function Castle({ level, pressure }: CastleProps) {
         <Merlons count={4} width={4} y={8.92} z={2.15} axis="z" map={stone} />
         <Merlons count={4} width={4} y={8.92} z={-2.15} axis="z" map={stone} />
         <mesh position={[0, 5.1, 2.14]}>
-          <boxGeometry args={[0.42, 0.9, 0.1]} />
-          <meshBasicMaterial color="#ff8a32" />
+          <boxGeometry args={[0.32, 0.9, 0.1]} />
+          <meshStandardMaterial color="#1a1612" roughness={0.7} />
         </mesh>
         <mesh position={[-1.1, 3.4, 2.14]}>
-          <boxGeometry args={[0.28, 0.55, 0.1]} />
-          <meshBasicMaterial color="#ff6a22" />
+          <boxGeometry args={[0.22, 0.55, 0.1]} />
+          <meshStandardMaterial color="#1a1612" roughness={0.7} />
         </mesh>
         <mesh position={[1.15, 6.4, 2.14]}>
-          <boxGeometry args={[0.28, 0.5, 0.1]} />
-          <meshBasicMaterial color="#ffb048" />
+          <boxGeometry args={[0.22, 0.5, 0.1]} />
+          <meshStandardMaterial color="#1a1612" roughness={0.7} />
         </mesh>
       </group>
 
       <mesh position={[-5.4, wallH + 1.05, 6.35]}>
         <boxGeometry args={[0.08, 2.1, 0.08]} />
-        <meshLambertMaterial color="#3a2a18" />
+        <meshStandardMaterial color="#3a2a18" />
       </mesh>
       <mesh position={[-5.1, wallH + 0.7, 6.35]}>
         <planeGeometry args={[0.85, 1.15]} />
-        <meshLambertMaterial color="#6a1212" />
+        <meshStandardMaterial color="#6a1212" />
       </mesh>
       <mesh position={[5.4, wallH + 1.05, 6.35]}>
         <boxGeometry args={[0.08, 2.1, 0.08]} />
-        <meshLambertMaterial color="#3a2a18" />
+        <meshStandardMaterial color="#3a2a18" />
       </mesh>
       <mesh position={[5.7, wallH + 0.7, 6.35]}>
         <planeGeometry args={[0.85, 1.15]} />
-        <meshLambertMaterial color="#6a1212" />
+        <meshStandardMaterial color="#6a1212" />
       </mesh>
 
-      <pointLight position={[0, 2.4, 7.1]} color="#ff6a2a" intensity={1.35 + fire * 2.2} distance={18} />
+      <pointLight position={[0, 2.4, 7.1]} color="#ff6a2a" intensity={0.35 + fire * 0.55} distance={14} />
     </group>
     <Defenders grow={grow} wallH={wallH} />
     </group>
