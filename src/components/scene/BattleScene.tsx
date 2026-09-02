@@ -8,7 +8,15 @@ import { SallyRaid } from "./SallyRaid";
 import { CaptureHpHud, ReelFade, ReelTitles } from "./CaptureHpHud";
 import { castleFrame } from "../../castleLayout";
 import { REEL_HOLD, reelBeats } from "../../recordCanvas";
-import { cinematicSallyOrigin, sallyLocal, setSallyOrigin, swordSwingU } from "../../siegeEvent";
+import {
+  cinematicSallyOrigin,
+  REEL_SWORD_START,
+  SWORD_START,
+  sallyLocal,
+  setSallyOrigin,
+  setSwordStart,
+  swordSwingU,
+} from "../../siegeEvent";
 
 type BattleSceneProps = {
   soldiers: number;
@@ -61,37 +69,37 @@ function CinematicCam({
     const form = armyFrame(soldiers, commanders);
     const castle = castleFrame(level);
     const swing = swordSwingU(sallyLocal(clock.elapsedTime), Math.max(1, commanders));
-    const smash = recT < cmd + 0.2 && swing > 0.35 ? Math.sin(((swing - 0.35) / 0.65) * Math.PI) : 0;
-    const shake = smash * 0.14;
+    const smash = recT < cmd && swing > 0.28 ? Math.sin(((swing - 0.28) / 0.72) * Math.PI) : 0;
+    const shake = smash * 0.05;
 
     const cmdZ = form.front;
     const a = {
-      x: 2.25,
-      y: 1.68,
-      z: cmdZ - 2.45,
-      lx: 0.08,
-      ly: 1.36,
-      lz: cmdZ,
-      fov: 26,
+      x: 0.82,
+      y: 1.86,
+      z: cmdZ - 4.55,
+      lx: 0.02,
+      ly: 1.62,
+      lz: cmdZ + 0.06,
+      fov: 29,
     };
     const b = {
-      x: Math.min(8.6, Math.max(4.2, form.width * 0.16)),
-      y: 6.1,
-      z: form.back + 11.2,
-      lx: 0,
-      ly: 1.85,
-      lz: form.midZ,
-      fov: 40,
+      x: Math.min(22, Math.max(13.2, form.width * 0.42 + 8)),
+      y: 7.1,
+      z: form.back + 7.2,
+      lx: -0.8,
+      ly: 1.7,
+      lz: form.front - 8,
+      fov: 42,
     };
     const wide = distToFit(Math.max(form.width, castle.width * 0.42), 14, aspect, 1.05);
     const c = {
-      x: 13.5,
-      y: 14.8 + wide * 0.08,
-      z: form.back + 15.5,
+      x: 20,
+      y: 15.6 + wide * 0.06,
+      z: form.back + 18,
       lx: 0,
-      ly: 3.1,
-      lz: (form.front + 22) * 0.5,
-      fov: 36,
+      ly: 3.2,
+      lz: 22,
+      fov: 38,
     };
 
     let t = 0;
@@ -364,9 +372,17 @@ function BattleSceneInner({
   const [active, setActive] = useState(() => typeof document === "undefined" || !document.hidden);
 
   useLayoutEffect(() => {
-    if (cinematic) setSallyOrigin(cinematicSallyOrigin(REEL_HOLD));
-    else setSallyOrigin(0);
-    return () => setSallyOrigin(0);
+    if (cinematic) {
+      setSallyOrigin(cinematicSallyOrigin(REEL_HOLD));
+      setSwordStart(REEL_SWORD_START);
+    } else {
+      setSallyOrigin(0);
+      setSwordStart(SWORD_START);
+    }
+    return () => {
+      setSallyOrigin(0);
+      setSwordStart(SWORD_START);
+    };
   }, [cinematic]);
 
   useEffect(() => {

@@ -1,3 +1,5 @@
+import { REEL_SALLY_AT, REEL_SWORD_START, SWORD_SWING } from "./siegeEvent";
+
 export const REEL_DURATIONS = [3, 5, 6, 7, 10, 15] as const;
 export type ReelDuration = (typeof REEL_DURATIONS)[number];
 
@@ -8,14 +10,17 @@ export function reelFade(duration: number) {
   return Math.min(1.15, Math.max(0.6, duration * 0.14));
 }
 
-/** Commander close-up → army names → pullback. Scales with 3–15s clips. */
+/** Face hold until the sword is up, then turn onto the named army. */
 export function reelBeats(duration: number) {
   const fade = reelFade(duration);
-  const cmd = Math.min(2.4, Math.max(1.2, duration * 0.2));
-  const turn = Math.min(0.95, Math.max(0.5, duration * 0.09));
-  const army = Math.min(3.5, Math.max(1.1, duration * 0.27));
-  const pullStart = cmd + turn + army;
-  return { cmd, turn, army, pullStart, fade };
+  const cmd = REEL_SWORD_START - REEL_SALLY_AT + SWORD_SWING * 0.3;
+  const after = Math.max(0.7, duration - cmd);
+  const turn = Math.min(1.05, Math.max(0.62, after * 0.24));
+  const army = Math.min(4.2, Math.max(0.7, after * 0.4));
+  let pullStart = cmd + turn + army;
+  const pullFloor = duration - Math.max(0.8, fade + 0.28);
+  if (pullStart > pullFloor) pullStart = Math.max(cmd + turn + 0.45, pullFloor);
+  return { cmd, turn, army: pullStart - cmd - turn, pullStart, fade };
 }
 
 export function reelHook(duration: number) {

@@ -4,13 +4,20 @@ export const SALLY_START_DELAY = 3.5;
 export const RAID_INSIDE_Z = 18;
 export const RAID_OUT_Z = 47;
 export const MAX_RAIDERS = 10000;
-/** Sally clock at recording start: gate open, charge on, sword in ~0.5s. */
-export const REEL_SALLY_AT = 6.55;
+/** Recording starts with the gate open and raiders still at the mouth. */
+export const REEL_SALLY_AT = 2.88;
+/** First sword raise during a reel — shortly after the clip starts. */
+export const REEL_SWORD_START = 4.02;
 
 let sallyOrigin = 0;
+let swordAt = 7.1;
 
 export function setSallyOrigin(seconds: number) {
   sallyOrigin = Number.isFinite(seconds) ? seconds : 0;
+}
+
+export function setSwordStart(p: number) {
+  swordAt = Number.isFinite(p) && p > 0 ? p : SWORD_START;
 }
 
 export function cinematicSallyOrigin(hold: number) {
@@ -49,7 +56,7 @@ export const SWORD_SWING = 0.42;
 
 export function swordPairCount(n: number, commanders: number) {
   if (commanders <= 0 || n <= 0) return 0;
-  const swings = Math.max(1, Math.floor((22.4 - SWORD_START) / SWORD_EVERY) * commanders);
+  const swings = Math.max(1, Math.floor((22.4 - swordAt) / SWORD_EVERY) * commanders);
   return Math.min(Math.floor(n / 2), swings);
 }
 
@@ -58,8 +65,8 @@ export function isSwordVictim(i: number, n: number, commanders: number) {
 }
 
 export function swordSwingU(p: number, commanders = 1) {
-  if (commanders <= 0 || p < SWORD_START || p > 22.8) return 0;
-  const local = (p - SWORD_START) % SWORD_EVERY;
+  if (commanders <= 0 || p < swordAt || p > 22.8) return 0;
+  const local = (p - swordAt) % SWORD_EVERY;
   if (local > SWORD_SWING) return 0;
   return local / SWORD_SWING;
 }
@@ -67,7 +74,7 @@ export function swordSwingU(p: number, commanders = 1) {
 export type SwordStyle = "power" | "side" | "overhead";
 
 export function swordStyleAt(p: number, cmdK = 0): SwordStyle {
-  const wave = Math.max(0, Math.floor((p - SWORD_START) / SWORD_EVERY));
+  const wave = Math.max(0, Math.floor((p - swordAt) / SWORD_EVERY));
   const k = Math.abs(wave * 5 + cmdK * 11 + 3) % 3;
   return k === 0 ? "power" : k === 1 ? "side" : "overhead";
 }
@@ -106,7 +113,7 @@ export function sallyHitAt(i: number, n: number, commanders = 0) {
   if (isSwordVictim(i, n, commanders)) {
     const perSwing = 2 * Math.max(1, commanders);
     const wave = Math.floor(i / perSwing);
-    return SWORD_START + wave * SWORD_EVERY + SWORD_SWING * 0.42 + (hash01(i, 9) - 0.5) * 0.16;
+    return swordAt + wave * SWORD_EVERY + SWORD_SWING * 0.42 + (hash01(i, 9) - 0.5) * 0.16;
   }
   const first = 6.1;
   const last = 22.3;

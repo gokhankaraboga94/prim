@@ -280,8 +280,8 @@ function makeHandleTexture(name: string, commander = false): NameTag | null {
   map.minFilter = THREE.LinearMipmapLinearFilter;
   map.magFilter = THREE.LinearFilter;
   map.anisotropy = 8;
-  const sy = commander ? 0.92 : 0.8;
-  const sx = Math.min(FILE * 0.86, sy * (width / height));
+  const sy = commander ? 1.02 : 0.9;
+  const sx = Math.min(FILE * 0.9, sy * (width / height));
   return { map, sx, sy };
 }
 
