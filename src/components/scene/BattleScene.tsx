@@ -133,6 +133,7 @@ function SkyDome() {
         side: THREE.BackSide,
         depthWrite: false,
         fog: false,
+        toneMapped: false,
         vertexShader: `
           varying vec3 vPos;
           void main() {
@@ -159,7 +160,7 @@ function SkyDome() {
   );
   return (
     <mesh material={mat} frustumCulled={false}>
-      <sphereGeometry args={[520, 48, 28]} />
+      <sphereGeometry args={[1800, 48, 28]} />
     </mesh>
   );
 }
@@ -237,14 +238,6 @@ function Terrain() {
         <sphereGeometry args={[1.15, 8, 6]} />
         <meshStandardMaterial color="#2f8a38" roughness={0.82} />
       </instancedMesh>
-      <mesh position={[-28, 38, -40]}>
-        <sphereGeometry args={[18, 10, 8]} />
-        <meshBasicMaterial color="#f4f7fb" transparent opacity={0.55} />
-      </mesh>
-      <mesh position={[36, 42, -28]} scale={[1.6, 0.55, 1]}>
-        <sphereGeometry args={[16, 10, 8]} />
-        <meshBasicMaterial color="#eef3f8" transparent opacity={0.5} />
-      </mesh>
     </group>
   );
 }
@@ -276,7 +269,7 @@ function SceneContent({
   return (
     <>
       <color attach="background" args={["#87a7c8"]} />
-      <fog attach="fog" args={["#b8c8d6", 220, 640]} />
+      <fog attach="fog" args={["#c5d4e0", 560, 1600]} />
       <SkyDome />
       <DayLights />
       <Terrain />
@@ -306,10 +299,10 @@ function SceneContent({
         />
       )}
       {cinematic && maxHp != null && hp != null && (
-        <CaptureHpHud hp={hp} maxHp={maxHp} soldiers={soldiers} overlay />
+        <CaptureHpHud hp={hp} maxHp={maxHp} soldiers={soldiers} />
       )}
       {cinematic && showTitles && (
-        <ReelTitles soldiers={soldiers} duration={duration ?? 8} overlay day={day} />
+        <ReelTitles soldiers={soldiers} duration={duration ?? 8} day={day} />
       )}
       {cinematic && <ReelFade duration={duration ?? 8} />}
     </>
@@ -347,7 +340,7 @@ function BattleSceneInner({
 
   return (
     <Canvas
-      dpr={[1, cinematic ? 2 : 1.75]}
+      dpr={[1, cinematic ? 1.5 : 1.5]}
       gl={{
         antialias: true,
         alpha: false,
@@ -357,7 +350,7 @@ function BattleSceneInner({
         preserveDrawingBuffer: Boolean(cinematic),
         failIfMajorPerformanceCaveat: false,
       }}
-      camera={{ fov: 36, near: 0.5, far: 700, position: cinematic ? [12, 11, 74] : [9, 21, 96] }}
+      camera={{ fov: 36, near: 0.5, far: 2200, position: cinematic ? [12, 11, 74] : [9, 21, 96] }}
       frameloop={active ? "always" : "demand"}
       style={{ width: "100%", height: "100%", display: "block" }}
       onCreated={({ gl }) => {

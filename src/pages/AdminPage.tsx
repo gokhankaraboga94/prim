@@ -36,6 +36,7 @@ export function AdminPage() {
   const [capturing, setCapturing] = useState(false);
   const [editIndex, setEditIndex] = useState<number | null>(null);
   const [editValue, setEditValue] = useState("");
+  const [listOpen, setListOpen] = useState(false);
 
   const handle = handleInput || game.instagramHandle;
   const cmdValue = cmdDraft ?? game.commanders.join("\n");
@@ -322,6 +323,14 @@ export function AdminPage() {
             {Math.max(0, game.soldiers - namedCount(game.names, game.soldiers))} isimsiz ·{" "}
             {game.commanders.length} komutan
           </p>
+          <button
+            type="button"
+            className="btn-ghost"
+            onClick={() => setListOpen((open) => !open)}
+          >
+            {listOpen ? "Listeyi gizle" : "Kullanıcı listesini aç"}
+          </button>
+          {listOpen && (
           <ul className="name-list">
             {game.names.map((name, index) =>
               name ? (
@@ -373,6 +382,7 @@ export function AdminPage() {
               ) : null
             )}
           </ul>
+          )}
         </section>
 
         <section className="admin-card">

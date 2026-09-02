@@ -166,8 +166,6 @@ function drawTitles(
     strokeFill(ctx, count, w / 2, dayLabel ? 185 : 140, 26);
     ctx.font = "800 68px Outfit, system-ui, sans-serif";
     strokeFill(ctx, "takipçi", w / 2, dayLabel ? 300 : 260, 16);
-    ctx.font = "800 64px Outfit, system-ui, sans-serif";
-    strokeFill(ctx, "DÜŞECEK Mİ?", w / 2, dayLabel ? 390 : 350, 16);
   } else {
     ctx.font = "800 88px Outfit, system-ui, sans-serif";
     strokeFill(ctx, "ORDUYA KATIL", w / 2, 130, 22);
@@ -302,7 +300,7 @@ function FadePlate({ duration }: { duration: number }) {
 
 export function ReelFade({ duration }: { duration: number }) {
   return (
-    <Hud renderPriority={4}>
+    <Hud renderPriority={2}>
       <OrthographicCamera makeDefault position={[0, 0, 10]} />
       <FadePlate duration={duration} />
     </Hud>
