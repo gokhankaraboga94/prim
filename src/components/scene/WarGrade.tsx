@@ -60,30 +60,30 @@ export function WarGrade() {
 
           float y = luma(col);
           vec3 grey = vec3(y);
-          col = mix(grey, col, 0.32);
+          col = mix(grey, col, 0.52);
 
           vec3 silver = overlay(col, grey);
-          col = mix(col, silver, 0.55);
-          col = (col - 0.5) * 1.42 + 0.47;
+          col = mix(col, silver, 0.32);
+          col = (col - 0.5) * 1.28 + 0.5;
 
-          vec3 shadow = vec3(0.72, 0.92, 0.86);
-          vec3 mid = vec3(1.08, 1.04, 0.78);
-          vec3 high = vec3(1.22, 1.10, 0.70);
+          vec3 shadow = vec3(0.78, 0.62, 0.48);
+          vec3 mid = vec3(1.16, 0.98, 0.72);
+          vec3 high = vec3(1.28, 1.08, 0.78);
           float s = smoothstep(0.10, 0.42, y);
           float h = smoothstep(0.45, 0.82, y);
           col *= mix(shadow, mix(mid, high, h), s);
 
-          col.r *= 1.06;
-          col.g *= 1.10;
-          col.b *= 0.78;
+          col.r *= 1.14;
+          col.g *= 1.02;
+          col.b *= 0.7;
 
-          col = mix(col, vec3(y * 1.05), 0.12);
-          col = max(col, vec3(0.035));
+          col = mix(col, vec3(y * 1.05), 0.06);
+          col = max(col, vec3(0.025, 0.016, 0.01));
 
           vec2 p = vUv * 2.0 - 1.0;
           p.x *= resolution.x / max(resolution.y, 1.0);
-          float vig = 1.0 - dot(p, p) * 0.24;
-          col *= mix(0.55, 1.0, clamp(vig, 0.0, 1.0));
+          float vig = 1.0 - dot(p, p) * 0.34;
+          col *= mix(0.42, 1.0, clamp(vig, 0.0, 1.0));
 
           float n = fract(sin(dot(gl_FragCoord.xy + time * 41.0, vec2(12.9898, 78.233))) * 43758.5453);
           col += (n - 0.5) * 0.07;

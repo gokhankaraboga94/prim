@@ -4,6 +4,18 @@ export const SALLY_START_DELAY = 3.5;
 export const RAID_INSIDE_Z = 18;
 export const RAID_OUT_Z = 47;
 export const MAX_RAIDERS = 10000;
+/** Sally clock at recording start: gate open, charge on, sword in ~0.5s. */
+export const REEL_SALLY_AT = 6.55;
+
+let sallyOrigin = 0;
+
+export function setSallyOrigin(seconds: number) {
+  sallyOrigin = Number.isFinite(seconds) ? seconds : 0;
+}
+
+export function cinematicSallyOrigin(hold: number) {
+  return SALLY_START_DELAY + REEL_SALLY_AT - hold;
+}
 
 function clamp01(v: number) {
   return Math.max(0, Math.min(1, v));
@@ -15,8 +27,9 @@ export function smooth01(t: number) {
 }
 
 export function sallyLocal(now: number) {
-  if (now < SALLY_START_DELAY) return SALLY_LEN;
-  return (now - SALLY_START_DELAY) % SALLY_CYCLE;
+  const t = now + sallyOrigin;
+  if (t < SALLY_START_DELAY) return SALLY_LEN;
+  return (t - SALLY_START_DELAY) % SALLY_CYCLE;
 }
 
 export function sallyGate(p: number) {

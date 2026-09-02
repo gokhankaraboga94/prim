@@ -32,7 +32,7 @@ export function AdminPage() {
   const [busy, setBusy] = useState(false);
   const [reelSeconds, setReelSeconds] = useState<ReelDuration>(7);
   const [reelText, setReelText] = useState(true);
-  const [reelWarLook, setReelWarLook] = useState(false);
+  const [reelWarLook, setReelWarLook] = useState(true);
   const [reelDay, setReelDay] = useState("1");
   const [capturing, setCapturing] = useState(false);
   const [editIndex, setEditIndex] = useState<number | null>(null);

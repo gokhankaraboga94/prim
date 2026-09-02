@@ -50,6 +50,29 @@ function useStoneTexture() {
   }, []);
 }
 
+function Flame({ position, scale = 1 }: { position: [number, number, number]; scale?: number }) {
+  const mesh = useRef<THREE.Mesh>(null);
+  const mat = useRef<THREE.MeshBasicMaterial>(null);
+  useFrame(({ clock }) => {
+    const t = clock.elapsedTime;
+    const f = 1 + Math.sin(t * 16 + position[0] * 5 + position[2]) * 0.2;
+    if (mesh.current) mesh.current.scale.set(scale * (0.88 + f * 0.12), scale * f, scale * (0.88 + f * 0.12));
+    if (mat.current) mat.current.opacity = 0.8 + Math.sin(t * 22 + position[2]) * 0.12;
+  });
+  return (
+    <group position={position}>
+      <mesh ref={mesh} position={[0, 0.22 * scale, 0]}>
+        <coneGeometry args={[0.13, 0.46, 5]} />
+        <meshBasicMaterial ref={mat} color="#ff7a28" transparent opacity={0.92} />
+      </mesh>
+      <mesh position={[0, 0.08 * scale, 0]}>
+        <coneGeometry args={[0.07, 0.2, 5]} />
+        <meshBasicMaterial color="#ffe28a" transparent opacity={0.95} />
+      </mesh>
+    </group>
+  );
+}
+
 function Block({
   args,
   position,
@@ -218,8 +241,11 @@ function Gatehouse({
 
       <mesh position={[0, 1.15, 1.05]}>
         <boxGeometry args={[0.35, 1.6, 0.08]} />
-        <meshLambertMaterial color="#8b1d1d" emissive="#4a0808" emissiveIntensity={0.25 + fire * 0.8} />
+        <meshLambertMaterial color="#8b1d1d" emissive="#ff4a12" emissiveIntensity={0.55 + fire * 1.4} />
       </mesh>
+      <Flame position={[0, 2.05, 1.55]} scale={1.15} />
+      <Flame position={[-1.55, wallH * 0.72, 1.62]} scale={0.72} />
+      <Flame position={[1.55, wallH * 0.72, 1.62]} scale={0.72} />
       <mesh position={[-1.55, wallH * 0.72, 1.48]}>
         <boxGeometry args={[0.16, 0.5, 0.1]} />
         <meshLambertMaterial color={STONE_DARK} />
@@ -314,6 +340,10 @@ export function Castle({ level, pressure }: CastleProps) {
       <SquareTower position={[10.2, 0, -13.4]} height={6.4} size={2.7} map={stone} />
       <SquareTower position={[-10.2, 0, 6.7]} height={5.6} size={2.45} map={stone} />
       <SquareTower position={[10.2, 0, 6.7]} height={5.8} size={2.5} map={stone} />
+      <Flame position={[-10.2, 6.05, 6.7]} scale={1.05} />
+      <Flame position={[10.2, 6.25, 6.7]} scale={1.05} />
+      <Flame position={[-10.2, 6.65, -13.4]} scale={0.9} />
+      <Flame position={[10.2, 6.85, -13.4]} scale={0.9} />
       <RoundTower position={[-2.1, 0, -2.4]} height={7.1} radius={1.55} map={stone} />
 
       <group position={[1.1, 0, -1.15]}>
@@ -324,16 +354,16 @@ export function Castle({ level, pressure }: CastleProps) {
         <Merlons count={4} width={4} y={8.92} z={2.15} axis="z" map={stone} />
         <Merlons count={4} width={4} y={8.92} z={-2.15} axis="z" map={stone} />
         <mesh position={[0, 5.1, 2.14]}>
-          <boxGeometry args={[0.28, 0.9, 0.1]} />
-          <meshLambertMaterial color={STONE_DARK} />
+          <boxGeometry args={[0.42, 0.9, 0.1]} />
+          <meshBasicMaterial color="#ff8a32" />
         </mesh>
         <mesh position={[-1.1, 3.4, 2.14]}>
-          <boxGeometry args={[0.2, 0.55, 0.1]} />
-          <meshLambertMaterial color={STONE_DARK} />
+          <boxGeometry args={[0.28, 0.55, 0.1]} />
+          <meshBasicMaterial color="#ff6a22" />
         </mesh>
         <mesh position={[1.15, 6.4, 2.14]}>
-          <boxGeometry args={[0.2, 0.5, 0.1]} />
-          <meshLambertMaterial color={STONE_DARK} />
+          <boxGeometry args={[0.28, 0.5, 0.1]} />
+          <meshBasicMaterial color="#ffb048" />
         </mesh>
       </group>
 
@@ -354,7 +384,7 @@ export function Castle({ level, pressure }: CastleProps) {
         <meshLambertMaterial color="#6a1212" />
       </mesh>
 
-      <pointLight position={[0, 2.4, 7.1]} color="#ff6a2a" intensity={0.55 + fire * 1.1} distance={12} />
+      <pointLight position={[0, 2.4, 7.1]} color="#ff6a2a" intensity={1.35 + fire * 2.2} distance={18} />
     </group>
     <Defenders grow={grow} wallH={wallH} />
     </group>

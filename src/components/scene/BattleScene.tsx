@@ -1,4 +1,4 @@
-import { memo, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
 import * as THREE from "three";
@@ -9,6 +9,7 @@ import { CaptureHpHud, ReelFade, ReelTitles } from "./CaptureHpHud";
 import { WarGrade } from "./WarGrade";
 import { castleFrame } from "../../castleLayout";
 import { REEL_HOLD, reelHook, reelZoomDur } from "../../recordCanvas";
+import { cinematicSallyOrigin, sallyLocal, setSallyOrigin, swordSwingU } from "../../siegeEvent";
 
 type BattleSceneProps = {
   soldiers: number;
@@ -51,32 +52,43 @@ function CinematicCam({
   useFrame(({ camera, clock, size }) => {
     const aspect = size.width / Math.max(1, size.height);
     const recT = clock.elapsedTime - REEL_HOLD;
-    const hook = reelHook(duration);
-    const zoomDur = reelZoomDur(duration);
-    const u = recT <= hook ? 0 : Math.min(1, (recT - hook) / zoomDur);
-    const e = 1 - Math.pow(1 - u, 2.35);
+    const hold = Math.min(0.95, reelHook(duration) * 0.55);
+    const zoomDur = Math.max(1.4, reelZoomDur(duration) + 0.45);
+    const u = recT <= hold ? 0 : Math.min(1, (recT - hold) / zoomDur);
+    const e = 1 - Math.pow(1 - u, 2.55);
 
     const army = armyFrame(soldiers, commanders);
     const castle = castleFrame(level);
+    const swing = swordSwingU(sallyLocal(clock.elapsedTime), Math.max(1, commanders));
+    const smash = swing > 0.38 ? Math.sin(((swing - 0.38) / 0.62) * Math.PI) : 0;
+    const shake = smash * 0.18;
 
-    const startDist = distToFit(army.width, army.height + 2.4, aspect, 1.28);
-    const startX = Math.min(7.2, army.width * 0.16);
-    const startY = 4.6 + startDist * 0.2;
-    const startZ = army.back + startDist * 0.8;
-    const startLookY = 2.15;
-    const startLookZ = army.front + (army.midZ - army.front) * 0.28;
+    const startX = 5.15;
+    const startY = 2.42;
+    const startZ = army.front + 8.6;
+    const startLookY = 1.52;
+    const startLookZ = army.front - 1.8;
 
-    const endDist = distToFit(castle.width, castle.height, aspect, 1.22);
-    const endLookZ = castle.midZ;
-    const endZ = castle.front + endDist * 0.78;
-    const endY = castle.midY + endDist * 0.36;
+    const endDist = distToFit(castle.width * 0.7, castle.height * 1.08, aspect, 1.1);
+    const endX = 7.2;
+    const endY = castle.midY + endDist * 0.4;
+    const endZ = castle.front + endDist * 0.68;
+    const endLookY = castle.midY * 0.7;
+    const endLookZ = castle.midZ + 1.6;
 
+    const persp = camera as THREE.PerspectiveCamera;
+    persp.fov = 28 + 11 * e;
+    persp.updateProjectionMatrix();
     camera.position.set(
-      startX * (1 - e),
+      startX + (endX - startX) * e + shake,
       startY + (endY - startY) * e,
       startZ + (endZ - startZ) * e
     );
-    look.set(0, startLookY + (castle.midY - startLookY) * e, startLookZ + (endLookZ - startLookZ) * e);
+    look.set(
+      shake * 0.35,
+      startLookY + (endLookY - startLookY) * e,
+      startLookZ + (endLookZ - startLookZ) * e
+    );
     camera.lookAt(look);
   });
   return null;
@@ -89,10 +101,10 @@ function useGroundTexture() {
     canvas.height = 256;
     const ctx = canvas.getContext("2d");
     if (!ctx) return null;
-    ctx.fillStyle = "#4f9a3c";
+    ctx.fillStyle = "#1a2412";
     ctx.fillRect(0, 0, 256, 256);
     for (let i = 0; i < 1100; i++) {
-      ctx.fillStyle = i % 3 === 0 ? "#68b34a" : i % 3 === 1 ? "#3d7d2e" : "#5aa83f";
+      ctx.fillStyle = i % 3 === 0 ? "#2a3a18" : i % 3 === 1 ? "#121a0c" : "#243214";
       ctx.fillRect(Math.random() * 256, Math.random() * 256, 2 + Math.random() * 6, 2 + Math.random() * 5);
     }
     const tex = new THREE.CanvasTexture(canvas);
@@ -149,21 +161,78 @@ function Terrain() {
     <group>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
         <planeGeometry args={[720, 720]} />
-        <meshLambertMaterial map={ground} color="#5dad45" />
+        <meshLambertMaterial map={ground} color="#243218" />
       </mesh>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 13]}>
         <planeGeometry args={[7, 22]} />
-        <meshLambertMaterial color="#c4a36a" />
+        <meshLambertMaterial color="#3a2818" />
       </mesh>
       <instancedMesh ref={rocks} args={[undefined, undefined, 24]}>
         <dodecahedronGeometry args={[0.9, 0]} />
-        <meshLambertMaterial color="#7a746c" />
+        <meshLambertMaterial color="#3a3630" />
       </instancedMesh>
       <instancedMesh ref={trees} args={[undefined, undefined, 22]}>
         <coneGeometry args={[0.9, 3.2, 6]} />
-        <meshLambertMaterial color="#2f7a32" />
+        <meshLambertMaterial color="#0f2414" />
       </instancedMesh>
     </group>
+  );
+}
+
+function Embers() {
+  const geo = useMemo(() => {
+    const g = new THREE.BufferGeometry();
+    const n = 70;
+    const pos = new Float32Array(n * 3);
+    const speed = new Float32Array(n);
+    for (let i = 0; i < n; i++) {
+      pos[i * 3] = (Math.random() - 0.5) * 38;
+      pos[i * 3 + 1] = Math.random() * 15;
+      pos[i * 3 + 2] = -6 + Math.random() * 40;
+      speed[i] = 0.55 + Math.random() * 0.9;
+    }
+    g.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+    g.userData.speed = speed;
+    return g;
+  }, []);
+
+  useFrame((_, dt) => {
+    const arr = geo.attributes.position.array as Float32Array;
+    const speed = geo.userData.speed as Float32Array;
+    for (let i = 0; i < speed.length; i++) {
+      arr[i * 3 + 1] += dt * speed[i] * 1.6;
+      arr[i * 3] += Math.sin(arr[i * 3 + 1] * 0.4 + i) * dt * 0.35;
+      if (arr[i * 3 + 1] > 16) {
+        arr[i * 3 + 1] = 0.2;
+        arr[i * 3] = (Math.random() - 0.5) * 38;
+        arr[i * 3 + 2] = -6 + Math.random() * 40;
+      }
+    }
+    geo.attributes.position.needsUpdate = true;
+  });
+
+  return (
+    <points geometry={geo} frustumCulled={false}>
+      <pointsMaterial color="#ffb060" size={0.28} transparent opacity={0.82} depthWrite={false} sizeAttenuation />
+    </points>
+  );
+}
+
+function NightLights({ pressure }: { pressure: number }) {
+  const fire = 1.4 + pressure * 1.8;
+  return (
+    <>
+      <ambientLight intensity={0.1} color="#2a1c14" />
+      <hemisphereLight args={["#2a3048", "#120a06", 0.32]} />
+      <directionalLight position={[48, 42, -18]} intensity={0.28} color="#8aa0c8" />
+      <directionalLight position={[-16, 22, 28]} intensity={0.55} color="#ff8a3a" />
+      <pointLight position={[0, 7.5, 8]} color="#ff6a22" intensity={fire * 2.4} distance={42} decay={2} />
+      <pointLight position={[-18, 9, 14]} color="#ff7a28" intensity={1.6} distance={26} decay={2} />
+      <pointLight position={[18, 9, 14]} color="#ff7a28" intensity={1.6} distance={26} decay={2} />
+      <pointLight position={[0, 5.5, 50]} color="#ffb060" intensity={2.8} distance={24} decay={2} />
+      <pointLight position={[0, 4.2, 36]} color="#ff8a40" intensity={2.4} distance={22} decay={2} />
+      <pointLight position={[4.2, 3.2, 49]} color="#ffe0a8" intensity={1.1} distance={12} decay={2} />
+    </>
   );
 }
 
@@ -183,17 +252,15 @@ function SceneContent({
 }: BattleSceneProps) {
   return (
     <>
-      {warLook && <WarGrade />}
-      <color attach="background" args={["#6d7d92"]} />
-      <fog attach="fog" args={["#7a8898", 340, 720]} />
-      <ambientLight intensity={0.62} color="#e8e4dc" />
-      <hemisphereLight args={["#b8c8dc", "#4a7a38", 0.55]} />
-      <directionalLight position={[-22, 34, 20]} intensity={2.15} color="#fff6e4" />
-      <directionalLight position={[18, 16, 10]} intensity={0.55} color="#c8d4e8" />
+      {(!cinematic || warLook) && <WarGrade />}
+      <color attach="background" args={["#07050c"]} />
+      <fog attach="fog" args={["#100c12", 90, 420]} />
+      <NightLights pressure={pressure} />
       <Terrain />
+      <Embers />
       <Castle level={level} pressure={pressure} />
       <SallyRaid soldiers={soldiers} commanders={commanders.length} />
-      <Army count={soldiers} names={names} commanders={commanders} />
+      <Army count={soldiers} names={names} commanders={commanders} cinematic={cinematic} />
       {cinematic ? (
         <CinematicCam
           duration={duration ?? 8}
@@ -217,10 +284,10 @@ function SceneContent({
         />
       )}
       {cinematic && maxHp != null && hp != null && (
-        <CaptureHpHud hp={hp} maxHp={maxHp} soldiers={soldiers} overlay={warLook} />
+        <CaptureHpHud hp={hp} maxHp={maxHp} soldiers={soldiers} overlay />
       )}
       {cinematic && showTitles && (
-        <ReelTitles soldiers={soldiers} duration={duration ?? 8} overlay={warLook} day={day} />
+        <ReelTitles soldiers={soldiers} duration={duration ?? 8} overlay day={day} />
       )}
       {cinematic && <ReelFade duration={duration ?? 8} />}
     </>
@@ -244,6 +311,12 @@ function BattleSceneInner({
 }: BattleSceneProps) {
   const [active, setActive] = useState(() => typeof document === "undefined" || !document.hidden);
 
+  useLayoutEffect(() => {
+    if (cinematic) setSallyOrigin(cinematicSallyOrigin(REEL_HOLD));
+    else setSallyOrigin(0);
+    return () => setSallyOrigin(0);
+  }, [cinematic]);
+
   useEffect(() => {
     const onVis = () => setActive(!document.hidden);
     document.addEventListener("visibilitychange", onVis);
@@ -262,13 +335,13 @@ function BattleSceneInner({
         preserveDrawingBuffer: Boolean(cinematic),
         failIfMajorPerformanceCaveat: false,
       }}
-      camera={{ fov: 36, near: 0.5, far: 700, position: [9, 21, 96] }}
+      camera={{ fov: 36, near: 0.5, far: 700, position: [12, 11, 74] }}
       frameloop={active ? "always" : "demand"}
       style={{ width: "100%", height: "100%", display: "block" }}
       onCreated={({ gl }) => {
         gl.toneMapping = THREE.ACESFilmicToneMapping;
-        gl.toneMappingExposure = 1.35;
-        gl.setClearColor("#6d7d92", 1);
+        gl.toneMappingExposure = 1.05;
+        gl.setClearColor("#07050c", 1);
         onReady?.(gl.domElement);
       }}
     >

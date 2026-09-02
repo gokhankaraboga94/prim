@@ -30,30 +30,32 @@ function drawHp(canvas: HTMLCanvasElement, pct: number, label: string) {
   const h = canvas.height;
   ctx.clearRect(0, 0, w, h);
 
-  roundRect(ctx, 16, 10, w - 32, h - 20, 32);
-  ctx.fillStyle = "rgba(8, 6, 4, 0.62)";
+  roundRect(ctx, 24, 18, w - 48, h - 36, 22);
+  ctx.fillStyle = "rgba(6, 4, 8, 0.55)";
   ctx.fill();
 
-  ctx.font = "800 48px Outfit, system-ui, sans-serif";
-  ctx.fillStyle = "#fff";
+  ctx.font = "800 42px Outfit, system-ui, sans-serif";
+  ctx.fillStyle = "#f3e6c8";
   ctx.textBaseline = "middle";
   ctx.textAlign = "left";
-  ctx.fillText("Kalan kale sağlığı", 48, 72);
+  ctx.fillText("KALE", 48, 58);
   ctx.textAlign = "right";
-  ctx.fillText(`%${label}`, w - 48, 72);
+  ctx.fillStyle = "#fff";
+  ctx.font = "800 56px Outfit, system-ui, sans-serif";
+  ctx.fillText(`%${label}`, w - 48, 58);
 
   const bx = 48;
-  const by = 118;
+  const by = 92;
   const bw = w - 96;
-  const bh = 56;
-  roundRect(ctx, bx, by, bw, bh, 20);
-  ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
+  const bh = 28;
+  roundRect(ctx, bx, by, bw, bh, 12);
+  ctx.fillStyle = "rgba(0, 0, 0, 0.55)";
   ctx.fill();
 
   const fillW = Math.max(8, (bw * pct) / 100);
   ctx.save();
   ctx.beginPath();
-  roundRect(ctx, bx, by, bw, bh, 20);
+  roundRect(ctx, bx, by, bw, bh, 12);
   ctx.clip();
   const grad = ctx.createLinearGradient(bx, by, bx + bw, by);
   grad.addColorStop(0, "#7a1010");
@@ -76,7 +78,7 @@ function HpPlate({ hp, maxHp, soldiers }: CaptureHpHudProps) {
   const canvas = useMemo(() => {
     const c = document.createElement("canvas");
     c.width = 1080;
-    c.height = 240;
+    c.height = 160;
     return c;
   }, []);
   const tex = useMemo(() => {
@@ -101,9 +103,9 @@ function HpPlate({ hp, maxHp, soldiers }: CaptureHpHudProps) {
     tex.needsUpdate = true;
   });
 
-  const width = size.width * 0.94;
-  const height = Math.max(96, size.height * 0.16);
-  const y = size.height / 2 - height / 2 - Math.max(12, size.height * 0.02);
+  const width = size.width * 0.9;
+  const height = Math.max(64, size.height * 0.1);
+  const y = size.height / 2 - height / 2 - Math.max(10, size.height * 0.018);
 
   return (
     <mesh position={[0, y, 0]} renderOrder={20}>
@@ -154,39 +156,19 @@ function drawTitles(
   ctx.textBaseline = "middle";
   if (phase === "hook") {
     const count = formatCount(soldiers);
-    const dayLabel = day > 0 ? `${day}. gün` : "";
+    const dayLabel = day > 0 ? `${day}. GÜN` : "";
     if (dayLabel) {
-      ctx.font = "800 64px Outfit, system-ui, sans-serif";
-      strokeFill(ctx, dayLabel, w / 2, 72, 16);
-      const big = count.length > 6 ? 140 : count.length > 4 ? 180 : 210;
-      ctx.font = `800 ${big}px Outfit, system-ui, sans-serif`;
-      strokeFill(ctx, count, w / 2, 195, 26);
-      ctx.font = "800 72px Outfit, system-ui, sans-serif";
-      strokeFill(ctx, "takipçi", w / 2, 310, 16);
-      ctx.font = "800 64px Outfit, system-ui, sans-serif";
-      strokeFill(ctx, "Bu kale düşecek mi?", w / 2, 410, 16);
-    } else {
-      const big = count.length > 6 ? 160 : count.length > 4 ? 200 : 240;
-      ctx.font = `800 ${big}px Outfit, system-ui, sans-serif`;
-      strokeFill(ctx, count, w / 2, 130, 28);
-      ctx.font = "800 72px Outfit, system-ui, sans-serif";
-      strokeFill(ctx, "takipçi", w / 2, 250, 16);
-      ctx.font = "800 64px Outfit, system-ui, sans-serif";
-      strokeFill(ctx, "Bu kale düşecek mi?", w / 2, 360, 16);
+      ctx.font = "800 56px Outfit, system-ui, sans-serif";
+      strokeFill(ctx, dayLabel, w / 2, 78, 16);
     }
+    const big = count.length > 6 ? 150 : count.length > 4 ? 190 : 230;
+    ctx.font = `800 ${big}px Outfit, system-ui, sans-serif`;
+    strokeFill(ctx, count, w / 2, dayLabel ? 200 : 150, 28);
+    ctx.font = "800 72px Outfit, system-ui, sans-serif";
+    strokeFill(ctx, "DÜŞECEK Mİ?", w / 2, dayLabel ? 330 : 290, 18);
   } else {
-    const count = formatCount(soldiers);
-    const line1 = `${count} asker bir başına kuşatmaya`;
-    const line2 = "katılmak için takip et";
-    let size = 52;
-    ctx.font = `800 ${size}px Outfit, system-ui, sans-serif`;
-    while (ctx.measureText(line1).width > w - 72 && size > 34) {
-      size -= 2;
-      ctx.font = `800 ${size}px Outfit, system-ui, sans-serif`;
-    }
-    strokeFill(ctx, line1, w / 2, 90, 14);
-    ctx.font = `800 ${Math.min(52, size)}px Outfit, system-ui, sans-serif`;
-    strokeFill(ctx, line2, w / 2, 170, 14);
+    ctx.font = "800 88px Outfit, system-ui, sans-serif";
+    strokeFill(ctx, "ORDUYA KATIL", w / 2, 130, 22);
   }
 }
 
@@ -219,8 +201,8 @@ function TitlesPlate({ soldiers, duration, day = 0 }: ReelTitlesProps) {
 
   useFrame(({ clock }) => {
     const recT = clock.elapsedTime - REEL_HOLD;
-    const hook = reelHook(duration) + 0.5;
-    const ctaLen = Math.min(2, Math.max(0.8, duration * 0.28));
+    const hook = Math.min(1.15, reelHook(duration));
+    const ctaLen = Math.min(1.35, Math.max(0.85, duration * 0.2));
     const ctaAt = duration - ctaLen;
     let phase: "hook" | "cta" | "none" = "none";
     let alpha = 0;
@@ -244,7 +226,7 @@ function TitlesPlate({ soldiers, duration, day = 0 }: ReelTitlesProps) {
     if (mat.current) mat.current.opacity = alpha;
     if (mesh.current) {
       if (phase === "cta") {
-        const hpH = Math.max(96, size.height * 0.16);
+        const hpH = Math.max(64, size.height * 0.1);
         const hpY = size.height / 2 - hpH / 2 - Math.max(12, size.height * 0.02);
         const hpBottom = hpY - hpH / 2;
         const hookH = Math.max(180, size.height * 0.42);

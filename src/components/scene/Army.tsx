@@ -6,7 +6,7 @@ import { isCommander } from "../../game";
 import { raidCount, sallyHunting, sallyLiveIndex, sallyLocal, sallyRaiderAt, swordStyleAt, swordSwingPose, swordSwingU } from "../../siegeEvent";
 
 const MAX_SOLDIERS = 5000;
-const MAX_LABELS = 80;
+const MAX_LABELS = 5;
 const MAX_COMMANDERS = 24;
 const MAX_ARROWS = 16;
 const IDLE_ARROWS = 2;
@@ -34,6 +34,7 @@ type ArmyProps = {
   count: number;
   names?: string[];
   commanders?: string[];
+  cinematic?: boolean;
 };
 
 const MAX_RANKS = 4;
@@ -145,12 +146,12 @@ function createArcherGeometry() {
     part(new THREE.BoxGeometry(0.16, 0.26, 0.17), "#1a1c24", -0.1, 0.58, 0),
     part(new THREE.BoxGeometry(0.16, 0.26, 0.17), "#1a1c24", 0.1, 0.58, 0),
     part(new THREE.CylinderGeometry(0.24, 0.28, 0.36, 8), "#1b2a48", 0, 0.68, 0.01),
-    part(new THREE.BoxGeometry(0.4, 0.34, 0.28), "#4e321c", 0, 0.94, 0.03),
+    part(new THREE.BoxGeometry(0.4, 0.34, 0.28), "#6a4224", 0, 0.94, 0.03),
     part(new THREE.BoxGeometry(0.42, 0.045, 0.3), "#2c1c10", 0, 0.84, 0.04),
     part(new THREE.BoxGeometry(0.42, 0.045, 0.3), "#2c1c10", 0, 0.96, 0.04),
     part(new THREE.BoxGeometry(0.42, 0.045, 0.3), "#2c1c10", 0, 1.08, 0.04),
     part(new THREE.BoxGeometry(0.44, 0.08, 0.22), "#6a4a28", 0, 0.78, 0.02),
-    part(new THREE.CylinderGeometry(0.2, 0.24, 0.18, 8), "#7a828a", 0, 1.14, 0.01),
+    part(new THREE.CylinderGeometry(0.2, 0.24, 0.18, 8), "#d4dce4", 0, 1.14, 0.01),
     part(new THREE.SphereGeometry(0.12, 8, 6), "#c4a07a", 0, 1.26, 0.03),
     part(new THREE.SphereGeometry(0.16, 9, 7), "#c5ccd4", 0, 1.34, 0.01),
     part(new THREE.BoxGeometry(0.035, 0.18, 0.04), "#d4dae0", 0, 1.38, 0.02),
@@ -192,9 +193,9 @@ let commanderGeoCache: THREE.BufferGeometry | null = null;
 function getCommanderGeometry() {
   if (commanderGeoCache) return commanderGeoCache;
   const capeParts = [
-    part(new THREE.BoxGeometry(0.62, 0.98, 0.12), "#153a72", 0, 0.68, -0.26),
-    part(new THREE.BoxGeometry(0.52, 0.5, 0.1), "#0c244c", 0, 0.28, -0.32),
-    part(new THREE.BoxGeometry(0.66, 0.12, 0.14), "#1d4c8a", 0, 1.08, -0.2),
+    part(new THREE.BoxGeometry(0.62, 0.98, 0.12), "#1c4e94", 0, 0.68, -0.26),
+    part(new THREE.BoxGeometry(0.52, 0.5, 0.1), "#0e2c5c", 0, 0.28, -0.32),
+    part(new THREE.BoxGeometry(0.66, 0.12, 0.14), "#2a62b0", 0, 1.08, -0.2),
     part(new THREE.BoxGeometry(0.2, 0.06, 0.1), "#e8c868", 0, 1.12, -0.08),
     part(new THREE.SphereGeometry(0.05, 7, 6), "#f0d478", -0.12, 1.12, -0.06),
     part(new THREE.SphereGeometry(0.05, 7, 6), "#f0d478", 0.12, 1.12, -0.06),
@@ -209,6 +210,19 @@ function getCommanderGeometry() {
   cape?.dispose();
   commanderGeoCache = merged || getArcherGeometry().clone();
   return commanderGeoCache;
+}
+
+function SwordFlash() {
+  const light = useRef<THREE.PointLight>(null);
+  useFrame(({ clock }) => {
+    const u = swordSwingU(sallyLocal(clock.elapsedTime), 1);
+    const hit = u > 0.4 ? Math.sin(((u - 0.4) / 0.6) * Math.PI) : 0;
+    if (light.current) {
+      light.current.intensity = hit * 8.5;
+      light.current.position.set(0, 2.35, FRONT_Z - RANK - 1.5);
+    }
+  });
+  return <pointLight ref={light} color="#ffe8c8" intensity={0} distance={18} decay={2} />;
 }
 
 type NameTag = {
@@ -243,9 +257,9 @@ function makeHandleTexture(name: string, commander = false): NameTag | null {
   ctx.textBaseline = "middle";
   ctx.lineJoin = "round";
   ctx.miterLimit = 2;
-  ctx.lineWidth = Math.max(14, fontSize * 0.2);
-  ctx.strokeStyle = commander ? "rgba(6, 28, 12, 0.96)" : "rgba(0,0,0,0.94)";
-  ctx.fillStyle = commander ? "#b6ffa8" : "#fff";
+  ctx.lineWidth = Math.max(22, fontSize * 0.24);
+  ctx.strokeStyle = commander ? "rgba(4, 18, 8, 0.96)" : "rgba(0,0,0,0.96)";
+  ctx.fillStyle = commander ? "#c8ffb0" : "#fff6e8";
   ctx.strokeText(label, width / 2, height / 2);
   ctx.fillText(label, width / 2, height / 2);
   const map = new THREE.CanvasTexture(canvas);
@@ -254,12 +268,12 @@ function makeHandleTexture(name: string, commander = false): NameTag | null {
   map.minFilter = THREE.LinearMipmapLinearFilter;
   map.magFilter = THREE.LinearFilter;
   map.anisotropy = 16;
-  const sy = commander ? 1.12 : 1.02;
-  const sx = Math.min(FILE * (commander ? 0.95 : 0.88), sy * (width / height));
+  const sy = commander ? 2.55 : 2.12;
+  const sx = Math.min(FILE * 2.85, sy * (width / height) * 1.08);
   return { map, sx, sy };
 }
 
-export function Army({ count, names = [], commanders = [] }: ArmyProps) {
+export function Army({ count, names = [], commanders = [], cinematic = false }: ArmyProps) {
   const bodies = useRef<THREE.InstancedMesh>(null);
   const chiefs = useRef<THREE.InstancedMesh>(null);
   const arrows = useRef<THREE.InstancedMesh>(null);
@@ -284,11 +298,23 @@ export function Army({ count, names = [], commanders = [] }: ArmyProps) {
         seen.add(i);
       }
     }
+    const frontW = layout.sizes[0] || 0;
     for (let i = 0; i < visible && ids.length < MAX_LABELS; i++) {
-      if (names[i] && !seen.has(i)) ids.push(i);
+      if (!names[i] || seen.has(i)) continue;
+      const slot = layout.slotOf[i];
+      if (slot >= 0 && slot < frontW) {
+        ids.push(i);
+        seen.add(i);
+      }
+    }
+    for (let i = 0; i < visible && ids.length < MAX_LABELS; i++) {
+      if (names[i] && !seen.has(i)) {
+        ids.push(i);
+        seen.add(i);
+      }
     }
     return ids;
-  }, [names, commanders, visible]);
+  }, [names, commanders, visible, layout]);
   const nameMaps = useMemo(
     () => labeled.map((i) => makeHandleTexture(names[i], isCommander(names[i], commanders))),
     [labeled, names, commanders]
@@ -354,8 +380,9 @@ export function Army({ count, names = [], commanders = [] }: ArmyProps) {
       const cmd = layout.cmdOf[idx] >= 0;
       poseSoldier(idx, t);
       tag.visible = true;
-      tag.position.set(pos.x, pos.y + (cmd ? 2.08 : 1.9) * scale, pos.z);
-      tag.scale.set(tagData.sx, tagData.sy, 1);
+      const boost = cinematic ? 1.28 : 1;
+      tag.position.set(pos.x, pos.y + (cmd ? 2.35 : 2.12) * scale, pos.z);
+      tag.scale.set(tagData.sx * boost, tagData.sy * boost, 1);
     }
   }
 
@@ -442,8 +469,9 @@ export function Army({ count, names = [], commanders = [] }: ArmyProps) {
       </instancedMesh>
       <instancedMesh ref={arrows} args={[undefined, undefined, MAX_ARROWS]} frustumCulled={false}>
         <cylinderGeometry args={[0.055, 0.02, 1.45, 6]} />
-        <meshBasicMaterial color="#ffe7a0" />
+        <meshBasicMaterial color="#ffd078" />
       </instancedMesh>
+      <SwordFlash />
       <group ref={tags}>
         {nameMaps.map((tag, i) =>
           tag ? (
