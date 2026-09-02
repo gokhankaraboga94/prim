@@ -252,6 +252,42 @@ export function assignNames(existing: string[], soldiers: number, incoming: stri
   return compactNames(names, cap);
 }
 
+export function enlistWithNames(
+  existing: string[],
+  soldiers: number,
+  incoming: string[],
+  extraSoldiers = 0
+): { soldiers: number; names: string[]; added: number; named: number } {
+  const cap = Math.max(0, Math.floor(soldiers));
+  const extra = Math.max(0, Math.floor(extraSoldiers));
+  const have = new Set(
+    existing
+      .slice(0, cap)
+      .map((n) => normalizeHandle(n).toLowerCase())
+      .filter(Boolean)
+  );
+  const fresh: string[] = [];
+  for (const raw of incoming) {
+    const name = normalizeHandle(raw);
+    const key = name.toLowerCase();
+    if (!name || have.has(key)) continue;
+    have.add(key);
+    fresh.push(name);
+  }
+  const grow = Math.max(extra, fresh.length);
+  const nextCount = cap + grow;
+  const names = Array.from({ length: nextCount }, (_, i) => normalizeHandle(existing[i] || ""));
+  fresh.forEach((name, k) => {
+    names[cap + k] = name;
+  });
+  return {
+    soldiers: nextCount,
+    names: compactNames(names, nextCount),
+    added: grow,
+    named: fresh.length,
+  };
+}
+
 export function instagramUrl(handle: string): string {
   const h = normalizeHandle(handle);
   return h ? `https://www.instagram.com/${h}/` : "https://www.instagram.com/";

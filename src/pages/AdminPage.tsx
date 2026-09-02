@@ -1,13 +1,12 @@
 import { FormEvent, useState } from "react";
 import { signOut } from "firebase/auth";
-import { push, ref, remove, set } from "firebase/database";
-import { getDownloadURL, ref as storageRef, uploadBytes } from "firebase/storage";
-import { auth, db, storage } from "../firebase";
+import { ref, set } from "firebase/database";
+import { auth, db } from "../firebase";
 import {
-  assignNames,
+  compactCommanders,
+  enlistWithNames,
   formatCount,
   isCommander,
-  toggleCommander,
   retargetCommander,
   formatPower,
   namedCount,
@@ -17,22 +16,18 @@ import {
   renameSoldier,
   targetForLevel,
   toGameRecord,
-  type ReelItem,
 } from "../game";
 import { useGame } from "../hooks/useGame";
 import { ReelCapture } from "../components/ReelCapture";
 import { REEL_DURATIONS, type ReelDuration } from "../recordCanvas";
 
 export function AdminPage() {
-  const { game, recruits, reels, level, power, pressure, target, maxHp } = useGame();
+  const { game, recruits, level, power, pressure, target, maxHp } = useGame();
   const [soldiersInput, setSoldiersInput] = useState("");
   const [addInput, setAddInput] = useState("");
   const [namesInput, setNamesInput] = useState("");
+  const [cmdDraft, setCmdDraft] = useState<string | null>(null);
   const [handleInput, setHandleInput] = useState("");
-  const [reelUrl, setReelUrl] = useState("");
-  const [reelCaption, setReelCaption] = useState("");
-  const [reelType, setReelType] = useState<"image" | "video">("image");
-  const [preview, setPreview] = useState<ReelItem | null>(null);
   const [msg, setMsg] = useState("");
   const [busy, setBusy] = useState(false);
   const [reelSeconds, setReelSeconds] = useState<ReelDuration>(7);
@@ -44,6 +39,7 @@ export function AdminPage() {
   const [editValue, setEditValue] = useState("");
 
   const handle = handleInput || game.instagramHandle;
+  const cmdValue = cmdDraft ?? game.commanders.join("\n");
 
   async function saveSoldiers(next: number) {
     const soldiers = Math.max(0, Math.floor(next));
@@ -71,20 +67,25 @@ export function AdminPage() {
 
   async function onAddSoldiers(e: FormEvent) {
     e.preventDefault();
+    const extra = Math.max(0, Math.floor(Number(addInput || 0)));
+    const incoming = parseNameList(namesInput);
+    if (!extra && !incoming.length) {
+      setMsg("Asker sayısı veya kullanıcı adı yaz.");
+      return;
+    }
     setBusy(true);
     try {
-      const extra = Math.max(0, Math.floor(Number(addInput || 0)));
-      const incoming = parseNameList(namesInput);
-      const soldiers = game.soldiers + extra;
-      const names = incoming.length ? assignNames(game.names, soldiers, incoming) : game.names;
-      const payload = toGameRecord(game, Date.now(), { soldiers, names });
+      const next = enlistWithNames(game.names, game.soldiers, incoming, extra);
+      const payload = toGameRecord(game, Date.now(), { soldiers: next.soldiers, names: next.names });
       await set(ref(db, "game"), payload);
       setAddInput("");
       if (incoming.length) setNamesInput("");
       setMsg(
-        incoming.length
-          ? `${extra} asker eklendi, ${incoming.length} isim isimsizlere atandı.`
-          : `Orduya ${extra} asker eklendi.`
+        next.named
+          ? `${next.added} asker eklendi, ${next.named} isim verildi.`
+          : next.added
+            ? `Orduya ${next.added} asker eklendi.`
+            : "Bu kullanıcı adları zaten orduda."
       );
     } catch {
       setMsg("Asker eklenemedi.");
@@ -102,11 +103,15 @@ export function AdminPage() {
     }
     setBusy(true);
     try {
-      const names = assignNames(game.names, game.soldiers, incoming);
-      await set(ref(db, "game"), toGameRecord(game, Date.now(), { names }));
+      const next = enlistWithNames(game.names, game.soldiers, incoming);
+      if (!next.added) {
+        setNamesInput("");
+        setMsg("Bu kullanıcı adları zaten orduda.");
+        return;
+      }
+      await set(ref(db, "game"), toGameRecord(game, Date.now(), { soldiers: next.soldiers, names: next.names }));
       setNamesInput("");
-      const filled = namedCount(names, game.soldiers) - namedCount(game.names, game.soldiers);
-      setMsg(`${Math.max(0, filled)} isim rastgele isimsiz askerlere yazıldı.`);
+      setMsg(`${next.named} asker oluşturuldu ve isimleri verildi.`);
     } catch {
       setMsg("İsimler kaydedilemedi.");
     } finally {
@@ -153,16 +158,26 @@ export function AdminPage() {
     );
   }
 
-  async function onToggleCommander(name: string) {
+  async function onSaveCommanders(e: FormEvent) {
+    e.preventDefault();
+    const incoming = parseNameList(cmdValue);
+    const commanders = compactCommanders(incoming, game.names);
+    const missing = incoming.filter(
+      (n) => !commanders.some((c) => c.toLowerCase() === n.toLowerCase())
+    );
     setBusy(true);
     try {
-      const commanders = toggleCommander(game.commanders, game.names, name);
       await set(ref(db, "game"), toGameRecord(game, Date.now(), { commanders }));
-      setMsg(
-        isCommander(name, commanders)
-          ? `@${name} komutan atandı. En önde, pelerinle durur.`
-          : `@${name} komutanlıktan alındı.`
-      );
+      setCmdDraft(null);
+      if (!incoming.length) {
+        setMsg("Komutan kalmadı.");
+      } else if (missing.length) {
+        setMsg(
+          `${commanders.length} komutan kaydedildi. Orduda yok: ${missing.map((n) => `@${n}`).join(", ")}`
+        );
+      } else {
+        setMsg(`${commanders.map((n) => `@${n}`).join(", ")} komutan.`);
+      }
     } catch {
       setMsg("Komutan kaydedilemedi.");
     } finally {
@@ -191,54 +206,6 @@ export function AdminPage() {
     } finally {
       setBusy(false);
     }
-  }
-
-  async function addReel(url: string, type: "image" | "video", caption: string) {
-    await push(ref(db, "reels"), {
-      url,
-      type,
-      caption: caption.trim(),
-      createdAt: Date.now(),
-    });
-  }
-
-  async function onAddReelUrl(e: FormEvent) {
-    e.preventDefault();
-    if (!reelUrl.trim()) return;
-    setBusy(true);
-    try {
-      await addReel(reelUrl.trim(), reelType, reelCaption);
-      setReelUrl("");
-      setReelCaption("");
-      setMsg("Reels eklendi.");
-    } catch {
-      setMsg("Reels kaydedilemedi.");
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function onUploadReel(file: File | null) {
-    if (!file) return;
-    setBusy(true);
-    try {
-      const path = `reels/${Date.now()}_${file.name.replace(/\s+/g, "_")}`;
-      const fileRef = storageRef(storage, path);
-      await uploadBytes(fileRef, file);
-      const url = await getDownloadURL(fileRef);
-      const type = file.type.startsWith("video") ? "video" : "image";
-      await addReel(url, type, reelCaption);
-      setReelCaption("");
-      setMsg("Görüntü yüklendi.");
-    } catch {
-      setMsg("Yükleme başarısız. Storage kurallarını yayınla veya URL kullan.");
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function deleteReel(id: string) {
-    await remove(ref(db, `reels/${id}`));
   }
 
   return (
@@ -320,9 +287,8 @@ export function AdminPage() {
         <section className="admin-card">
           <h2>Asker kullanıcı adları</h2>
           <p className="muted">
-            Virgül, boşluk veya alt alta yaz. İsimsiz askerlere rastgele dağılır. 13 takipçi adı
-            yazarsan 13 isimsiz askerin üstüne @ad gelir. Yeni 5 asker ekleyip 5 isim verirsen
-            o isimsizler bu adları alır.
+            Virgül, boşluk veya alt alta yaz. Asker ekle demeden isim yazarsan o kadar yeni asker
+            oluşur ve bu adlar verilir. Zaten listedeki adlar tekrar eklenmez.
           </p>
           <form onSubmit={onAssignNames}>
             <label>@kullanıcıadları</label>
@@ -333,7 +299,23 @@ export function AdminPage() {
               onChange={(e) => setNamesInput(e.target.value)}
             />
             <button className="btn-gold" disabled={busy}>
-              İsimleri ata
+              Asker oluştur
+            </button>
+          </form>
+          <form onSubmit={onSaveCommanders}>
+            <label>Komutanlar</label>
+            <p className="muted">
+              Ordudaki kullanıcılardan bir veya daha fazla ad yaz. Listedekiler komutan olur; adı
+              silinen komutanlıktan çıkar.
+            </p>
+            <textarea
+              rows={4}
+              placeholder={"komutan1\nkomutan2"}
+              value={cmdValue}
+              onChange={(e) => setCmdDraft(e.target.value)}
+            />
+            <button className="btn-gold" disabled={busy}>
+              Komutanları kaydet
             </button>
           </form>
           <p className="muted">
@@ -370,15 +352,6 @@ export function AdminPage() {
                   ) : (
                     <>
                       <span className={isCommander(name, game.commanders) ? "cmd" : undefined}>@{name}</span>
-                      <label className="cmd-tick">
-                        <input
-                          type="checkbox"
-                          checked={isCommander(name, game.commanders)}
-                          disabled={busy}
-                          onChange={() => void onToggleCommander(name)}
-                        />
-                        Komutan
-                      </label>
                       <button
                         type="button"
                         className="btn-ghost"
@@ -471,54 +444,6 @@ export function AdminPage() {
           </button>
         </section>
 
-        <section className="admin-card admin-span">
-          <h2>Reels görüntüleri</h2>
-          <p className="muted">Anasayfada Reels moduyla kaydırarak geçilir. Video veya görsel ekle.</p>
-          <form onSubmit={onAddReelUrl} className="reel-form">
-            <label>Görsel / video URL</label>
-            <input
-              value={reelUrl}
-              onChange={(e) => setReelUrl(e.target.value)}
-              placeholder="https://..."
-            />
-            <label>Altyazı</label>
-            <input value={reelCaption} onChange={(e) => setReelCaption(e.target.value)} />
-            <label>Tür</label>
-            <select value={reelType} onChange={(e) => setReelType(e.target.value as "image" | "video")}>
-              <option value="image">Görsel</option>
-              <option value="video">Video</option>
-            </select>
-            <button className="btn-gold" disabled={busy}>
-              URL ekle
-            </button>
-          </form>
-          <label className="file-btn">
-            Dosya yükle
-            <input
-              type="file"
-              accept="image/*,video/*"
-              hidden
-              onChange={(e) => {
-                void onUploadReel(e.target.files?.[0] || null);
-                e.target.value = "";
-              }}
-            />
-          </label>
-          <ul className="reel-list">
-            {reels.map((item) => (
-              <li key={item.id}>
-                <button type="button" className="thumb" onClick={() => setPreview(item)}>
-                  {item.type === "video" ? "Video" : "Görsel"}
-                </button>
-                <span>{item.caption || item.url.slice(0, 48)}</span>
-                <button type="button" className="btn-ghost" onClick={() => void deleteReel(item.id)}>
-                  Sil
-                </button>
-              </li>
-            ))}
-          </ul>
-        </section>
-
         <section className="admin-card">
           <h2>Katılan askerler</h2>
           <ul className="recruit-list">
@@ -529,16 +454,6 @@ export function AdminPage() {
           </ul>
         </section>
       </div>
-
-      {preview && (
-        <div className="preview-overlay" onClick={() => setPreview(null)}>
-          {preview.type === "video" ? (
-            <video src={preview.url} controls autoPlay />
-          ) : (
-            <img src={preview.url} alt={preview.caption || "Reels"} />
-          )}
-        </div>
-      )}
 
       {capturing && (
         <ReelCapture
