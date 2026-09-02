@@ -15,8 +15,6 @@ const ARROW_FLIGHT = 3.2;
 const FRONT_Z = 52;
 const FILE = 2.55;
 const RANK = 2.9;
-const COMP_FILES = 8;
-const COMP_GAP = 3.2;
 const GATE = new THREE.Vector3(0, 10.5, 16.4);
 
 type Shot = {
@@ -45,35 +43,39 @@ function pickCols(n: number) {
   return Math.max(Math.ceil(count / MAX_RANKS), Math.min(count, 4));
 }
 
+function rankSizes(n: number) {
+  const count = Math.max(0, n);
+  if (count <= 0) return [];
+  const cols = pickCols(count);
+  const rows = Math.max(1, Math.min(MAX_RANKS, Math.ceil(count / cols)));
+  const base = Math.floor(count / rows);
+  const extra = count % rows;
+  const sizes: number[] = [];
+  for (let r = 0; r < rows; r++) sizes.push(base + (r < extra ? 1 : 0));
+  return sizes;
+}
+
 export function armyFrame(count: number, commanderCount = 0) {
   const n = Math.max(1, Math.min(MAX_SOLDIERS, Math.floor(count)));
   const chiefs = Math.max(0, Math.min(MAX_COMMANDERS, Math.floor(commanderCount)));
-  const rankN = Math.max(1, n - chiefs);
-  const cols = pickCols(rankN);
-  const rows = Math.ceil(rankN / cols);
-  const companies = Math.max(1, Math.ceil(cols / COMP_FILES));
-  const pitch = (COMP_FILES - 1) * FILE + COMP_GAP;
-  const width = (companies - 1) * pitch + (COMP_FILES - 1) * FILE + FILE * 0.55;
+  const sizes = rankSizes(Math.max(1, n - chiefs));
+  const cols = sizes.length ? Math.max(...sizes) : 1;
+  const rows = Math.max(1, sizes.length);
+  const width = Math.max(FILE, (cols - 1) * FILE + FILE * 0.55);
   const front = chiefs > 0 ? FRONT_Z - RANK : FRONT_Z;
   const back = FRONT_Z + (rows - 1) * RANK;
   return { width, front, back, midZ: (front + back) / 2, height: 3.5 };
 }
 
-function unitPos(i: number, t: number, cols: number, n: number, out: THREE.Vector3) {
-  const col = i % cols;
-  const row = Math.floor(i / cols);
-  const companies = Math.max(1, Math.ceil(cols / COMP_FILES));
-  const company = Math.floor(col / COMP_FILES);
-  const file = col % COMP_FILES;
-  const stagger = (row % 2) * FILE * 0.46;
-  const pitch = (COMP_FILES - 1) * FILE + COMP_GAP;
-  const width = (companies - 1) * pitch + (COMP_FILES - 1) * FILE;
-  let x = company * pitch + file * FILE - width / 2 + stagger;
-  const rows = Math.max(1, Math.ceil(n / cols));
-  const lastCount = n - (rows - 1) * cols;
-  if (row === rows - 1 && lastCount > 0 && lastCount < cols) {
-    x += ((cols - lastCount) * FILE) / 2;
+function unitPos(i: number, t: number, sizes: number[], out: THREE.Vector3) {
+  let row = 0;
+  let col = i;
+  while (row < sizes.length - 1 && col >= sizes[row]) {
+    col -= sizes[row];
+    row += 1;
   }
+  const rowCols = Math.max(1, sizes[row] ?? 1);
+  const x = (col - (rowCols - 1) / 2) * FILE;
   const z = FRONT_Z + row * RANK;
   const front = row < 2;
   const strike = front ? Math.abs(Math.sin(t * 7 + i)) * 0.07 : 0;
@@ -81,12 +83,9 @@ function unitPos(i: number, t: number, cols: number, n: number, out: THREE.Vecto
   out.set(x, strike, z - march);
 }
 
-function commanderPos(k: number, cmdCount: number, t: number, id: number, out: THREE.Vector3) {
-  const mid = (Math.max(1, cmdCount) - 1) / 2;
-  const x = (k - mid) * FILE * 1.2;
-  const z = FRONT_Z - RANK;
+function commanderPos(t: number, id: number, out: THREE.Vector3) {
   const strike = Math.abs(Math.sin(t * 7 + id)) * 0.07;
-  out.set(x, strike, z);
+  out.set(0, strike, FRONT_Z - RANK);
 }
 
 function buildLayout(names: string[], commanders: string[], n: number) {
@@ -104,7 +103,7 @@ function buildLayout(names: string[], commanders: string[], n: number) {
   cmd.forEach((soldier, i) => {
     cmdOf[soldier] = i;
   });
-  return { cmd, rest, slotOf, cmdOf, cols: pickCols(Math.max(1, rest.length)) };
+  return { cmd, rest, slotOf, cmdOf, sizes: rankSizes(rest.length) };
 }
 
 function colorize(geo: THREE.BufferGeometry, hex: string) {
@@ -275,7 +274,7 @@ export function Army({ count, names = [], commanders = [] }: ArmyProps) {
   const visible = Math.min(MAX_SOLDIERS, Math.max(0, Math.floor(count)));
   const instanceCap = Math.min(MAX_SOLDIERS, Math.max(visible, 1));
   const layout = useMemo(() => buildLayout(names, commanders, visible), [names, commanders, visible]);
-  const form = useMemo(() => ({ cols: layout.cols, scale: 1.14 }), [layout.cols]);
+  const form = useMemo(() => ({ sizes: layout.sizes, scale: 1.14 }), [layout.sizes]);
   const labeled = useMemo(() => {
     const ids: number[] = [];
     const seen = new Set<number>();
@@ -304,11 +303,11 @@ export function Army({ count, names = [], commanders = [] }: ArmyProps) {
   function poseSoldier(soldier: number, t: number) {
     const cmdK = layout.cmdOf[soldier];
     if (cmdK >= 0) {
-      commanderPos(cmdK, layout.cmd.length, t, soldier, pos);
+      commanderPos(t, soldier, pos);
       return;
     }
     const slot = layout.slotOf[soldier];
-    unitPos(slot >= 0 ? slot : soldier, t + seeds[soldier], form.cols, Math.max(1, layout.rest.length), pos);
+    unitPos(slot >= 0 ? slot : soldier, t + seeds[soldier], form.sizes, pos);
   }
 
   function placeBodies(t: number) {
@@ -317,7 +316,7 @@ export function Army({ count, names = [], commanders = [] }: ArmyProps) {
       bodies.current.count = layout.rest.length;
       for (let i = 0; i < layout.rest.length; i++) {
         const soldier = layout.rest[i];
-        unitPos(i, t + seeds[soldier], form.cols, Math.max(1, layout.rest.length), pos);
+        unitPos(i, t + seeds[soldier], form.sizes, pos);
         dummy.position.copy(pos);
         dummy.rotation.set(0, Math.PI, 0);
         dummy.scale.setScalar(scale);
@@ -333,7 +332,7 @@ export function Army({ count, names = [], commanders = [] }: ArmyProps) {
       const swing = swordSwingU(p, n);
       for (let k = 0; k < n; k++) {
         const soldier = layout.cmd[k];
-        commanderPos(k, layout.cmd.length, t, soldier, pos);
+        commanderPos(t, soldier, pos);
         dummy.position.copy(pos);
         const [rx, ry, rz] = swordSwingPose(swordStyleAt(p, k), swing);
         dummy.rotation.set(rx, ry, rz);
