@@ -80,7 +80,9 @@ export function swordStyleAt(p: number, cmdK = 0): SwordStyle {
 }
 
 export function swordSwingPose(style: SwordStyle, u: number): [number, number, number] {
-  if (u <= 0) return [0, Math.PI, 0];
+  const restX = 0.28;
+  const restZ = 0.1;
+  if (u <= 0) return [restX, Math.PI, restZ];
   let wind = 0;
   let slash = 0;
   if (u < 0.5) {
@@ -94,12 +96,12 @@ export function swordSwingPose(style: SwordStyle, u: number): [number, number, n
     slash = t * t * (2 - t);
   }
   if (style === "side") {
-    return [0.06 * wind + 0.18 * slash, Math.PI - 0.7 * wind + 1.45 * slash, -0.55 * wind + 0.7 * slash];
+    return [restX + 0.45 * wind - 1.35 * slash, Math.PI, restZ + 0.4 * wind - 0.65 * slash];
   }
   if (style === "overhead") {
-    return [-0.95 * wind + 1.55 * slash, Math.PI + 0.06 * wind, 0.12 * wind - 0.18 * slash];
+    return [restX + 1.05 * wind - 2.25 * slash, Math.PI, restZ];
   }
-  return [-0.58 * wind + 1.22 * slash, Math.PI - 0.32 * wind + 0.78 * slash, -0.88 * wind + 1.65 * slash];
+  return [restX + 0.85 * wind - 2.05 * slash, Math.PI, restZ + 0.08 * wind];
 }
 
 function hash01(i: number, salt: number) {

@@ -90,10 +90,7 @@ function unitPos(i: number, t: number, sizes: number[], out: THREE.Vector3) {
 
 function commanderPos(t: number, id: number, out: THREE.Vector3) {
   const strike = Math.abs(Math.sin(t * 7 + id)) * 0.07;
-  const u = swordSwingU(sallyLocal(t), 1);
-  const lift = u > 0 && u < 0.58 ? 0.05 * Math.min(1, u / 0.5) : 0;
-  const lunge = u > 0.58 ? Math.sin(((u - 0.58) / 0.42) * Math.PI) * 0.42 : 0;
-  out.set(0, strike + lift, FRONT_Z - CMD_STEP - lunge);
+  out.set(0, strike, FRONT_Z - CMD_STEP);
 }
 
 function buildLayout(names: string[], commanders: string[], n: number) {
@@ -191,10 +188,9 @@ function armoredBody() {
     part(new THREE.BoxGeometry(0.34, 0.15, 0.2), "#121214", 0, 0.7, 0.02),
     part(new THREE.BoxGeometry(0.36, 0.055, 0.22), "#0a0a0c", 0, 0.78, 0.03),
     part(new THREE.BoxGeometry(0.07, 0.08, 0.05), "#3a3e44", 0, 0.78, 0.14),
-    part(new THREE.CylinderGeometry(0.125, 0.155, 0.16, 8), "#1a1a1e", 0, 0.9, 0.03),
-    part(new THREE.SphereGeometry(0.1, 8, 6), "#222226", -0.085, 1.08, 0.08),
-    part(new THREE.SphereGeometry(0.1, 8, 6), "#222226", 0.085, 1.08, 0.08),
-    part(new THREE.BoxGeometry(0.32, 0.16, 0.14), "#101012", 0, 1.08, 0),
+    part(new THREE.CylinderGeometry(0.125, 0.145, 0.16, 8), "#1a1a1e", 0, 0.9, 0.02),
+    part(new THREE.BoxGeometry(0.34, 0.3, 0.16), "#141416", 0, 1.06, 0.02),
+    part(new THREE.BoxGeometry(0.3, 0.02, 0.17), "#2a2c30", 0, 1.12, 0.03),
     part(new THREE.SphereGeometry(0.085, 8, 6), "#1c1c20", -0.2, 1.14, 0.02),
     part(new THREE.SphereGeometry(0.085, 8, 6), "#1c1c20", 0.2, 1.14, 0.02),
     part(new THREE.CylinderGeometry(0.048, 0.06, 0.2, 8), "#161618", -0.26, 0.98, 0.04, 0, 0, 0.38),
@@ -244,17 +240,11 @@ function createCommanderGeometry() {
     part(new THREE.BoxGeometry(0.62, 1.02, 0.12), "#0a0a0c", 0, 0.68, -0.26),
     part(new THREE.BoxGeometry(0.5, 0.48, 0.1), "#08080a", 0, 0.28, -0.32),
     part(new THREE.BoxGeometry(0.58, 0.12, 0.14), "#141416", 0, 1.12, -0.2),
-    part(new THREE.SphereGeometry(0.1, 8, 6), "#1a1a1e", -0.1, 1.12, 0.1),
-    part(new THREE.SphereGeometry(0.1, 8, 6), "#1a1a1e", 0.1, 1.12, 0.1),
-    part(new THREE.SphereGeometry(0.095, 8, 6), "#18181c", -0.24, 1.16, 0.03),
-    part(new THREE.SphereGeometry(0.095, 8, 6), "#18181c", 0.24, 1.16, 0.03),
+    part(new THREE.SphereGeometry(0.08, 8, 6), "#18181c", -0.22, 1.16, 0.02),
+    part(new THREE.SphereGeometry(0.08, 8, 6), "#18181c", 0.22, 1.16, 0.02),
     part(new THREE.BoxGeometry(0.2, 0.06, 0.1), "#c9a227", 0, 1.16, -0.08),
     part(new THREE.SphereGeometry(0.045, 6, 5), "#e0c040", -0.12, 1.16, -0.05),
     part(new THREE.SphereGeometry(0.045, 6, 5), "#e0c040", 0.12, 1.16, -0.05),
-    part(new THREE.BoxGeometry(0.085, 1.46, 0.1), "#c8ccd0", 0.5, 1.06, 0.22, 0.55, 0, -0.55),
-    part(new THREE.BoxGeometry(0.16, 0.08, 0.2), "#c9a227", 0.44, 0.5, 0.14),
-    part(new THREE.BoxGeometry(0.07, 0.24, 0.07), "#1a1a1e", 0.42, 0.36, 0.1),
-    part(new THREE.BoxGeometry(0.12, 0.12, 0.04), "#c9a227", 0.42, 0.24, 0.1),
   ];
   const merged = mergeGeometries(pieces, false);
   pieces.forEach((g) => g.dispose());
@@ -264,6 +254,25 @@ function createCommanderGeometry() {
 function getCommanderGeometry() {
   if (!commanderGeoCache) commanderGeoCache = createCommanderGeometry();
   return commanderGeoCache;
+}
+
+let swordGeoCache: THREE.BufferGeometry | null = null;
+
+function createSwordGeometry() {
+  const pieces = [
+    part(new THREE.BoxGeometry(0.075, 1.48, 0.09), "#c8ccd0", 0, 0.86, 0),
+    part(new THREE.BoxGeometry(0.18, 0.07, 0.2), "#c9a227", 0, 0.12, 0),
+    part(new THREE.BoxGeometry(0.065, 0.22, 0.065), "#1a1a1e", 0, -0.02, 0),
+    part(new THREE.BoxGeometry(0.11, 0.1, 0.04), "#c9a227", 0, -0.14, 0),
+  ];
+  const merged = mergeGeometries(pieces, false);
+  pieces.forEach((g) => g.dispose());
+  return merged || colorize(new THREE.BoxGeometry(0.08, 1.4, 0.08), "#c8ccd0");
+}
+
+function getSwordGeometry() {
+  if (!swordGeoCache) swordGeoCache = createSwordGeometry();
+  return swordGeoCache;
 }
 
 function SwordFlash() {
@@ -340,6 +349,7 @@ function makeHandleTexture(name: string, commander = false): NameTag | null {
 export function Army({ count, names = [], commanders = [], cinematic, duration = 8 }: ArmyProps) {
   const bodies = useRef<THREE.InstancedMesh>(null);
   const chiefs = useRef<THREE.InstancedMesh>(null);
+  const swords = useRef<THREE.InstancedMesh>(null);
   const arrows = useRef<THREE.InstancedMesh>(null);
   const tags = useRef<THREE.Group>(null);
   const acc = useRef(0);
@@ -348,6 +358,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
   const pos = useMemo(() => new THREE.Vector3(), []);
   const archerGeo = useMemo(() => getArcherGeometry(), []);
   const commanderGeo = useMemo(() => getCommanderGeometry(), []);
+  const swordGeo = useMemo(() => getSwordGeometry(), []);
 
   const visible = Math.min(MAX_SOLDIERS, Math.max(0, Math.floor(count)));
   const instanceCap = Math.min(MAX_SOLDIERS, Math.max(visible, 1));
@@ -396,11 +407,11 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
     if (age < drawT) {
       const u = Math.max(0, Math.min(1, age / drawT));
       const e = u * u * (3 - 2 * u);
-      return [-0.22 * e + idle * 0.2, Math.PI - 0.16 * e, 0.2 * e];
+      return [-0.11 * e + idle * 0.2, Math.PI - 0.08 * e, 0.1 * e];
     }
     const rel = Math.max(0, Math.min(1, (age - drawT) / 0.32));
     const snap = Math.sin(rel * Math.PI);
-    return [0.28 * snap, Math.PI + 0.1 * snap + idle * 0.15, -0.08 * snap];
+    return [0.14 * snap, Math.PI + 0.05 * snap + idle * 0.15, -0.04 * snap];
   }
 
   function placeBodies(t: number) {
@@ -422,19 +433,29 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
     if (chiefs.current) {
       const n = Math.min(MAX_COMMANDERS, layout.cmd.length);
       chiefs.current.count = n;
+      if (swords.current) swords.current.count = n;
       const p = sallyLocal(t);
       const swing = swordSwingU(p, n);
+      const cmdScale = scale * 1.18;
       for (let k = 0; k < n; k++) {
         const soldier = layout.cmd[k];
         commanderPos(t, soldier, pos);
         dummy.position.copy(pos);
-        const [rx, ry, rz] = swordSwingPose(swordStyleAt(p, k), swing);
-        dummy.rotation.set(rx, ry, rz);
-        dummy.scale.setScalar(scale * 1.18);
+        dummy.rotation.set(0, Math.PI, 0);
+        dummy.scale.setScalar(cmdScale);
         dummy.updateMatrix();
         chiefs.current.setMatrixAt(k, dummy.matrix);
+        if (swords.current) {
+          const [rx, ry, rz] = swordSwingPose(swordStyleAt(p, k), swing);
+          dummy.position.set(pos.x - 0.42 * cmdScale, pos.y + 0.86 * cmdScale, pos.z - 0.14 * cmdScale);
+          dummy.rotation.set(rx, ry, rz);
+          dummy.scale.setScalar(cmdScale);
+          dummy.updateMatrix();
+          swords.current.setMatrixAt(k, dummy.matrix);
+        }
       }
       chiefs.current.instanceMatrix.needsUpdate = true;
+      if (swords.current) swords.current.instanceMatrix.needsUpdate = true;
     }
     if (!tags.current) return;
     for (let k = 0; k < tags.current.children.length; k++) {
@@ -547,6 +568,9 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
       </instancedMesh>
       <instancedMesh ref={chiefs} args={[commanderGeo, undefined, MAX_COMMANDERS]} frustumCulled={false}>
         <meshStandardMaterial vertexColors roughness={0.42} metalness={0.28} />
+      </instancedMesh>
+      <instancedMesh ref={swords} args={[swordGeo, undefined, MAX_COMMANDERS]} frustumCulled={false}>
+        <meshStandardMaterial vertexColors roughness={0.28} metalness={0.55} />
       </instancedMesh>
       <instancedMesh ref={arrows} args={[undefined, undefined, MAX_ARROWS]} frustumCulled={false}>
         <cylinderGeometry args={[0.055, 0.02, 1.45, 6]} />
