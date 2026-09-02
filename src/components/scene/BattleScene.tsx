@@ -9,9 +9,9 @@ import { CaptureHpHud, ReelFade, ReelTitles } from "./CaptureHpHud";
 import { castleFrame } from "../../castleLayout";
 import { REEL_HOLD, reelBeats } from "../../recordCanvas";
 import {
-  cinematicSallyOrigin,
-  REEL_SWORD_START,
+  SALLY_START_DELAY,
   SWORD_START,
+  SWORD_SWING,
   sallyLocal,
   setSallyOrigin,
   setSwordStart,
@@ -74,32 +74,35 @@ function CinematicCam({
 
     const cmdZ = form.front;
     const a = {
-      x: 0.82,
-      y: 1.86,
-      z: cmdZ - 4.55,
-      lx: 0.02,
-      ly: 1.62,
-      lz: cmdZ + 0.06,
-      fov: 29,
+      x: 1.35,
+      y: 2.08,
+      z: cmdZ - 8.2,
+      lx: 0.04,
+      ly: 1.22,
+      lz: cmdZ,
+      fov: 32,
     };
+    const spanX = Math.max(form.width, 12);
+    const spanZ = Math.max(8, form.back - form.front + 6);
+    const fit = distToFit(spanX, spanZ, aspect, 1.2);
     const b = {
-      x: Math.min(22, Math.max(13.2, form.width * 0.42 + 8)),
-      y: 7.1,
-      z: form.back + 7.2,
-      lx: -0.8,
-      ly: 1.7,
-      lz: form.front - 8,
-      fov: 42,
-    };
-    const wide = distToFit(Math.max(form.width, castle.width * 0.42), 14, aspect, 1.05);
-    const c = {
-      x: 20,
-      y: 15.6 + wide * 0.06,
-      z: form.back + 18,
+      x: Math.min(7, spanX * 0.08),
+      y: 10.4 + fit * 0.05,
+      z: form.back + Math.max(14, fit * 0.48),
       lx: 0,
-      ly: 3.2,
-      lz: 22,
-      fov: 38,
+      ly: 1.42,
+      lz: form.midZ,
+      fov: 48,
+    };
+    const wide = distToFit(Math.max(form.width, castle.width * 0.42), 16, aspect, 1.08);
+    const c = {
+      x: 16,
+      y: 17 + wide * 0.05,
+      z: form.back + 22,
+      lx: 0,
+      ly: 2.8,
+      lz: 24,
+      fov: 40,
     };
 
     let t = 0;
@@ -373,8 +376,10 @@ function BattleSceneInner({
 
   useLayoutEffect(() => {
     if (cinematic) {
-      setSallyOrigin(cinematicSallyOrigin(REEL_HOLD));
-      setSwordStart(REEL_SWORD_START);
+      const beats = reelBeats(duration ?? 8);
+      const atStart = 3.04 - beats.pullStart;
+      setSallyOrigin(SALLY_START_DELAY + atStart - REEL_HOLD);
+      setSwordStart(atStart + beats.cmd - SWORD_SWING * 0.3);
     } else {
       setSallyOrigin(0);
       setSwordStart(SWORD_START);
@@ -383,7 +388,7 @@ function BattleSceneInner({
       setSallyOrigin(0);
       setSwordStart(SWORD_START);
     };
-  }, [cinematic]);
+  }, [cinematic, duration]);
 
   useEffect(() => {
     const onVis = () => setActive(!document.hidden);

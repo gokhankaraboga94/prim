@@ -17,7 +17,7 @@ export function setSallyOrigin(seconds: number) {
 }
 
 export function setSwordStart(p: number) {
-  swordAt = Number.isFinite(p) && p > 0 ? p : SWORD_START;
+  swordAt = Number.isFinite(p) ? p : SWORD_START;
 }
 
 export function cinematicSallyOrigin(hold: number) {
@@ -35,7 +35,7 @@ export function smooth01(t: number) {
 
 export function sallyLocal(now: number) {
   const t = now + sallyOrigin;
-  if (t < SALLY_START_DELAY) return SALLY_LEN;
+  if (t < SALLY_START_DELAY) return t - SALLY_START_DELAY;
   return (t - SALLY_START_DELAY) % SALLY_CYCLE;
 }
 
@@ -124,13 +124,14 @@ export function sallyHitAt(i: number, n: number, commanders = 0) {
   return first + (last - first) * (k / Math.max(1, rest - 1));
 }
 
-export function sallyStartAt(i: number, n: number) {
+export function sallyStartAt(i: number, n: number, commanders = 0) {
+  if (isSwordVictim(i, n, commanders)) return swordAt - 1.05;
   const row = Math.floor(i / raidCols(n));
   return 3 + Math.min(3.2, row * 0.07);
 }
 
 export function sallyRun(p: number, i: number, n: number, commanders = 0) {
-  const start = sallyStartAt(i, n);
+  const start = sallyStartAt(i, n, commanders);
   const hit = sallyHitAt(i, n, commanders);
   if (p < start) return 0;
   if (p >= hit) return 1;
