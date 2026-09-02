@@ -38,14 +38,11 @@ type ArmyProps = {
   commanders?: string[];
 };
 
+const MAX_RANKS = 4;
+
 function pickCols(n: number) {
-  if (n <= 8) return n;
-  if (n <= 40) return 8;
-  if (n <= 96) return 16;
-  if (n <= 200) return 24;
-  if (n <= 500) return 32;
-  if (n <= 1500) return 48;
-  return 64;
+  const count = Math.max(1, n);
+  return Math.max(Math.ceil(count / MAX_RANKS), Math.min(count, 4));
 }
 
 export function armyFrame(count: number, commanderCount = 0) {
