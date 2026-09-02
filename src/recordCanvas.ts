@@ -4,19 +4,28 @@ export type ReelDuration = (typeof REEL_DURATIONS)[number];
 /** Warmup before MediaRecorder starts — keep in sync with ReelCapture wait. */
 export const REEL_HOLD = 1.05;
 
-/** Army close-up. ~0.8s on 3s clips, ~1.6s on 10s, 2.2s on 15s. */
-export function reelHook(duration: number) {
-  return Math.min(2.2, Math.max(0.8, duration * 0.16));
-}
-
-/** Pullback to the castle. Longer clips pull back slower so the shot is not a freeze-frame. */
-export function reelZoomDur(duration: number) {
-  return Math.min(4.8, Math.max(0.9, duration * 0.32));
-}
-
-/** End fade to black. ~0.6s on 3s clips, ~1s on 7s, 1.15s cap on longer ones. */
 export function reelFade(duration: number) {
   return Math.min(1.15, Math.max(0.6, duration * 0.14));
+}
+
+/** Commander close-up → army names → pullback. Scales with 3–15s clips. */
+export function reelBeats(duration: number) {
+  const fade = reelFade(duration);
+  const cmd = Math.min(2.4, Math.max(1.2, duration * 0.2));
+  const turn = Math.min(0.95, Math.max(0.5, duration * 0.09));
+  const army = Math.min(3.5, Math.max(1.1, duration * 0.27));
+  const pullStart = cmd + turn + army;
+  return { cmd, turn, army, pullStart, fade };
+}
+
+export function reelHook(duration: number) {
+  const b = reelBeats(duration);
+  return b.cmd + b.turn * 0.35;
+}
+
+export function reelZoomDur(duration: number) {
+  const b = reelBeats(duration);
+  return Math.max(0.8, duration - b.pullStart - b.fade * 0.4);
 }
 
 /** Full-black hold after the fade so the recorder doesn't cut mid-grey. */

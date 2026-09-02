@@ -7,7 +7,7 @@ import { Castle } from "./Castle";
 import { SallyRaid } from "./SallyRaid";
 import { CaptureHpHud, ReelFade, ReelTitles } from "./CaptureHpHud";
 import { castleFrame } from "../../castleLayout";
-import { REEL_HOLD, reelHook, reelZoomDur } from "../../recordCanvas";
+import { REEL_HOLD, reelBeats } from "../../recordCanvas";
 import { cinematicSallyOrigin, sallyLocal, setSallyOrigin, swordSwingU } from "../../siegeEvent";
 
 type BattleSceneProps = {
@@ -36,6 +36,11 @@ function distToFit(width: number, height: number, aspect: number, margin = 1.2) 
   return Math.max(dH, dW);
 }
 
+function ease(u: number) {
+  const x = Math.max(0, Math.min(1, u));
+  return x * x * (3 - 2 * x);
+}
+
 function CinematicCam({
   duration,
   soldiers,
@@ -50,46 +55,78 @@ function CinematicCam({
   const look = useMemo(() => new THREE.Vector3(), []);
   useFrame(({ camera, clock, size }) => {
     const aspect = size.width / Math.max(1, size.height);
-    const recT = clock.elapsedTime - REEL_HOLD;
-    const hold = reelHook(duration);
-    const zoomDur = reelZoomDur(duration);
-    const u = recT <= hold ? 0 : Math.min(1, (recT - hold) / zoomDur);
-    const e = 1 - Math.pow(1 - u, 2.55);
-    const after = Math.max(0, recT - hold - zoomDur);
-    const rest = Math.max(0.4, duration - hold - zoomDur);
-    const drift = Math.min(1, after / rest);
+    const recT = Math.max(0, clock.elapsedTime - REEL_HOLD);
+    const { cmd, turn, pullStart } = reelBeats(duration);
 
-    const army = armyFrame(soldiers, commanders);
+    const form = armyFrame(soldiers, commanders);
     const castle = castleFrame(level);
     const swing = swordSwingU(sallyLocal(clock.elapsedTime), Math.max(1, commanders));
-    const smash = swing > 0.38 ? Math.sin(((swing - 0.38) / 0.62) * Math.PI) : 0;
-    const shake = smash * 0.18;
+    const smash = recT < cmd + 0.2 && swing > 0.35 ? Math.sin(((swing - 0.35) / 0.65) * Math.PI) : 0;
+    const shake = smash * 0.14;
 
-    const startX = 5.15;
-    const startY = 2.42;
-    const startZ = army.front + 8.6;
-    const startLookY = 1.52;
-    const startLookZ = army.front - 1.8;
+    const cmdZ = form.front;
+    const a = {
+      x: 2.25,
+      y: 1.68,
+      z: cmdZ - 2.45,
+      lx: 0.08,
+      ly: 1.36,
+      lz: cmdZ,
+      fov: 26,
+    };
+    const b = {
+      x: Math.min(8.6, Math.max(4.2, form.width * 0.16)),
+      y: 6.1,
+      z: form.back + 11.2,
+      lx: 0,
+      ly: 1.85,
+      lz: form.midZ,
+      fov: 40,
+    };
+    const wide = distToFit(Math.max(form.width, castle.width * 0.42), 14, aspect, 1.05);
+    const c = {
+      x: 13.5,
+      y: 14.8 + wide * 0.08,
+      z: form.back + 15.5,
+      lx: 0,
+      ly: 3.1,
+      lz: (form.front + 22) * 0.5,
+      fov: 36,
+    };
 
-    const endDist = distToFit(castle.width * 0.7, castle.height * 1.08, aspect, 1.1);
-    const endX = 7.2;
-    const endY = castle.midY + endDist * 0.4;
-    const endZ = castle.front + endDist * 0.68;
-    const endLookY = castle.midY * 0.7;
-    const endLookZ = castle.midZ + 1.6;
+    let t = 0;
+    let from = a;
+    let to = a;
+    if (recT <= cmd) {
+      from = a;
+      to = a;
+      t = 0;
+    } else if (recT <= cmd + turn) {
+      from = a;
+      to = b;
+      t = ease((recT - cmd) / turn);
+    } else if (recT <= pullStart) {
+      from = b;
+      to = b;
+      t = 0;
+    } else {
+      from = b;
+      to = c;
+      t = ease((recT - pullStart) / Math.max(0.5, duration - pullStart - 0.35));
+    }
 
     const persp = camera as THREE.PerspectiveCamera;
-    persp.fov = 28 + 11 * e;
+    persp.fov = from.fov + (to.fov - from.fov) * t;
     persp.updateProjectionMatrix();
     camera.position.set(
-      startX + (endX - startX) * e + shake + drift * 3.2,
-      startY + (endY - startY) * e + drift * 1.4,
-      startZ + (endZ - startZ) * e - drift * 2.4
+      from.x + (to.x - from.x) * t + shake,
+      from.y + (to.y - from.y) * t,
+      from.z + (to.z - from.z) * t
     );
     look.set(
-      shake * 0.35 + drift * 0.6,
-      startLookY + (endLookY - startLookY) * e,
-      startLookZ + (endLookZ - startLookZ) * e
+      from.lx + (to.lx - from.lx) * t + shake * 0.25,
+      from.ly + (to.ly - from.ly) * t,
+      from.lz + (to.lz - from.lz) * t
     );
     camera.lookAt(look);
   });
@@ -299,7 +336,7 @@ function SceneContent({
         />
       )}
       {cinematic && maxHp != null && hp != null && (
-        <CaptureHpHud hp={hp} maxHp={maxHp} soldiers={soldiers} />
+        <CaptureHpHud hp={hp} maxHp={maxHp} soldiers={soldiers} duration={duration ?? 8} />
       )}
       {cinematic && showTitles && (
         <ReelTitles soldiers={soldiers} duration={duration ?? 8} day={day} />
