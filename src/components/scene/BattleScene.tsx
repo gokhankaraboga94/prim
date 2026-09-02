@@ -52,10 +52,13 @@ function CinematicCam({
   useFrame(({ camera, clock, size }) => {
     const aspect = size.width / Math.max(1, size.height);
     const recT = clock.elapsedTime - REEL_HOLD;
-    const hold = Math.min(0.95, reelHook(duration) * 0.55);
-    const zoomDur = Math.max(1.4, reelZoomDur(duration) + 0.45);
+    const hold = reelHook(duration);
+    const zoomDur = reelZoomDur(duration);
     const u = recT <= hold ? 0 : Math.min(1, (recT - hold) / zoomDur);
     const e = 1 - Math.pow(1 - u, 2.55);
+    const after = Math.max(0, recT - hold - zoomDur);
+    const rest = Math.max(0.4, duration - hold - zoomDur);
+    const drift = Math.min(1, after / rest);
 
     const army = armyFrame(soldiers, commanders);
     const castle = castleFrame(level);
@@ -80,12 +83,12 @@ function CinematicCam({
     persp.fov = 28 + 11 * e;
     persp.updateProjectionMatrix();
     camera.position.set(
-      startX + (endX - startX) * e + shake,
-      startY + (endY - startY) * e,
-      startZ + (endZ - startZ) * e
+      startX + (endX - startX) * e + shake + drift * 3.2,
+      startY + (endY - startY) * e + drift * 1.4,
+      startZ + (endZ - startZ) * e - drift * 2.4
     );
     look.set(
-      shake * 0.35,
+      shake * 0.35 + drift * 0.6,
       startLookY + (endLookY - startLookY) * e,
       startLookZ + (endLookZ - startLookZ) * e
     );
@@ -222,7 +225,7 @@ function NightLights({ pressure }: { pressure: number }) {
   const fire = 1.4 + pressure * 1.8;
   return (
     <>
-      <ambientLight intensity={0.1} color="#2a1c14" />
+      <ambientLight intensity={0.22} color="#3a2a22" />
       <hemisphereLight args={["#2a3048", "#120a06", 0.32]} />
       <directionalLight position={[48, 42, -18]} intensity={0.28} color="#8aa0c8" />
       <directionalLight position={[-16, 22, 28]} intensity={0.55} color="#ff8a3a" />
@@ -252,7 +255,7 @@ function SceneContent({
 }: BattleSceneProps) {
   return (
     <>
-      {(!cinematic || warLook) && <WarGrade />}
+      {warLook && <WarGrade />}
       <color attach="background" args={["#07050c"]} />
       <fog attach="fog" args={["#100c12", 90, 420]} />
       <NightLights pressure={pressure} />
@@ -340,7 +343,7 @@ function BattleSceneInner({
       style={{ width: "100%", height: "100%", display: "block" }}
       onCreated={({ gl }) => {
         gl.toneMapping = THREE.ACESFilmicToneMapping;
-        gl.toneMappingExposure = 1.05;
+        gl.toneMappingExposure = 1.18;
         gl.setClearColor("#07050c", 1);
         onReady?.(gl.domElement);
       }}

@@ -4,14 +4,14 @@ export type ReelDuration = (typeof REEL_DURATIONS)[number];
 /** Warmup before MediaRecorder starts — keep in sync with ReelCapture wait. */
 export const REEL_HOLD = 1.05;
 
-/** Army close-up length. 7s clips hold ~2.1s then pull back. */
+/** Army close-up. ~0.8s on 3s clips, ~1.6s on 10s, 2.2s on 15s. */
 export function reelHook(duration: number) {
-  return Math.min(2.1, Math.max(0.7, duration * 0.3));
+  return Math.min(2.2, Math.max(0.8, duration * 0.16));
 }
 
-/** Pullback length — finishes mid-clip so the castle holds, especially on 7s. */
+/** Pullback to the castle. Longer clips pull back slower so the shot is not a freeze-frame. */
 export function reelZoomDur(duration: number) {
-  return Math.min(2.05, Math.max(0.55, duration * 0.28));
+  return Math.min(4.8, Math.max(0.9, duration * 0.32));
 }
 
 /** End fade to black. ~0.6s on 3s clips, ~1s on 7s, 1.15s cap on longer ones. */

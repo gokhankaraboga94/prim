@@ -159,13 +159,15 @@ function drawTitles(
     const dayLabel = day > 0 ? `${day}. GÜN` : "";
     if (dayLabel) {
       ctx.font = "800 56px Outfit, system-ui, sans-serif";
-      strokeFill(ctx, dayLabel, w / 2, 78, 16);
+      strokeFill(ctx, dayLabel, w / 2, 64, 16);
     }
-    const big = count.length > 6 ? 150 : count.length > 4 ? 190 : 230;
+    const big = count.length > 6 ? 140 : count.length > 4 ? 180 : 210;
     ctx.font = `800 ${big}px Outfit, system-ui, sans-serif`;
-    strokeFill(ctx, count, w / 2, dayLabel ? 200 : 150, 28);
-    ctx.font = "800 72px Outfit, system-ui, sans-serif";
-    strokeFill(ctx, "DÜŞECEK Mİ?", w / 2, dayLabel ? 330 : 290, 18);
+    strokeFill(ctx, count, w / 2, dayLabel ? 185 : 140, 26);
+    ctx.font = "800 68px Outfit, system-ui, sans-serif";
+    strokeFill(ctx, "takipçi", w / 2, dayLabel ? 300 : 260, 16);
+    ctx.font = "800 64px Outfit, system-ui, sans-serif";
+    strokeFill(ctx, "DÜŞECEK Mİ?", w / 2, dayLabel ? 390 : 350, 16);
   } else {
     ctx.font = "800 88px Outfit, system-ui, sans-serif";
     strokeFill(ctx, "ORDUYA KATIL", w / 2, 130, 22);
@@ -201,7 +203,7 @@ function TitlesPlate({ soldiers, duration, day = 0 }: ReelTitlesProps) {
 
   useFrame(({ clock }) => {
     const recT = clock.elapsedTime - REEL_HOLD;
-    const hook = Math.min(1.15, reelHook(duration));
+    const hook = reelHook(duration) + 0.45;
     const ctaLen = Math.min(1.35, Math.max(0.85, duration * 0.2));
     const ctaAt = duration - ctaLen;
     let phase: "hook" | "cta" | "none" = "none";
