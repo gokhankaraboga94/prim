@@ -52,7 +52,7 @@ export function raidCount(soldiers: number) {
 
 export const SWORD_START = 7.1;
 export const SWORD_EVERY = 2.9;
-export const SWORD_SWING = 0.42;
+export const SWORD_SWING = 0.78;
 
 export function swordPairCount(n: number, commanders: number) {
   if (commanders <= 0 || n <= 0) return 0;
@@ -81,15 +81,25 @@ export function swordStyleAt(p: number, cmdK = 0): SwordStyle {
 
 export function swordSwingPose(style: SwordStyle, u: number): [number, number, number] {
   if (u <= 0) return [0, Math.PI, 0];
-  const wind = Math.min(1, u / 0.34);
-  const slash = u <= 0.34 ? 0 : 1 - (1 - (u - 0.34) / 0.66) ** 2;
+  let wind = 0;
+  let slash = 0;
+  if (u < 0.5) {
+    const t = u / 0.5;
+    wind = t * t * (3 - 2 * t);
+  } else if (u < 0.58) {
+    wind = 1;
+  } else {
+    wind = 1;
+    const t = (u - 0.58) / 0.42;
+    slash = t * t * (2 - t);
+  }
   if (style === "side") {
-    return [0.08 * slash, Math.PI - 0.9 * wind + 1.75 * slash, -0.22 * wind + 0.12 * slash];
+    return [0.06 * wind + 0.18 * slash, Math.PI - 0.7 * wind + 1.45 * slash, -0.55 * wind + 0.7 * slash];
   }
   if (style === "overhead") {
-    return [-1.05 * wind + 1.45 * slash, Math.PI + 0.1 * slash, 0.12 * wind];
+    return [-0.95 * wind + 1.55 * slash, Math.PI + 0.06 * wind, 0.12 * wind - 0.18 * slash];
   }
-  return [-0.32 * wind + 0.82 * slash, Math.PI - 0.18 * wind + 0.5 * slash, -1.02 * wind + 2.25 * slash];
+  return [-0.58 * wind + 1.22 * slash, Math.PI - 0.32 * wind + 0.78 * slash, -0.88 * wind + 1.65 * slash];
 }
 
 function hash01(i: number, salt: number) {

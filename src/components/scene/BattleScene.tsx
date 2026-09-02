@@ -96,13 +96,13 @@ function CinematicCam({
     };
     const castleFit = distToFit(castle.width, castle.height, aspect, 1.18);
     const c = {
-      x: castle.width * 0.05,
-      y: castle.midY + 10,
-      z: castle.midZ + castleFit,
+      x: castle.width * 0.04,
+      y: castle.midY + 32 + castleFit * 0.12,
+      z: castle.midZ + castleFit * 0.78,
       lx: 0,
-      ly: castle.midY,
+      ly: castle.midY * 0.55,
       lz: castle.midZ,
-      fov: 38,
+      fov: 40,
     };
 
     let t = 0;
@@ -379,7 +379,7 @@ function BattleSceneInner({
       const beats = reelBeats(duration ?? 8);
       const atStart = 3.04 - beats.pullStart;
       setSallyOrigin(SALLY_START_DELAY + atStart - REEL_HOLD);
-      setSwordStart(atStart + beats.cmd - SWORD_SWING * 0.3);
+      setSwordStart(atStart + beats.cmd - SWORD_SWING * 0.5);
     } else {
       setSallyOrigin(0);
       setSwordStart(SWORD_START);

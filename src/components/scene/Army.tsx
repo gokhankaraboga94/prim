@@ -21,6 +21,7 @@ const GATE = new THREE.Vector3(0, 10.5, 16.4);
 
 type Shot = {
   soldier: number;
+  draw: number;
   born: number;
   sx: number;
   sy: number;
@@ -89,7 +90,10 @@ function unitPos(i: number, t: number, sizes: number[], out: THREE.Vector3) {
 
 function commanderPos(t: number, id: number, out: THREE.Vector3) {
   const strike = Math.abs(Math.sin(t * 7 + id)) * 0.07;
-  out.set(0, strike, FRONT_Z - CMD_STEP);
+  const u = swordSwingU(sallyLocal(t), 1);
+  const lift = u > 0 && u < 0.58 ? 0.05 * Math.min(1, u / 0.5) : 0;
+  const lunge = u > 0.58 ? Math.sin(((u - 0.58) / 0.42) * Math.PI) * 0.42 : 0;
+  out.set(0, strike + lift, FRONT_Z - CMD_STEP - lunge);
 }
 
 function buildLayout(names: string[], commanders: string[], n: number) {
@@ -142,18 +146,18 @@ function part(
 
 function soldierHelm() {
   return [
-    part(new THREE.SphereGeometry(0.155, 10, 8), "#8a929c", 0, 1.4, 0.02),
-    part(new THREE.CylinderGeometry(0.14, 0.16, 0.13, 10), "#6e767e", 0, 1.28, 0.02),
-    part(new THREE.ConeGeometry(0.11, 0.15, 8), "#9aa2aa", 0, 1.54, 0.01),
-    part(new THREE.CylinderGeometry(0.19, 0.16, 0.028, 10), "#b4bcc4", 0, 1.21, 0.02),
-    part(new THREE.CylinderGeometry(0.09, 0.11, 0.08, 8), "#5a6068", 0, 1.18, 0.02),
-    part(new THREE.BoxGeometry(0.048, 0.15, 0.1), "#7a828a", -0.125, 1.26, 0.09),
-    part(new THREE.BoxGeometry(0.048, 0.15, 0.1), "#7a828a", 0.125, 1.26, 0.09),
-    part(new THREE.BoxGeometry(0.032, 0.15, 0.038), "#c4ccd4", 0, 1.28, 0.155),
-    part(new THREE.BoxGeometry(0.11, 0.07, 0.03), "#1a1c22", 0, 1.31, 0.15),
-    part(new THREE.BoxGeometry(0.09, 0.014, 0.018), "#e4e8ee", 0, 1.325, 0.168),
-    part(new THREE.SphereGeometry(0.016, 5, 4), "#d0d4d8", -0.1, 1.22, 0.12),
-    part(new THREE.SphereGeometry(0.016, 5, 4), "#d0d4d8", 0.1, 1.22, 0.12),
+    part(new THREE.SphereGeometry(0.155, 10, 8), "#2a2c30", 0, 1.4, 0.02),
+    part(new THREE.CylinderGeometry(0.14, 0.16, 0.13, 10), "#1c1e22", 0, 1.28, 0.02),
+    part(new THREE.ConeGeometry(0.11, 0.15, 8), "#3a3e44", 0, 1.54, 0.01),
+    part(new THREE.CylinderGeometry(0.19, 0.16, 0.028, 10), "#4a5058", 0, 1.21, 0.02),
+    part(new THREE.CylinderGeometry(0.09, 0.11, 0.08, 8), "#14161a", 0, 1.18, 0.02),
+    part(new THREE.BoxGeometry(0.048, 0.15, 0.1), "#2c3036", -0.125, 1.26, 0.09),
+    part(new THREE.BoxGeometry(0.048, 0.15, 0.1), "#2c3036", 0.125, 1.26, 0.09),
+    part(new THREE.BoxGeometry(0.032, 0.15, 0.038), "#6a727a", 0, 1.28, 0.155),
+    part(new THREE.BoxGeometry(0.11, 0.07, 0.03), "#0a0a0c", 0, 1.31, 0.15),
+    part(new THREE.BoxGeometry(0.09, 0.014, 0.018), "#c8ced4", 0, 1.325, 0.168),
+    part(new THREE.SphereGeometry(0.016, 5, 4), "#5a6068", -0.1, 1.22, 0.12),
+    part(new THREE.SphereGeometry(0.016, 5, 4), "#5a6068", 0.1, 1.22, 0.12),
     part(new THREE.SphereGeometry(0.028, 6, 5), "#8a2018", 0, 1.62, 0),
     part(new THREE.BoxGeometry(0.032, 0.22, 0.032), "#7a1c18", 0.04, 1.56, -0.09, 0.5, 0, 0.2),
     part(new THREE.BoxGeometry(0.024, 0.16, 0.024), "#4a1014", 0.07, 1.45, -0.15, 0.85, 0, 0.14),
@@ -162,57 +166,63 @@ function soldierHelm() {
 
 function commanderHelm() {
   return [
-    part(new THREE.ConeGeometry(0.095, 0.24, 8), "#a8b0b8", 0, 1.66, 0.01),
-    part(new THREE.TorusGeometry(0.15, 0.02, 6, 12), "#e0c040", 0, 1.43, 0.02, Math.PI / 2),
-    part(new THREE.BoxGeometry(0.18, 0.03, 0.045), "#e0c040", 0, 1.37, 0.15),
-    part(new THREE.BoxGeometry(0.18, 0.16, 0.05), "#8a929a", 0, 1.27, 0.16),
-    part(new THREE.BoxGeometry(0.07, 0.04, 0.025), "#14161c", -0.035, 1.31, 0.19),
-    part(new THREE.BoxGeometry(0.07, 0.04, 0.025), "#14161c", 0.035, 1.31, 0.19),
-    part(new THREE.SphereGeometry(0.036, 6, 5), "#e0c040", 0, 1.78, 0),
+    part(new THREE.ConeGeometry(0.095, 0.24, 8), "#2a2c30", 0, 1.66, 0.01),
+    part(new THREE.TorusGeometry(0.15, 0.02, 6, 12), "#c9a227", 0, 1.43, 0.02, Math.PI / 2),
+    part(new THREE.BoxGeometry(0.18, 0.03, 0.045), "#c9a227", 0, 1.37, 0.15),
+    part(new THREE.BoxGeometry(0.18, 0.16, 0.05), "#1a1c20", 0, 1.27, 0.16),
+    part(new THREE.BoxGeometry(0.07, 0.04, 0.025), "#08080a", -0.035, 1.31, 0.19),
+    part(new THREE.BoxGeometry(0.07, 0.04, 0.025), "#08080a", 0.035, 1.31, 0.19),
+    part(new THREE.SphereGeometry(0.036, 6, 5), "#c9a227", 0, 1.78, 0),
     part(new THREE.BoxGeometry(0.055, 0.38, 0.055), "#9a1822", -0.02, 1.8, -0.08, 0.22, 0, -0.14),
     part(new THREE.BoxGeometry(0.042, 0.28, 0.042), "#5c1018", 0.03, 1.72, -0.14, 0.42, 0, 0.1),
   ];
 }
 
+function armoredBody() {
+  return [
+    part(new THREE.BoxGeometry(0.12, 0.09, 0.2), "#0c0c0e", -0.1, 0.055, 0.06),
+    part(new THREE.BoxGeometry(0.12, 0.09, 0.2), "#0c0c0e", 0.1, 0.055, 0.06),
+    part(new THREE.CylinderGeometry(0.048, 0.068, 0.24, 8), "#141416", -0.1, 0.22, 0.04),
+    part(new THREE.CylinderGeometry(0.048, 0.068, 0.24, 8), "#141416", 0.1, 0.22, 0.04),
+    part(new THREE.SphereGeometry(0.052, 7, 6), "#1c1c20", -0.1, 0.36, 0.04),
+    part(new THREE.SphereGeometry(0.052, 7, 6), "#1c1c20", 0.1, 0.36, 0.04),
+    part(new THREE.CylinderGeometry(0.072, 0.088, 0.26, 8), "#18181c", -0.1, 0.52, 0.03),
+    part(new THREE.CylinderGeometry(0.072, 0.088, 0.26, 8), "#18181c", 0.1, 0.52, 0.03),
+    part(new THREE.BoxGeometry(0.34, 0.15, 0.2), "#121214", 0, 0.7, 0.02),
+    part(new THREE.BoxGeometry(0.36, 0.055, 0.22), "#0a0a0c", 0, 0.78, 0.03),
+    part(new THREE.BoxGeometry(0.07, 0.08, 0.05), "#3a3e44", 0, 0.78, 0.14),
+    part(new THREE.CylinderGeometry(0.125, 0.155, 0.16, 8), "#1a1a1e", 0, 0.9, 0.03),
+    part(new THREE.SphereGeometry(0.1, 8, 6), "#222226", -0.085, 1.08, 0.08),
+    part(new THREE.SphereGeometry(0.1, 8, 6), "#222226", 0.085, 1.08, 0.08),
+    part(new THREE.BoxGeometry(0.32, 0.16, 0.14), "#101012", 0, 1.08, 0),
+    part(new THREE.SphereGeometry(0.085, 8, 6), "#1c1c20", -0.2, 1.14, 0.02),
+    part(new THREE.SphereGeometry(0.085, 8, 6), "#1c1c20", 0.2, 1.14, 0.02),
+    part(new THREE.CylinderGeometry(0.048, 0.06, 0.2, 8), "#161618", -0.26, 0.98, 0.04, 0, 0, 0.38),
+    part(new THREE.CylinderGeometry(0.048, 0.06, 0.2, 8), "#161618", 0.28, 1.0, 0.1, 0.22, 0, -0.5),
+    part(new THREE.CylinderGeometry(0.04, 0.046, 0.17, 8), "#141416", -0.34, 0.84, 0.08, 0.12, 0, 0.22),
+    part(new THREE.CylinderGeometry(0.04, 0.046, 0.17, 8), "#141416", 0.28, 0.92, 0.24, 0.38, 0, -0.12),
+    part(new THREE.BoxGeometry(0.065, 0.065, 0.075), "#2a2c32", -0.38, 0.74, 0.12),
+    part(new THREE.BoxGeometry(0.065, 0.065, 0.075), "#2a2c32", 0.24, 0.86, 0.34),
+  ];
+}
+
 function createArcherGeometry() {
   const pieces = [
-    part(new THREE.BoxGeometry(0.12, 0.09, 0.2), "#1c1410", -0.1, 0.055, 0.06),
-    part(new THREE.BoxGeometry(0.12, 0.09, 0.2), "#1c1410", 0.1, 0.055, 0.06),
-    part(new THREE.CylinderGeometry(0.048, 0.068, 0.24, 8), "#2a1c14", -0.1, 0.22, 0.04),
-    part(new THREE.CylinderGeometry(0.048, 0.068, 0.24, 8), "#2a1c14", 0.1, 0.22, 0.04),
-    part(new THREE.SphereGeometry(0.052, 7, 6), "#3a2a1c", -0.1, 0.36, 0.04),
-    part(new THREE.SphereGeometry(0.052, 7, 6), "#3a2a1c", 0.1, 0.36, 0.04),
-    part(new THREE.CylinderGeometry(0.072, 0.088, 0.26, 8), "#4a3224", -0.1, 0.52, 0.03),
-    part(new THREE.CylinderGeometry(0.072, 0.088, 0.26, 8), "#4a3224", 0.1, 0.52, 0.03),
-    part(new THREE.BoxGeometry(0.34, 0.15, 0.2), "#3a281c", 0, 0.7, 0.02),
-    part(new THREE.BoxGeometry(0.36, 0.055, 0.22), "#241810", 0, 0.78, 0.03),
-    part(new THREE.BoxGeometry(0.07, 0.08, 0.05), "#c4a030", 0, 0.78, 0.14),
-    part(new THREE.CylinderGeometry(0.125, 0.155, 0.16, 8), "#6a3e26", 0, 0.9, 0.03),
-    part(new THREE.SphereGeometry(0.1, 8, 6), "#7a4a2c", -0.085, 1.08, 0.08),
-    part(new THREE.SphereGeometry(0.1, 8, 6), "#7a4a2c", 0.085, 1.08, 0.08),
-    part(new THREE.BoxGeometry(0.32, 0.16, 0.14), "#3d4824", 0, 1.08, 0),
-    part(new THREE.SphereGeometry(0.085, 8, 6), "#6a4228", -0.2, 1.14, 0.02),
-    part(new THREE.SphereGeometry(0.085, 8, 6), "#6a4228", 0.2, 1.14, 0.02),
-    part(new THREE.CylinderGeometry(0.048, 0.06, 0.2, 8), "#5a3a24", -0.26, 0.98, 0.04, 0, 0, 0.38),
-    part(new THREE.CylinderGeometry(0.048, 0.06, 0.2, 8), "#5a3a24", 0.28, 1.0, 0.1, 0.22, 0, -0.5),
-    part(new THREE.CylinderGeometry(0.04, 0.046, 0.17, 8), "#4a3220", -0.34, 0.84, 0.08, 0.12, 0, 0.22),
-    part(new THREE.CylinderGeometry(0.04, 0.046, 0.17, 8), "#4a3220", 0.28, 0.92, 0.24, 0.38, 0, -0.12),
-    part(new THREE.BoxGeometry(0.065, 0.065, 0.075), "#6a727a", -0.38, 0.74, 0.12),
-    part(new THREE.BoxGeometry(0.065, 0.065, 0.075), "#6a727a", 0.24, 0.86, 0.34),
+    ...armoredBody(),
     ...soldierHelm(),
-    part(new THREE.TorusGeometry(0.5, 0.018, 5, 14, Math.PI), "#8a5a28", 0.26, 0.88, 0.22, 0, 0.15, Math.PI / 2),
-    part(new THREE.BoxGeometry(0.012, 0.98, 0.012), "#e8e0c8", 0.16, 0.88, 0.3),
-    part(new THREE.CylinderGeometry(0.05, 0.065, 0.36, 7), "#3a2414", -0.16, 1.0, -0.15, 0.95, 0.45, 0.1),
-    part(new THREE.BoxGeometry(0.016, 0.24, 0.016), "#d8c898", -0.14, 1.18, -0.22, 0.25, 0, 0.2),
-    part(new THREE.BoxGeometry(0.016, 0.22, 0.016), "#d8c898", -0.18, 1.16, -0.2, 0.15, 0, -0.12),
-    part(new THREE.BoxGeometry(0.016, 0.2, 0.016), "#d8c898", -0.12, 1.14, -0.18, 0.1, 0, 0.08),
-    part(new THREE.BoxGeometry(0.05, 0.58, 0.05), "#3a3c42", -0.2, 0.68, -0.1, 0.12, 0, 0.25),
-    part(new THREE.BoxGeometry(0.038, 0.1, 0.08), "#8a9098", -0.2, 0.98, -0.12),
+    part(new THREE.TorusGeometry(0.5, 0.018, 5, 14, Math.PI), "#2a2c30", 0.26, 0.88, 0.22, 0, 0.15, Math.PI / 2),
+    part(new THREE.BoxGeometry(0.012, 0.98, 0.012), "#c8c4b8", 0.16, 0.88, 0.3),
+    part(new THREE.CylinderGeometry(0.05, 0.065, 0.36, 7), "#121214", -0.16, 1.0, -0.15, 0.95, 0.45, 0.1),
+    part(new THREE.BoxGeometry(0.016, 0.24, 0.016), "#3a3c40", -0.14, 1.18, -0.22, 0.25, 0, 0.2),
+    part(new THREE.BoxGeometry(0.016, 0.22, 0.016), "#3a3c40", -0.18, 1.16, -0.2, 0.15, 0, -0.12),
+    part(new THREE.BoxGeometry(0.016, 0.2, 0.016), "#3a3c40", -0.12, 1.14, -0.18, 0.1, 0, 0.08),
+    part(new THREE.BoxGeometry(0.05, 0.58, 0.05), "#1a1c20", -0.2, 0.68, -0.1, 0.12, 0, 0.25),
+    part(new THREE.BoxGeometry(0.038, 0.1, 0.08), "#2a2c30", -0.2, 0.98, -0.12),
   ];
   const merged = mergeGeometries(pieces, false);
   pieces.forEach((g) => g.dispose());
   if (!merged) {
-    return colorize(new THREE.BoxGeometry(0.4, 1.1, 0.28), "#4a3220");
+    return colorize(new THREE.BoxGeometry(0.4, 1.1, 0.28), "#141416");
   }
   return merged;
 }
@@ -226,30 +236,33 @@ function getArcherGeometry() {
 
 let commanderGeoCache: THREE.BufferGeometry | null = null;
 
-function getCommanderGeometry() {
-  if (commanderGeoCache) return commanderGeoCache;
-  const capeParts = [
-    part(new THREE.BoxGeometry(0.62, 1.02, 0.12), "#1c4e94", 0, 0.68, -0.26),
-    part(new THREE.BoxGeometry(0.5, 0.48, 0.1), "#0e2c5c", 0, 0.28, -0.32),
-    part(new THREE.BoxGeometry(0.58, 0.12, 0.14), "#2a62b0", 0, 1.12, -0.2),
-    part(new THREE.SphereGeometry(0.1, 8, 6), "#8a5434", -0.1, 1.12, 0.1),
-    part(new THREE.SphereGeometry(0.1, 8, 6), "#8a5434", 0.1, 1.12, 0.1),
-    part(new THREE.SphereGeometry(0.095, 8, 6), "#7a4a2c", -0.24, 1.16, 0.03),
-    part(new THREE.SphereGeometry(0.095, 8, 6), "#7a4a2c", 0.24, 1.16, 0.03),
-    part(new THREE.BoxGeometry(0.2, 0.06, 0.1), "#e8c868", 0, 1.16, -0.08),
-    part(new THREE.SphereGeometry(0.045, 6, 5), "#f0d478", -0.12, 1.16, -0.05),
-    part(new THREE.SphereGeometry(0.045, 6, 5), "#f0d478", 0.12, 1.16, -0.05),
-    part(new THREE.BoxGeometry(0.085, 1.46, 0.1), "#d8dee6", 0.5, 1.06, 0.22, 0.55, 0, -0.55),
-    part(new THREE.BoxGeometry(0.16, 0.08, 0.2), "#c9a227", 0.44, 0.5, 0.14),
-    part(new THREE.BoxGeometry(0.07, 0.24, 0.07), "#3a2414", 0.42, 0.36, 0.1),
-    part(new THREE.BoxGeometry(0.12, 0.12, 0.04), "#e8c868", 0.42, 0.24, 0.1),
+function createCommanderGeometry() {
+  const pieces = [
+    ...armoredBody(),
+    ...soldierHelm(),
     ...commanderHelm(),
+    part(new THREE.BoxGeometry(0.62, 1.02, 0.12), "#0a0a0c", 0, 0.68, -0.26),
+    part(new THREE.BoxGeometry(0.5, 0.48, 0.1), "#08080a", 0, 0.28, -0.32),
+    part(new THREE.BoxGeometry(0.58, 0.12, 0.14), "#141416", 0, 1.12, -0.2),
+    part(new THREE.SphereGeometry(0.1, 8, 6), "#1a1a1e", -0.1, 1.12, 0.1),
+    part(new THREE.SphereGeometry(0.1, 8, 6), "#1a1a1e", 0.1, 1.12, 0.1),
+    part(new THREE.SphereGeometry(0.095, 8, 6), "#18181c", -0.24, 1.16, 0.03),
+    part(new THREE.SphereGeometry(0.095, 8, 6), "#18181c", 0.24, 1.16, 0.03),
+    part(new THREE.BoxGeometry(0.2, 0.06, 0.1), "#c9a227", 0, 1.16, -0.08),
+    part(new THREE.SphereGeometry(0.045, 6, 5), "#e0c040", -0.12, 1.16, -0.05),
+    part(new THREE.SphereGeometry(0.045, 6, 5), "#e0c040", 0.12, 1.16, -0.05),
+    part(new THREE.BoxGeometry(0.085, 1.46, 0.1), "#c8ccd0", 0.5, 1.06, 0.22, 0.55, 0, -0.55),
+    part(new THREE.BoxGeometry(0.16, 0.08, 0.2), "#c9a227", 0.44, 0.5, 0.14),
+    part(new THREE.BoxGeometry(0.07, 0.24, 0.07), "#1a1a1e", 0.42, 0.36, 0.1),
+    part(new THREE.BoxGeometry(0.12, 0.12, 0.04), "#c9a227", 0.42, 0.24, 0.1),
   ];
-  const cape = mergeGeometries(capeParts, false);
-  capeParts.forEach((g) => g.dispose());
-  const merged = mergeGeometries([getArcherGeometry().clone(), cape || getArcherGeometry().clone()], false);
-  cape?.dispose();
-  commanderGeoCache = merged || getArcherGeometry().clone();
+  const merged = mergeGeometries(pieces, false);
+  pieces.forEach((g) => g.dispose());
+  return merged || colorize(new THREE.BoxGeometry(0.4, 1.2, 0.28), "#101012");
+}
+
+function getCommanderGeometry() {
+  if (!commanderGeoCache) commanderGeoCache = createCommanderGeometry();
   return commanderGeoCache;
 }
 
@@ -368,6 +381,28 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
     unitPos(slot >= 0 ? slot : soldier, t + seeds[soldier], form.sizes, pos);
   }
 
+  function bowPose(soldier: number, t: number): [number, number, number] {
+    const idle = Math.sin(t * 1.7 + soldier) * 0.035;
+    let shot: Shot | undefined;
+    for (let k = 0; k < shots.current.length; k++) {
+      if (shots.current[k].soldier === soldier) {
+        shot = shots.current[k];
+        break;
+      }
+    }
+    if (!shot) return [idle * 0.45, Math.PI + idle, 0];
+    const age = t - shot.draw;
+    const drawT = Math.max(0.08, shot.born - shot.draw);
+    if (age < drawT) {
+      const u = Math.max(0, Math.min(1, age / drawT));
+      const e = u * u * (3 - 2 * u);
+      return [-0.22 * e + idle * 0.2, Math.PI - 0.16 * e, 0.2 * e];
+    }
+    const rel = Math.max(0, Math.min(1, (age - drawT) / 0.32));
+    const snap = Math.sin(rel * Math.PI);
+    return [0.28 * snap, Math.PI + 0.1 * snap + idle * 0.15, -0.08 * snap];
+  }
+
   function placeBodies(t: number) {
     const { scale } = form;
     if (bodies.current) {
@@ -375,8 +410,9 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
       for (let i = 0; i < layout.rest.length; i++) {
         const soldier = layout.rest[i];
         unitPos(i, t + seeds[soldier], form.sizes, pos);
+        pos.y += Math.sin(t * 2.05 + soldier) * 0.02;
         dummy.position.copy(pos);
-        dummy.rotation.set(0, Math.PI, 0);
+        dummy.rotation.set(...bowPose(soldier, t));
         dummy.scale.setScalar(scale);
         dummy.updateMatrix();
         bodies.current.setMatrixAt(i, dummy.matrix);
@@ -441,7 +477,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
     const enemies = raidCount(visible);
 
     acc.current += dt;
-    if (acc.current >= 1 / 28) {
+      if (acc.current >= 1 / 40) {
       acc.current = 0;
       placeBodies(t);
     }
@@ -453,7 +489,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
       return;
     }
 
-    shots.current = shots.current.filter((s) => t - s.born < s.flight);
+    shots.current = shots.current.filter((s) => t - s.draw < s.flight + 0.45);
 
     const cap = hunt ? MAX_ARROWS : IDLE_ARROWS;
     if (t >= nextShot.current && shots.current.length < cap) {
@@ -466,9 +502,11 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
         const cmdN = layout.cmd.length;
         const idx = hunt ? sallyLiveIndex(sally, enemies, soldier + i * 11, cmdN) : -1;
         const prey = idx >= 0 ? sallyRaiderAt(sally, idx, enemies, cmdN) : null;
+        const draw = t + i * 0.05;
         shots.current.push({
           soldier,
-          born: t + i * 0.04,
+          draw,
+          born: draw + 0.36,
           sx: pos.x,
           sy: pos.y + 1.25 * scale,
           sz: pos.z,
@@ -483,7 +521,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
       nextShot.current = t + pace + Math.random() * (hunt ? 0.04 : 0.28);
     }
 
-    const live = shots.current;
+    const live = shots.current.filter((s) => t >= s.born && t - s.born < s.flight);
     arrows.current.count = live.length;
     for (let i = 0; i < live.length; i++) {
       const s = live[i];
