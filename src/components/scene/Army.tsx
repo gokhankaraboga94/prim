@@ -468,13 +468,22 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
       }
       const cmd = layout.cmdOf[idx] >= 0;
       poseSoldier(idx, t);
-      let namesOn = true;
+      let nameScale = 1;
       if (cinematic) {
         const recT = t - REEL_HOLD;
         const beats = reelBeats(duration);
-        namesOn = recT >= beats.cmd + beats.turn;
+        if (recT < 0) {
+          tag.visible = false;
+          continue;
+        }
+        if (recT < beats.cmd) nameScale = 0.38;
+        else {
+          const u = Math.min(1, (recT - beats.cmd) / Math.max(0.2, beats.turn * 0.58));
+          const e = u * u * (3 - 2 * u);
+          nameScale = 0.38 + 0.62 * e;
+        }
       }
-      tag.visible = namesOn;
+      tag.visible = true;
       let lift = 2.22;
       if (!cmd) {
         const slot = layout.slotOf[idx];
@@ -482,7 +491,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
         lift = 1.86 + row * 0.5 + (col % 2) * 0.2;
       }
       tag.position.set(pos.x, pos.y + lift * scale, pos.z);
-      tag.scale.set(tagData.sx, tagData.sy, 1);
+      tag.scale.set(tagData.sx * nameScale, tagData.sy * nameScale, 1);
     }
   }
 
