@@ -239,13 +239,8 @@ function commanderHelm() {
     part(new THREE.BoxGeometry(0.11, 0.3, 0.15), HELM_DK, 0.145, 1.26, 0.1),
     part(new THREE.SphereGeometry(0.152, 12, 10), HELM, -0.1, 1.28, 0.05),
     part(new THREE.SphereGeometry(0.152, 12, 10), HELM, 0.1, 1.28, 0.05),
-    part(new THREE.BoxGeometry(0.162, 0.038, 0.068), SLIT, 0, 1.4, 0.186),
-    part(new THREE.BoxGeometry(0.024, 0.15, 0.068), SLIT, 0, 1.292, 0.186),
-    part(new THREE.BoxGeometry(0.188, 0.01, 0.016), GOLD, 0, 1.424, 0.214),
-    part(new THREE.BoxGeometry(0.188, 0.009, 0.014), GOLD, 0, 1.38, 0.214),
-    part(new THREE.BoxGeometry(0.009, 0.042, 0.014), GOLD, -0.09, 1.4, 0.214),
-    part(new THREE.BoxGeometry(0.009, 0.042, 0.014), GOLD, 0.09, 1.4, 0.214),
-    part(new THREE.BoxGeometry(0.026, 0.155, 0.016), GOLD, 0, 1.292, 0.216),
+    part(new THREE.BoxGeometry(0.22, 0.3, 0.07), HELM, 0, 1.32, 0.155),
+    part(new THREE.BoxGeometry(0.2, 0.012, 0.02), GOLD, 0, 1.46, 0.188),
     part(new THREE.BoxGeometry(0.016, 0.28, 0.022), GOLD, -0.2, 1.26, 0.165),
     part(new THREE.BoxGeometry(0.016, 0.28, 0.022), GOLD, 0.2, 1.26, 0.165),
     part(new THREE.BoxGeometry(0.13, 0.016, 0.022), GOLD, -0.155, 1.115, 0.175),
@@ -318,26 +313,18 @@ function plateArmor(withArms = true) {
     ...flaps,
     part(new THREE.BoxGeometry(0.42, 0.08, 0.24), ARMOR_HI, 0, 0.8, 0.02),
     part(new THREE.BoxGeometry(0.11, 0.055, 0.055), GOLD, 0, 0.8, 0.15),
-    part(new THREE.BoxGeometry(0.4, 0.44, 0.18), ARMOR, 0, 1.04, 0.03),
-    part(new THREE.BoxGeometry(0.06, 0.4, 0.04), ARMOR_HI, 0, 1.04, 0.12),
-    part(new THREE.BoxGeometry(0.36, 0.016, 0.2), GOLD, 0, 1.24, 0.04),
-    part(new THREE.BoxGeometry(0.36, 0.012, 0.02), GOLD, 0, 0.86, 0.13),
-    part(new THREE.BoxGeometry(0.014, 0.4, 0.02), GOLD, 0, 1.04, 0.13),
-    part(new THREE.BoxGeometry(0.014, 0.4, 0.02), GOLD, -0.18, 1.04, 0.125),
-    part(new THREE.BoxGeometry(0.014, 0.4, 0.02), GOLD, 0.18, 1.04, 0.125),
-    part(new THREE.SphereGeometry(0.175, 14, 12), ARMOR_HI, -0.3, 1.18, 0.02),
-    part(new THREE.SphereGeometry(0.175, 14, 12), ARMOR_HI, 0.3, 1.18, 0.02),
-    part(new THREE.SphereGeometry(0.125, 12, 10), ARMOR, -0.34, 1.08, 0.06),
-    part(new THREE.SphereGeometry(0.125, 12, 10), ARMOR, 0.34, 1.08, 0.06),
-    part(new THREE.TorusGeometry(0.112, 0.016, 7, 14), GOLD, -0.3, 1.04, 0.05, Math.PI / 2),
-    part(new THREE.TorusGeometry(0.112, 0.016, 7, 14), GOLD, 0.3, 1.04, 0.05, Math.PI / 2),
+    part(new THREE.BoxGeometry(0.42, 0.46, 0.16), ARMOR, 0, 1.04, 0.02),
+    part(new THREE.BoxGeometry(0.06, 0.42, 0.03), ARMOR_HI, 0, 1.04, 0.105),
+    part(new THREE.BoxGeometry(0.38, 0.014, 0.18), GOLD, 0, 1.25, 0.03),
+    part(new THREE.BoxGeometry(0.38, 0.01, 0.018), GOLD, 0, 0.84, 0.108),
+    part(new THREE.BoxGeometry(0.012, 0.42, 0.018), GOLD, 0, 1.04, 0.108),
+    part(new THREE.BoxGeometry(0.012, 0.42, 0.018), GOLD, -0.19, 1.04, 0.104),
+    part(new THREE.BoxGeometry(0.012, 0.42, 0.018), GOLD, 0.19, 1.04, 0.104),
+    part(new THREE.BoxGeometry(0.2, 0.16, 0.14), ARMOR_HI, -0.34, 1.2, -0.02),
+    part(new THREE.BoxGeometry(0.2, 0.16, 0.14), ARMOR_HI, 0.34, 1.2, -0.02),
+    part(new THREE.TorusGeometry(0.08, 0.012, 6, 12), GOLD, -0.34, 1.12, 0.02, Math.PI / 2),
+    part(new THREE.TorusGeometry(0.08, 0.012, 6, 12), GOLD, 0.34, 1.12, 0.02, Math.PI / 2),
     ...(withArms ? [...arm(-1), ...arm(1)] : []),
-    part(new THREE.CylinderGeometry(0.07, 0.07, 0.032, 16), GOLD, -0.15, 1.22, 0.14, Math.PI / 2),
-    part(new THREE.CylinderGeometry(0.07, 0.07, 0.032, 16), GOLD, 0.15, 1.22, 0.14, Math.PI / 2),
-    part(new THREE.CylinderGeometry(0.038, 0.038, 0.022, 12), GOLD_DK, -0.15, 1.22, 0.16, Math.PI / 2),
-    part(new THREE.CylinderGeometry(0.038, 0.038, 0.022, 12), GOLD_DK, 0.15, 1.22, 0.16, Math.PI / 2),
-    part(new THREE.TorusGeometry(0.052, 0.008, 6, 12), GOLD, -0.15, 1.22, 0.155, Math.PI / 2),
-    part(new THREE.TorusGeometry(0.052, 0.008, 6, 12), GOLD, 0.15, 1.22, 0.155, Math.PI / 2),
   ];
 }
 
@@ -485,8 +472,8 @@ function createCommanderFaceGeometry() {
   return mergeParts(commanderFace(), SKIN);
 }
 
-let archerGeoV10: THREE.BufferGeometry | null = null;
-let commanderGeoV11: THREE.BufferGeometry | null = null;
+let archerGeoV12: THREE.BufferGeometry | null = null;
+let commanderGeoV12: THREE.BufferGeometry | null = null;
 let soldierCapeV9: THREE.BufferGeometry | null = null;
 let commanderCapeV9: THREE.BufferGeometry | null = null;
 let soldierPlumeV10: THREE.BufferGeometry | null = null;
@@ -498,13 +485,13 @@ let nockArrowGeo: THREE.BufferGeometry | null = null;
 const nockOff = new THREE.Vector3();
 
 function getArcherGeometry() {
-  if (!archerGeoV10) archerGeoV10 = createArcherGeometry();
-  return archerGeoV10;
+  if (!archerGeoV12) archerGeoV12 = createArcherGeometry();
+  return archerGeoV12;
 }
 
 function getCommanderGeometry() {
-  if (!commanderGeoV11) commanderGeoV11 = createCommanderGeometry();
-  return commanderGeoV11;
+  if (!commanderGeoV12) commanderGeoV12 = createCommanderGeometry();
+  return commanderGeoV12;
 }
 
 function getSoldierCapeGeometry() {
@@ -880,7 +867,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
       chiefs.current.count = n;
       if (chiefCapes.current) chiefCapes.current.count = n;
       if (chiefPlumes.current) chiefPlumes.current.count = n;
-      if (chiefFaces.current) chiefFaces.current.count = n;
+      if (chiefFaces.current) chiefFaces.current.count = 0;
       if (swords.current) swords.current.count = n;
       const p = sallyLocal(t);
       const swing = swordSwingU(p, n);
@@ -895,7 +882,6 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
         stamp(chiefs.current, k);
         stamp(chiefCapes.current, k);
         stamp(chiefPlumes.current, k);
-        stamp(chiefFaces.current, k);
         if (swords.current) {
           const [rx, ry, rz] = swordSwingPose(swordStyleAt(p, k), swing);
           dummy.position.set(pos.x - 0.42 * cmdScale, pos.y + 0.86 * cmdScale, pos.z - 0.14 * cmdScale);

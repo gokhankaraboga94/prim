@@ -179,11 +179,9 @@ function SquareTower({
 
 function Gatehouse({
   wallH,
-  fire,
   stone,
 }: {
   wallH: number;
-  fire: number;
   stone: THREE.Texture | null;
 }) {
   const bars = useMemo(() => Array.from({ length: 7 }, (_, i) => i), []);
@@ -259,11 +257,6 @@ function Gatehouse({
         ))}
       </group>
 
-      <mesh position={[0, 1.15, 1.05]}>
-        <boxGeometry args={[0.35, 1.6, 0.08]} />
-        <meshStandardMaterial color="#8b1d1d" emissive="#ff4a12" emissiveIntensity={0.12 + fire * 0.3} roughness={0.7} />
-      </mesh>
-      <Flame position={[0, 2.05, 1.55]} scale={1.15} />
       <Flame position={[-1.55, wallH * 0.72, 1.62]} scale={0.72} />
       <Flame position={[1.55, wallH * 0.72, 1.62]} scale={0.72} />
       <mesh position={[-1.55, wallH * 0.72, 1.48]}>
@@ -315,13 +308,12 @@ function RoundTower({
   );
 }
 
-export function Castle({ level, pressure }: CastleProps) {
+export function Castle({ level }: CastleProps) {
   const stone = useStoneTexture();
   const visualTier = ((level - 1) % 5) + 1;
   const grow = castleGrow(level);
   const { sx, sy, sz, zShift } = castleAxes(grow);
   const wallH = 3.85 + visualTier * 0.18;
-  const fire = Math.min(1, pressure);
   const merlonCount = 13;
 
   return (
@@ -355,7 +347,7 @@ export function Castle({ level, pressure }: CastleProps) {
         <Merlons count={15} width={20.8} y={wallH + 0.36} z={10.85} axis="z" map={stone} />
       </group>
 
-      <Gatehouse wallH={wallH} fire={fire} stone={stone} />
+      <Gatehouse wallH={wallH} stone={stone} />
       <mesh position={[0, wallH * 0.72, -13.05]}>
         <boxGeometry args={[0.2, 0.62, 0.1]} />
         <meshStandardMaterial color={STONE_DARK} />
@@ -434,7 +426,6 @@ export function Castle({ level, pressure }: CastleProps) {
         <meshStandardMaterial color="#6a1212" />
       </mesh>
 
-      <pointLight position={[0, 2.4, 7.1]} color="#ff6a2a" intensity={0.7 + fire * 0.9} distance={22} />
       <pointLight position={[-11.1, 8.2, 6.85]} color="#ff7a30" intensity={0.65} distance={14} />
       <pointLight position={[11.1, 8.4, 6.85]} color="#ff7a30" intensity={0.65} distance={14} />
       <pointLight position={[1.2, 14.2, -1.2]} color="#ff8a40" intensity={0.45} distance={16} />
