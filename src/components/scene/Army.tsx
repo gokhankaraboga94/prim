@@ -152,8 +152,6 @@ const SLIT = "#040406";
 const LEATHER = "#141210";
 const PLUME = "#0c0c0e";
 const PLUME_HI = "#1a1a1e";
-const BLUE = "#0437f2";
-const BLUE_DK = "#0327a9";
 const BLACK = "#070709";
 const BLACK_LINING = "#121218";
 const HELM = "#1a2430";
@@ -475,7 +473,6 @@ function createCommanderFaceGeometry() {
 
 let archerGeoV12: THREE.BufferGeometry | null = null;
 let commanderGeoV12: THREE.BufferGeometry | null = null;
-let soldierCapeV9: THREE.BufferGeometry | null = null;
 let commanderCapeV9: THREE.BufferGeometry | null = null;
 let soldierPlumeV10: THREE.BufferGeometry | null = null;
 let commanderPlumeV10: THREE.BufferGeometry | null = null;
@@ -493,11 +490,6 @@ function getArcherGeometry() {
 function getCommanderGeometry() {
   if (!commanderGeoV12) commanderGeoV12 = createCommanderGeometry();
   return commanderGeoV12;
-}
-
-function getSoldierCapeGeometry() {
-  if (!soldierCapeV9) soldierCapeV9 = createCapeGeometry(BLUE, BLUE_DK);
-  return soldierCapeV9;
 }
 
 function getCommanderCapeGeometry() {
@@ -639,7 +631,6 @@ function makeHandleTexture(name: string, commander = false): NameTag | null {
 
 export function Army({ count, names = [], commanders = [], cinematic, duration = 8, skipCommander = false }: ArmyProps) {
   const bodies = useRef<THREE.InstancedMesh>(null);
-  const soldierCapes = useRef<THREE.InstancedMesh>(null);
   const soldierPlumes = useRef<THREE.InstancedMesh>(null);
   const bowHolds = useRef<THREE.InstancedMesh>(null);
   const drawArms = useRef<THREE.InstancedMesh>(null);
@@ -657,7 +648,6 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
   const pos = useMemo(() => new THREE.Vector3(), []);
   const archerGeo = useMemo(() => getArcherGeometry(), []);
   const commanderGeo = useMemo(() => getCommanderGeometry(), []);
-  const soldierCapeGeo = useMemo(() => getSoldierCapeGeometry(), []);
   const commanderCapeGeo = useMemo(() => getCommanderCapeGeometry(), []);
   const soldierPlumeGeo = useMemo(() => getSoldierPlumeGeometry(), []);
   const commanderPlumeGeo = useMemo(() => getCommanderPlumeGeometry(), []);
@@ -813,7 +803,6 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
     if (bodies.current) {
       const n = layout.rest.length;
       bodies.current.count = n;
-      if (soldierCapes.current) soldierCapes.current.count = n;
       if (soldierPlumes.current) soldierPlumes.current.count = n;
       if (bowHolds.current) bowHolds.current.count = n;
       if (drawArms.current) drawArms.current.count = n;
@@ -829,7 +818,6 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
         dummy.scale.setScalar(scale);
         dummy.updateMatrix();
         stamp(bodies.current, i);
-        stamp(soldierCapes.current, i);
         stamp(soldierPlumes.current, i);
         _bodyQ.setFromEuler(_limbEul.set(cycle.rx, cycle.ry, cycle.rz, "XYZ"));
         const holdRx = (1 - cycle.raise) * -1.18;
@@ -857,7 +845,6 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
         }
       }
       bodies.current.instanceMatrix.needsUpdate = true;
-      if (soldierCapes.current) soldierCapes.current.instanceMatrix.needsUpdate = true;
       if (soldierPlumes.current) soldierPlumes.current.instanceMatrix.needsUpdate = true;
       if (bowHolds.current) bowHolds.current.instanceMatrix.needsUpdate = true;
       if (drawArms.current) drawArms.current.instanceMatrix.needsUpdate = true;
@@ -1028,9 +1015,6 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
             clearcoatRoughness={0.45}
           />
         )}
-      </instancedMesh>
-      <instancedMesh key="cape-v9" ref={soldierCapes} args={[soldierCapeGeo, undefined, instanceCap]} frustumCulled={false}>
-        <meshStandardMaterial color="#0437f2" roughness={0.88} metalness={0} envMapIntensity={0.08} side={THREE.DoubleSide} />
       </instancedMesh>
       <instancedMesh ref={soldierPlumes} args={[soldierPlumeGeo, undefined, instanceCap]} frustumCulled={false}>
         <meshStandardMaterial vertexColors roughness={0.86} metalness={0} side={THREE.DoubleSide} />
