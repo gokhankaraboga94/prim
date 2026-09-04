@@ -150,8 +150,8 @@ const SLIT = "#040406";
 const LEATHER = "#141210";
 const PLUME = "#0c0c0e";
 const PLUME_HI = "#1a1a1e";
-const BLUE = "#1e5bff";
-const BLUE_DK = "#0a2a9a";
+const BLUE = "#163a78";
+const BLUE_DK = "#0c2452";
 const BLACK = "#070709";
 const BLACK_LINING = "#121218";
 
@@ -284,38 +284,38 @@ function arm(side: -1 | 1) {
 }
 
 function wrapCape(cloth: string, lining: string) {
-  const drape = new THREE.PlaneGeometry(0.92, 1.55, 12, 12);
+  const drape = new THREE.PlaneGeometry(0.88, 0.82, 12, 10);
   const pos = drape.attributes.position;
   for (let i = 0; i < pos.count; i++) {
     const x = pos.getX(i);
     const y = pos.getY(i);
-    const u = x / 0.46;
-    const flare = 0.2 + Math.max(0, 0.55 - y) * 0.08;
-    const ang = u * 1.05;
-    pos.setX(i, Math.sin(ang) * flare * 1.08);
-    pos.setZ(i, -Math.cos(ang) * flare * 1.25 - 0.02);
+    const u = x / 0.44;
+    const flare = 0.18 + Math.max(0, 0.2 - y) * 0.06;
+    const ang = u * 1.02;
+    pos.setX(i, Math.sin(ang) * flare * 1.05);
+    pos.setZ(i, -Math.cos(ang) * flare * 1.22 - 0.02);
   }
   drape.computeVertexNormals();
-  const inner = new THREE.PlaneGeometry(0.78, 1.15, 8, 8);
+  const inner = new THREE.PlaneGeometry(0.72, 0.62, 8, 7);
   const ip = inner.attributes.position;
   for (let i = 0; i < ip.count; i++) {
     const x = ip.getX(i);
     const y = ip.getY(i);
-    const u = x / 0.39;
-    const flare = 0.17 + Math.max(0, 0.4 - y) * 0.06;
-    const ang = u * 0.95;
+    const u = x / 0.36;
+    const flare = 0.15 + Math.max(0, 0.12 - y) * 0.05;
+    const ang = u * 0.92;
     ip.setX(i, Math.sin(ang) * flare);
-    ip.setZ(i, -Math.cos(ang) * flare * 1.15 - 0.06);
+    ip.setZ(i, -Math.cos(ang) * flare * 1.12 - 0.05);
   }
   inner.computeVertexNormals();
   return [
-    part(drape, cloth, 0, 0.52, 0),
-    part(inner, lining, 0, 0.38, 0),
-    part(new THREE.BoxGeometry(0.52, 0.2, 0.2), cloth, 0, 1.2, -0.08),
-    part(new THREE.BoxGeometry(0.18, 0.16, 0.22), cloth, -0.14, 1.2, 0.08),
-    part(new THREE.BoxGeometry(0.18, 0.16, 0.22), cloth, 0.14, 1.2, 0.08),
-    part(new THREE.BoxGeometry(0.14, 1.2, 0.08), cloth, -0.24, 0.55, 0.02, 0, 0.22, 0.06),
-    part(new THREE.BoxGeometry(0.14, 1.2, 0.08), cloth, 0.24, 0.55, 0.02, 0, -0.22, -0.06),
+    part(drape, cloth, 0, 0.86, 0),
+    part(inner, lining, 0, 0.78, 0),
+    part(new THREE.BoxGeometry(0.5, 0.18, 0.2), cloth, 0, 1.2, -0.08),
+    part(new THREE.BoxGeometry(0.17, 0.14, 0.2), cloth, -0.14, 1.2, 0.08),
+    part(new THREE.BoxGeometry(0.17, 0.14, 0.2), cloth, 0.14, 1.2, 0.08),
+    part(new THREE.BoxGeometry(0.13, 0.7, 0.08), cloth, -0.23, 0.86, 0.02, 0, 0.2, 0.05),
+    part(new THREE.BoxGeometry(0.13, 0.7, 0.08), cloth, 0.23, 0.86, 0.02, 0, -0.2, -0.05),
   ];
 }
 
@@ -352,41 +352,60 @@ function createPlumeGeometry(tall: boolean) {
   return mergeParts(helmPlume(tall), PLUME);
 }
 
-let archerGeoV4: THREE.BufferGeometry | null = null;
-let commanderGeoV4: THREE.BufferGeometry | null = null;
-let soldierCapeV4: THREE.BufferGeometry | null = null;
-let commanderCapeV4: THREE.BufferGeometry | null = null;
-let soldierPlumeV4: THREE.BufferGeometry | null = null;
-let commanderPlumeV4: THREE.BufferGeometry | null = null;
+let archerGeoV5: THREE.BufferGeometry | null = null;
+let commanderGeoV5: THREE.BufferGeometry | null = null;
+let soldierCapeV5: THREE.BufferGeometry | null = null;
+let commanderCapeV5: THREE.BufferGeometry | null = null;
+let soldierPlumeV5: THREE.BufferGeometry | null = null;
+let commanderPlumeV5: THREE.BufferGeometry | null = null;
+let nockArrowGeo: THREE.BufferGeometry | null = null;
+const nockOff = new THREE.Vector3();
 
 function getArcherGeometry() {
-  if (!archerGeoV4) archerGeoV4 = createArcherGeometry();
-  return archerGeoV4;
+  if (!archerGeoV5) archerGeoV5 = createArcherGeometry();
+  return archerGeoV5;
 }
 
 function getCommanderGeometry() {
-  if (!commanderGeoV4) commanderGeoV4 = createCommanderGeometry();
-  return commanderGeoV4;
+  if (!commanderGeoV5) commanderGeoV5 = createCommanderGeometry();
+  return commanderGeoV5;
 }
 
 function getSoldierCapeGeometry() {
-  if (!soldierCapeV4) soldierCapeV4 = createCapeGeometry(BLUE, BLUE_DK);
-  return soldierCapeV4;
+  if (!soldierCapeV5) soldierCapeV5 = createCapeGeometry(BLUE, BLUE_DK);
+  return soldierCapeV5;
 }
 
 function getCommanderCapeGeometry() {
-  if (!commanderCapeV4) commanderCapeV4 = createCapeGeometry(BLACK, BLACK_LINING);
-  return commanderCapeV4;
+  if (!commanderCapeV5) commanderCapeV5 = createCapeGeometry(BLACK, BLACK_LINING);
+  return commanderCapeV5;
 }
 
 function getSoldierPlumeGeometry() {
-  if (!soldierPlumeV4) soldierPlumeV4 = createPlumeGeometry(false);
-  return soldierPlumeV4;
+  if (!soldierPlumeV5) soldierPlumeV5 = createPlumeGeometry(false);
+  return soldierPlumeV5;
 }
 
 function getCommanderPlumeGeometry() {
-  if (!commanderPlumeV4) commanderPlumeV4 = createPlumeGeometry(true);
-  return commanderPlumeV4;
+  if (!commanderPlumeV5) commanderPlumeV5 = createPlumeGeometry(true);
+  return commanderPlumeV5;
+}
+
+function createNockArrowGeometry() {
+  const pieces = [
+    part(new THREE.CylinderGeometry(0.011, 0.013, 0.78, 7), "#6a4a28", 0, 0, 0, Math.PI / 2),
+    part(new THREE.ConeGeometry(0.022, 0.08, 7), "#c8ccd2", 0, 0, 0.42, Math.PI / 2),
+    part(new THREE.BoxGeometry(0.055, 0.012, 0.07), "#8b1d1d", 0, 0.028, -0.32),
+    part(new THREE.BoxGeometry(0.012, 0.055, 0.07), "#8b1d1d", 0.028, 0, -0.32),
+    part(new THREE.BoxGeometry(0.012, 0.055, 0.07), "#8b1d1d", -0.028, 0, -0.32),
+    part(new THREE.BoxGeometry(0.02, 0.02, 0.03), "#3a2a18", 0, 0, -0.4),
+  ];
+  return mergeParts(pieces, "#6a4a28");
+}
+
+function getNockArrowGeometry() {
+  if (!nockArrowGeo) nockArrowGeo = createNockArrowGeometry();
+  return nockArrowGeo;
 }
 
 let swordGeoCache: THREE.BufferGeometry | null = null;
@@ -500,6 +519,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
   const soldierPlumeGeo = useMemo(() => getSoldierPlumeGeometry(), []);
   const commanderPlumeGeo = useMemo(() => getCommanderPlumeGeometry(), []);
   const swordGeo = useMemo(() => getSwordGeometry(), []);
+  const nockGeo = useMemo(() => getNockArrowGeometry(), []);
 
   const visible = Math.min(MAX_SOLDIERS, Math.max(0, Math.floor(count)));
   const instanceCap = Math.min(MAX_SOLDIERS, Math.max(visible, 1));
@@ -604,11 +624,14 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
     }
     const sway = Math.sin(t * 1.35 + soldier) * 0.012;
     return {
-      rx: -0.055 * raise - 0.065 * draw + 0.07 * loose + sway,
-      ry: Math.PI - 0.045 * raise - 0.055 * draw + 0.03 * loose,
-      rz: 0.035 * raise + 0.04 * draw,
-      dz: 0.035 * draw,
-      dy: 0.012 * draw,
+      raise,
+      draw,
+      loose,
+      rx: -0.08 * raise - 0.14 * draw + 0.1 * loose + sway,
+      ry: Math.PI - 0.04 * raise - 0.06 * draw + 0.03 * loose,
+      rz: 0.02 * raise + 0.03 * draw,
+      dz: 0.04 * draw,
+      dy: 0.02 * draw,
     };
   }
 
@@ -623,6 +646,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
       bodies.current.count = n;
       if (soldierCapes.current) soldierCapes.current.count = n;
       if (soldierPlumes.current) soldierPlumes.current.count = n;
+      if (nocks.current) nocks.current.count = n;
       for (let i = 0; i < n; i++) {
         const soldier = layout.rest[i];
         unitPos(i, t + seeds[soldier], form.sizes, pos);
@@ -636,10 +660,28 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
         stamp(bodies.current, i);
         stamp(soldierCapes.current, i);
         stamp(soldierPlumes.current, i);
+        if (nocks.current) {
+          const aim = cycle.raise * (1 - cycle.loose);
+          if (aim > 0.12) {
+            nockOff.set(0.14, 1.04 + cycle.draw * 0.03, 0.22 - cycle.draw * 0.1);
+            nockOff.applyEuler(dummy.rotation);
+            nockOff.multiplyScalar(scale);
+            dummy.position.set(pos.x + nockOff.x, pos.y + nockOff.y, pos.z + nockOff.z);
+            dummy.rotation.set(cycle.rx - 0.18 - cycle.draw * 0.1, cycle.ry, cycle.rz);
+            dummy.scale.setScalar(scale * (0.92 + aim * 0.1));
+            dummy.updateMatrix();
+            nocks.current.setMatrixAt(i, dummy.matrix);
+          } else {
+            dummy.scale.setScalar(0);
+            dummy.updateMatrix();
+            nocks.current.setMatrixAt(i, dummy.matrix);
+          }
+        }
       }
       bodies.current.instanceMatrix.needsUpdate = true;
       if (soldierCapes.current) soldierCapes.current.instanceMatrix.needsUpdate = true;
       if (soldierPlumes.current) soldierPlumes.current.instanceMatrix.needsUpdate = true;
+      if (nocks.current) nocks.current.instanceMatrix.needsUpdate = true;
     }
     if (chiefs.current) {
       const n = Math.min(MAX_COMMANDERS, layout.cmd.length);
@@ -825,6 +867,9 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
       </instancedMesh>
       <instancedMesh ref={swords} args={[swordGeo, undefined, MAX_COMMANDERS]} frustumCulled={false} castShadow>
         <meshPhysicalMaterial vertexColors roughness={0.2} metalness={0.9} envMapIntensity={1.5} clearcoat={0.4} />
+      </instancedMesh>
+      <instancedMesh ref={nocks} args={[nockGeo, undefined, instanceCap]} frustumCulled={false}>
+        <meshStandardMaterial vertexColors roughness={0.55} metalness={0.28} />
       </instancedMesh>
       <instancedMesh ref={arrows} args={[undefined, undefined, MAX_ARROWS]} frustumCulled={false}>
         <cylinderGeometry args={[0.055, 0.02, 1.45, 6]} />
