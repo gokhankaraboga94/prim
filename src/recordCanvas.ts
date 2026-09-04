@@ -1,5 +1,3 @@
-import { REEL_SALLY_AT, REEL_SWORD_START, SWORD_SWING } from "./siegeEvent";
-
 export const REEL_DURATIONS = [3, 5, 6, 7, 10, 15] as const;
 export type ReelDuration = (typeof REEL_DURATIONS)[number];
 
@@ -10,12 +8,12 @@ export function reelFade(duration: number) {
   return Math.min(1.15, Math.max(0.6, duration * 0.14));
 }
 
-/** Face hold until the sword is up, a slow turn, then pull as the sally starts. */
+/** Sword already moving; army must appear inside the first 3s hook. */
 export function reelBeats(duration: number) {
   const fade = reelFade(duration);
-  const cmd = REEL_SWORD_START - REEL_SALLY_AT + SWORD_SWING * 0.5;
-  const turn = Math.min(2.4, Math.max(1.45, duration * 0.17));
-  const army = Math.min(0.5, Math.max(0.28, duration * 0.035));
+  const cmd = 1.05;
+  const turn = Math.min(1.85, Math.max(1.12, duration * 0.12));
+  const army = Math.min(0.55, Math.max(0.22, duration * 0.04));
   let pullStart = cmd + turn + army;
   if (pullStart > duration - fade) pullStart = Math.max(cmd + turn, duration - fade);
   return { cmd, turn, army: Math.max(0, pullStart - cmd - turn), pullStart, fade };

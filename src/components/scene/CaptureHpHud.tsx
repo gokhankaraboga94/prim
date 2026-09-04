@@ -152,7 +152,7 @@ function strokeFill(
 
 function drawTitles(
   canvas: HTMLCanvasElement,
-  phase: "cmd" | "army" | "cta" | "none",
+  phase: "hook" | "army" | "cta" | "none",
   soldiers: number,
   day: number
 ) {
@@ -164,21 +164,25 @@ function drawTitles(
   if (phase === "none") return;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  if (phase === "cmd") {
+  if (phase === "hook") {
     if (day > 0) {
-      ctx.font = "800 58px Outfit, system-ui, sans-serif";
-      strokeFill(ctx, `${day}. GÜN`, w / 2, 70, 16);
+      ctx.font = "800 168px Outfit, system-ui, sans-serif";
+      strokeFill(ctx, `${day}. GÜN`, w / 2, 150, 28);
     }
+    ctx.font = "800 54px Outfit, system-ui, sans-serif";
+    strokeFill(ctx, "KALE KUŞATILDI", w / 2, day > 0 ? 280 : 160, 16);
   } else if (phase === "army") {
     const count = formatCount(soldiers);
-    const big = count.length > 6 ? 120 : count.length > 4 ? 160 : 190;
+    const big = count.length > 6 ? 130 : count.length > 4 ? 170 : 200;
     ctx.font = `800 ${big}px Outfit, system-ui, sans-serif`;
-    strokeFill(ctx, count, w / 2, 130, 24);
-    ctx.font = "800 62px Outfit, system-ui, sans-serif";
-    strokeFill(ctx, "takipçi", w / 2, 250, 16);
+    strokeFill(ctx, count, w / 2, 130, 26);
+    ctx.font = "800 58px Outfit, system-ui, sans-serif";
+    strokeFill(ctx, "kişilik ordu", w / 2, 250, 16);
   } else {
-    ctx.font = "800 84px Outfit, system-ui, sans-serif";
-    strokeFill(ctx, "ORDUYA KATIL", w / 2, 130, 20);
+    ctx.font = "800 88px Outfit, system-ui, sans-serif";
+    strokeFill(ctx, "ORDUYA KATIL", w / 2, 120, 22);
+    ctx.font = "800 48px Outfit, system-ui, sans-serif";
+    strokeFill(ctx, "@wargame2028", w / 2, 210, 14);
   }
 }
 
@@ -199,7 +203,7 @@ function TitlesPlate({ soldiers, duration, day = 0 }: ReelTitlesProps) {
     return c;
   }, []);
   const tex = useMemo(() => {
-    drawTitles(canvas, "cmd", soldiers, day);
+    drawTitles(canvas, "hook", soldiers, day);
     const t = new THREE.CanvasTexture(canvas);
     t.colorSpace = THREE.SRGBColorSpace;
     t.minFilter = THREE.LinearFilter;
@@ -214,16 +218,16 @@ function TitlesPlate({ soldiers, duration, day = 0 }: ReelTitlesProps) {
     const { cmd, turn, pullStart } = reelBeats(duration);
     const ctaLen = Math.min(1.4, Math.max(0.9, duration * 0.18));
     const ctaAt = duration - ctaLen;
-    let phase: "cmd" | "army" | "cta" | "none" = "none";
+    let phase: "hook" | "army" | "cta" | "none" = "none";
     let alpha = 0;
-    if (recT >= 0 && recT < cmd + turn * 0.2) {
-      phase = "cmd";
-      if (recT < 0.3) alpha = recT / 0.3;
-      else if (recT > cmd - 0.28) alpha = Math.max(0, (cmd + turn * 0.2 - recT) / 0.28);
+    if (recT >= 0 && recT < 2.15) {
+      phase = "hook";
+      if (recT < 0.12) alpha = recT / 0.12;
+      else if (recT > 1.75) alpha = Math.max(0, (2.15 - recT) / 0.4);
       else alpha = 1;
-    } else if (recT >= cmd + turn * 0.4 && recT < pullStart + 1.1) {
+    } else if (recT >= cmd + turn * 0.22 && recT < pullStart + 1.25) {
       phase = "army";
-      const into = recT - (cmd + turn * 0.4);
+      const into = recT - (cmd + turn * 0.22);
       const left = pullStart + 1.1 - recT;
       if (into < 0.35) alpha = into / 0.35;
       else if (left < 0.35) alpha = Math.max(0, left / 0.35);
@@ -242,7 +246,9 @@ function TitlesPlate({ soldiers, duration, day = 0 }: ReelTitlesProps) {
     }
     if (mat.current) mat.current.opacity = alpha;
     if (mesh.current) {
-      if (phase === "army") {
+      if (phase === "hook") {
+        mesh.current.position.y = size.height * 0.3;
+      } else if (phase === "army") {
         mesh.current.position.y = size.height * 0.28;
       } else if (phase === "cta") {
         const hpH = Math.max(64, size.height * 0.1);
@@ -322,6 +328,42 @@ export function ReelFade({ duration }: { duration: number }) {
     <Hud renderPriority={2}>
       <OrthographicCamera makeDefault position={[0, 0, 10]} />
       <FadePlate duration={duration} />
+    </Hud>
+  );
+}
+
+function VignettePlate() {
+  const size = useThree((s) => s.size);
+  const tex = useMemo(() => {
+    const c = document.createElement("canvas");
+    c.width = 512;
+    c.height = 512;
+    const ctx = c.getContext("2d");
+    if (!ctx) return null;
+    const g = ctx.createRadialGradient(256, 256, 90, 256, 256, 256);
+    g.addColorStop(0, "rgba(0,0,0,0)");
+    g.addColorStop(0.62, "rgba(0,0,0,0)");
+    g.addColorStop(1, "rgba(0,0,0,0.55)");
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, 512, 512);
+    const t = new THREE.CanvasTexture(c);
+    t.colorSpace = THREE.SRGBColorSpace;
+    return t;
+  }, []);
+  if (!tex) return null;
+  return (
+    <mesh position={[0, 0, 1]} renderOrder={70}>
+      <planeGeometry args={[size.width * 2, size.height * 2]} />
+      <meshBasicMaterial map={tex} transparent depthTest={false} toneMapped={false} />
+    </mesh>
+  );
+}
+
+export function ReelVignette() {
+  return (
+    <Hud renderPriority={1}>
+      <OrthographicCamera makeDefault position={[0, 0, 10]} />
+      <VignettePlate />
     </Hud>
   );
 }

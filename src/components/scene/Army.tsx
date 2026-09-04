@@ -281,7 +281,7 @@ function SwordFlash() {
     const u = swordSwingU(sallyLocal(clock.elapsedTime), 1);
     const hit = u > 0.4 ? Math.sin(((u - 0.4) / 0.6) * Math.PI) : 0;
     if (light.current) {
-      light.current.intensity = hit * 8.5;
+      light.current.intensity = hit * 16;
       light.current.position.set(0, 2.35, FRONT_Z - CMD_STEP - 1.5);
     }
   });
@@ -611,11 +611,11 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
       <instancedMesh key={instanceCap} ref={bodies} args={[archerGeo, undefined, instanceCap]} frustumCulled={false}>
         <meshStandardMaterial vertexColors roughness={0.42} metalness={0.34} />
       </instancedMesh>
-      <instancedMesh ref={chiefs} args={[commanderGeo, undefined, MAX_COMMANDERS]} frustumCulled={false}>
-        <meshStandardMaterial vertexColors roughness={0.42} metalness={0.28} />
+      <instancedMesh ref={chiefs} args={[commanderGeo, undefined, MAX_COMMANDERS]} frustumCulled={false} castShadow>
+        <meshStandardMaterial vertexColors roughness={0.38} metalness={0.32} />
       </instancedMesh>
-      <instancedMesh ref={swords} args={[swordGeo, undefined, MAX_COMMANDERS]} frustumCulled={false}>
-        <meshStandardMaterial vertexColors roughness={0.28} metalness={0.55} />
+      <instancedMesh ref={swords} args={[swordGeo, undefined, MAX_COMMANDERS]} frustumCulled={false} castShadow>
+        <meshStandardMaterial vertexColors roughness={0.22} metalness={0.62} />
       </instancedMesh>
       <instancedMesh ref={arrows} args={[undefined, undefined, MAX_ARROWS]} frustumCulled={false}>
         <cylinderGeometry args={[0.055, 0.02, 1.45, 6]} />

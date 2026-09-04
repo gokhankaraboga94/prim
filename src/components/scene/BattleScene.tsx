@@ -5,13 +5,12 @@ import * as THREE from "three";
 import { Army, armyFrame } from "./Army";
 import { Castle } from "./Castle";
 import { SallyRaid } from "./SallyRaid";
-import { CaptureHpHud, ReelFade, ReelTitles } from "./CaptureHpHud";
+import { CaptureHpHud, ReelFade, ReelTitles, ReelVignette } from "./CaptureHpHud";
 import { castleFrame } from "../../castleLayout";
 import { REEL_HOLD, reelBeats } from "../../recordCanvas";
 import {
   SALLY_START_DELAY,
   SWORD_START,
-  SWORD_SWING,
   sallyLocal,
   setSallyOrigin,
   setSwordStart,
@@ -69,16 +68,25 @@ function CinematicCam({
     const form = armyFrame(soldiers, commanders);
     const castle = castleFrame(level);
     const swing = swordSwingU(sallyLocal(clock.elapsedTime), Math.max(1, commanders));
-    const smash = recT < cmd && swing > 0.28 ? Math.sin(((swing - 0.28) / 0.72) * Math.PI) : 0;
-    const shake = smash * 0.05;
+    const smash = swing > 0.22 ? Math.sin(((swing - 0.22) / 0.78) * Math.PI) : 0;
+    const shake = smash * (recT < cmd + 0.35 ? 0.11 : 0.04);
 
     const cmdZ = form.front;
+    const a0 = {
+      x: 0.72,
+      y: 1.72,
+      z: cmdZ - 5.8,
+      lx: 0.02,
+      ly: 1.28,
+      lz: cmdZ,
+      fov: 24,
+    };
     const a = {
-      x: 1.05,
-      y: 1.92,
-      z: cmdZ - 7.6,
+      x: 1.15,
+      y: 1.98,
+      z: cmdZ - 7.4,
       lx: 0.03,
-      ly: 1.16,
+      ly: 1.18,
       lz: cmdZ,
       fov: 30,
     };
@@ -109,9 +117,9 @@ function CinematicCam({
     let from = a;
     let to = a;
     if (recT <= cmd) {
-      from = a;
+      from = a0;
       to = a;
-      t = 0;
+      t = ease(recT / Math.max(0.25, cmd));
     } else if (recT <= cmd + turn) {
       from = a;
       to = b;
@@ -151,24 +159,33 @@ function useGroundTexture() {
     canvas.height = 512;
     const ctx = canvas.getContext("2d");
     if (!ctx) return null;
-    ctx.fillStyle = "#4a8f38";
-    ctx.fillRect(0, 0, 512, 512);
-    for (let i = 0; i < 4200; i++) {
-      const n = i % 5;
-      ctx.fillStyle = n === 0 ? "#63b34a" : n === 1 ? "#3d7a2c" : n === 2 ? "#5aa83f" : n === 3 ? "#2f6a22" : "#7cbc58";
-      ctx.fillRect(Math.random() * 512, Math.random() * 512, 2 + Math.random() * 7, 2 + Math.random() * 6);
+    canvas.width = 1024;
+    canvas.height = 1024;
+    ctx.fillStyle = "#3f7d32";
+    ctx.fillRect(0, 0, 1024, 1024);
+    for (let i = 0; i < 14000; i++) {
+      const n = i % 7;
+      ctx.fillStyle =
+        n === 0 ? "#6fbf4a" : n === 1 ? "#2e6a24" : n === 2 ? "#57a83c" : n === 3 ? "#24581c" : n === 4 ? "#8fd45c" : n === 5 ? "#4a8a34" : "#1e4a18";
+      ctx.fillRect(Math.random() * 1024, Math.random() * 1024, 2 + Math.random() * 8, 2 + Math.random() * 7);
     }
-    for (let i = 0; i < 80; i++) {
-      ctx.fillStyle = "rgba(90, 70, 40, 0.18)";
+    for (let i = 0; i < 180; i++) {
+      ctx.fillStyle = "rgba(92, 68, 36, 0.22)";
       ctx.beginPath();
-      ctx.ellipse(Math.random() * 512, Math.random() * 512, 8 + Math.random() * 22, 5 + Math.random() * 14, 0, 0, Math.PI * 2);
+      ctx.ellipse(Math.random() * 1024, Math.random() * 1024, 10 + Math.random() * 28, 6 + Math.random() * 16, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    for (let i = 0; i < 40; i++) {
+      ctx.fillStyle = "rgba(20, 40, 14, 0.16)";
+      ctx.beginPath();
+      ctx.ellipse(Math.random() * 1024, Math.random() * 1024, 30 + Math.random() * 70, 18 + Math.random() * 40, 0, 0, Math.PI * 2);
       ctx.fill();
     }
     const tex = new THREE.CanvasTexture(canvas);
     tex.wrapS = THREE.RepeatWrapping;
     tex.wrapT = THREE.RepeatWrapping;
-    tex.repeat.set(42, 42);
-    tex.anisotropy = 8;
+    tex.repeat.set(36, 36);
+    tex.anisotropy = 16;
     tex.colorSpace = THREE.SRGBColorSpace;
     return tex;
   }, []);
@@ -193,11 +210,19 @@ function SkyDome() {
           varying vec3 vPos;
           void main() {
             float h = normalize(vPos).y;
-            vec3 zenith = vec3(0.38, 0.66, 0.96);
-            vec3 mid = vec3(0.58, 0.80, 0.98);
-            vec3 horizon = vec3(0.70, 0.86, 0.98);
-            vec3 col = mix(horizon, mid, smoothstep(-0.12, 0.18, h));
-            col = mix(col, zenith, smoothstep(0.16, 0.82, h));
+            vec3 dir = normalize(vPos);
+            vec3 zenith = vec3(0.22, 0.48, 0.92);
+            vec3 mid = vec3(0.46, 0.72, 0.98);
+            vec3 horizon = vec3(0.62, 0.82, 0.96);
+            vec3 col = mix(horizon, mid, smoothstep(-0.06, 0.22, h));
+            col = mix(col, zenith, smoothstep(0.2, 0.88, h));
+            float sun = pow(max(0.0, dot(dir, normalize(vec3(-0.35, 0.42, 0.28)))), 48.0);
+            col += vec3(1.0, 0.92, 0.7) * sun * 0.85;
+            vec2 c = dir.xz * (1.4 / max(0.12, dir.y + 0.18));
+            float n = fract(sin(dot(floor(c * 3.2), vec2(127.1, 311.7))) * 43758.5453);
+            float n2 = fract(sin(dot(floor(c * 7.0 + 2.4), vec2(269.5, 183.3))) * 43758.5453);
+            float cloud = smoothstep(0.55, 0.92, n * 0.65 + n2 * 0.35) * smoothstep(0.02, 0.28, h) * smoothstep(0.72, 0.22, h);
+            col = mix(col, vec3(0.93, 0.96, 1.0), cloud * 0.42);
             gl_FragColor = vec4(col, 1.0);
           }
         `,
@@ -264,38 +289,81 @@ function Terrain() {
 
   return (
     <group>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow>
         <planeGeometry args={[720, 720]} />
-        <meshStandardMaterial map={ground} color="#6bb34f" roughness={0.92} />
+        <meshStandardMaterial map={ground} color="#5aa044" roughness={0.94} />
       </mesh>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 13]}>
-        <planeGeometry args={[7.4, 24]} />
-        <meshStandardMaterial color="#c4a36a" roughness={0.88} />
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 13]} receiveShadow>
+        <planeGeometry args={[8.2, 28]} />
+        <meshStandardMaterial color="#b89258" roughness={0.9} />
       </mesh>
-      <instancedMesh ref={rocks} args={[undefined, undefined, 24]}>
+      <instancedMesh ref={rocks} args={[undefined, undefined, 24]} castShadow receiveShadow>
         <dodecahedronGeometry args={[0.9, 1]} />
-        <meshStandardMaterial color="#8a8478" roughness={0.95} />
+        <meshStandardMaterial color="#7a7468" roughness={0.92} />
       </instancedMesh>
-      <instancedMesh ref={trunks} args={[undefined, undefined, 22]}>
-        <cylinderGeometry args={[0.22, 0.32, 1.5, 7]} />
-        <meshStandardMaterial color="#5a3a22" roughness={0.9} />
+      <instancedMesh ref={trunks} args={[undefined, undefined, 22]} castShadow>
+        <cylinderGeometry args={[0.22, 0.32, 1.5, 8]} />
+        <meshStandardMaterial color="#4a2e1a" roughness={0.88} />
       </instancedMesh>
-      <instancedMesh ref={canopy} args={[undefined, undefined, 22]}>
-        <sphereGeometry args={[1.15, 8, 6]} />
-        <meshStandardMaterial color="#2f8a38" roughness={0.82} />
+      <instancedMesh ref={canopy} args={[undefined, undefined, 22]} castShadow>
+        <sphereGeometry args={[1.15, 10, 8]} />
+        <meshStandardMaterial color="#2a7a32" roughness={0.78} />
       </instancedMesh>
     </group>
   );
 }
 
-function DayLights() {
+function DayLights({ cinematic = false }: { cinematic?: boolean }) {
+  const sun = useRef<THREE.DirectionalLight>(null);
+  useLayoutEffect(() => {
+    const light = sun.current;
+    if (!light) return;
+    light.castShadow = cinematic;
+    light.shadow.mapSize.set(2048, 2048);
+    light.shadow.camera.near = 4;
+    light.shadow.camera.far = 220;
+    light.shadow.camera.left = -70;
+    light.shadow.camera.right = 70;
+    light.shadow.camera.top = 50;
+    light.shadow.camera.bottom = -18;
+    light.shadow.bias = -0.0008;
+    light.shadow.normalBias = 0.04;
+  }, [cinematic]);
   return (
     <>
-      <ambientLight intensity={0.58} color="#e8e4dc" />
-      <hemisphereLight args={["#b8c8dc", "#4a7a38", 0.62]} />
-      <directionalLight position={[-22, 38, 20]} intensity={2.35} color="#fff6e4" />
-      <directionalLight position={[18, 16, 10]} intensity={0.7} color="#c8d4e8" />
+      <ambientLight intensity={0.42} color="#dce6f2" />
+      <hemisphereLight args={["#9ec4f0", "#3d6a30", 0.78]} />
+      <directionalLight ref={sun} position={[-28, 42, 18]} intensity={2.7} color="#fff4dc" />
+      <directionalLight position={[22, 14, 8]} intensity={0.55} color="#a8c4e8" />
+      <directionalLight position={[6, 8, 56]} intensity={0.85} color="#ffe0b8" />
     </>
+  );
+}
+
+function Embers() {
+  const mesh = useRef<THREE.InstancedMesh>(null);
+  const dummy = useMemo(() => new THREE.Object3D(), []);
+  const seeds = useMemo(() => Float32Array.from({ length: 90 }, () => Math.random()), []);
+  useFrame(({ clock }) => {
+    if (!mesh.current) return;
+    const t = clock.elapsedTime;
+    for (let i = 0; i < 90; i++) {
+      const s = seeds[i];
+      const life = (t * (0.35 + s * 0.45) + s * 8) % 3.2;
+      const u = life / 3.2;
+      dummy.position.set((s - 0.5) * 6.5 + Math.sin(t * 1.4 + i) * 0.4, 1.1 + u * 7.2, 16.2 + (s * 3 - 1.2));
+      const sc = 0.04 + (1 - u) * 0.07;
+      dummy.scale.setScalar(sc);
+      dummy.updateMatrix();
+      mesh.current.setMatrixAt(i, dummy.matrix);
+    }
+    mesh.current.instanceMatrix.needsUpdate = true;
+  });
+  return (
+    <instancedMesh ref={mesh} args={[undefined, undefined, 90]} frustumCulled={false}>
+      <sphereGeometry args={[1, 6, 5]} />
+      <meshBasicMaterial color="#ffb060" toneMapped={false} transparent opacity={0.85} />
+    </instancedMesh>
   );
 }
 
@@ -314,11 +382,12 @@ function SceneContent({
 }: BattleSceneProps) {
   return (
     <>
-      <color attach="background" args={["#8ec6f4"]} />
-      <fog attach="fog" args={["#b9d8f4", 560, 1600]} />
+      <color attach="background" args={["#7eb6ee"]} />
+      <fog attach="fog" args={["#9ec8ee", 380, 1500]} />
       <SkyDome />
-      <DayLights />
+      <DayLights cinematic={cinematic} />
       <Terrain />
+      {cinematic && <Embers />}
       <Castle level={level} pressure={pressure} />
       <SallyRaid soldiers={soldiers} commanders={commanders.length} />
       <Army count={soldiers} names={names} commanders={commanders} cinematic={cinematic} duration={duration} />
@@ -350,6 +419,7 @@ function SceneContent({
       {cinematic && showTitles && (
         <ReelTitles soldiers={soldiers} duration={duration ?? 8} day={day} />
       )}
+      {cinematic && <ReelVignette />}
       {cinematic && <ReelFade duration={duration ?? 8} />}
     </>
   );
@@ -377,7 +447,7 @@ function BattleSceneInner({
       const beats = reelBeats(duration ?? 8);
       const atStart = 3.04 - beats.pullStart;
       setSallyOrigin(SALLY_START_DELAY + atStart - REEL_HOLD);
-      setSwordStart(atStart + beats.cmd - SWORD_SWING * 0.5);
+      setSwordStart(atStart + 0.04);
     } else {
       setSallyOrigin(0);
       setSwordStart(SWORD_START);
@@ -396,7 +466,8 @@ function BattleSceneInner({
 
   return (
     <Canvas
-      dpr={[1, cinematic ? 1.5 : 1.5]}
+      shadows
+      dpr={[1, cinematic ? 2 : 1.5]}
       gl={{
         antialias: true,
         alpha: false,
@@ -411,8 +482,10 @@ function BattleSceneInner({
       style={{ width: "100%", height: "100%", display: "block" }}
       onCreated={({ gl }) => {
         gl.toneMapping = THREE.ACESFilmicToneMapping;
-        gl.toneMappingExposure = 1.32;
-        gl.setClearColor("#8ec6f4", 1);
+        gl.toneMappingExposure = cinematic ? 1.2 : 1.26;
+        gl.shadowMap.enabled = true;
+        gl.shadowMap.type = THREE.PCFSoftShadowMap;
+        gl.setClearColor("#7eb6ee", 1);
         onReady?.(gl.domElement);
       }}
     >

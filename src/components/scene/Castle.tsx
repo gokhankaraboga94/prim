@@ -18,39 +18,43 @@ const STONE_DARK = "#4a4642";
 function useStoneTexture() {
   return useMemo(() => {
     const canvas = document.createElement("canvas");
-    canvas.width = 512;
-    canvas.height = 512;
+    canvas.width = 1024;
+    canvas.height = 1024;
     const ctx = canvas.getContext("2d");
     if (!ctx) return null;
-    ctx.fillStyle = "#6e6860";
-    ctx.fillRect(0, 0, 512, 512);
-    const cols = 10;
-    const rows = 8;
-    const bw = 512 / cols;
-    const bh = 512 / rows;
+    ctx.fillStyle = "#3a3632";
+    ctx.fillRect(0, 0, 1024, 1024);
+    const cols = 12;
+    const rows = 10;
+    const bw = 1024 / cols;
+    const bh = 1024 / rows;
     for (let y = 0; y < rows; y++) {
       const ox = (y % 2) * (bw * 0.5);
       for (let x = -1; x <= cols; x++) {
-        const n = (x * 19 + y * 37 + 11) % 40;
-        const r = 128 + n;
-        const g = 120 + n * 0.65;
-        const b = 108 + n * 0.4;
+        const n = (x * 19 + y * 37 + 11) % 50;
+        const r = 118 + n;
+        const g = 108 + n * 0.55;
+        const b = 96 + n * 0.32;
         ctx.fillStyle = `rgb(${r | 0},${g | 0},${b | 0})`;
-        ctx.fillRect(x * bw + ox + 2, y * bh + 2, bw - 4, bh - 4);
-        ctx.fillStyle = "rgba(255,255,255,0.08)";
-        ctx.fillRect(x * bw + ox + 2, y * bh + 2, bw - 4, 3);
-        ctx.fillStyle = "rgba(0,0,0,0.22)";
-        ctx.fillRect(x * bw + ox + 2, y * bh + bh - 6, bw - 4, 4);
+        ctx.fillRect(x * bw + ox + 3, y * bh + 3, bw - 6, bh - 6);
+        ctx.fillStyle = "rgba(255,255,255,0.14)";
+        ctx.fillRect(x * bw + ox + 3, y * bh + 3, bw - 6, 4);
+        ctx.fillStyle = "rgba(0,0,0,0.32)";
+        ctx.fillRect(x * bw + ox + 3, y * bh + bh - 8, bw - 6, 5);
+        if ((x + y) % 4 === 0) {
+          ctx.fillStyle = "rgba(30, 22, 16, 0.18)";
+          ctx.fillRect(x * bw + ox + 10, y * bh + 10, bw * 0.35, bh * 0.4);
+        }
       }
     }
-    for (let i = 0; i < 120; i++) {
-      ctx.fillStyle = "rgba(50, 80, 40, 0.12)";
-      ctx.fillRect(Math.random() * 512, Math.random() * 512, 3 + Math.random() * 8, 2);
+    for (let i = 0; i < 220; i++) {
+      ctx.fillStyle = "rgba(40, 70, 32, 0.14)";
+      ctx.fillRect(Math.random() * 1024, Math.random() * 1024, 4 + Math.random() * 10, 2);
     }
     const tex = new THREE.CanvasTexture(canvas);
     tex.wrapS = THREE.RepeatWrapping;
     tex.wrapT = THREE.RepeatWrapping;
-    tex.anisotropy = 8;
+    tex.anisotropy = 16;
     tex.colorSpace = THREE.SRGBColorSpace;
     tex.repeat.set(3, 2);
     return tex;
@@ -94,9 +98,9 @@ function Block({
   rotation?: [number, number, number];
 }) {
   return (
-    <mesh position={position} rotation={rotation} castShadow={false}>
+    <mesh position={position} rotation={rotation} castShadow receiveShadow>
       <boxGeometry args={args} />
-      <meshStandardMaterial color={color} map={map ?? undefined} roughness={0.88} metalness={0.04} />
+      <meshStandardMaterial color={color} map={map ?? undefined} roughness={0.82} metalness={0.08} />
     </mesh>
   );
 }
@@ -314,9 +318,9 @@ export function Castle({ level, pressure }: CastleProps) {
   return (
     <group>
     <group position={[0, 0, zShift]} scale={[sx, sy, sz]}>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.03, -3.3]}>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.03, -3.3]} receiveShadow>
         <planeGeometry args={[22.4, 20.2]} />
-        <meshStandardMaterial color="#6a6258" map={stone ?? undefined} />
+        <meshStandardMaterial color="#6a6258" map={stone ?? undefined} roughness={0.9} />
       </mesh>
 
       <Block args={[22.2, wallH, 1.7]} position={[0, wallH / 2, -13.2]} color={STONE} map={stone} />
@@ -347,10 +351,12 @@ export function Castle({ level, pressure }: CastleProps) {
       <SquareTower position={[10.2, 0, -13.4]} height={6.4} size={2.7} map={stone} />
       <SquareTower position={[-10.2, 0, 6.7]} height={5.6} size={2.45} map={stone} />
       <SquareTower position={[10.2, 0, 6.7]} height={5.8} size={2.5} map={stone} />
-      <Flame position={[-10.2, 6.05, 6.7]} scale={1.05} />
-      <Flame position={[10.2, 6.25, 6.7]} scale={1.05} />
-      <Flame position={[-10.2, 6.65, -13.4]} scale={0.9} />
-      <Flame position={[10.2, 6.85, -13.4]} scale={0.9} />
+      <Flame position={[-10.2, 6.05, 6.7]} scale={1.2} />
+      <Flame position={[10.2, 6.25, 6.7]} scale={1.2} />
+      <Flame position={[-10.2, 6.65, -13.4]} scale={1.05} />
+      <Flame position={[10.2, 6.85, -13.4]} scale={1.05} />
+      <Flame position={[-2.1, 7.35, -2.4]} scale={0.85} />
+      <Flame position={[1.1, 8.85, -1.15]} scale={1.1} />
       <RoundTower position={[-2.1, 0, -2.4]} height={7.1} radius={1.55} map={stone} />
 
       <group position={[1.1, 0, -1.15]}>
@@ -362,15 +368,15 @@ export function Castle({ level, pressure }: CastleProps) {
         <Merlons count={4} width={4} y={8.92} z={-2.15} axis="z" map={stone} />
         <mesh position={[0, 5.1, 2.14]}>
           <boxGeometry args={[0.32, 0.9, 0.1]} />
-          <meshStandardMaterial color="#1a1612" roughness={0.7} />
+          <meshStandardMaterial color="#1a1612" emissive="#ffb060" emissiveIntensity={0.22} roughness={0.7} />
         </mesh>
         <mesh position={[-1.1, 3.4, 2.14]}>
           <boxGeometry args={[0.22, 0.55, 0.1]} />
-          <meshStandardMaterial color="#1a1612" roughness={0.7} />
+          <meshStandardMaterial color="#1a1612" emissive="#ff9a40" emissiveIntensity={0.16} roughness={0.7} />
         </mesh>
         <mesh position={[1.15, 6.4, 2.14]}>
           <boxGeometry args={[0.22, 0.5, 0.1]} />
-          <meshStandardMaterial color="#1a1612" roughness={0.7} />
+          <meshStandardMaterial color="#1a1612" emissive="#ffb060" emissiveIntensity={0.18} roughness={0.7} />
         </mesh>
       </group>
 
@@ -391,7 +397,9 @@ export function Castle({ level, pressure }: CastleProps) {
         <meshStandardMaterial color="#6a1212" />
       </mesh>
 
-      <pointLight position={[0, 2.4, 7.1]} color="#ff6a2a" intensity={0.35 + fire * 0.55} distance={14} />
+      <pointLight position={[0, 2.4, 7.1]} color="#ff6a2a" intensity={0.7 + fire * 0.9} distance={18} />
+      <pointLight position={[-10.2, 6.2, 6.7]} color="#ff7a30" intensity={0.55} distance={10} />
+      <pointLight position={[10.2, 6.4, 6.7]} color="#ff7a30" intensity={0.55} distance={10} />
     </group>
     <Defenders grow={grow} wallH={wallH} />
     </group>
