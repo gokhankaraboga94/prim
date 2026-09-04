@@ -150,8 +150,8 @@ const SLIT = "#040406";
 const LEATHER = "#141210";
 const PLUME = "#0c0c0e";
 const PLUME_HI = "#1a1a1e";
-const BLUE = "#163a78";
-const BLUE_DK = "#0c2452";
+const BLUE = "#0a1c42";
+const BLUE_DK = "#061228";
 const BLACK = "#070709";
 const BLACK_LINING = "#121218";
 
@@ -284,38 +284,38 @@ function arm(side: -1 | 1) {
 }
 
 function wrapCape(cloth: string, lining: string) {
-  const drape = new THREE.PlaneGeometry(0.88, 0.82, 12, 10);
+  const drape = new THREE.PlaneGeometry(0.78, 0.46, 10, 8);
   const pos = drape.attributes.position;
   for (let i = 0; i < pos.count; i++) {
     const x = pos.getX(i);
     const y = pos.getY(i);
-    const u = x / 0.44;
-    const flare = 0.18 + Math.max(0, 0.2 - y) * 0.06;
-    const ang = u * 1.02;
-    pos.setX(i, Math.sin(ang) * flare * 1.05);
-    pos.setZ(i, -Math.cos(ang) * flare * 1.22 - 0.02);
+    const u = x / 0.39;
+    const flare = 0.16 + Math.max(0, 0.08 - y) * 0.04;
+    const ang = u * 0.95;
+    pos.setX(i, Math.sin(ang) * flare);
+    pos.setZ(i, -Math.cos(ang) * flare * 1.15 - 0.02);
   }
   drape.computeVertexNormals();
-  const inner = new THREE.PlaneGeometry(0.72, 0.62, 8, 7);
+  const inner = new THREE.PlaneGeometry(0.62, 0.36, 8, 6);
   const ip = inner.attributes.position;
   for (let i = 0; i < ip.count; i++) {
     const x = ip.getX(i);
     const y = ip.getY(i);
-    const u = x / 0.36;
-    const flare = 0.15 + Math.max(0, 0.12 - y) * 0.05;
-    const ang = u * 0.92;
+    const u = x / 0.31;
+    const flare = 0.14 + Math.max(0, 0.04 - y) * 0.03;
+    const ang = u * 0.88;
     ip.setX(i, Math.sin(ang) * flare);
-    ip.setZ(i, -Math.cos(ang) * flare * 1.12 - 0.05);
+    ip.setZ(i, -Math.cos(ang) * flare * 1.08 - 0.04);
   }
   inner.computeVertexNormals();
   return [
-    part(drape, cloth, 0, 0.86, 0),
-    part(inner, lining, 0, 0.78, 0),
-    part(new THREE.BoxGeometry(0.5, 0.18, 0.2), cloth, 0, 1.2, -0.08),
-    part(new THREE.BoxGeometry(0.17, 0.14, 0.2), cloth, -0.14, 1.2, 0.08),
-    part(new THREE.BoxGeometry(0.17, 0.14, 0.2), cloth, 0.14, 1.2, 0.08),
-    part(new THREE.BoxGeometry(0.13, 0.7, 0.08), cloth, -0.23, 0.86, 0.02, 0, 0.2, 0.05),
-    part(new THREE.BoxGeometry(0.13, 0.7, 0.08), cloth, 0.23, 0.86, 0.02, 0, -0.2, -0.05),
+    part(drape, cloth, 0, 0.98, 0),
+    part(inner, lining, 0, 0.94, 0),
+    part(new THREE.BoxGeometry(0.46, 0.14, 0.18), cloth, 0, 1.18, -0.08),
+    part(new THREE.BoxGeometry(0.16, 0.12, 0.18), cloth, -0.13, 1.18, 0.07),
+    part(new THREE.BoxGeometry(0.16, 0.12, 0.18), cloth, 0.13, 1.18, 0.07),
+    part(new THREE.BoxGeometry(0.12, 0.42, 0.07), cloth, -0.2, 0.98, 0.02, 0, 0.18, 0.04),
+    part(new THREE.BoxGeometry(0.12, 0.42, 0.07), cloth, 0.2, 0.98, 0.02, 0, -0.18, -0.04),
   ];
 }
 
@@ -352,43 +352,43 @@ function createPlumeGeometry(tall: boolean) {
   return mergeParts(helmPlume(tall), PLUME);
 }
 
-let archerGeoV5: THREE.BufferGeometry | null = null;
-let commanderGeoV5: THREE.BufferGeometry | null = null;
-let soldierCapeV5: THREE.BufferGeometry | null = null;
-let commanderCapeV5: THREE.BufferGeometry | null = null;
-let soldierPlumeV5: THREE.BufferGeometry | null = null;
-let commanderPlumeV5: THREE.BufferGeometry | null = null;
+let archerGeoV6: THREE.BufferGeometry | null = null;
+let commanderGeoV6: THREE.BufferGeometry | null = null;
+let soldierCapeV6: THREE.BufferGeometry | null = null;
+let commanderCapeV6: THREE.BufferGeometry | null = null;
+let soldierPlumeV6: THREE.BufferGeometry | null = null;
+let commanderPlumeV6: THREE.BufferGeometry | null = null;
 let nockArrowGeo: THREE.BufferGeometry | null = null;
 const nockOff = new THREE.Vector3();
 
 function getArcherGeometry() {
-  if (!archerGeoV5) archerGeoV5 = createArcherGeometry();
-  return archerGeoV5;
+  if (!archerGeoV6) archerGeoV6 = createArcherGeometry();
+  return archerGeoV6;
 }
 
 function getCommanderGeometry() {
-  if (!commanderGeoV5) commanderGeoV5 = createCommanderGeometry();
-  return commanderGeoV5;
+  if (!commanderGeoV6) commanderGeoV6 = createCommanderGeometry();
+  return commanderGeoV6;
 }
 
 function getSoldierCapeGeometry() {
-  if (!soldierCapeV5) soldierCapeV5 = createCapeGeometry(BLUE, BLUE_DK);
-  return soldierCapeV5;
+  if (!soldierCapeV6) soldierCapeV6 = createCapeGeometry(BLUE, BLUE_DK);
+  return soldierCapeV6;
 }
 
 function getCommanderCapeGeometry() {
-  if (!commanderCapeV5) commanderCapeV5 = createCapeGeometry(BLACK, BLACK_LINING);
-  return commanderCapeV5;
+  if (!commanderCapeV6) commanderCapeV6 = createCapeGeometry(BLACK, BLACK_LINING);
+  return commanderCapeV6;
 }
 
 function getSoldierPlumeGeometry() {
-  if (!soldierPlumeV5) soldierPlumeV5 = createPlumeGeometry(false);
-  return soldierPlumeV5;
+  if (!soldierPlumeV6) soldierPlumeV6 = createPlumeGeometry(false);
+  return soldierPlumeV6;
 }
 
 function getCommanderPlumeGeometry() {
-  if (!commanderPlumeV5) commanderPlumeV5 = createPlumeGeometry(true);
-  return commanderPlumeV5;
+  if (!commanderPlumeV6) commanderPlumeV6 = createPlumeGeometry(true);
+  return commanderPlumeV6;
 }
 
 function createNockArrowGeometry() {
@@ -842,8 +842,8 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
           clearcoatRoughness={0.45}
         />
       </instancedMesh>
-      <instancedMesh ref={soldierCapes} args={[soldierCapeGeo, undefined, instanceCap]} frustumCulled={false} castShadow>
-        <meshStandardMaterial vertexColors roughness={0.92} metalness={0} envMapIntensity={0.08} side={THREE.DoubleSide} />
+      <instancedMesh key="cape-v6" ref={soldierCapes} args={[soldierCapeGeo, undefined, instanceCap]} frustumCulled={false} castShadow>
+        <meshStandardMaterial color="#0a1c42" roughness={0.95} metalness={0} envMapIntensity={0.04} side={THREE.DoubleSide} />
       </instancedMesh>
       <instancedMesh ref={soldierPlumes} args={[soldierPlumeGeo, undefined, instanceCap]} frustumCulled={false}>
         <meshStandardMaterial vertexColors roughness={0.86} metalness={0} side={THREE.DoubleSide} />
