@@ -308,20 +308,20 @@ function cinemaCuts(ctx: ShotCtx): CinemaCut[] {
     },
     {
       at: 14.8,
-      dur: 3.6,
+      dur: 2.8,
       a: pose(15, 6.2, back + 2, -4, 1.7, 42, 40),
       b: pose(19, 10.5, back + 8, -2, 2.2, 36, 42),
     },
     {
-      at: 18.4,
-      dur: 3.2,
-      a: pose(16, 55, back + 40, 0, 4, mid, 48),
-      b: pose(10, 32, back + 24, 0, 3, mid, 44),
+      at: 17.6,
+      dur: 3.6,
+      a: pose(2, 48, mid + 8, 0, 0.4, mid, 50),
+      b: pose(4, 32, back + 10, 0, 1.2, mid, 46),
     },
     {
-      at: 21.6,
-      dur: 3.2,
-      a: pose(10, 32, back + 24, 0, 3, mid, 44),
+      at: 21.2,
+      dur: 3.6,
+      a: pose(16, 55, back + 40, 0, 4, mid, 48),
       b: pose(6, 14, back + 14, 0, 2.2, gate, 40),
     },
     {
