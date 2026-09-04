@@ -212,9 +212,9 @@ function Gatehouse({
       </mesh>
       <Block args={[2.7, 0.32, 0.55]} position={[0, 2.52, 1.42]} color={STONE_2} map={stone} />
 
-      <mesh position={[0, 1.2, -0.35]}>
-        <boxGeometry args={[2.2, 2.4, 0.85]} />
-        <meshStandardMaterial color="#0c0907" />
+      <mesh position={[0, 1.2, -0.55]}>
+        <boxGeometry args={[2.15, 2.35, 0.55]} />
+        <meshStandardMaterial color="#0c0907" polygonOffset polygonOffsetFactor={1} polygonOffsetUnits={1} />
       </mesh>
 
       <group ref={leftDoor} position={[-1.14, 1.12, 1.28]}>
@@ -319,9 +319,16 @@ export function Castle({ level }: CastleProps) {
   return (
     <group>
     <group position={[0, 0, zShift]} scale={[sx, sy, sz]}>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.004, -4.05]} receiveShadow>
-        <planeGeometry args={[21.6, 18.2]} />
-        <meshStandardMaterial color="#6a6258" map={stone ?? undefined} roughness={0.9} />
+      <mesh position={[0, 0.05, -4.05]} receiveShadow>
+        <boxGeometry args={[21.6, 0.08, 18.2]} />
+        <meshStandardMaterial
+          color="#6a6258"
+          map={stone ?? undefined}
+          roughness={0.9}
+          polygonOffset
+          polygonOffsetFactor={-2}
+          polygonOffsetUnits={-2}
+        />
       </mesh>
 
       <Block args={[24.4, wallH, 2.15]} position={[0, wallH / 2, -13.2]} color={STONE} map={stone} />

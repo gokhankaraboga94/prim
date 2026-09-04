@@ -828,6 +828,11 @@ select:focus {
   color: #1a1308;
 }
 
+.shot-pills button {
+  font-size: 13px;
+  padding: 7px 10px;
+}
+
 .check-row {
   display: flex;
   align-items: center;

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { BattleScene } from "./scene/BattleScene";
 import { SceneErrorBoundary } from "./SceneErrorBoundary";
 import { recordCanvas, saveReelBlob, wait } from "../recordCanvas";
+import type { ShotId } from "../shotModes";
 
 type ReelCaptureProps = {
   soldiers: number;
@@ -16,10 +17,11 @@ type ReelCaptureProps = {
   warLook?: boolean;
   day?: number;
   skipCommander?: boolean;
+  shotMode?: ShotId | null;
   onClose: () => void;
 };
 
-export function ReelCapture({ soldiers, names, commanders = [], level, pressure, hp, maxHp, seconds, showTitles = true, warLook = false, day = 0, skipCommander = false, onClose }: ReelCaptureProps) {
+export function ReelCapture({ soldiers, names, commanders = [], level, pressure, hp, maxHp, seconds, showTitles = true, warLook = false, day = 0, skipCommander = false, shotMode = null, onClose }: ReelCaptureProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [phase, setPhase] = useState<"boot" | "rec" | "done" | "err">("boot");
   const [blob, setBlob] = useState<Blob | null>(null);
@@ -104,6 +106,7 @@ export function ReelCapture({ soldiers, names, commanders = [], level, pressure,
             warLook={warLook}
             day={day}
             skipCommander={skipCommander}
+            shotMode={shotMode}
             onReady={(canvas) => {
               canvasRef.current = canvas;
             }}

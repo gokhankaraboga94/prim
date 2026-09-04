@@ -20,6 +20,7 @@ import {
 import { useGame } from "../hooks/useGame";
 import { ReelCapture } from "../components/ReelCapture";
 import { REEL_DURATIONS, type ReelDuration } from "../recordCanvas";
+import { SHOT_MODES, type ShotId } from "../shotModes";
 
 export function AdminPage() {
   const { game, recruits, level, power, pressure, target, maxHp } = useGame();
@@ -33,6 +34,7 @@ export function AdminPage() {
   const [reelSeconds, setReelSeconds] = useState<ReelDuration>(7);
   const [reelText, setReelText] = useState(true);
   const [reelSkipCmd, setReelSkipCmd] = useState(false);
+  const [reelShot, setReelShot] = useState<ShotId | null>(null);
   const [reelDay, setReelDay] = useState("1");
   const [capturing, setCapturing] = useState(false);
   const [editIndex, setEditIndex] = useState<number | null>(null);
@@ -215,7 +217,7 @@ export function AdminPage() {
         <div>
           <p className="join-kicker">Komuta paneli</p>
           <h1>Kuşatma yönetimi</h1>
-          <p className="join-kicker">sürüm 15 — 20 sn kayıt</p>
+          <p className="join-kicker">sürüm 16 — kale zemin, çekim A–Z</p>
         </div>
         <button type="button" className="btn-ghost" onClick={() => signOut(auth)}>
           Çıkış
@@ -454,6 +456,23 @@ export function AdminPage() {
             İşaretlersen kayıt komutan yakın planı olmadan, kamera dönüşünden başlar. “X. GÜN” ve
             “KALE KUŞATILDI” o anda çıkar. İşaretlemezsen eski usül komutanla başlar.
           </p>
+          <label>Çekim modu</label>
+          <p className="muted">
+            Hiçbirini seçmezsen eski usül kayıt. Birini seçersen kamera o açıyla çeker. Tekrar basınca
+            seçim kalkar.
+          </p>
+          <div className="dur-pills shot-pills">
+            {SHOT_MODES.map((mode) => (
+              <button
+                key={mode.id}
+                type="button"
+                className={reelShot === mode.id ? "on" : ""}
+                onClick={() => setReelShot((cur) => (cur === mode.id ? null : mode.id))}
+              >
+                {mode.label}
+              </button>
+            ))}
+          </div>
           <button type="button" className="btn-gold" onClick={() => setCapturing(true)}>
             Kaydı başlat
           </button>
@@ -482,6 +501,7 @@ export function AdminPage() {
           seconds={reelSeconds}
           showTitles={reelText}
           skipCommander={reelSkipCmd}
+          shotMode={reelShot}
           day={Math.max(0, Math.floor(Number(reelDay)) || 0)}
           onClose={() => setCapturing(false)}
         />

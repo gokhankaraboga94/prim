@@ -8,6 +8,7 @@ import { SallyRaid } from "./SallyRaid";
 import { CaptureHpHud, ReelFade, ReelTitles, ReelVignette } from "./CaptureHpHud";
 import { castleFrame } from "../../castleLayout";
 import { REEL_HOLD, reelBeats } from "../../recordCanvas";
+import { sampleShotMode, type ShotId } from "../../shotModes";
 import {
   SALLY_START_DELAY,
   SWORD_START,
@@ -31,6 +32,7 @@ type BattleSceneProps = {
   warLook?: boolean;
   day?: number;
   skipCommander?: boolean;
+  shotMode?: ShotId | null;
   onReady?: (canvas: HTMLCanvasElement) => void;
 };
 
@@ -55,12 +57,14 @@ function CinematicCam({
   level,
   commanders = 0,
   skipCommander = false,
+  shotMode = null,
 }: {
   duration: number;
   soldiers: number;
   level: number;
   commanders?: number;
   skipCommander?: boolean;
+  shotMode?: ShotId | null;
 }) {
   const look = useMemo(() => new THREE.Vector3(), []);
   useFrame(({ camera, clock, size }) => {
@@ -107,14 +111,33 @@ function CinematicCam({
     };
     const castleFit = distToFit(castle.width, castle.height, aspect, 1.18);
     const c = {
-      x: castle.width * 0.04,
-      y: castle.midY + 32 + castleFit * 0.12,
-      z: castle.midZ + castleFit * 0.78,
+      x: castle.width * 0.1,
+      y: castle.midY + 62 + castleFit * 0.28,
+      z: castle.midZ + castleFit * 0.48,
       lx: 0,
-      ly: castle.midY * 0.55,
-      lz: castle.midZ,
-      fov: 40,
+      ly: castle.midY * 0.78,
+      lz: castle.midZ + 6,
+      fov: 38,
     };
+
+    if (shotMode) {
+      const warm = clock.elapsedTime;
+      const sampleT = warm < REEL_HOLD ? (warm / REEL_HOLD) * duration : recT;
+      const pose = sampleShotMode(shotMode, sampleT, duration, skipCommander, {
+        cmdZ,
+        form,
+        castle,
+        fit,
+        castleFit,
+      });
+      const persp = camera as THREE.PerspectiveCamera;
+      persp.fov = pose.fov;
+      persp.updateProjectionMatrix();
+      camera.position.set(pose.x + shake, pose.y, pose.z);
+      look.set(pose.lx + shake * 0.25, pose.ly, pose.lz);
+      camera.lookAt(look);
+      return;
+    }
 
     let t = 0;
     let from = a;
@@ -313,11 +336,11 @@ function Terrain() {
     <group>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow>
         <planeGeometry args={[720, 720]} />
-        <meshStandardMaterial map={ground} color="#4e963c" roughness={0.92} envMapIntensity={0.2} />
+        <meshStandardMaterial map={ground} color="#4e963c" roughness={0.92} envMapIntensity={0.2} depthWrite={false} />
       </mesh>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 13]} receiveShadow>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.06, 13]} receiveShadow>
         <planeGeometry args={[9.2, 32]} />
-        <meshStandardMaterial color="#a8824c" roughness={0.88} />
+        <meshStandardMaterial color="#a8824c" roughness={0.88} polygonOffset polygonOffsetFactor={-1} polygonOffsetUnits={-1} />
       </mesh>
       <instancedMesh ref={rocks} args={[undefined, undefined, 24]} castShadow receiveShadow>
         <dodecahedronGeometry args={[0.9, 1]} />
@@ -428,6 +451,7 @@ function SceneContent({
   showTitles = true,
   day = 0,
   skipCommander = false,
+  shotMode = null,
 }: BattleSceneProps) {
   return (
     <>
@@ -448,6 +472,7 @@ function SceneContent({
           level={level}
           commanders={commanders.length}
           skipCommander={skipCommander}
+          shotMode={shotMode}
         />
       ) : (
         <OrbitControls
@@ -491,6 +516,7 @@ function BattleSceneInner({
   warLook,
   day,
   skipCommander = false,
+  shotMode = null,
   onReady,
 }: BattleSceneProps) {
   const [active, setActive] = useState(() => typeof document === "undefined" || !document.hidden);
@@ -527,10 +553,11 @@ function BattleSceneInner({
         powerPreference: "high-performance",
         stencil: false,
         depth: true,
+        logarithmicDepthBuffer: true,
         preserveDrawingBuffer: Boolean(cinematic),
         failIfMajorPerformanceCaveat: false,
       }}
-      camera={{ fov: 36, near: 0.12, far: 3200, position: cinematic ? [12, 11, 74] : [9, 21, 96] }}
+      camera={{ fov: 36, near: 0.35, far: 2400, position: cinematic ? [12, 11, 74] : [9, 21, 96] }}
       frameloop={active ? "always" : "demand"}
       style={{ width: "100%", height: "100%", display: "block" }}
       onCreated={({ gl }) => {
@@ -557,6 +584,7 @@ function BattleSceneInner({
         warLook={warLook}
         day={day}
         skipCommander={skipCommander}
+        shotMode={shotMode}
       />
     </Canvas>
   );
