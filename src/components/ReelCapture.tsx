@@ -86,6 +86,7 @@ export function ReelCapture({ soldiers, names, commanders = [], level, pressure,
   return (
     <div className="reel-capture">
       <div className="reel-capture-scene">
+        <div className="reel-capture-frame">
         <SceneErrorBoundary>
           <BattleScene
             soldiers={soldiers}
@@ -105,6 +106,7 @@ export function ReelCapture({ soldiers, names, commanders = [], level, pressure,
             }}
           />
         </SceneErrorBoundary>
+        </div>
       </div>
 
       {phase === "err" && (

@@ -859,6 +859,16 @@ select:focus {
 .reel-capture-scene {
   position: absolute;
   inset: 0;
+  display: grid;
+  place-items: center;
+  background: #000;
+}
+
+.reel-capture-frame {
+  width: min(1080px, calc(100vh * 9 / 16));
+  height: min(1920px, 100vh);
+  aspect-ratio: 9 / 16;
+  background: #000;
 }
 
 .reel-capture-hud,

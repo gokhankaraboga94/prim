@@ -155,30 +155,28 @@ function CinematicCam({
 function useGroundTexture() {
   return useMemo(() => {
     const canvas = document.createElement("canvas");
-    canvas.width = 512;
-    canvas.height = 512;
+    canvas.width = 2048;
+    canvas.height = 2048;
     const ctx = canvas.getContext("2d");
     if (!ctx) return null;
-    canvas.width = 1024;
-    canvas.height = 1024;
-    ctx.fillStyle = "#3f7d32";
-    ctx.fillRect(0, 0, 1024, 1024);
-    for (let i = 0; i < 14000; i++) {
+    ctx.fillStyle = "#357028";
+    ctx.fillRect(0, 0, 2048, 2048);
+    for (let i = 0; i < 28000; i++) {
       const n = i % 7;
       ctx.fillStyle =
         n === 0 ? "#6fbf4a" : n === 1 ? "#2e6a24" : n === 2 ? "#57a83c" : n === 3 ? "#24581c" : n === 4 ? "#8fd45c" : n === 5 ? "#4a8a34" : "#1e4a18";
-      ctx.fillRect(Math.random() * 1024, Math.random() * 1024, 2 + Math.random() * 8, 2 + Math.random() * 7);
+      ctx.fillRect(Math.random() * 2048, Math.random() * 2048, 2 + Math.random() * 9, 2 + Math.random() * 8);
     }
-    for (let i = 0; i < 180; i++) {
-      ctx.fillStyle = "rgba(92, 68, 36, 0.22)";
+    for (let i = 0; i < 260; i++) {
+      ctx.fillStyle = "rgba(92, 68, 36, 0.24)";
       ctx.beginPath();
-      ctx.ellipse(Math.random() * 1024, Math.random() * 1024, 10 + Math.random() * 28, 6 + Math.random() * 16, 0, 0, Math.PI * 2);
+      ctx.ellipse(Math.random() * 2048, Math.random() * 2048, 12 + Math.random() * 34, 7 + Math.random() * 18, 0, 0, Math.PI * 2);
       ctx.fill();
     }
-    for (let i = 0; i < 40; i++) {
-      ctx.fillStyle = "rgba(20, 40, 14, 0.16)";
+    for (let i = 0; i < 70; i++) {
+      ctx.fillStyle = "rgba(20, 40, 14, 0.18)";
       ctx.beginPath();
-      ctx.ellipse(Math.random() * 1024, Math.random() * 1024, 30 + Math.random() * 70, 18 + Math.random() * 40, 0, 0, Math.PI * 2);
+      ctx.ellipse(Math.random() * 2048, Math.random() * 2048, 36 + Math.random() * 80, 20 + Math.random() * 46, 0, 0, Math.PI * 2);
       ctx.fill();
     }
     const tex = new THREE.CanvasTexture(canvas);
@@ -216,13 +214,14 @@ function SkyDome() {
             vec3 horizon = vec3(0.62, 0.82, 0.96);
             vec3 col = mix(horizon, mid, smoothstep(-0.06, 0.22, h));
             col = mix(col, zenith, smoothstep(0.2, 0.88, h));
-            float sun = pow(max(0.0, dot(dir, normalize(vec3(-0.35, 0.42, 0.28)))), 48.0);
-            col += vec3(1.0, 0.92, 0.7) * sun * 0.85;
+            float sun = pow(max(0.0, dot(dir, normalize(vec3(-0.35, 0.42, 0.28)))), 64.0);
+            col += vec3(1.0, 0.93, 0.72) * sun * 1.05;
             vec2 c = dir.xz * (1.4 / max(0.12, dir.y + 0.18));
             float n = fract(sin(dot(floor(c * 3.2), vec2(127.1, 311.7))) * 43758.5453);
             float n2 = fract(sin(dot(floor(c * 7.0 + 2.4), vec2(269.5, 183.3))) * 43758.5453);
-            float cloud = smoothstep(0.55, 0.92, n * 0.65 + n2 * 0.35) * smoothstep(0.02, 0.28, h) * smoothstep(0.72, 0.22, h);
-            col = mix(col, vec3(0.93, 0.96, 1.0), cloud * 0.42);
+            float n3 = fract(sin(dot(floor(c * 13.0 + 5.1), vec2(91.7, 47.3))) * 43758.5453);
+            float cloud = smoothstep(0.48, 0.9, n * 0.5 + n2 * 0.32 + n3 * 0.18) * smoothstep(0.02, 0.28, h) * smoothstep(0.78, 0.2, h);
+            col = mix(col, vec3(0.95, 0.97, 1.0), cloud * 0.5);
             gl_FragColor = vec4(col, 1.0);
           }
         `,
@@ -291,11 +290,11 @@ function Terrain() {
     <group>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow>
         <planeGeometry args={[720, 720]} />
-        <meshStandardMaterial map={ground} color="#5aa044" roughness={0.94} />
+        <meshStandardMaterial map={ground} color="#4e963c" roughness={0.92} envMapIntensity={0.2} />
       </mesh>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 13]} receiveShadow>
-        <planeGeometry args={[8.2, 28]} />
-        <meshStandardMaterial color="#b89258" roughness={0.9} />
+        <planeGeometry args={[9.2, 32]} />
+        <meshStandardMaterial color="#a8824c" roughness={0.88} />
       </mesh>
       <instancedMesh ref={rocks} args={[undefined, undefined, 24]} castShadow receiveShadow>
         <dodecahedronGeometry args={[0.9, 1]} />
@@ -345,7 +344,7 @@ function DayLights({ cinematic = false }: { cinematic?: boolean }) {
     const light = sun.current;
     if (!light) return;
     light.castShadow = cinematic;
-    light.shadow.mapSize.set(2048, 2048);
+    light.shadow.mapSize.set(4096, 4096);
     light.shadow.camera.near = 4;
     light.shadow.camera.far = 340;
     light.shadow.camera.left = -110;
@@ -494,7 +493,7 @@ function BattleSceneInner({
   return (
     <Canvas
       shadows
-      dpr={[1, cinematic ? 2 : 1.5]}
+      dpr={cinematic ? 2 : [1, 1.75]}
       gl={{
         antialias: true,
         alpha: false,
@@ -509,7 +508,8 @@ function BattleSceneInner({
       style={{ width: "100%", height: "100%", display: "block" }}
       onCreated={({ gl }) => {
         gl.toneMapping = THREE.ACESFilmicToneMapping;
-        gl.toneMappingExposure = cinematic ? 1.2 : 1.26;
+        gl.toneMappingExposure = cinematic ? 1.16 : 1.22;
+        gl.outputColorSpace = THREE.SRGBColorSpace;
         gl.shadowMap.enabled = true;
         gl.shadowMap.type = THREE.PCFSoftShadowMap;
         gl.setClearColor("#7eb6ee", 1);

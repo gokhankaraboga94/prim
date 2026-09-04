@@ -17,46 +17,53 @@ const STONE_DARK = "#4a4642";
 
 function useStoneTexture() {
   return useMemo(() => {
+    const size = 2048;
     const canvas = document.createElement("canvas");
-    canvas.width = 1024;
-    canvas.height = 1024;
+    canvas.width = size;
+    canvas.height = size;
     const ctx = canvas.getContext("2d");
     if (!ctx) return null;
-    ctx.fillStyle = "#3a3632";
-    ctx.fillRect(0, 0, 1024, 1024);
-    const cols = 12;
-    const rows = 10;
-    const bw = 1024 / cols;
-    const bh = 1024 / rows;
+    ctx.fillStyle = "#2e2a26";
+    ctx.fillRect(0, 0, size, size);
+    const cols = 14;
+    const rows = 12;
+    const bw = size / cols;
+    const bh = size / rows;
     for (let y = 0; y < rows; y++) {
       const ox = (y % 2) * (bw * 0.5);
       for (let x = -1; x <= cols; x++) {
-        const n = (x * 19 + y * 37 + 11) % 50;
-        const r = 118 + n;
-        const g = 108 + n * 0.55;
-        const b = 96 + n * 0.32;
+        const n = (x * 19 + y * 37 + 11) % 56;
+        const r = 112 + n;
+        const g = 102 + n * 0.52;
+        const b = 90 + n * 0.3;
         ctx.fillStyle = `rgb(${r | 0},${g | 0},${b | 0})`;
-        ctx.fillRect(x * bw + ox + 3, y * bh + 3, bw - 6, bh - 6);
-        ctx.fillStyle = "rgba(255,255,255,0.14)";
-        ctx.fillRect(x * bw + ox + 3, y * bh + 3, bw - 6, 4);
-        ctx.fillStyle = "rgba(0,0,0,0.32)";
-        ctx.fillRect(x * bw + ox + 3, y * bh + bh - 8, bw - 6, 5);
-        if ((x + y) % 4 === 0) {
-          ctx.fillStyle = "rgba(30, 22, 16, 0.18)";
-          ctx.fillRect(x * bw + ox + 10, y * bh + 10, bw * 0.35, bh * 0.4);
+        ctx.fillRect(x * bw + ox + 4, y * bh + 4, bw - 8, bh - 8);
+        ctx.fillStyle = "rgba(255,255,255,0.16)";
+        ctx.fillRect(x * bw + ox + 4, y * bh + 4, bw - 8, 5);
+        ctx.fillStyle = "rgba(0,0,0,0.38)";
+        ctx.fillRect(x * bw + ox + 4, y * bh + bh - 10, bw - 8, 6);
+        ctx.fillStyle = "rgba(0,0,0,0.2)";
+        ctx.fillRect(x * bw + ox + bw - 10, y * bh + 4, 4, bh - 8);
+        if ((x + y) % 3 === 0) {
+          ctx.fillStyle = "rgba(28, 20, 14, 0.2)";
+          ctx.fillRect(x * bw + ox + 14, y * bh + 12, bw * 0.4, bh * 0.42);
         }
       }
     }
-    for (let i = 0; i < 220; i++) {
-      ctx.fillStyle = "rgba(40, 70, 32, 0.14)";
-      ctx.fillRect(Math.random() * 1024, Math.random() * 1024, 4 + Math.random() * 10, 2);
+    for (let i = 0; i < 480; i++) {
+      ctx.fillStyle = "rgba(42, 72, 32, 0.16)";
+      ctx.fillRect(Math.random() * size, Math.random() * size, 5 + Math.random() * 14, 2);
+    }
+    for (let i = 0; i < 180; i++) {
+      ctx.fillStyle = `rgba(20,18,16,${0.08 + Math.random() * 0.14})`;
+      ctx.fillRect(Math.random() * size, Math.random() * size, 2 + Math.random() * 18, 1);
     }
     const tex = new THREE.CanvasTexture(canvas);
     tex.wrapS = THREE.RepeatWrapping;
     tex.wrapT = THREE.RepeatWrapping;
     tex.anisotropy = 16;
     tex.colorSpace = THREE.SRGBColorSpace;
-    tex.repeat.set(3, 2);
+    tex.repeat.set(3.4, 2.2);
     return tex;
   }, []);
 }
@@ -100,7 +107,7 @@ function Block({
   return (
     <mesh position={position} rotation={rotation} castShadow receiveShadow>
       <boxGeometry args={args} />
-      <meshStandardMaterial color={color} map={map ?? undefined} roughness={0.82} metalness={0.08} />
+      <meshStandardMaterial color={color} map={map ?? undefined} roughness={0.74} metalness={0.12} envMapIntensity={0.55} />
     </mesh>
   );
 }
@@ -291,7 +298,7 @@ function RoundTower({
   return (
     <group position={position}>
       <mesh position={[0, height / 2, 0]}>
-        <cylinderGeometry args={[radius, radius + 0.12, height, 10]} />
+        <cylinderGeometry args={[radius, radius + 0.12, height, 16]} />
         <meshStandardMaterial color={STONE_2} map={map ?? undefined} />
       </mesh>
       <mesh position={[0, height + 0.08, 0]}>
