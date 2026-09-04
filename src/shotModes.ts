@@ -295,8 +295,8 @@ function cinemaCuts(ctx: ShotCtx): CinemaCut[] {
     {
       at: 7.4,
       dur: 3.6,
-      a: pose(11, 4.8, cmdZ - 3, -3, 1.7, gate + 10, 38),
-      b: pose(8, 3.6, mid - 4, -1, 1.35, 34, 36),
+      a: pose(3, 8, gate - 10, 0, 3, mid, 40),
+      b: pose(10, 18, back + 16, 0, 2.6, mid, 44),
     },
     {
       at: 11,

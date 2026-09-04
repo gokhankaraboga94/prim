@@ -218,7 +218,7 @@ export function AdminPage() {
         <div>
           <p className="join-kicker">Komuta paneli</p>
           <h1>Kuşatma yönetimi</h1>
-          <p className="join-kicker">sürüm 24 — sinema çapraz dalış</p>
+          <p className="join-kicker">sürüm 25 — sinema kaleden orduya</p>
         </div>
         <button type="button" className="btn-ghost" onClick={() => signOut(auth)}>
           Çıkış
@@ -455,7 +455,7 @@ export function AdminPage() {
             Sinema kaydı (30 sn)
           </label>
           <p className="muted">
-            İşaretlersen tek videoda 8 farklı açı kesilir: sağdan ordu, kapı açılışı, düşman hücumu,
+            İşaretlersen tek videoda şu açılar kesilir: sağdan ordu, kapı açılışı, Kaleden orduya,
             ilk çarpışma, Sağ sweep, Tepe bakış, Geniş ustalayan, Çapraz dalış, Yukarı vinç.
             300 / Truva / Yüzüklerin Efendisi tadında 30 saniyelik tanıtım.
           </p>
