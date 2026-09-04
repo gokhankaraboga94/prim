@@ -275,10 +275,12 @@ export const CINEMA_SWORD_P = 9.5;
 type CinemaCut = { at: number; dur: number; a: ShotPose; b: ShotPose };
 
 function cinemaCuts(ctx: ShotCtx): CinemaCut[] {
-  const { cmdZ, form, castle } = ctx;
+  const { cmdZ, form, castle, castleFit } = ctx;
   const mid = form.midZ;
   const back = form.back;
   const gate = castle.front;
+  const cm = castle.midZ;
+  const cy = castle.midY;
   return [
     {
       at: 0,
@@ -330,15 +332,15 @@ function cinemaCuts(ctx: ShotCtx): CinemaCut[] {
     },
     {
       at: 24.8,
-      dur: 2.8,
+      dur: 2.4,
       a: pose(20, 40, back + 18, -4, 2, mid, 42),
       b: pose(2, 3.2, cmdZ - 8, 0, 1.3, cmdZ, 30),
     },
     {
-      at: 27.6,
-      dur: 2.4,
-      a: pose(2, 3.2, cmdZ - 7, 0, 1.3, cmdZ, 34),
-      b: pose(5, 72, mid + 10, 0, 4, mid, 48),
+      at: 27.2,
+      dur: 2.8,
+      a: pose(1.4, 2.4, cmdZ - 8, 0, 1.2, cmdZ, 32),
+      b: pose(7, cy + 68, cm + castleFit * 0.4, 0, cy * 0.75, cm, 38),
     },
   ];
 }
