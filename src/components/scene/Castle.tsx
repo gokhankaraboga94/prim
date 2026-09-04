@@ -214,8 +214,8 @@ function Gatehouse({
       </mesh>
       <Block args={[2.7, 0.32, 0.55]} position={[0, 2.52, 1.42]} color={STONE_2} map={stone} />
 
-      <mesh position={[0, 1.2, 0.05]}>
-        <boxGeometry args={[2.2, 2.4, 2.1]} />
+      <mesh position={[0, 1.2, -0.35]}>
+        <boxGeometry args={[2.2, 2.4, 0.85]} />
         <meshStandardMaterial color="#0c0907" />
       </mesh>
 
@@ -258,11 +258,6 @@ function Gatehouse({
           </mesh>
         ))}
       </group>
-
-      <mesh position={[0, 0.08, 2.15]} rotation={[-0.08, 0, 0]}>
-        <boxGeometry args={[2.6, 0.12, 2.4]} />
-        <meshStandardMaterial color="#5a4630" />
-      </mesh>
 
       <mesh position={[0, 1.15, 1.05]}>
         <boxGeometry args={[0.35, 1.6, 0.08]} />
@@ -332,8 +327,8 @@ export function Castle({ level, pressure }: CastleProps) {
   return (
     <group>
     <group position={[0, 0, zShift]} scale={[sx, sy, sz]}>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.03, -3.3]} receiveShadow>
-        <planeGeometry args={[25.6, 22.4]} />
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.004, -4.05]} receiveShadow>
+        <planeGeometry args={[21.6, 18.2]} />
         <meshStandardMaterial color="#6a6258" map={stone ?? undefined} roughness={0.9} />
       </mesh>
 

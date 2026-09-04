@@ -428,15 +428,16 @@ function SceneContent({
         <OrbitControls
           makeDefault
           enableDamping
-          dampingFactor={0.08}
-          enablePan={false}
-          minDistance={16}
-          maxDistance={280}
-          minPolarAngle={0.12}
-          maxPolarAngle={1.48}
+          dampingFactor={0.06}
+          enablePan
+          panSpeed={1.25}
+          minDistance={2.4}
+          maxDistance={720}
+          minPolarAngle={0}
+          maxPolarAngle={Math.PI * 0.92}
           target={[0, 6, 30]}
-          rotateSpeed={0.95}
-          zoomSpeed={1}
+          rotateSpeed={1.2}
+          zoomSpeed={1.85}
         />
       )}
       {cinematic && maxHp != null && hp != null && (
@@ -503,7 +504,7 @@ function BattleSceneInner({
         preserveDrawingBuffer: Boolean(cinematic),
         failIfMajorPerformanceCaveat: false,
       }}
-      camera={{ fov: 36, near: 0.5, far: 2200, position: cinematic ? [12, 11, 74] : [9, 21, 96] }}
+      camera={{ fov: 36, near: 0.12, far: 3200, position: cinematic ? [12, 11, 74] : [9, 21, 96] }}
       frameloop={active ? "always" : "demand"}
       style={{ width: "100%", height: "100%", display: "block" }}
       onCreated={({ gl }) => {
