@@ -344,13 +344,13 @@ function DayLights({ cinematic = false }: { cinematic?: boolean }) {
     const light = sun.current;
     if (!light) return;
     light.castShadow = cinematic;
-    light.shadow.mapSize.set(4096, 4096);
-    light.shadow.camera.near = 4;
-    light.shadow.camera.far = 340;
-    light.shadow.camera.left = -110;
-    light.shadow.camera.right = 110;
-    light.shadow.camera.top = 90;
-    light.shadow.camera.bottom = -24;
+    light.shadow.mapSize.set(2048, 2048);
+    light.shadow.camera.near = 8;
+    light.shadow.camera.far = 220;
+    light.shadow.camera.left = -64;
+    light.shadow.camera.right = 64;
+    light.shadow.camera.top = 52;
+    light.shadow.camera.bottom = -16;
     light.shadow.bias = -0.0008;
     light.shadow.normalBias = 0.04;
   }, [cinematic]);
@@ -433,8 +433,8 @@ function SceneContent({
           panSpeed={1.25}
           minDistance={2.4}
           maxDistance={720}
-          minPolarAngle={0}
-          maxPolarAngle={Math.PI * 0.92}
+          minPolarAngle={0.18}
+          maxPolarAngle={1.32}
           target={[0, 6, 30]}
           rotateSpeed={1.2}
           zoomSpeed={1.85}
@@ -494,7 +494,7 @@ function BattleSceneInner({
   return (
     <Canvas
       shadows
-      dpr={cinematic ? 2 : [1, 1.75]}
+      dpr={cinematic ? 1.25 : [1, 1.5]}
       gl={{
         antialias: true,
         alpha: false,

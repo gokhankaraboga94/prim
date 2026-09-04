@@ -214,7 +214,7 @@ export function AdminPage() {
         <div>
           <p className="join-kicker">Komuta paneli</p>
           <h1>Kuşatma yönetimi</h1>
-          <p className="join-kicker">sürüm 10 — komutan kaskı, yay, kamera, kapı</p>
+          <p className="join-kicker">sürüm 11 — kayıt akıcı, kamera, ince T</p>
         </div>
         <button type="button" className="btn-ghost" onClick={() => signOut(auth)}>
           Çıkış
@@ -248,9 +248,9 @@ export function AdminPage() {
         </article>
       </section>
 
-      {msg && <p className="admin-msg">{msg}</p>}
+      {msg && !capturing && <p className="admin-msg">{msg}</p>}
 
-      <div className="admin-grid">
+      {!capturing && <div className="admin-grid">
         <section className="admin-card">
           <h2>Asker sayısı</h2>
           <p className="muted">
@@ -455,7 +455,7 @@ export function AdminPage() {
             ))}
           </ul>
         </section>
-      </div>
+      </div>}
 
       {capturing && (
         <ReelCapture

@@ -7,7 +7,8 @@ import { REEL_HOLD, reelBeats } from "../../recordCanvas";
 import { raidCount, sallyHunting, sallyLiveIndex, sallyLocal, sallyRaiderAt, swordStyleAt, swordSwingPose, swordSwingU } from "../../siegeEvent";
 
 const MAX_SOLDIERS = 5000;
-const MAX_LABELS = 2000;
+const MAX_LABELS = 400;
+const MAX_REEL_LABELS = 72;
 const MAX_COMMANDERS = 24;
 const MAX_ARROWS = 28;
 const IDLE_ARROWS = 8;
@@ -238,14 +239,13 @@ function commanderHelm() {
     part(new THREE.BoxGeometry(0.11, 0.3, 0.15), HELM_DK, 0.145, 1.26, 0.1),
     part(new THREE.SphereGeometry(0.152, 12, 10), HELM, -0.1, 1.28, 0.05),
     part(new THREE.SphereGeometry(0.152, 12, 10), HELM, 0.1, 1.28, 0.05),
-    part(new THREE.BoxGeometry(0.255, 0.08, 0.085), SLIT, 0, 1.405, 0.178),
-    part(new THREE.BoxGeometry(0.044, 0.24, 0.085), SLIT, 0, 1.26, 0.18),
-    part(new THREE.BoxGeometry(0.32, 0.024, 0.03), GOLD, 0, 1.452, 0.21),
-    part(new THREE.BoxGeometry(0.32, 0.02, 0.026), GOLD, 0, 1.358, 0.212),
-    part(new THREE.BoxGeometry(0.02, 0.1, 0.026), GOLD, -0.15, 1.405, 0.212),
-    part(new THREE.BoxGeometry(0.02, 0.1, 0.026), GOLD, 0.15, 1.405, 0.212),
-    part(new THREE.BoxGeometry(0.052, 0.26, 0.032), GOLD, 0, 1.265, 0.216),
-    part(new THREE.BoxGeometry(0.018, 0.26, 0.02), GOLD_DK, 0, 1.265, 0.232),
+    part(new THREE.BoxGeometry(0.162, 0.038, 0.068), SLIT, 0, 1.4, 0.186),
+    part(new THREE.BoxGeometry(0.024, 0.15, 0.068), SLIT, 0, 1.292, 0.186),
+    part(new THREE.BoxGeometry(0.188, 0.01, 0.016), GOLD, 0, 1.424, 0.214),
+    part(new THREE.BoxGeometry(0.188, 0.009, 0.014), GOLD, 0, 1.38, 0.214),
+    part(new THREE.BoxGeometry(0.009, 0.042, 0.014), GOLD, -0.09, 1.4, 0.214),
+    part(new THREE.BoxGeometry(0.009, 0.042, 0.014), GOLD, 0.09, 1.4, 0.214),
+    part(new THREE.BoxGeometry(0.026, 0.155, 0.016), GOLD, 0, 1.292, 0.216),
     part(new THREE.BoxGeometry(0.016, 0.28, 0.022), GOLD, -0.2, 1.26, 0.165),
     part(new THREE.BoxGeometry(0.016, 0.28, 0.022), GOLD, 0.2, 1.26, 0.165),
     part(new THREE.BoxGeometry(0.13, 0.016, 0.022), GOLD, -0.155, 1.115, 0.175),
@@ -270,10 +270,10 @@ function commanderFace() {
     part(new THREE.SphereGeometry(0.135, 16, 13), SKIN, 0, 1.365, 0.042),
     part(new THREE.SphereGeometry(0.03, 8, 7), SKIN_DK, 0, 1.305, 0.142),
     part(new THREE.SphereGeometry(0.018, 7, 6), SKIN, 0, 1.318, 0.164),
-    part(new THREE.SphereGeometry(0.017, 8, 6), "#f2eee6", -0.044, 1.408, 0.158),
-    part(new THREE.SphereGeometry(0.017, 8, 6), "#f2eee6", 0.044, 1.408, 0.158),
-    part(new THREE.SphereGeometry(0.009, 6, 5), "#1a1008", -0.044, 1.408, 0.172),
-    part(new THREE.SphereGeometry(0.009, 6, 5), "#1a1008", 0.044, 1.408, 0.172),
+    part(new THREE.SphereGeometry(0.014, 8, 6), "#f2eee6", -0.032, 1.4, 0.162),
+    part(new THREE.SphereGeometry(0.014, 8, 6), "#f2eee6", 0.032, 1.4, 0.162),
+    part(new THREE.SphereGeometry(0.007, 6, 5), "#1a1008", -0.032, 1.4, 0.174),
+    part(new THREE.SphereGeometry(0.007, 6, 5), "#1a1008", 0.032, 1.4, 0.174),
     part(new THREE.BoxGeometry(0.052, 0.009, 0.012), "#6a3a32", 0, 1.242, 0.158),
     part(new THREE.BoxGeometry(0.072, 0.014, 0.032), SKIN_DK, 0, 1.218, 0.122),
   ];
@@ -281,7 +281,7 @@ function commanderFace() {
 
 function horsehairPlume(tall: boolean) {
   const strands: THREE.BufferGeometry[] = [];
-  const n = tall ? 30 : 16;
+  const n = tall ? 14 : 7;
   const baseH = tall ? 0.68 : 0.4;
   const baseY = 1.8;
   const span = tall ? 0.54 : 0.34;
@@ -293,13 +293,9 @@ function horsehairPlume(tall: boolean) {
     const x = ((i % 3) - 1) * 0.013;
     const lean = (u - 0.5) * 0.42;
     const col = i % 3 === 0 ? PLUME_HI : PLUME;
-    strands.push(part(new THREE.BoxGeometry(0.015 + (i % 2) * 0.007, h, 0.026), col, x, baseY + h * 0.36, z, lean * 0.18, 0, 0));
-    if (tall && i % 2 === 0) {
-      strands.push(part(new THREE.BoxGeometry(0.011, h * 0.8, 0.018), PLUME, x + 0.01, baseY + h * 0.26, z + 0.01, lean * 0.24, 0, 0.05));
-    }
+    strands.push(part(new THREE.BoxGeometry(0.018 + (i % 2) * 0.008, h, 0.03), col, x, baseY + h * 0.36, z, lean * 0.18, 0, 0));
   }
   strands.push(part(new THREE.BoxGeometry(0.072, 0.2, 0.11), PLUME, 0, 1.64, -0.24, 0.42));
-  strands.push(part(new THREE.BoxGeometry(0.05, 0.15, 0.08), PLUME_HI, 0, 1.56, -0.28, 0.58));
   return strands;
 }
 
@@ -350,26 +346,10 @@ function fingers(hx: number, hy: number, hz: number, s: -1 | 1, curl: number, sp
   const spread = [-0.026, -0.009, 0.008, 0.026].map((v) => v * spreadMul);
   for (let i = 0; i < 4; i++) {
     const fx = hx + spread[i];
-    const len = 0.05 - i * 0.003;
     const pitch = 0.55 + curl * 0.85;
-    digits.push(part(new THREE.CylinderGeometry(0.01, 0.013, len, 6), LEATHER, fx, hy - 0.018, hz + 0.028, pitch, 0, s * 0.05));
-    digits.push(
-      part(
-        new THREE.CylinderGeometry(0.008, 0.01, len * 0.76, 6),
-        LEATHER,
-        fx,
-        hy - 0.018 - Math.sin(pitch) * len * 0.52,
-        hz + 0.028 + Math.cos(pitch) * len * 0.32,
-        pitch + 0.38,
-        0,
-        s * 0.04
-      )
-    );
-    digits.push(part(new THREE.SphereGeometry(0.01, 5, 4), SKIN, fx, hy - 0.048 - curl * 0.018, hz + 0.05 + curl * 0.016));
+    digits.push(part(new THREE.BoxGeometry(0.013, 0.05, 0.013), LEATHER, fx, hy - 0.028, hz + 0.03, pitch, 0, s * 0.05));
   }
-  digits.push(part(new THREE.CylinderGeometry(0.012, 0.014, 0.04, 6), LEATHER, hx - s * 0.03, hy + 0.01, hz + 0.01, 0.38, 0, s * -0.92));
-  digits.push(part(new THREE.CylinderGeometry(0.01, 0.012, 0.03, 6), LEATHER, hx - s * 0.042, hy + 0.002, hz + 0.028, 0.62 + curl * 0.28, 0, s * -0.72));
-  digits.push(part(new THREE.SphereGeometry(0.011, 5, 4), SKIN, hx - s * 0.05, hy - 0.008, hz + 0.044));
+  digits.push(part(new THREE.BoxGeometry(0.014, 0.036, 0.014), LEATHER, hx - s * 0.032, hy + 0.004, hz + 0.02, 0.4, 0, s * -0.85));
   return digits;
 }
 
@@ -393,15 +373,15 @@ function arm(side: -1 | 1) {
 
 function bowLimb(x: number, y: number, z: number, dir: 1 | -1) {
   const segs: THREE.BufferGeometry[] = [];
-  for (let i = 0; i < 8; i++) {
-    const t = (i + 0.5) / 8;
+  for (let i = 0; i < 5; i++) {
+    const t = (i + 0.5) / 5;
     const a = t * 1.22 * dir;
     const yy = y + Math.sin(a) * 0.52;
     const zz = z + (1 - Math.cos(a)) * 0.15;
     const thick = 0.02 - t * 0.007;
-    segs.push(part(new THREE.CylinderGeometry(thick, thick + 0.003, 0.09, 7), i % 2 ? WOOD_HI : WOOD, x, yy, zz, a, 0, 0));
+    segs.push(part(new THREE.CylinderGeometry(thick, thick + 0.003, 0.12, 6), i % 2 ? WOOD_HI : WOOD, x, yy, zz, a, 0, 0));
   }
-  segs.push(part(new THREE.CylinderGeometry(0.007, 0.013, 0.06, 6), HORN, x, y + dir * 0.52, z + 0.13, dir * 0.38));
+  segs.push(part(new THREE.CylinderGeometry(0.007, 0.013, 0.06, 5), HORN, x, y + dir * 0.52, z + 0.13, dir * 0.38));
   return segs;
 }
 
@@ -506,7 +486,7 @@ function createCommanderFaceGeometry() {
 }
 
 let archerGeoV10: THREE.BufferGeometry | null = null;
-let commanderGeoV10: THREE.BufferGeometry | null = null;
+let commanderGeoV11: THREE.BufferGeometry | null = null;
 let soldierCapeV9: THREE.BufferGeometry | null = null;
 let commanderCapeV9: THREE.BufferGeometry | null = null;
 let soldierPlumeV10: THREE.BufferGeometry | null = null;
@@ -523,8 +503,8 @@ function getArcherGeometry() {
 }
 
 function getCommanderGeometry() {
-  if (!commanderGeoV10) commanderGeoV10 = createCommanderGeometry();
-  return commanderGeoV10;
+  if (!commanderGeoV11) commanderGeoV11 = createCommanderGeometry();
+  return commanderGeoV11;
 }
 
 function getSoldierCapeGeometry() {
@@ -704,6 +684,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
   const layout = useMemo(() => buildLayout(names, commanders, visible), [names, commanders, visible]);
   const form = useMemo(() => ({ sizes: layout.sizes, scale: 1.28 }), [layout.sizes]);
   const steelRough = useMemo(() => {
+    if (cinematic) return null;
     const c = document.createElement("canvas");
     c.width = 512;
     c.height = 512;
@@ -725,14 +706,18 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
     tex.repeat.set(3, 3);
     tex.anisotropy = 8;
     return tex;
-  }, []);
+  }, [cinematic]);
   const labeled = useMemo(() => {
+    const cap = cinematic ? MAX_REEL_LABELS : MAX_LABELS;
     const ids: number[] = [];
-    for (let i = 0; i < visible && ids.length < MAX_LABELS; i++) {
-      if (names[i]) ids.push(i);
+    for (let i = 0; i < visible && ids.length < cap; i++) {
+      if (names[i] && isCommander(names[i], commanders)) ids.push(i);
+    }
+    for (let i = 0; i < visible && ids.length < cap; i++) {
+      if (names[i] && !isCommander(names[i], commanders)) ids.push(i);
     }
     return ids;
-  }, [names, visible]);
+  }, [names, visible, commanders, cinematic]);
   const nameMaps = useMemo(
     () => labeled.map((i) => makeHandleTexture(names[i], isCommander(names[i], commanders))),
     [labeled, names, commanders]
@@ -1041,27 +1026,31 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
 
   return (
     <group>
-      <instancedMesh key={instanceCap} ref={bodies} args={[archerGeo, undefined, instanceCap]} frustumCulled={false} castShadow>
-        <meshPhysicalMaterial
-          vertexColors
-          roughness={0.42}
-          metalness={0.82}
-          roughnessMap={steelRough ?? undefined}
-          envMapIntensity={1.25}
-          clearcoat={0.28}
-          clearcoatRoughness={0.45}
-        />
+      <instancedMesh key={instanceCap} ref={bodies} args={[archerGeo, undefined, instanceCap]} frustumCulled={false} castShadow={!cinematic}>
+        {cinematic ? (
+          <meshStandardMaterial vertexColors roughness={0.46} metalness={0.72} envMapIntensity={0.9} />
+        ) : (
+          <meshPhysicalMaterial
+            vertexColors
+            roughness={0.42}
+            metalness={0.82}
+            roughnessMap={steelRough ?? undefined}
+            envMapIntensity={1.25}
+            clearcoat={0.28}
+            clearcoatRoughness={0.45}
+          />
+        )}
       </instancedMesh>
-      <instancedMesh key="cape-v9" ref={soldierCapes} args={[soldierCapeGeo, undefined, instanceCap]} frustumCulled={false} castShadow>
+      <instancedMesh key="cape-v9" ref={soldierCapes} args={[soldierCapeGeo, undefined, instanceCap]} frustumCulled={false}>
         <meshStandardMaterial color="#0437f2" roughness={0.88} metalness={0} envMapIntensity={0.08} side={THREE.DoubleSide} />
       </instancedMesh>
       <instancedMesh ref={soldierPlumes} args={[soldierPlumeGeo, undefined, instanceCap]} frustumCulled={false}>
         <meshStandardMaterial vertexColors roughness={0.86} metalness={0} side={THREE.DoubleSide} />
       </instancedMesh>
-      <instancedMesh key="bow-v10" ref={bowHolds} args={[bowHoldGeo, undefined, instanceCap]} frustumCulled={false} castShadow>
+      <instancedMesh key="bow-v10" ref={bowHolds} args={[bowHoldGeo, undefined, instanceCap]} frustumCulled={false}>
         <meshStandardMaterial vertexColors roughness={0.52} metalness={0.28} envMapIntensity={0.7} />
       </instancedMesh>
-      <instancedMesh key="draw-v10" ref={drawArms} args={[drawArmGeo, undefined, instanceCap]} frustumCulled={false} castShadow>
+      <instancedMesh key="draw-v10" ref={drawArms} args={[drawArmGeo, undefined, instanceCap]} frustumCulled={false}>
         <meshStandardMaterial vertexColors roughness={0.48} metalness={0.32} envMapIntensity={0.75} />
       </instancedMesh>
       <instancedMesh ref={chiefs} args={[commanderGeo, undefined, MAX_COMMANDERS]} frustumCulled={false} castShadow>

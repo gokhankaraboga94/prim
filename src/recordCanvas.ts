@@ -52,7 +52,7 @@ export async function recordCanvas(canvas: HTMLCanvasElement, seconds: number) {
   const mime = pickMime();
   if (!mime) throw new Error("Bu tarayıcı video kaydını desteklemiyor. Safari veya Chrome dene.");
   const stream = canvas.captureStream(60);
-  const rec = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 28_000_000 });
+  const rec = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 14_000_000 });
   const chunks: BlobPart[] = [];
   rec.ondataavailable = (e) => {
     if (e.data.size) chunks.push(e.data);
