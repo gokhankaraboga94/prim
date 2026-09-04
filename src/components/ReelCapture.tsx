@@ -15,10 +15,11 @@ type ReelCaptureProps = {
   showTitles?: boolean;
   warLook?: boolean;
   day?: number;
+  skipCommander?: boolean;
   onClose: () => void;
 };
 
-export function ReelCapture({ soldiers, names, commanders = [], level, pressure, hp, maxHp, seconds, showTitles = true, warLook = false, day = 0, onClose }: ReelCaptureProps) {
+export function ReelCapture({ soldiers, names, commanders = [], level, pressure, hp, maxHp, seconds, showTitles = true, warLook = false, day = 0, skipCommander = false, onClose }: ReelCaptureProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [phase, setPhase] = useState<"boot" | "rec" | "done" | "err">("boot");
   const [blob, setBlob] = useState<Blob | null>(null);
@@ -40,7 +41,7 @@ export function ReelCapture({ soldiers, names, commanders = [], level, pressure,
         setPhase("err");
         return;
       }
-      await wait(1100);
+      await wait(2300);
       if (stop) return;
       setPhase("rec");
       try {
@@ -102,6 +103,7 @@ export function ReelCapture({ soldiers, names, commanders = [], level, pressure,
             showTitles={showTitles}
             warLook={warLook}
             day={day}
+            skipCommander={skipCommander}
             onReady={(canvas) => {
               canvasRef.current = canvas;
             }}

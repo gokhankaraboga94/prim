@@ -72,9 +72,10 @@ type CaptureHpHudProps = {
   soldiers: number;
   overlay?: boolean;
   duration?: number;
+  skipCommander?: boolean;
 };
 
-function HpPlate({ hp, maxHp, soldiers, duration = 8 }: CaptureHpHudProps) {
+function HpPlate({ hp, maxHp, soldiers, duration = 8, skipCommander = false }: CaptureHpHudProps) {
   const size = useThree((s) => s.size);
   const mat = useRef<THREE.MeshBasicMaterial>(null);
   const canvas = useMemo(() => {
@@ -97,7 +98,7 @@ function HpPlate({ hp, maxHp, soldiers, duration = 8 }: CaptureHpHudProps) {
 
   useFrame(({ clock }) => {
     const recT = clock.elapsedTime - REEL_HOLD;
-    const { pullStart } = reelBeats(duration);
+    const { pullStart } = reelBeats(duration, skipCommander);
     let alpha = 0;
     if (recT >= pullStart) {
       alpha = Math.min(1, (recT - pullStart) / 0.4);
@@ -191,9 +192,10 @@ type ReelTitlesProps = {
   duration: number;
   overlay?: boolean;
   day?: number;
+  skipCommander?: boolean;
 };
 
-function TitlesPlate({ soldiers, duration, day = 0 }: ReelTitlesProps) {
+function TitlesPlate({ soldiers, duration, day = 0, skipCommander = false }: ReelTitlesProps) {
   const size = useThree((s) => s.size);
   const mesh = useRef<THREE.Mesh>(null);
   const canvas = useMemo(() => {
@@ -215,7 +217,7 @@ function TitlesPlate({ soldiers, duration, day = 0 }: ReelTitlesProps) {
 
   useFrame(({ clock }) => {
     const recT = clock.elapsedTime - REEL_HOLD;
-    const { cmd, turn, pullStart } = reelBeats(duration);
+    const { cmd, turn, pullStart } = reelBeats(duration, skipCommander);
     const ctaLen = Math.min(1.4, Math.max(0.9, duration * 0.18));
     const ctaAt = duration - ctaLen;
     let phase: "hook" | "army" | "cta" | "none" = "none";

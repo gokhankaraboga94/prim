@@ -32,6 +32,7 @@ export function AdminPage() {
   const [busy, setBusy] = useState(false);
   const [reelSeconds, setReelSeconds] = useState<ReelDuration>(7);
   const [reelText, setReelText] = useState(true);
+  const [reelSkipCmd, setReelSkipCmd] = useState(false);
   const [reelDay, setReelDay] = useState("1");
   const [capturing, setCapturing] = useState(false);
   const [editIndex, setEditIndex] = useState<number | null>(null);
@@ -214,7 +215,7 @@ export function AdminPage() {
         <div>
           <p className="join-kicker">Komuta paneli</p>
           <h1>Kuşatma yönetimi</h1>
-          <p className="join-kicker">sürüm 12 — düz zırh, kapı, 30/45/60 sn</p>
+          <p className="join-kicker">sürüm 13 — kayıt ısınma, komutansız seçenek</p>
         </div>
         <button type="button" className="btn-ghost" onClick={() => signOut(auth)}>
           Çıkış
@@ -441,6 +442,18 @@ export function AdminPage() {
             />
             Yazı olsun mu
           </label>
+          <label className="check-row">
+            <input
+              type="checkbox"
+              checked={reelSkipCmd}
+              onChange={(e) => setReelSkipCmd(e.target.checked)}
+            />
+            Komutansız kayıt
+          </label>
+          <p className="muted">
+            İşaretlersen kayıt komutan yakın planı olmadan, kamera dönüşünden başlar. “X. GÜN” ve
+            “KALE KUŞATILDI” o anda çıkar. İşaretlemezsen eski usül komutanla başlar.
+          </p>
           <button type="button" className="btn-gold" onClick={() => setCapturing(true)}>
             Kaydı başlat
           </button>
@@ -468,6 +481,7 @@ export function AdminPage() {
           maxHp={maxHp}
           seconds={reelSeconds}
           showTitles={reelText}
+          skipCommander={reelSkipCmd}
           day={Math.max(0, Math.floor(Number(reelDay)) || 0)}
           onClose={() => setCapturing(false)}
         />

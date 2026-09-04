@@ -40,6 +40,7 @@ type ArmyProps = {
   commanders?: string[];
   cinematic?: boolean;
   duration?: number;
+  skipCommander?: boolean;
 };
 
 const MAX_RANKS = 4;
@@ -636,7 +637,7 @@ function makeHandleTexture(name: string, commander = false): NameTag | null {
   return { map, sx, sy };
 }
 
-export function Army({ count, names = [], commanders = [], cinematic, duration = 8 }: ArmyProps) {
+export function Army({ count, names = [], commanders = [], cinematic, duration = 8, skipCommander = false }: ArmyProps) {
   const bodies = useRef<THREE.InstancedMesh>(null);
   const soldierCapes = useRef<THREE.InstancedMesh>(null);
   const soldierPlumes = useRef<THREE.InstancedMesh>(null);
@@ -911,12 +912,13 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
       let nameScale = 1;
       if (cinematic) {
         const recT = t - REEL_HOLD;
-        const beats = reelBeats(duration);
+        const beats = reelBeats(duration, skipCommander);
         if (recT < 0) {
           tag.visible = false;
           continue;
         }
-        if (recT < beats.cmd) nameScale = 0.38;
+        if (skipCommander) nameScale = 1;
+        else if (recT < beats.cmd) nameScale = 0.38;
         else {
           const u = Math.min(1, (recT - beats.cmd) / Math.max(0.2, beats.turn * 0.58));
           const e = u * u * (3 - 2 * u);

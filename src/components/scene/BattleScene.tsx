@@ -30,6 +30,7 @@ type BattleSceneProps = {
   showTitles?: boolean;
   warLook?: boolean;
   day?: number;
+  skipCommander?: boolean;
   onReady?: (canvas: HTMLCanvasElement) => void;
 };
 
@@ -53,17 +54,19 @@ function CinematicCam({
   soldiers,
   level,
   commanders = 0,
+  skipCommander = false,
 }: {
   duration: number;
   soldiers: number;
   level: number;
   commanders?: number;
+  skipCommander?: boolean;
 }) {
   const look = useMemo(() => new THREE.Vector3(), []);
   useFrame(({ camera, clock, size }) => {
     const aspect = size.width / Math.max(1, size.height);
     const recT = Math.max(0, clock.elapsedTime - REEL_HOLD);
-    const { cmd, turn, pullStart } = reelBeats(duration);
+    const { cmd, turn, pullStart } = reelBeats(duration, skipCommander);
 
     const form = armyFrame(soldiers, commanders);
     const castle = castleFrame(level);
@@ -116,7 +119,27 @@ function CinematicCam({
     let t = 0;
     let from = a;
     let to = a;
-    if (recT <= cmd) {
+    const warm = clock.elapsedTime;
+    if (warm < REEL_HOLD) {
+      const u = warm / REEL_HOLD;
+      if (skipCommander) {
+        from = u < 0.45 ? c : b;
+        to = from;
+        t = 0;
+      } else if (u < 0.32) {
+        from = b;
+        to = b;
+        t = 0;
+      } else if (u < 0.62) {
+        from = c;
+        to = c;
+        t = 0;
+      } else {
+        from = a0;
+        to = a0;
+        t = 0;
+      }
+    } else if (recT <= cmd) {
       from = a0;
       to = a;
       t = ease(recT / Math.max(0.25, cmd));
@@ -404,6 +427,7 @@ function SceneContent({
   duration,
   showTitles = true,
   day = 0,
+  skipCommander = false,
 }: BattleSceneProps) {
   return (
     <>
@@ -416,13 +440,14 @@ function SceneContent({
       {cinematic && <Embers />}
       <Castle level={level} pressure={pressure} />
       <SallyRaid soldiers={soldiers} commanders={commanders.length} />
-      <Army count={soldiers} names={names} commanders={commanders} cinematic={cinematic} duration={duration} />
+      <Army count={soldiers} names={names} commanders={commanders} cinematic={cinematic} duration={duration} skipCommander={skipCommander} />
       {cinematic ? (
         <CinematicCam
           duration={duration ?? 8}
           soldiers={soldiers}
           level={level}
           commanders={commanders.length}
+          skipCommander={skipCommander}
         />
       ) : (
         <OrbitControls
@@ -441,10 +466,10 @@ function SceneContent({
         />
       )}
       {cinematic && maxHp != null && hp != null && (
-        <CaptureHpHud hp={hp} maxHp={maxHp} soldiers={soldiers} duration={duration ?? 8} />
+        <CaptureHpHud hp={hp} maxHp={maxHp} soldiers={soldiers} duration={duration ?? 8} skipCommander={skipCommander} />
       )}
       {cinematic && showTitles && (
-        <ReelTitles soldiers={soldiers} duration={duration ?? 8} day={day} />
+        <ReelTitles soldiers={soldiers} duration={duration ?? 8} day={day} skipCommander={skipCommander} />
       )}
       {cinematic && <ReelVignette />}
       {cinematic && <ReelFade duration={duration ?? 8} />}
@@ -465,13 +490,14 @@ function BattleSceneInner({
   showTitles,
   warLook,
   day,
+  skipCommander = false,
   onReady,
 }: BattleSceneProps) {
   const [active, setActive] = useState(() => typeof document === "undefined" || !document.hidden);
 
   useLayoutEffect(() => {
     if (cinematic) {
-      const beats = reelBeats(duration ?? 8);
+      const beats = reelBeats(duration ?? 8, skipCommander);
       const atStart = 3.04 - beats.pullStart;
       setSallyOrigin(SALLY_START_DELAY + atStart - REEL_HOLD);
       setSwordStart(atStart + 0.04);
@@ -483,7 +509,7 @@ function BattleSceneInner({
       setSallyOrigin(0);
       setSwordStart(SWORD_START);
     };
-  }, [cinematic, duration]);
+  }, [cinematic, duration, skipCommander]);
 
   useEffect(() => {
     const onVis = () => setActive(!document.hidden);
@@ -530,6 +556,7 @@ function BattleSceneInner({
         showTitles={showTitles}
         warLook={warLook}
         day={day}
+        skipCommander={skipCommander}
       />
     </Canvas>
   );

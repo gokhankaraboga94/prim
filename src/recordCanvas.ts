@@ -2,30 +2,30 @@ export const REEL_DURATIONS = [3, 5, 6, 7, 10, 15, 30, 45, 60] as const;
 export type ReelDuration = (typeof REEL_DURATIONS)[number];
 
 /** Warmup before MediaRecorder starts — keep in sync with ReelCapture wait. */
-export const REEL_HOLD = 1.05;
+export const REEL_HOLD = 2.25;
 
 export function reelFade(duration: number) {
   return Math.min(1.15, Math.max(0.6, duration * 0.14));
 }
 
 /** Sword already moving; army must appear inside the first 3s hook. */
-export function reelBeats(duration: number) {
+export function reelBeats(duration: number, skipCommander = false) {
   const fade = reelFade(duration);
-  const cmd = 1.05;
+  const cmd = skipCommander ? 0 : 1.05;
   const turn = Math.min(1.85, Math.max(1.12, duration * 0.12));
   const army = Math.min(0.55, Math.max(0.22, duration * 0.04));
   let pullStart = cmd + turn + army;
   if (pullStart > duration - fade) pullStart = Math.max(cmd + turn, duration - fade);
-  return { cmd, turn, army: Math.max(0, pullStart - cmd - turn), pullStart, fade };
+  return { cmd, turn, army: Math.max(0, pullStart - cmd - turn), pullStart, fade, skipCommander };
 }
 
-export function reelHook(duration: number) {
-  const b = reelBeats(duration);
+export function reelHook(duration: number, skipCommander = false) {
+  const b = reelBeats(duration, skipCommander);
   return b.cmd + b.turn * 0.35;
 }
 
-export function reelZoomDur(duration: number) {
-  const b = reelBeats(duration);
+export function reelZoomDur(duration: number, skipCommander = false) {
+  const b = reelBeats(duration, skipCommander);
   return Math.max(0.8, duration - b.pullStart - b.fade * 0.4);
 }
 
