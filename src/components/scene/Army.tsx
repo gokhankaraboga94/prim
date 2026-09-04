@@ -258,38 +258,38 @@ function plateArmor() {
 }
 
 function wrapCape(cloth: string, lining: string) {
-  const drape = new THREE.PlaneGeometry(1.85, 1.55, 14, 12);
+  const drape = new THREE.PlaneGeometry(0.92, 1.55, 12, 12);
   const pos = drape.attributes.position;
   for (let i = 0; i < pos.count; i++) {
     const x = pos.getX(i);
     const y = pos.getY(i);
-    const u = x / 0.925;
-    const flare = 0.34 + Math.max(0, 0.55 - y) * 0.16;
-    const ang = u * 1.35;
-    pos.setX(i, Math.sin(ang) * flare * 2.15);
+    const u = x / 0.46;
+    const flare = 0.2 + Math.max(0, 0.55 - y) * 0.08;
+    const ang = u * 1.05;
+    pos.setX(i, Math.sin(ang) * flare * 1.08);
     pos.setZ(i, -Math.cos(ang) * flare * 1.25 - 0.02);
   }
   drape.computeVertexNormals();
-  const inner = new THREE.PlaneGeometry(1.55, 1.15, 10, 8);
+  const inner = new THREE.PlaneGeometry(0.78, 1.15, 8, 8);
   const ip = inner.attributes.position;
   for (let i = 0; i < ip.count; i++) {
     const x = ip.getX(i);
     const y = ip.getY(i);
-    const u = x / 0.775;
-    const flare = 0.3 + Math.max(0, 0.4 - y) * 0.12;
-    const ang = u * 1.2;
-    ip.setX(i, Math.sin(ang) * flare * 2);
+    const u = x / 0.39;
+    const flare = 0.17 + Math.max(0, 0.4 - y) * 0.06;
+    const ang = u * 0.95;
+    ip.setX(i, Math.sin(ang) * flare);
     ip.setZ(i, -Math.cos(ang) * flare * 1.15 - 0.06);
   }
   inner.computeVertexNormals();
   return [
     part(drape, cloth, 0, 0.52, 0),
     part(inner, lining, 0, 0.38, 0),
-    part(new THREE.BoxGeometry(1.05, 0.2, 0.22), cloth, 0, 1.2, -0.08),
-    part(new THREE.BoxGeometry(0.34, 0.16, 0.26), cloth, -0.24, 1.2, 0.08),
-    part(new THREE.BoxGeometry(0.34, 0.16, 0.26), cloth, 0.24, 1.2, 0.08),
-    part(new THREE.BoxGeometry(0.28, 1.2, 0.1), cloth, -0.46, 0.55, 0.02, 0, 0.35, 0.08),
-    part(new THREE.BoxGeometry(0.28, 1.2, 0.1), cloth, 0.46, 0.55, 0.02, 0, -0.35, -0.08),
+    part(new THREE.BoxGeometry(0.52, 0.2, 0.2), cloth, 0, 1.2, -0.08),
+    part(new THREE.BoxGeometry(0.18, 0.16, 0.22), cloth, -0.14, 1.2, 0.08),
+    part(new THREE.BoxGeometry(0.18, 0.16, 0.22), cloth, 0.14, 1.2, 0.08),
+    part(new THREE.BoxGeometry(0.14, 1.2, 0.08), cloth, -0.24, 0.55, 0.02, 0, 0.22, 0.06),
+    part(new THREE.BoxGeometry(0.14, 1.2, 0.08), cloth, 0.24, 0.55, 0.02, 0, -0.22, -0.06),
   ];
 }
 
@@ -326,41 +326,41 @@ function createPlumeGeometry(tall: boolean) {
   return mergeParts(helmPlume(tall), PLUME);
 }
 
-let archerGeoV2: THREE.BufferGeometry | null = null;
-let commanderGeoV2: THREE.BufferGeometry | null = null;
-let soldierCapeV2: THREE.BufferGeometry | null = null;
-let commanderCapeV2: THREE.BufferGeometry | null = null;
-let soldierPlumeV2: THREE.BufferGeometry | null = null;
-let commanderPlumeV2: THREE.BufferGeometry | null = null;
+let archerGeoV3: THREE.BufferGeometry | null = null;
+let commanderGeoV3: THREE.BufferGeometry | null = null;
+let soldierCapeV3: THREE.BufferGeometry | null = null;
+let commanderCapeV3: THREE.BufferGeometry | null = null;
+let soldierPlumeV3: THREE.BufferGeometry | null = null;
+let commanderPlumeV3: THREE.BufferGeometry | null = null;
 
 function getArcherGeometry() {
-  if (!archerGeoV2) archerGeoV2 = createArcherGeometry();
-  return archerGeoV2;
+  if (!archerGeoV3) archerGeoV3 = createArcherGeometry();
+  return archerGeoV3;
 }
 
 function getCommanderGeometry() {
-  if (!commanderGeoV2) commanderGeoV2 = createCommanderGeometry();
-  return commanderGeoV2;
+  if (!commanderGeoV3) commanderGeoV3 = createCommanderGeometry();
+  return commanderGeoV3;
 }
 
 function getSoldierCapeGeometry() {
-  if (!soldierCapeV2) soldierCapeV2 = createCapeGeometry(BLUE, BLUE_DK);
-  return soldierCapeV2;
+  if (!soldierCapeV3) soldierCapeV3 = createCapeGeometry(BLUE, BLUE_DK);
+  return soldierCapeV3;
 }
 
 function getCommanderCapeGeometry() {
-  if (!commanderCapeV2) commanderCapeV2 = createCapeGeometry(BLACK, BLACK_LINING);
-  return commanderCapeV2;
+  if (!commanderCapeV3) commanderCapeV3 = createCapeGeometry(BLACK, BLACK_LINING);
+  return commanderCapeV3;
 }
 
 function getSoldierPlumeGeometry() {
-  if (!soldierPlumeV2) soldierPlumeV2 = createPlumeGeometry(false);
-  return soldierPlumeV2;
+  if (!soldierPlumeV3) soldierPlumeV3 = createPlumeGeometry(false);
+  return soldierPlumeV3;
 }
 
 function getCommanderPlumeGeometry() {
-  if (!commanderPlumeV2) commanderPlumeV2 = createPlumeGeometry(true);
-  return commanderPlumeV2;
+  if (!commanderPlumeV3) commanderPlumeV3 = createPlumeGeometry(true);
+  return commanderPlumeV3;
 }
 
 let swordGeoCache: THREE.BufferGeometry | null = null;

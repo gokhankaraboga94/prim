@@ -73,22 +73,22 @@ function CinematicCam({
 
     const cmdZ = form.front;
     const a0 = {
-      x: 0.55,
-      y: 1.82,
-      z: cmdZ - 5.4,
+      x: 0.85,
+      y: 2.15,
+      z: cmdZ - 9.2,
       lx: 0.02,
-      ly: 1.38,
+      ly: 1.22,
       lz: cmdZ,
-      fov: 23,
+      fov: 30,
     };
     const a = {
-      x: 1.05,
-      y: 2.08,
-      z: cmdZ - 7.1,
+      x: 1.35,
+      y: 2.35,
+      z: cmdZ - 11.2,
       lx: 0.03,
-      ly: 1.28,
+      ly: 1.18,
       lz: cmdZ,
-      fov: 28,
+      fov: 34,
     };
     const spanX = Math.max(form.width, 12);
     const spanZ = Math.max(8, form.back - form.front + 6);
