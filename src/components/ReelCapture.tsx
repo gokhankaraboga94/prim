@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { BattleScene } from "./scene/BattleScene";
 import { SceneErrorBoundary } from "./SceneErrorBoundary";
 import { recordCanvas, saveReelBlob, wait } from "../recordCanvas";
-import type { ShotId } from "../shotModes";
+import { CINEMA_DURATION, type ShotId } from "../shotModes";
 
 type ReelCaptureProps = {
   soldiers: number;
@@ -18,10 +18,12 @@ type ReelCaptureProps = {
   day?: number;
   skipCommander?: boolean;
   shotMode?: ShotId | null;
+  cinema?: boolean;
   onClose: () => void;
 };
 
-export function ReelCapture({ soldiers, names, commanders = [], level, pressure, hp, maxHp, seconds, showTitles = true, warLook = false, day = 0, skipCommander = false, shotMode = null, onClose }: ReelCaptureProps) {
+export function ReelCapture({ soldiers, names, commanders = [], level, pressure, hp, maxHp, seconds, showTitles = true, warLook = false, day = 0, skipCommander = false, shotMode = null, cinema = false, onClose }: ReelCaptureProps) {
+  const clip = cinema ? CINEMA_DURATION : seconds;
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [phase, setPhase] = useState<"boot" | "rec" | "done" | "err">("boot");
   const [blob, setBlob] = useState<Blob | null>(null);
@@ -47,13 +49,13 @@ export function ReelCapture({ soldiers, names, commanders = [], level, pressure,
       if (stop) return;
       setPhase("rec");
       try {
-        const recorded = await recordCanvas(canvas, seconds);
+        const recorded = await recordCanvas(canvas, clip);
         if (stop) return;
         setBlob(recorded);
         setPreview(URL.createObjectURL(recorded));
         setPhase("done");
         try {
-          await saveReelBlob(recorded, seconds);
+          await saveReelBlob(recorded, clip);
         } catch {
           /* iPhone often needs a second tap */
         }
@@ -66,7 +68,7 @@ export function ReelCapture({ soldiers, names, commanders = [], level, pressure,
     return () => {
       stop = true;
     };
-  }, [seconds]);
+  }, [clip]);
 
   useEffect(() => {
     return () => {
@@ -78,7 +80,7 @@ export function ReelCapture({ soldiers, names, commanders = [], level, pressure,
     if (!blob) return;
     setBusy(true);
     try {
-      await saveReelBlob(blob, seconds);
+      await saveReelBlob(blob, clip);
     } catch {
       setErr("Kayıt paylaşılmadı. Tekrar dene.");
     } finally {
@@ -101,12 +103,13 @@ export function ReelCapture({ soldiers, names, commanders = [], level, pressure,
             hp={hp}
             maxHp={maxHp}
             cinematic
-            duration={seconds}
+            duration={clip}
             showTitles={showTitles}
             warLook={warLook}
             day={day}
             skipCommander={skipCommander}
-            shotMode={shotMode}
+            shotMode={cinema ? null : shotMode}
+            cinema={cinema}
             onReady={(canvas) => {
               canvasRef.current = canvas;
             }}

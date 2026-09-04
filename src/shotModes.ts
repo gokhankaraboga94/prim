@@ -265,3 +265,81 @@ export function sampleShotMode(id: ShotId, recT: number, duration: number, skipC
   if (u < 0.42) return lerpPose(seq[0], seq[1], u / 0.42);
   return lerpPose(seq[1], seq[2], (u - 0.42) / 0.58);
 }
+
+/** One 30s trailer: 8 hard cuts, like 300 / Troy / LOTR. */
+export const CINEMA_DURATION = 30;
+/** Video time when the gate shot starts — sally clock is aligned so doors begin here. */
+export const CINEMA_GATE_AT = 4;
+export const CINEMA_SWORD_P = 9.5;
+
+type CinemaCut = { at: number; dur: number; a: ShotPose; b: ShotPose };
+
+function cinemaCuts(ctx: ShotCtx): CinemaCut[] {
+  const { cmdZ, form, castle, castleFit } = ctx;
+  const mid = form.midZ;
+  const back = form.back;
+  const gate = castle.front;
+  const cm = castle.midZ;
+  const cy = castle.midY;
+  return [
+    {
+      at: 0,
+      dur: 4,
+      a: pose(20, 4.4, back + 3, -8, 1.45, mid, 36),
+      b: pose(17, 4.9, cmdZ + 1, -6, 1.55, cmdZ - 4, 34),
+    },
+    {
+      at: 4,
+      dur: 3.4,
+      a: pose(7, 4.6, gate + 16, 0, 3.4, gate, 32),
+      b: pose(4.2, 4.1, gate + 9, 0, 2.8, gate - 1, 30),
+    },
+    {
+      at: 7.4,
+      dur: 3.6,
+      a: pose(11, 4.8, cmdZ - 3, -3, 1.7, gate + 10, 38),
+      b: pose(8, 3.6, mid - 4, -1, 1.35, 34, 36),
+    },
+    {
+      at: 11,
+      dur: 3.8,
+      a: pose(6.2, 1.9, cmdZ - 2, -1, 1.25, 47, 30),
+      b: pose(4.4, 2.3, cmdZ - 3.5, 0, 1.35, 46, 28),
+    },
+    {
+      at: 14.8,
+      dur: 3.6,
+      a: pose(15, 6.2, back + 2, -4, 1.7, 42, 40),
+      b: pose(19, 10.5, back + 8, -2, 2.2, 36, 42),
+    },
+    {
+      at: 18.4,
+      dur: 3.8,
+      a: pose(23, 12, back + 6, -6, 2.6, 30, 44),
+      b: pose(25, 15, back + 12, -3, 3.2, 26, 44),
+    },
+    {
+      at: 22.2,
+      dur: 4.2,
+      a: pose(16, 17, mid + 4, -2, 8, gate, 40),
+      b: pose(10, cy + 18, gate + 18, 0, cy * 0.55, cm, 38),
+    },
+    {
+      at: 26.4,
+      dur: 3.6,
+      a: pose(9, cy + 22, cm + castleFit * 0.28, 0, cy * 0.62, cm, 38),
+      b: pose(14, cy + 58, cm + castleFit * 0.42, 0, cy * 0.8, cm + 4, 36),
+    },
+  ];
+}
+
+export function sampleCinema(recT: number, ctx: ShotCtx): ShotPose {
+  const cuts = cinemaCuts(ctx);
+  const t = Math.max(0, recT);
+  let cut = cuts[0];
+  for (let i = 0; i < cuts.length; i++) {
+    if (t >= cuts[i].at) cut = cuts[i];
+  }
+  const u = Math.max(0, Math.min(1, (t - cut.at) / Math.max(0.08, cut.dur)));
+  return lerpPose(cut.a, cut.b, u);
+}

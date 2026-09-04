@@ -73,9 +73,10 @@ type CaptureHpHudProps = {
   overlay?: boolean;
   duration?: number;
   skipCommander?: boolean;
+  cinema?: boolean;
 };
 
-function HpPlate({ hp, maxHp, soldiers, duration = 8, skipCommander = false }: CaptureHpHudProps) {
+function HpPlate({ hp, maxHp, soldiers, duration = 8, skipCommander = false, cinema = false }: CaptureHpHudProps) {
   const size = useThree((s) => s.size);
   const mat = useRef<THREE.MeshBasicMaterial>(null);
   const canvas = useMemo(() => {
@@ -100,8 +101,9 @@ function HpPlate({ hp, maxHp, soldiers, duration = 8, skipCommander = false }: C
     const recT = clock.elapsedTime - REEL_HOLD;
     const { pullStart } = reelBeats(duration, skipCommander);
     let alpha = 0;
-    if (recT >= pullStart) {
-      alpha = Math.min(1, (recT - pullStart) / 0.4);
+    const showAt = cinema ? 14.8 : pullStart;
+    if (recT >= showAt) {
+      alpha = Math.min(1, (recT - showAt) / 0.4);
     }
     if (mat.current) mat.current.opacity = alpha;
 
@@ -193,9 +195,10 @@ type ReelTitlesProps = {
   overlay?: boolean;
   day?: number;
   skipCommander?: boolean;
+  cinema?: boolean;
 };
 
-function TitlesPlate({ soldiers, duration, day = 0, skipCommander = false }: ReelTitlesProps) {
+function TitlesPlate({ soldiers, duration, day = 0, skipCommander = false, cinema = false }: ReelTitlesProps) {
   const size = useThree((s) => s.size);
   const mesh = useRef<THREE.Mesh>(null);
   const canvas = useMemo(() => {
@@ -218,8 +221,10 @@ function TitlesPlate({ soldiers, duration, day = 0, skipCommander = false }: Ree
   useFrame(({ clock }) => {
     const recT = clock.elapsedTime - REEL_HOLD;
     const { cmd, turn, pullStart } = reelBeats(duration, skipCommander);
-    const ctaLen = Math.min(1.4, Math.max(0.9, duration * 0.18));
+    const ctaLen = cinema ? 1.6 : Math.min(1.4, Math.max(0.9, duration * 0.18));
     const ctaAt = duration - ctaLen;
+    const armyAt = cinema ? 15 : cmd + turn * 0.22;
+    const armyEnd = cinema ? 19.2 : pullStart + 1.25;
     let phase: "hook" | "army" | "cta" | "none" = "none";
     let alpha = 0;
     if (recT >= 0 && recT < 2.15) {
@@ -227,10 +232,10 @@ function TitlesPlate({ soldiers, duration, day = 0, skipCommander = false }: Ree
       if (recT < 0.12) alpha = recT / 0.12;
       else if (recT > 1.75) alpha = Math.max(0, (2.15 - recT) / 0.4);
       else alpha = 1;
-    } else if (recT >= cmd + turn * 0.22 && recT < pullStart + 1.25) {
+    } else if (recT >= armyAt && recT < armyEnd) {
       phase = "army";
-      const into = recT - (cmd + turn * 0.22);
-      const left = pullStart + 1.1 - recT;
+      const into = recT - armyAt;
+      const left = armyEnd - recT;
       if (into < 0.35) alpha = into / 0.35;
       else if (left < 0.35) alpha = Math.max(0, left / 0.35);
       else alpha = 1;

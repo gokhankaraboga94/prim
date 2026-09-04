@@ -8,7 +8,7 @@ import { SallyRaid } from "./SallyRaid";
 import { CaptureHpHud, ReelFade, ReelTitles, ReelVignette } from "./CaptureHpHud";
 import { castleFrame } from "../../castleLayout";
 import { REEL_HOLD, reelBeats } from "../../recordCanvas";
-import { sampleShotMode, type ShotId } from "../../shotModes";
+import { CINEMA_GATE_AT, CINEMA_SWORD_P, sampleCinema, sampleShotMode, type ShotId } from "../../shotModes";
 import {
   SALLY_START_DELAY,
   SWORD_START,
@@ -33,6 +33,7 @@ type BattleSceneProps = {
   day?: number;
   skipCommander?: boolean;
   shotMode?: ShotId | null;
+  cinema?: boolean;
   onReady?: (canvas: HTMLCanvasElement) => void;
 };
 
@@ -58,6 +59,7 @@ function CinematicCam({
   commanders = 0,
   skipCommander = false,
   shotMode = null,
+  cinema = false,
 }: {
   duration: number;
   soldiers: number;
@@ -65,6 +67,7 @@ function CinematicCam({
   commanders?: number;
   skipCommander?: boolean;
   shotMode?: ShotId | null;
+  cinema?: boolean;
 }) {
   const look = useMemo(() => new THREE.Vector3(), []);
   useFrame(({ camera, clock, size }) => {
@@ -120,16 +123,13 @@ function CinematicCam({
       fov: 38,
     };
 
-    if (shotMode) {
+    if (cinema || shotMode) {
       const warm = clock.elapsedTime;
       const sampleT = warm < REEL_HOLD ? (warm / REEL_HOLD) * duration : recT;
-      const pose = sampleShotMode(shotMode, sampleT, duration, skipCommander, {
-        cmdZ,
-        form,
-        castle,
-        fit,
-        castleFit,
-      });
+      const ctx = { cmdZ, form, castle, fit, castleFit };
+      const pose = cinema
+        ? sampleCinema(sampleT, ctx)
+        : sampleShotMode(shotMode as ShotId, sampleT, duration, skipCommander, ctx);
       const persp = camera as THREE.PerspectiveCamera;
       persp.fov = pose.fov;
       persp.updateProjectionMatrix();
@@ -452,6 +452,7 @@ function SceneContent({
   day = 0,
   skipCommander = false,
   shotMode = null,
+  cinema = false,
 }: BattleSceneProps) {
   return (
     <>
@@ -473,6 +474,7 @@ function SceneContent({
           commanders={commanders.length}
           skipCommander={skipCommander}
           shotMode={shotMode}
+          cinema={cinema}
         />
       ) : (
         <OrbitControls
@@ -491,10 +493,10 @@ function SceneContent({
         />
       )}
       {cinematic && maxHp != null && hp != null && (
-        <CaptureHpHud hp={hp} maxHp={maxHp} soldiers={soldiers} duration={duration ?? 8} skipCommander={skipCommander} />
+        <CaptureHpHud hp={hp} maxHp={maxHp} soldiers={soldiers} duration={duration ?? 8} skipCommander={skipCommander} cinema={cinema} />
       )}
       {cinematic && showTitles && (
-        <ReelTitles soldiers={soldiers} duration={duration ?? 8} day={day} skipCommander={skipCommander} />
+        <ReelTitles soldiers={soldiers} duration={duration ?? 8} day={day} skipCommander={skipCommander} cinema={cinema} />
       )}
       {cinematic && <ReelVignette />}
       {cinematic && <ReelFade duration={duration ?? 8} />}
@@ -517,12 +519,16 @@ function BattleSceneInner({
   day,
   skipCommander = false,
   shotMode = null,
+  cinema = false,
   onReady,
 }: BattleSceneProps) {
   const [active, setActive] = useState(() => typeof document === "undefined" || !document.hidden);
 
   useLayoutEffect(() => {
-    if (cinematic) {
+    if (cinematic && cinema) {
+      setSallyOrigin(SALLY_START_DELAY - REEL_HOLD - CINEMA_GATE_AT);
+      setSwordStart(CINEMA_SWORD_P);
+    } else if (cinematic) {
       const beats = reelBeats(duration ?? 8, skipCommander);
       const atStart = 3.04 - beats.pullStart;
       setSallyOrigin(SALLY_START_DELAY + atStart - REEL_HOLD);
@@ -535,7 +541,7 @@ function BattleSceneInner({
       setSallyOrigin(0);
       setSwordStart(SWORD_START);
     };
-  }, [cinematic, duration, skipCommander]);
+  }, [cinematic, cinema, duration, skipCommander]);
 
   useEffect(() => {
     const onVis = () => setActive(!document.hidden);
@@ -585,6 +591,7 @@ function BattleSceneInner({
         day={day}
         skipCommander={skipCommander}
         shotMode={shotMode}
+        cinema={cinema}
       />
     </Canvas>
   );

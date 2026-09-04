@@ -35,6 +35,7 @@ export function AdminPage() {
   const [reelText, setReelText] = useState(true);
   const [reelSkipCmd, setReelSkipCmd] = useState(false);
   const [reelShot, setReelShot] = useState<ShotId | null>(null);
+  const [reelCinema, setReelCinema] = useState(false);
   const [reelDay, setReelDay] = useState("1");
   const [capturing, setCapturing] = useState(false);
   const [editIndex, setEditIndex] = useState<number | null>(null);
@@ -217,7 +218,7 @@ export function AdminPage() {
         <div>
           <p className="join-kicker">Komuta paneli</p>
           <h1>Kuşatma yönetimi</h1>
-          <p className="join-kicker">sürüm 16 — kale zemin, çekim A–Z</p>
+          <p className="join-kicker">sürüm 17 — sinema kaydı 30 sn</p>
         </div>
         <button type="button" className="btn-ghost" onClick={() => signOut(auth)}>
           Çıkış
@@ -419,7 +420,8 @@ export function AdminPage() {
               <button
                 key={sec}
                 type="button"
-                className={reelSeconds === sec ? "on" : ""}
+                className={!reelCinema && reelSeconds === sec ? "on" : ""}
+                disabled={reelCinema}
                 onClick={() => setReelSeconds(sec)}
               >
                 {sec} sn
@@ -447,6 +449,19 @@ export function AdminPage() {
           <label className="check-row">
             <input
               type="checkbox"
+              checked={reelCinema}
+              onChange={(e) => setReelCinema(e.target.checked)}
+            />
+            Sinema kaydı (30 sn)
+          </label>
+          <p className="muted">
+            İşaretlersen tek videoda 8 farklı açı kesilir: sağdan ordu, kapı açılışı, düşman hücumu,
+            ilk çarpışma, sağdan uzaklaşma, kaleye yükseliş. 300 / Truva / Yüzüklerin Efendisi tadında
+            30 saniyelik tanıtım.
+          </p>
+          <label className="check-row">
+            <input
+              type="checkbox"
               checked={reelSkipCmd}
               onChange={(e) => setReelSkipCmd(e.target.checked)}
             />
@@ -458,15 +473,17 @@ export function AdminPage() {
           </p>
           <label>Çekim modu</label>
           <p className="muted">
-            Hiçbirini seçmezsen eski usül kayıt. Birini seçersen kamera o açıyla çeker. Tekrar basınca
-            seçim kalkar.
+            {reelCinema
+              ? "Sinema kaydı açıkken A–Z çekimler kapalı; 8 açı tek videoda kesilir."
+              : "Hiçbirini seçmezsen eski usül kayıt. Birini seçersen kamera o açıyla çeker. Tekrar basınca seçim kalkar."}
           </p>
           <div className="dur-pills shot-pills">
             {SHOT_MODES.map((mode) => (
               <button
                 key={mode.id}
                 type="button"
-                className={reelShot === mode.id ? "on" : ""}
+                className={!reelCinema && reelShot === mode.id ? "on" : ""}
+                disabled={reelCinema}
                 onClick={() => setReelShot((cur) => (cur === mode.id ? null : mode.id))}
               >
                 {mode.label}
@@ -498,10 +515,11 @@ export function AdminPage() {
           pressure={pressure}
           hp={power}
           maxHp={maxHp}
-          seconds={reelSeconds}
+          seconds={reelCinema ? 30 : reelSeconds}
           showTitles={reelText}
           skipCommander={reelSkipCmd}
-          shotMode={reelShot}
+          shotMode={reelCinema ? null : reelShot}
+          cinema={reelCinema}
           day={Math.max(0, Math.floor(Number(reelDay)) || 0)}
           onClose={() => setCapturing(false)}
         />
