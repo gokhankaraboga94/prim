@@ -143,19 +143,26 @@ function SquareTower({
   map?: THREE.Texture | null;
 }) {
   const top = height + 0.12;
+  const base = size + 0.55;
   return (
     <group position={position}>
+      <Block args={[base, height * 0.22, base]} position={[0, height * 0.11, 0]} color={STONE_2} map={map} />
       <Block args={[size, height, size]} position={[0, height / 2, 0]} color={STONE} map={map} />
-      <Block args={[size + 0.28, 0.28, size + 0.28]} position={[0, top, 0]} color={STONE_3} map={map} />
-      <Merlons count={4} width={size + 0.1} y={top + 0.4} z={size / 2 + 0.06} map={map} />
-      <Merlons count={4} width={size + 0.1} y={top + 0.4} z={-(size / 2 + 0.06)} map={map} />
-      <Merlons count={3} width={size - 0.2} y={top + 0.4} z={size / 2 + 0.06} axis="z" map={map} />
-      <Merlons count={3} width={size - 0.2} y={top + 0.4} z={-(size / 2 + 0.06)} axis="z" map={map} />
-      <mesh position={[0, height * 0.55, size / 2 + 0.02]}>
-        <boxGeometry args={[0.22, 0.7, 0.08]} />
+      <Block args={[size + 0.22, 0.7, size + 0.22]} position={[0, height * 0.62, 0]} color={STONE_2} map={map} />
+      <Block args={[size + 0.36, 0.32, size + 0.36]} position={[0, top, 0]} color={STONE_3} map={map} />
+      <Merlons count={5} width={size + 0.18} y={top + 0.45} z={size / 2 + 0.08} map={map} />
+      <Merlons count={5} width={size + 0.18} y={top + 0.45} z={-(size / 2 + 0.08)} map={map} />
+      <Merlons count={4} width={size} y={top + 0.45} z={size / 2 + 0.08} axis="z" map={map} />
+      <Merlons count={4} width={size} y={top + 0.45} z={-(size / 2 + 0.08)} axis="z" map={map} />
+      <mesh position={[0, height * 0.58, size / 2 + 0.03]}>
+        <boxGeometry args={[0.24, 0.82, 0.1]} />
         <meshStandardMaterial color={STONE_DARK} />
       </mesh>
-      <mesh position={[0.55, height * 0.38, size / 2 + 0.02]}>
+      <mesh position={[-0.55, height * 0.4, size / 2 + 0.03]}>
+        <boxGeometry args={[0.16, 0.48, 0.08]} />
+        <meshStandardMaterial color={STONE_DARK} />
+      </mesh>
+      <mesh position={[0.55, height * 0.34, size / 2 + 0.03]}>
         <boxGeometry args={[0.16, 0.42, 0.08]} />
         <meshStandardMaterial color={STONE_DARK} />
       </mesh>
@@ -187,12 +194,12 @@ function Gatehouse({
 
   return (
     <group position={[0, 0, 6.85]}>
-      <Block args={[1.35, wallH + 1.15, 2.6]} position={[-2.05, (wallH + 1.15) / 2, 0.15]} color={STONE} map={stone} />
-      <Block args={[1.35, wallH + 1.15, 2.6]} position={[2.05, (wallH + 1.15) / 2, 0.15]} color={STONE} map={stone} />
-      <Block args={[5.6, 1.25, 2.75]} position={[0, wallH + 0.95, 0.18]} color={STONE_2} map={stone} />
-      <Block args={[5.9, 0.28, 3]} position={[0, wallH + 1.62, 0.22]} color={STONE_3} map={stone} />
-      <Merlons count={5} width={5.2} y={wallH + 2.05} z={1.45} map={stone} />
-      <Merlons count={5} width={5.2} y={wallH + 2.05} z={-1.05} map={stone} />
+      <Block args={[1.7, wallH + 2.05, 3.15]} position={[-2.25, (wallH + 2.05) / 2, 0.2]} color={STONE} map={stone} />
+      <Block args={[1.7, wallH + 2.05, 3.15]} position={[2.25, (wallH + 2.05) / 2, 0.2]} color={STONE} map={stone} />
+      <Block args={[6.4, 1.55, 3.3]} position={[0, wallH + 1.35, 0.22]} color={STONE_2} map={stone} />
+      <Block args={[6.8, 0.32, 3.55]} position={[0, wallH + 2.2, 0.26]} color={STONE_3} map={stone} />
+      <Merlons count={6} width={6.2} y={wallH + 2.65} z={1.7} map={stone} />
+      <Merlons count={6} width={6.2} y={wallH + 2.65} z={-1.15} map={stone} />
 
       <mesh position={[0, 2.55, 1.42]} rotation={[Math.PI / 2, 0, 0]}>
         <torusGeometry args={[1.28, 0.26, 8, 18, Math.PI]} />
@@ -311,34 +318,39 @@ export function Castle({ level, pressure }: CastleProps) {
   const visualTier = ((level - 1) % 5) + 1;
   const grow = castleGrow(level);
   const { sx, sy, sz, zShift } = castleAxes(grow);
-  const wallH = 3.15 + visualTier * 0.14;
+  const wallH = 3.85 + visualTier * 0.18;
   const fire = Math.min(1, pressure);
-  const merlonCount = 11;
+  const merlonCount = 13;
 
   return (
     <group>
     <group position={[0, 0, zShift]} scale={[sx, sy, sz]}>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.03, -3.3]} receiveShadow>
-        <planeGeometry args={[22.4, 20.2]} />
+        <planeGeometry args={[25.6, 22.4]} />
         <meshStandardMaterial color="#6a6258" map={stone ?? undefined} roughness={0.9} />
       </mesh>
 
-      <Block args={[22.2, wallH, 1.7]} position={[0, wallH / 2, -13.2]} color={STONE} map={stone} />
-      <Block args={[8.85, wallH, 1.7]} position={[-6.55, wallH / 2, 6.55]} color={STONE} map={stone} />
-      <Block args={[8.85, wallH, 1.7]} position={[6.55, wallH / 2, 6.55]} color={STONE} map={stone} />
-      <Block args={[1.7, wallH, 20.2]} position={[-10.05, wallH / 2, -3.325]} color={STONE} map={stone} />
-      <Block args={[1.7, wallH, 20.2]} position={[10.05, wallH / 2, -3.325]} color={STONE} map={stone} />
+      <Block args={[24.4, wallH, 2.15]} position={[0, wallH / 2, -13.2]} color={STONE} map={stone} />
+      <Block args={[9.4, wallH, 2.15]} position={[-6.7, wallH / 2, 6.55]} color={STONE} map={stone} />
+      <Block args={[9.4, wallH, 2.15]} position={[6.7, wallH / 2, 6.55]} color={STONE} map={stone} />
+      <Block args={[2.15, wallH, 21.6]} position={[-10.85, wallH / 2, -3.325]} color={STONE} map={stone} />
+      <Block args={[2.15, wallH, 21.6]} position={[10.85, wallH / 2, -3.325]} color={STONE} map={stone} />
+      <Block args={[21.6, 0.22, 0.85]} position={[0, wallH - 0.05, -12.35]} color={STONE_3} map={stone} />
+      <Block args={[8.2, 0.22, 0.85]} position={[-6.7, wallH - 0.05, 5.7]} color={STONE_3} map={stone} />
+      <Block args={[8.2, 0.22, 0.85]} position={[6.7, wallH - 0.05, 5.7]} color={STONE_3} map={stone} />
+      <Block args={[0.85, 0.22, 19.6]} position={[-10.05, wallH - 0.05, -3.325]} color={STONE_3} map={stone} />
+      <Block args={[0.85, 0.22, 19.6]} position={[10.05, wallH - 0.05, -3.325]} color={STONE_3} map={stone} />
 
-      <Merlons count={merlonCount} width={21.2} y={wallH + 0.32} z={-13.2} map={stone} />
-      <group position={[-6.55, 0, 0]}>
-        <Merlons count={5} width={8} y={wallH + 0.32} z={6.55} map={stone} />
+      <Merlons count={merlonCount} width={23.2} y={wallH + 0.36} z={-13.2} map={stone} />
+      <group position={[-6.7, 0, 0]}>
+        <Merlons count={6} width={8.6} y={wallH + 0.36} z={6.55} map={stone} />
       </group>
-      <group position={[6.55, 0, 0]}>
-        <Merlons count={5} width={8} y={wallH + 0.32} z={6.55} map={stone} />
+      <group position={[6.7, 0, 0]}>
+        <Merlons count={6} width={8.6} y={wallH + 0.36} z={6.55} map={stone} />
       </group>
       <group position={[0, 0, -3.3]}>
-        <Merlons count={13} width={19.4} y={wallH + 0.32} z={-10.05} axis="z" map={stone} />
-        <Merlons count={13} width={19.4} y={wallH + 0.32} z={10.05} axis="z" map={stone} />
+        <Merlons count={15} width={20.8} y={wallH + 0.36} z={-10.85} axis="z" map={stone} />
+        <Merlons count={15} width={20.8} y={wallH + 0.36} z={10.85} axis="z" map={stone} />
       </group>
 
       <Gatehouse wallH={wallH} fire={fire} stone={stone} />
@@ -347,38 +359,61 @@ export function Castle({ level, pressure }: CastleProps) {
         <meshStandardMaterial color={STONE_DARK} />
       </mesh>
 
-      <SquareTower position={[-10.2, 0, -13.4]} height={6.2} size={2.55} map={stone} />
-      <SquareTower position={[10.2, 0, -13.4]} height={6.4} size={2.7} map={stone} />
-      <SquareTower position={[-10.2, 0, 6.7]} height={5.6} size={2.45} map={stone} />
-      <SquareTower position={[10.2, 0, 6.7]} height={5.8} size={2.5} map={stone} />
-      <Flame position={[-10.2, 6.05, 6.7]} scale={1.2} />
-      <Flame position={[10.2, 6.25, 6.7]} scale={1.2} />
-      <Flame position={[-10.2, 6.65, -13.4]} scale={1.05} />
-      <Flame position={[10.2, 6.85, -13.4]} scale={1.05} />
-      <Flame position={[-2.1, 7.35, -2.4]} scale={0.85} />
-      <Flame position={[1.1, 8.85, -1.15]} scale={1.1} />
-      <RoundTower position={[-2.1, 0, -2.4]} height={7.1} radius={1.55} map={stone} />
+      <Block args={[1.15, wallH * 0.72, 1.15]} position={[-7.2, wallH * 0.36, 4.1]} color={STONE_2} map={stone} />
+      <Block args={[1.15, wallH * 0.72, 1.15]} position={[7.2, wallH * 0.36, 4.1]} color={STONE_2} map={stone} />
+      <Block args={[1.15, wallH * 0.72, 1.15]} position={[-7.2, wallH * 0.36, -10.4]} color={STONE_2} map={stone} />
+      <Block args={[1.15, wallH * 0.72, 1.15]} position={[7.2, wallH * 0.36, -10.4]} color={STONE_2} map={stone} />
 
-      <group position={[1.1, 0, -1.15]}>
-        <Block args={[4.6, 8.4, 4.2]} position={[0, 4.2, 0]} color={STONE} map={stone} />
-        <Block args={[5, 0.32, 4.6]} position={[0, 8.5, 0]} color={STONE_3} map={stone} />
-        <Merlons count={5} width={4.7} y={8.92} z={2.15} map={stone} />
-        <Merlons count={5} width={4.7} y={8.92} z={-2.15} map={stone} />
-        <Merlons count={4} width={4} y={8.92} z={2.15} axis="z" map={stone} />
-        <Merlons count={4} width={4} y={8.92} z={-2.15} axis="z" map={stone} />
-        <mesh position={[0, 5.1, 2.14]}>
-          <boxGeometry args={[0.32, 0.9, 0.1]} />
-          <meshStandardMaterial color="#1a1612" emissive="#ffb060" emissiveIntensity={0.22} roughness={0.7} />
+      <SquareTower position={[-11.1, 0, -13.6]} height={8.6} size={3.25} map={stone} />
+      <SquareTower position={[11.1, 0, -13.6]} height={8.9} size={3.4} map={stone} />
+      <SquareTower position={[-11.1, 0, 6.85]} height={8} size={3.1} map={stone} />
+      <SquareTower position={[11.1, 0, 6.85]} height={8.2} size={3.15} map={stone} />
+      <SquareTower position={[0, 0, -13.6]} height={6.4} size={2.35} map={stone} />
+      <Flame position={[-11.1, 8.15, 6.85]} scale={1.35} />
+      <Flame position={[11.1, 8.35, 6.85]} scale={1.35} />
+      <Flame position={[-11.1, 8.75, -13.6]} scale={1.15} />
+      <Flame position={[11.1, 9.05, -13.6]} scale={1.15} />
+      <Flame position={[-2.4, 9.1, -2.6]} scale={0.95} />
+      <Flame position={[1.2, 13.4, -1.2]} scale={1.25} />
+      <RoundTower position={[-2.4, 0, -2.6]} height={9.6} radius={1.85} map={stone} />
+      <RoundTower position={[4.8, 0, -8.8]} height={7.4} radius={1.5} map={stone} />
+      <RoundTower position={[-5.6, 0, -8.4]} height={6.8} radius={1.25} map={stone} />
+
+      <group position={[1.2, 0, -1.2]}>
+        <Block args={[6.4, 12.4, 5.8]} position={[0, 6.2, 0]} color={STONE} map={stone} />
+        <Block args={[7, 0.42, 6.4]} position={[0, 12.55, 0]} color={STONE_3} map={stone} />
+        <Block args={[4.2, 2.8, 3.8]} position={[0, 13.95, 0]} color={STONE_2} map={stone} />
+        <mesh position={[0, 16.1, 0]}>
+          <coneGeometry args={[2.55, 2.4, 8]} />
+          <meshStandardMaterial color="#5c2a22" roughness={0.78} />
         </mesh>
-        <mesh position={[-1.1, 3.4, 2.14]}>
-          <boxGeometry args={[0.22, 0.55, 0.1]} />
+        <Merlons count={6} width={6.2} y={12.95} z={2.95} map={stone} />
+        <Merlons count={6} width={6.2} y={12.95} z={-2.95} map={stone} />
+        <Merlons count={5} width={5.4} y={12.95} z={2.95} axis="z" map={stone} />
+        <Merlons count={5} width={5.4} y={12.95} z={-2.95} axis="z" map={stone} />
+        <mesh position={[0, 6.4, 2.95]}>
+          <boxGeometry args={[0.38, 1.15, 0.12]} />
+          <meshStandardMaterial color="#1a1612" emissive="#ffb060" emissiveIntensity={0.28} roughness={0.7} />
+        </mesh>
+        <mesh position={[-1.45, 4.1, 2.95]}>
+          <boxGeometry args={[0.24, 0.65, 0.1]} />
+          <meshStandardMaterial color="#1a1612" emissive="#ff9a40" emissiveIntensity={0.18} roughness={0.7} />
+        </mesh>
+        <mesh position={[1.5, 8.1, 2.95]}>
+          <boxGeometry args={[0.24, 0.6, 0.1]} />
+          <meshStandardMaterial color="#1a1612" emissive="#ffb060" emissiveIntensity={0.2} roughness={0.7} />
+        </mesh>
+        <mesh position={[-1.6, 9.8, 2.95]}>
+          <boxGeometry args={[0.2, 0.48, 0.1]} />
           <meshStandardMaterial color="#1a1612" emissive="#ff9a40" emissiveIntensity={0.16} roughness={0.7} />
         </mesh>
-        <mesh position={[1.15, 6.4, 2.14]}>
-          <boxGeometry args={[0.22, 0.5, 0.1]} />
-          <meshStandardMaterial color="#1a1612" emissive="#ffb060" emissiveIntensity={0.18} roughness={0.7} />
-        </mesh>
       </group>
+      <Block args={[4.6, 3.4, 3.8]} position={[-5.2, 1.7, -5.4]} color={STONE_2} map={stone} />
+      <Block args={[5, 0.22, 4.2]} position={[-5.2, 3.45, -5.4]} color={STONE_3} map={stone} />
+      <mesh position={[-5.2, 4.55, -5.4]} rotation={[0, 0.2, 0]}>
+        <coneGeometry args={[2.6, 1.8, 4]} />
+        <meshStandardMaterial color="#6a3226" roughness={0.8} />
+      </mesh>
 
       <mesh position={[-5.4, wallH + 1.05, 6.35]}>
         <boxGeometry args={[0.08, 2.1, 0.08]} />
@@ -397,9 +432,10 @@ export function Castle({ level, pressure }: CastleProps) {
         <meshStandardMaterial color="#6a1212" />
       </mesh>
 
-      <pointLight position={[0, 2.4, 7.1]} color="#ff6a2a" intensity={0.7 + fire * 0.9} distance={18} />
-      <pointLight position={[-10.2, 6.2, 6.7]} color="#ff7a30" intensity={0.55} distance={10} />
-      <pointLight position={[10.2, 6.4, 6.7]} color="#ff7a30" intensity={0.55} distance={10} />
+      <pointLight position={[0, 2.4, 7.1]} color="#ff6a2a" intensity={0.7 + fire * 0.9} distance={22} />
+      <pointLight position={[-11.1, 8.2, 6.85]} color="#ff7a30" intensity={0.65} distance={14} />
+      <pointLight position={[11.1, 8.4, 6.85]} color="#ff7a30" intensity={0.65} distance={14} />
+      <pointLight position={[1.2, 14.2, -1.2]} color="#ff8a40" intensity={0.45} distance={16} />
     </group>
     <Defenders grow={grow} wallH={wallH} />
     </group>

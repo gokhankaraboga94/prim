@@ -1,5 +1,5 @@
 import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { Canvas, useFrame } from "@react-three/fiber";
+import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
 import * as THREE from "three";
 import { Army, armyFrame } from "./Army";
@@ -73,22 +73,22 @@ function CinematicCam({
 
     const cmdZ = form.front;
     const a0 = {
-      x: 0.72,
-      y: 1.72,
-      z: cmdZ - 5.8,
+      x: 0.55,
+      y: 1.82,
+      z: cmdZ - 5.4,
       lx: 0.02,
-      ly: 1.28,
+      ly: 1.38,
       lz: cmdZ,
-      fov: 24,
+      fov: 23,
     };
     const a = {
-      x: 1.15,
-      y: 1.98,
-      z: cmdZ - 7.4,
+      x: 1.05,
+      y: 2.08,
+      z: cmdZ - 7.1,
       lx: 0.03,
-      ly: 1.18,
+      ly: 1.28,
       lz: cmdZ,
-      fov: 30,
+      fov: 28,
     };
     const spanX = Math.max(form.width, 12);
     const spanZ = Math.max(8, form.back - form.front + 6);
@@ -313,6 +313,32 @@ function Terrain() {
   );
 }
 
+function SteelSky() {
+  const { gl, scene } = useThree();
+  useLayoutEffect(() => {
+    const envScene = new THREE.Scene();
+    envScene.background = new THREE.Color("#7eb6ee");
+    envScene.add(new THREE.HemisphereLight("#e8f2ff", "#3a2a18", 1.35));
+    const sun = new THREE.Mesh(new THREE.SphereGeometry(3.2, 12, 10), new THREE.MeshBasicMaterial({ color: "#fff1c8" }));
+    sun.position.set(-9, 13, 7);
+    envScene.add(sun);
+    const ground = new THREE.Mesh(new THREE.CircleGeometry(20, 16), new THREE.MeshBasicMaterial({ color: "#3d6a2e" }));
+    ground.rotation.x = -Math.PI / 2;
+    ground.position.y = -2.2;
+    envScene.add(ground);
+    const pmrem = new THREE.PMREMGenerator(gl);
+    const env = pmrem.fromScene(envScene, 0.04).texture;
+    scene.environment = env;
+    scene.environmentIntensity = 0.72;
+    return () => {
+      scene.environment = null;
+      env.dispose();
+      pmrem.dispose();
+    };
+  }, [gl, scene]);
+  return null;
+}
+
 function DayLights({ cinematic = false }: { cinematic?: boolean }) {
   const sun = useRef<THREE.DirectionalLight>(null);
   useLayoutEffect(() => {
@@ -321,11 +347,11 @@ function DayLights({ cinematic = false }: { cinematic?: boolean }) {
     light.castShadow = cinematic;
     light.shadow.mapSize.set(2048, 2048);
     light.shadow.camera.near = 4;
-    light.shadow.camera.far = 220;
-    light.shadow.camera.left = -70;
-    light.shadow.camera.right = 70;
-    light.shadow.camera.top = 50;
-    light.shadow.camera.bottom = -18;
+    light.shadow.camera.far = 340;
+    light.shadow.camera.left = -110;
+    light.shadow.camera.right = 110;
+    light.shadow.camera.top = 90;
+    light.shadow.camera.bottom = -24;
     light.shadow.bias = -0.0008;
     light.shadow.normalBias = 0.04;
   }, [cinematic]);
@@ -385,6 +411,7 @@ function SceneContent({
       <color attach="background" args={["#7eb6ee"]} />
       <fog attach="fog" args={["#9ec8ee", 380, 1500]} />
       <SkyDome />
+      <SteelSky />
       <DayLights cinematic={cinematic} />
       <Terrain />
       {cinematic && <Embers />}

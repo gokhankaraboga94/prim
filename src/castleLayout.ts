@@ -1,6 +1,6 @@
-export const CASTLE_SX = 3.25;
-export const CASTLE_SY = 4;
-export const CASTLE_SZ = 3.55;
+export const CASTLE_SX = 5.45;
+export const CASTLE_SY = 6.6;
+export const CASTLE_SZ = 4.45;
 export const CASTLE_OLD_SZ = 2.15;
 export const CASTLE_FRONT_LOCAL = 6.55;
 
@@ -22,11 +22,11 @@ export function castleFrame(level: number) {
   const front = 6.85 * sz + zShift;
   const back = -13.4 * sz + zShift;
   return {
-    width: 22.4 * sx,
-    height: 9.3 * sy,
+    width: 24.6 * sx,
+    height: 14.2 * sy,
     front,
     back,
     midZ: (front + back) / 2,
-    midY: 4.4 * sy,
+    midY: 6.2 * sy,
   };
 }
