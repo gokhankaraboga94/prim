@@ -253,43 +253,44 @@ function plateArmor() {
 
 function arm(side: -1 | 1) {
   const s = side;
-  const fingers: THREE.BufferGeometry[] = [];
-  const tips = [-0.018, -0.006, 0.006, 0.018];
+  const hx = s * 0.4;
+  const hy = 0.58;
+  const hz = 0.14;
+  const digits: THREE.BufferGeometry[] = [];
+  const spread = [-0.028, -0.01, 0.008, 0.026];
   for (let i = 0; i < 4; i++) {
-    fingers.push(
-      part(
-        new THREE.CylinderGeometry(0.009, 0.011, 0.052, 6),
-        LEATHER,
-        s * 0.455 + tips[i],
-        0.548,
-        0.195 + i * 0.002,
-        0.72,
-        0,
-        s * 0.04
-      )
-    );
+    const fx = hx + spread[i];
+    const fy = hy - 0.055;
+    const fz = hz + 0.04 + i * 0.004;
+    digits.push(part(new THREE.CylinderGeometry(0.013, 0.015, 0.046, 7), LEATHER, fx, fy, fz, 0.85, 0, s * 0.08));
+    digits.push(part(new THREE.CylinderGeometry(0.011, 0.013, 0.038, 7), LEATHER, fx, fy - 0.038, fz + 0.02, 1.05, 0, s * 0.06));
+    digits.push(part(new THREE.SphereGeometry(0.012, 6, 5), LEATHER, fx, fy - 0.058, fz + 0.034));
   }
   return [
-    part(new THREE.CylinderGeometry(0.052, 0.06, 0.22, 10), ARMOR, s * 0.31, 0.99, 0.03, 0, 0, s * 0.28),
-    part(new THREE.SphereGeometry(0.046, 8, 6), ARMOR_HI, s * 0.37, 0.88, 0.055),
-    part(new THREE.CylinderGeometry(0.044, 0.05, 0.2, 10), ARMOR_DK, s * 0.41, 0.76, 0.085, 0.14, 0, s * 0.1),
-    part(new THREE.BoxGeometry(0.014, 0.15, 0.014), GOLD_DK, s * 0.41, 0.76, 0.132),
-    part(new THREE.TorusGeometry(0.04, 0.008, 6, 10), GOLD, s * 0.41, 0.68, 0.11, Math.PI / 2),
-    part(new THREE.CylinderGeometry(0.036, 0.038, 0.045, 8), LEATHER, s * 0.435, 0.655, 0.125, 0.16, 0, s * 0.06),
-    part(new THREE.BoxGeometry(0.05, 0.072, 0.036), LEATHER, s * 0.45, 0.6, 0.16, 0.2, 0, s * 0.04),
-    part(new THREE.SphereGeometry(0.022, 6, 5), LEATHER, s * 0.45, 0.575, 0.175),
-    ...fingers,
-    part(new THREE.CylinderGeometry(0.011, 0.013, 0.04, 6), LEATHER, s * 0.43, 0.59, 0.155, 0.35, 0, s * -0.7),
+    part(new THREE.CylinderGeometry(0.058, 0.068, 0.26, 12), ARMOR, s * 0.3, 1.02, 0.04, 0.08, 0, s * 0.22),
+    part(new THREE.SphereGeometry(0.052, 10, 8), ARMOR_HI, s * 0.35, 0.88, 0.07),
+    part(new THREE.CylinderGeometry(0.05, 0.056, 0.24, 12), ARMOR_DK, s * 0.38, 0.74, 0.1, 0.18, 0, s * 0.08),
+    part(new THREE.BoxGeometry(0.018, 0.18, 0.016), GOLD, s * 0.38, 0.74, 0.15),
+    part(new THREE.TorusGeometry(0.048, 0.01, 7, 12), GOLD, s * 0.39, 0.64, 0.12, Math.PI / 2),
+    part(new THREE.CylinderGeometry(0.04, 0.042, 0.05, 10), LEATHER, hx, 0.62, 0.13, 0.2, 0, s * 0.04),
+    part(new THREE.BoxGeometry(0.072, 0.09, 0.048), LEATHER, hx, hy, hz, 0.25, 0, s * 0.05),
+    part(new THREE.SphereGeometry(0.028, 8, 6), LEATHER, hx, hy - 0.02, hz + 0.01),
+    ...digits,
+    part(new THREE.CylinderGeometry(0.014, 0.016, 0.042, 7), LEATHER, hx - s * 0.028, hy + 0.012, hz + 0.01, 0.35, 0, s * -0.85),
+    part(new THREE.CylinderGeometry(0.012, 0.014, 0.032, 7), LEATHER, hx - s * 0.04, hy + 0.004, hz + 0.028, 0.55, 0, s * -0.7),
+    part(new THREE.SphereGeometry(0.013, 6, 5), LEATHER, hx - s * 0.048, hy - 0.006, hz + 0.042),
   ];
 }
 
 function wrapCape(cloth: string, lining: string) {
   return [
-    part(new THREE.BoxGeometry(0.52, 0.44, 0.12), cloth, 0, 0.98, -0.24),
-    part(new THREE.BoxGeometry(0.4, 0.28, 0.08), lining, 0, 0.9, -0.3),
-    part(new THREE.BoxGeometry(0.56, 0.14, 0.16), cloth, 0, 1.16, -0.14),
-    part(new THREE.BoxGeometry(0.16, 0.12, 0.16), cloth, -0.15, 1.16, 0.04),
-    part(new THREE.BoxGeometry(0.16, 0.12, 0.16), cloth, 0.15, 1.16, 0.04),
+    part(new THREE.BoxGeometry(0.58, 0.72, 0.13), cloth, 0, 0.86, -0.26),
+    part(new THREE.BoxGeometry(0.44, 0.42, 0.09), lining, 0, 0.74, -0.32),
+    part(new THREE.BoxGeometry(0.62, 0.16, 0.18), cloth, 0, 1.18, -0.14),
+    part(new THREE.BoxGeometry(0.18, 0.13, 0.18), cloth, -0.16, 1.17, 0.05),
+    part(new THREE.BoxGeometry(0.18, 0.13, 0.18), cloth, 0.16, 1.17, 0.05),
+    part(new THREE.BoxGeometry(0.14, 0.58, 0.08), cloth, -0.24, 0.88, -0.08, 0, 0.18, 0.04),
+    part(new THREE.BoxGeometry(0.14, 0.58, 0.08), cloth, 0.24, 0.88, -0.08, 0, -0.18, -0.04),
   ];
 }
 
@@ -326,43 +327,43 @@ function createPlumeGeometry(tall: boolean) {
   return mergeParts(helmPlume(tall), PLUME);
 }
 
-let archerGeoV6: THREE.BufferGeometry | null = null;
-let commanderGeoV6: THREE.BufferGeometry | null = null;
-let soldierCapeV7: THREE.BufferGeometry | null = null;
-let commanderCapeV7: THREE.BufferGeometry | null = null;
-let soldierPlumeV6: THREE.BufferGeometry | null = null;
-let commanderPlumeV6: THREE.BufferGeometry | null = null;
+let archerGeoV8: THREE.BufferGeometry | null = null;
+let commanderGeoV8: THREE.BufferGeometry | null = null;
+let soldierCapeV8: THREE.BufferGeometry | null = null;
+let commanderCapeV8: THREE.BufferGeometry | null = null;
+let soldierPlumeV8: THREE.BufferGeometry | null = null;
+let commanderPlumeV8: THREE.BufferGeometry | null = null;
 let nockArrowGeo: THREE.BufferGeometry | null = null;
 const nockOff = new THREE.Vector3();
 
 function getArcherGeometry() {
-  if (!archerGeoV6) archerGeoV6 = createArcherGeometry();
-  return archerGeoV6;
+  if (!archerGeoV8) archerGeoV8 = createArcherGeometry();
+  return archerGeoV8;
 }
 
 function getCommanderGeometry() {
-  if (!commanderGeoV6) commanderGeoV6 = createCommanderGeometry();
-  return commanderGeoV6;
+  if (!commanderGeoV8) commanderGeoV8 = createCommanderGeometry();
+  return commanderGeoV8;
 }
 
 function getSoldierCapeGeometry() {
-  if (!soldierCapeV7) soldierCapeV7 = createCapeGeometry(BLUE, BLUE_DK);
-  return soldierCapeV7;
+  if (!soldierCapeV8) soldierCapeV8 = createCapeGeometry(BLUE, BLUE_DK);
+  return soldierCapeV8;
 }
 
 function getCommanderCapeGeometry() {
-  if (!commanderCapeV7) commanderCapeV7 = createCapeGeometry(BLACK, BLACK_LINING);
-  return commanderCapeV7;
+  if (!commanderCapeV8) commanderCapeV8 = createCapeGeometry(BLACK, BLACK_LINING);
+  return commanderCapeV8;
 }
 
 function getSoldierPlumeGeometry() {
-  if (!soldierPlumeV6) soldierPlumeV6 = createPlumeGeometry(false);
-  return soldierPlumeV6;
+  if (!soldierPlumeV8) soldierPlumeV8 = createPlumeGeometry(false);
+  return soldierPlumeV8;
 }
 
 function getCommanderPlumeGeometry() {
-  if (!commanderPlumeV6) commanderPlumeV6 = createPlumeGeometry(true);
-  return commanderPlumeV6;
+  if (!commanderPlumeV8) commanderPlumeV8 = createPlumeGeometry(true);
+  return commanderPlumeV8;
 }
 
 function createNockArrowGeometry() {
@@ -817,7 +818,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
           clearcoatRoughness={0.45}
         />
       </instancedMesh>
-      <instancedMesh key="cape-v7" ref={soldierCapes} args={[soldierCapeGeo, undefined, instanceCap]} frustumCulled={false} castShadow>
+      <instancedMesh key="cape-v8" ref={soldierCapes} args={[soldierCapeGeo, undefined, instanceCap]} frustumCulled={false} castShadow>
         <meshStandardMaterial color="#0437f2" roughness={0.88} metalness={0} envMapIntensity={0.08} side={THREE.DoubleSide} />
       </instancedMesh>
       <instancedMesh ref={soldierPlumes} args={[soldierPlumeGeo, undefined, instanceCap]} frustumCulled={false}>
