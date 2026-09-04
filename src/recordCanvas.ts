@@ -1,4 +1,4 @@
-export const REEL_DURATIONS = [3, 5, 6, 7, 10, 15, 30, 45, 60] as const;
+export const REEL_DURATIONS = [3, 5, 6, 7, 10, 15, 20, 30, 45, 60] as const;
 export type ReelDuration = (typeof REEL_DURATIONS)[number];
 
 /** Warmup before MediaRecorder starts — keep in sync with ReelCapture wait. */
