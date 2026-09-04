@@ -8,7 +8,7 @@ import { SallyRaid } from "./SallyRaid";
 import { CaptureHpHud, ReelFade, ReelTitles, ReelVignette } from "./CaptureHpHud";
 import { castleFrame } from "../../castleLayout";
 import { REEL_HOLD, reelBeats } from "../../recordCanvas";
-import { CINEMA_GATE_AT, CINEMA_SWORD_P, sampleCinema, sampleShotMode, type ShotId } from "../../shotModes";
+import { CINEMA_SWORD_P, cinemaGateAt, sampleCinema, sampleShotMode, type ShotId } from "../../shotModes";
 import {
   SALLY_START_DELAY,
   SWORD_START,
@@ -128,7 +128,7 @@ function CinematicCam({
       const sampleT = warm < REEL_HOLD ? (warm / REEL_HOLD) * duration : recT;
       const ctx = { cmdZ, form, castle, fit, castleFit };
       const pose = cinema
-        ? sampleCinema(sampleT, ctx)
+        ? sampleCinema(sampleT, duration, ctx)
         : sampleShotMode(shotMode as ShotId, sampleT, duration, skipCommander, ctx);
       const persp = camera as THREE.PerspectiveCamera;
       persp.fov = pose.fov;
@@ -526,7 +526,7 @@ function BattleSceneInner({
 
   useLayoutEffect(() => {
     if (cinematic && cinema) {
-      setSallyOrigin(SALLY_START_DELAY - REEL_HOLD - CINEMA_GATE_AT);
+      setSallyOrigin(SALLY_START_DELAY - REEL_HOLD - cinemaGateAt(duration ?? 30));
       setSwordStart(CINEMA_SWORD_P);
     } else if (cinematic) {
       const beats = reelBeats(duration ?? 8, skipCommander);

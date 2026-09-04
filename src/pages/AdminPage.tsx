@@ -19,8 +19,8 @@ import {
 } from "../game";
 import { useGame } from "../hooks/useGame";
 import { ReelCapture } from "../components/ReelCapture";
-import { REEL_DURATIONS, type ReelDuration } from "../recordCanvas";
-import { SHOT_MODES, type ShotId } from "../shotModes";
+import { REEL_DURATIONS } from "../recordCanvas";
+import { CINEMA_DURATIONS, CINEMA_ID, CINEMA_MODE, SHOT_MODES, type ReelShot } from "../shotModes";
 
 export function AdminPage() {
   const { game, recruits, level, power, pressure, target, maxHp } = useGame();
@@ -31,11 +31,10 @@ export function AdminPage() {
   const [handleInput, setHandleInput] = useState("");
   const [msg, setMsg] = useState("");
   const [busy, setBusy] = useState(false);
-  const [reelSeconds, setReelSeconds] = useState<ReelDuration>(7);
+  const [reelSeconds, setReelSeconds] = useState<number>(7);
   const [reelText, setReelText] = useState(true);
   const [reelSkipCmd, setReelSkipCmd] = useState(false);
-  const [reelShot, setReelShot] = useState<ShotId | null>(null);
-  const [reelCinema, setReelCinema] = useState(false);
+  const [reelShot, setReelShot] = useState<ReelShot | null>(null);
   const [reelDay, setReelDay] = useState("1");
   const [capturing, setCapturing] = useState(false);
   const [editIndex, setEditIndex] = useState<number | null>(null);
@@ -218,7 +217,7 @@ export function AdminPage() {
         <div>
           <p className="join-kicker">Komuta paneli</p>
           <h1>Kuşatma yönetimi</h1>
-          <p className="join-kicker">sürüm 27 — sinema kuş bakışı</p>
+          <p className="join-kicker">sürüm 28 — birleşim 30/60/90</p>
         </div>
         <button type="button" className="btn-ghost" onClick={() => signOut(auth)}>
           Çıkış
@@ -416,12 +415,11 @@ export function AdminPage() {
           </p>
           <label>Süre</label>
           <div className="dur-pills">
-            {REEL_DURATIONS.map((sec) => (
+            {(reelShot === CINEMA_ID ? CINEMA_DURATIONS : REEL_DURATIONS).map((sec) => (
               <button
                 key={sec}
                 type="button"
-                className={!reelCinema && reelSeconds === sec ? "on" : ""}
-                disabled={reelCinema}
+                className={reelSeconds === sec ? "on" : ""}
                 onClick={() => setReelSeconds(sec)}
               >
                 {sec} sn
@@ -449,19 +447,6 @@ export function AdminPage() {
           <label className="check-row">
             <input
               type="checkbox"
-              checked={reelCinema}
-              onChange={(e) => setReelCinema(e.target.checked)}
-            />
-            Sinema kaydı (30 sn)
-          </label>
-          <p className="muted">
-            İşaretlersen tek videoda şu açılar kesilir: sağdan ordu, kapı açılışı, Kaleden orduya,
-            ilk çarpışma, Sağ sweep, Kuş bakışı, Geniş ustalayan, Çapraz dalış, Geri ve yukarı.
-            300 / Truva / Yüzüklerin Efendisi tadında 30 saniyelik tanıtım.
-          </p>
-          <label className="check-row">
-            <input
-              type="checkbox"
               checked={reelSkipCmd}
               onChange={(e) => setReelSkipCmd(e.target.checked)}
             />
@@ -473,22 +458,33 @@ export function AdminPage() {
           </p>
           <label>Çekim modu</label>
           <p className="muted">
-            {reelCinema
-              ? "Sinema kaydı açıkken A–Z çekimler kapalı; 8 açı tek videoda kesilir."
-              : "Hiçbirini seçmezsen eski usül kayıt. Birini seçersen kamera o açıyla çeker. Tekrar basınca seçim kalkar."}
+            On bir tekil açı duruyor; tek tek çekebilirsin. Birleşim, bunların en iyi sahnelerini 30 /
+            60 / 90 saniyelik tek videoda keser.
           </p>
           <div className="dur-pills shot-pills">
             {SHOT_MODES.map((mode) => (
               <button
                 key={mode.id}
                 type="button"
-                className={!reelCinema && reelShot === mode.id ? "on" : ""}
-                disabled={reelCinema}
-                onClick={() => setReelShot((cur) => (cur === mode.id ? null : mode.id))}
+                className={reelShot === mode.id ? "on" : ""}
+                onClick={() => {
+                  setReelShot((cur) => (cur === mode.id ? null : mode.id));
+                  setReelSeconds((sec) => ((REEL_DURATIONS as readonly number[]).includes(sec) ? sec : 30));
+                }}
               >
                 {mode.label}
               </button>
             ))}
+            <button
+              type="button"
+              className={reelShot === CINEMA_ID ? "on" : ""}
+              onClick={() => {
+                setReelShot((cur) => (cur === CINEMA_ID ? null : CINEMA_ID));
+                setReelSeconds((sec) => (CINEMA_DURATIONS as readonly number[]).includes(sec) ? sec : 30);
+              }}
+            >
+              {CINEMA_MODE.label}
+            </button>
           </div>
           <button type="button" className="btn-gold" onClick={() => setCapturing(true)}>
             Kaydı başlat
@@ -515,11 +511,11 @@ export function AdminPage() {
           pressure={pressure}
           hp={power}
           maxHp={maxHp}
-          seconds={reelCinema ? 30 : reelSeconds}
+          seconds={reelSeconds}
           showTitles={reelText}
           skipCommander={reelSkipCmd}
-          shotMode={reelCinema ? null : reelShot}
-          cinema={reelCinema}
+          shotMode={reelShot === CINEMA_ID ? null : reelShot}
+          cinema={reelShot === CINEMA_ID}
           day={Math.max(0, Math.floor(Number(reelDay)) || 0)}
           onClose={() => setCapturing(false)}
         />

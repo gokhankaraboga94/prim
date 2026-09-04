@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { BattleScene } from "./scene/BattleScene";
 import { SceneErrorBoundary } from "./SceneErrorBoundary";
 import { recordCanvas, saveReelBlob, wait } from "../recordCanvas";
-import { CINEMA_DURATION, type ShotId } from "../shotModes";
+import type { ShotId } from "../shotModes";
 
 type ReelCaptureProps = {
   soldiers: number;
@@ -23,7 +23,7 @@ type ReelCaptureProps = {
 };
 
 export function ReelCapture({ soldiers, names, commanders = [], level, pressure, hp, maxHp, seconds, showTitles = true, warLook = false, day = 0, skipCommander = false, shotMode = null, cinema = false, onClose }: ReelCaptureProps) {
-  const clip = cinema ? CINEMA_DURATION : seconds;
+  const clip = seconds;
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [phase, setPhase] = useState<"boot" | "rec" | "done" | "err">("boot");
   const [blob, setBlob] = useState<Blob | null>(null);

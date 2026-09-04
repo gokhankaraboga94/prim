@@ -1,59 +1,23 @@
-export type ShotId =
-  | "a"
-  | "b"
-  | "c"
-  | "d"
-  | "e"
-  | "f"
-  | "g"
-  | "h"
-  | "i"
-  | "j"
-  | "k"
-  | "l"
-  | "m"
-  | "n"
-  | "o"
-  | "p"
-  | "q"
-  | "r"
-  | "s"
-  | "t"
-  | "u"
-  | "v"
-  | "w"
-  | "x"
-  | "y"
-  | "z";
+export type ShotId = "b" | "d" | "g" | "l" | "n" | "p" | "q" | "r" | "w" | "y" | "z";
+
+export const CINEMA_ID = "birlesim" as const;
+export type ReelShot = ShotId | typeof CINEMA_ID;
 
 export const SHOT_MODES: { id: ShotId; label: string }[] = [
-  { id: "a", label: "A · Yakından uzağa" },
-  { id: "b", label: "B · Uzaktan yakına" },
-  { id: "c", label: "C · Film sahnesi" },
-  { id: "d", label: "D · Sağ çapraz geriden" },
-  { id: "e", label: "E · Sol çapraz ileriden" },
-  { id: "f", label: "F · Yan takip" },
-  { id: "g", label: "G · Tepe bakış" },
-  { id: "h", label: "H · Alçak kahraman" },
-  { id: "i", label: "I · Kale üzerinden orduya" },
-  { id: "j", label: "J · Ordu üzerinden kaleye" },
-  { id: "k", label: "K · Dairesel orbit" },
-  { id: "l", label: "L · Sağ sweep" },
-  { id: "m", label: "M · Sol sweep" },
-  { id: "n", label: "N · Yukarı vinç" },
-  { id: "o", label: "O · Omuz üzeri" },
-  { id: "p", label: "P · Geniş ustalayan" },
-  { id: "q", label: "Q · Çapraz dalış" },
-  { id: "r", label: "R · Kaleden orduya" },
-  { id: "s", label: "S · Yükselerek orbit" },
-  { id: "t", label: "T · Alçaktan geçiş" },
-  { id: "u", label: "U · Sağ omuz" },
-  { id: "v", label: "V · Sol kanat" },
-  { id: "w", label: "W · Geri ve yukarı" },
-  { id: "x", label: "X · Yakın kaydırma" },
-  { id: "y", label: "Y · Kuş bakışı" },
-  { id: "z", label: "Z · Ters zoom" },
+  { id: "b", label: "Uzaktan yakına" },
+  { id: "d", label: "Sağ çapraz geriden" },
+  { id: "g", label: "Tepe bakış" },
+  { id: "l", label: "Sağ sweep" },
+  { id: "n", label: "Yukarı vinç" },
+  { id: "p", label: "Geniş ustalayan" },
+  { id: "q", label: "Çapraz dalış" },
+  { id: "r", label: "Kaleden orduya" },
+  { id: "w", label: "Geri ve yukarı" },
+  { id: "y", label: "Kuş bakışı" },
+  { id: "z", label: "Ters zoom" },
 ];
+
+export const CINEMA_MODE = { id: CINEMA_ID, label: "Birleşim" } as const;
 
 export type ShotPose = {
   x: number;
@@ -87,7 +51,7 @@ export function lerpPose(a: ShotPose, b: ShotPose, t: number): ShotPose {
 }
 
 function keysFor(id: ShotId, ctx: ShotCtx): ShotPose[] {
-  const { cmdZ, form, castle, fit, castleFit } = ctx;
+  const { cmdZ, form, castle, castleFit } = ctx;
   const mid = form.midZ;
   const back = form.back;
   const gate = castle.front;
@@ -95,23 +59,11 @@ function keysFor(id: ShotId, ctx: ShotCtx): ShotPose[] {
   const cy = castle.midY;
 
   switch (id) {
-    case "a":
-      return [
-        pose(1.2, 2.2, cmdZ - 9, 0, 1.2, cmdZ, 32),
-        pose(4, 12, back + 16, 0, 2, mid, 44),
-        pose(8, cy + 62, cm + castleFit * 0.45, 0, cy * 0.7, cm, 38),
-      ];
     case "b":
       return [
         pose(10, cy + 70, cm + castleFit * 0.7, 0, cy * 0.5, cm, 42),
         pose(5, 14, back + 18, 0, 2.2, mid, 46),
         pose(1.1, 2.3, cmdZ - 8.5, 0.02, 1.2, cmdZ, 30),
-      ];
-    case "c":
-      return [
-        pose(18, 6.5, cmdZ + 2, 0, 1.6, mid, 36),
-        pose(8, 9, back + 8, -2, 1.8, mid - 4, 40),
-        pose(-16, 22, cm + 20, 0, cy * 0.45, cm, 38),
       ];
     case "d":
       return [
@@ -119,47 +71,11 @@ function keysFor(id: ShotId, ctx: ShotCtx): ShotPose[] {
         pose(14, 8, mid + 6, -4, 1.8, gate + 4, 40),
         pose(22, 28, cm + 14, 0, cy * 0.5, cm, 42),
       ];
-    case "e":
-      return [
-        pose(-14, 4.2, gate + 8, 4, 2.2, mid, 36),
-        pose(-10, 7, mid, 2, 1.8, cmdZ, 40),
-        pose(-20, 24, back + 12, 0, 3, mid, 44),
-      ];
-    case "f":
-      return [
-        pose(-form.width * 0.7, 3.4, mid + 2, 4, 1.4, mid, 38),
-        pose(0, 4.2, mid + 6, 0, 1.5, gate, 40),
-        pose(form.width * 0.75, 8, mid + 4, -4, 1.8, mid, 42),
-      ];
     case "g":
       return [
         pose(2, 48, mid + 8, 0, 0.4, mid, 50),
         pose(4, 32, back + 10, 0, 1.2, mid, 46),
         pose(6, 18, back + 20, 0, 2, gate, 42),
-      ];
-    case "h":
-      return [
-        pose(0.8, 0.85, cmdZ - 6.2, 0.1, 1.55, cmdZ, 28),
-        pose(2.2, 1.4, mid + 4, 0, 2.4, gate, 34),
-        pose(6, 10, back + 18, 0, 3, mid, 42),
-      ];
-    case "i":
-      return [
-        pose(4, cy + 28, cm - 8, 0, 4, mid, 40),
-        pose(6, 16, mid, 0, 2, cmdZ, 42),
-        pose(3, 5, back + 8, 0, 1.6, mid, 38),
-      ];
-    case "j":
-      return [
-        pose(3, 16, back + 12, 0, 2, mid, 44),
-        pose(5, cy + 10, mid - 4, 0, cy * 0.4, cm, 40),
-        pose(2, cy + 36, cm + castleFit * 0.35, 0, cy * 0.55, cm, 38),
-      ];
-    case "k":
-      return [
-        pose(22, 9, mid + 6, 0, 1.8, mid, 40),
-        pose(0, 12, back + 22, 0, 2, mid, 44),
-        pose(-24, 16, mid - 4, 0, 2.4, gate, 42),
       ];
     case "l":
       return [
@@ -167,23 +83,11 @@ function keysFor(id: ShotId, ctx: ShotCtx): ShotPose[] {
         pose(12, 10, mid + 8, -4, 2, gate, 40),
         pose(4, 20, gate + 10, 0, cy * 0.4, cm, 42),
       ];
-    case "m":
-      return [
-        pose(-26, 6.5, back + 6, 8, 1.5, mid, 38),
-        pose(-12, 9, mid + 4, 4, 2, gate, 40),
-        pose(-6, 22, gate + 8, 0, cy * 0.4, cm, 42),
-      ];
     case "n":
       return [
         pose(2, 3.2, cmdZ - 7, 0, 1.3, cmdZ, 34),
         pose(3, 22, mid + 4, 0, 2.5, mid, 42),
         pose(5, 72, mid + 10, 0, 4, mid, 48),
-      ];
-    case "o":
-      return [
-        pose(1.6, 2.6, back + 3, 0, 1.5, cmdZ, 36),
-        pose(2.4, 3.4, mid + 2, 0, 1.7, gate, 38),
-        pose(8, 14, mid + 16, 0, 3, gate, 44),
       ];
     case "p":
       return [
@@ -203,41 +107,11 @@ function keysFor(id: ShotId, ctx: ShotCtx): ShotPose[] {
         pose(6, 12, mid - 6, 0, 2.2, back, 42),
         pose(10, 18, back + 16, 0, 2.6, mid, 44),
       ];
-    case "s":
-      return [
-        pose(14, 5, cmdZ + 4, -2, 1.6, mid, 36),
-        pose(0, 16, back + 14, 0, 2.4, mid, 42),
-        pose(-18, 34, cm + 8, 4, cy * 0.5, cm, 40),
-      ];
-    case "t":
-      return [
-        pose(-6, 1.6, back + 2, 2, 1.4, gate, 34),
-        pose(0, 2.2, mid, 0, 1.8, gate, 36),
-        pose(8, 6, gate + 6, -2, 2.4, cm, 40),
-      ];
-    case "u":
-      return [
-        pose(3.4, 2.1, cmdZ - 5.5, -0.4, 1.25, cmdZ, 30),
-        pose(6, 4.5, mid, -2, 1.8, gate, 36),
-        pose(12, 16, mid + 12, -2, 3, gate, 42),
-      ];
-    case "v":
-      return [
-        pose(-form.width * 0.45, 3, back + 2, 3, 1.5, mid, 38),
-        pose(-form.width * 0.25, 5, mid, 2, 1.8, gate, 40),
-        pose(-8, 18, gate + 10, 2, 3, cm, 44),
-      ];
     case "w":
       return [
         pose(1.4, 2.4, cmdZ - 8, 0, 1.2, cmdZ, 32),
         pose(4, 14, back + 12, 0, 2.4, mid, 42),
         pose(7, cy + 68, cm + castleFit * 0.4, 0, cy * 0.75, cm, 38),
-      ];
-    case "x":
-      return [
-        pose(-5, 2.6, cmdZ - 4, 2, 1.4, cmdZ, 32),
-        pose(0, 2.8, cmdZ - 5, 0, 1.5, cmdZ, 34),
-        pose(6, 3.2, cmdZ - 4, -2, 1.5, cmdZ + 2, 36),
       ];
     case "y":
       return [
@@ -251,8 +125,6 @@ function keysFor(id: ShotId, ctx: ShotCtx): ShotPose[] {
         pose(5, 12, back + 10, 0, 2, mid, 48),
         pose(8, 28, back + 28, 0, 3, mid, 58),
       ];
-    default:
-      return [pose(4, 12, back + 16, 0, 2, mid, 44), pose(8, cy + 50, cm + castleFit * 0.5, 0, cy * 0.6, cm, 40)];
   }
 }
 
@@ -266,88 +138,55 @@ export function sampleShotMode(id: ShotId, recT: number, duration: number, skipC
   return lerpPose(seq[1], seq[2], (u - 0.42) / 0.58);
 }
 
-/** One 30s trailer: 8 hard cuts, like 300 / Troy / LOTR. */
-export const CINEMA_DURATION = 30;
-/** Video time when the gate shot starts — sally clock is aligned so doors begin here. */
-export const CINEMA_GATE_AT = 4;
+/** Base timeline for the combined trailer. 60s and 90s stretch this. */
+export const CINEMA_BASE = 30;
+export const CINEMA_DURATIONS = [30, 60, 90] as const;
+export type CinemaDuration = (typeof CINEMA_DURATIONS)[number];
+/** On the 30s timeline, when Kaleden orduya starts — sally doors begin here. */
+export const CINEMA_GATE_AT = 7.4;
 export const CINEMA_SWORD_P = 9.5;
+
+export function cinemaGateAt(duration: number) {
+  return CINEMA_GATE_AT * (Math.max(CINEMA_BASE, duration) / CINEMA_BASE);
+}
+
+export function cinemaScale(duration: number) {
+  return Math.max(CINEMA_BASE, duration) / CINEMA_BASE;
+}
 
 type CinemaCut = { at: number; dur: number; a: ShotPose; b: ShotPose };
 
+/** Best beat of each kept shot, hard-cut like 300 / Troy / LOTR. Times are for 30s. */
 function cinemaCuts(ctx: ShotCtx): CinemaCut[] {
-  const { cmdZ, form, castle, castleFit } = ctx;
-  const mid = form.midZ;
-  const back = form.back;
-  const gate = castle.front;
-  const cm = castle.midZ;
-  const cy = castle.midY;
+  const d = keysFor("d", ctx);
+  const p = keysFor("p", ctx);
+  const y = keysFor("y", ctx);
+  const r = keysFor("r", ctx);
+  const l = keysFor("l", ctx);
+  const g = keysFor("g", ctx);
+  const q = keysFor("q", ctx);
+  const b = keysFor("b", ctx);
+  const z = keysFor("z", ctx);
+  const n = keysFor("n", ctx);
+  const w = keysFor("w", ctx);
   return [
-    {
-      at: 0,
-      dur: 4,
-      a: pose(20, 4.4, back + 3, -8, 1.45, mid, 36),
-      b: pose(17, 4.9, cmdZ + 1, -6, 1.55, cmdZ - 4, 34),
-    },
-    {
-      at: 4,
-      dur: 3.4,
-      a: pose(7, 4.6, gate + 16, 0, 3.4, gate, 32),
-      b: pose(4.2, 4.1, gate + 9, 0, 2.8, gate - 1, 30),
-    },
-    {
-      at: 7.4,
-      dur: 3.6,
-      a: pose(3, 8, gate - 10, 0, 3, mid, 40),
-      b: pose(10, 18, back + 16, 0, 2.6, mid, 44),
-    },
-    {
-      at: 11,
-      dur: 3.8,
-      a: pose(6.2, 1.9, cmdZ - 2, -1, 1.25, 47, 30),
-      b: pose(4.4, 2.3, cmdZ - 3.5, 0, 1.35, 46, 28),
-    },
-    {
-      at: 14.8,
-      dur: 3.2,
-      a: pose(28, 7, back + 4, -8, 1.6, mid, 38),
-      b: pose(12, 10, mid + 8, -4, 2, gate, 40),
-    },
-    {
-      at: 18,
-      dur: 3,
-      a: pose(2, 80, mid + 6, 0, 1, mid, 52),
-      b: pose(10, 36, mid + 14, 0, 2, mid, 46),
-    },
-    {
-      at: 21,
-      dur: 2,
-      a: pose(16, 55, back + 40, 0, 4, mid, 48),
-      b: pose(10, 32, back + 24, 0, 3, mid, 44),
-    },
-    {
-      at: 23,
-      dur: 2,
-      a: pose(10, 32, back + 24, 0, 3, mid, 44),
-      b: pose(6, 14, back + 14, 0, 2.2, gate, 40),
-    },
-    {
-      at: 25,
-      dur: 2.4,
-      a: pose(20, 40, back + 18, -4, 2, mid, 42),
-      b: pose(2, 3.2, cmdZ - 8, 0, 1.3, cmdZ, 30),
-    },
-    {
-      at: 27.4,
-      dur: 2.6,
-      a: pose(1.4, 2.4, cmdZ - 8, 0, 1.2, cmdZ, 32),
-      b: pose(7, cy + 68, cm + castleFit * 0.4, 0, cy * 0.75, cm, 38),
-    },
+    { at: 0, dur: 2.4, a: d[0], b: d[1] },
+    { at: 2.4, dur: 2.6, a: p[0], b: p[1] },
+    { at: 5, dur: 2.4, a: y[0], b: y[1] },
+    { at: 7.4, dur: 2.8, a: r[0], b: r[2] },
+    { at: 10.2, dur: 2.6, a: l[0], b: l[1] },
+    { at: 12.8, dur: 2.2, a: g[0], b: g[1] },
+    { at: 15, dur: 2.6, a: q[0], b: q[2] },
+    { at: 17.6, dur: 2.4, a: b[0], b: b[2] },
+    { at: 20, dur: 2.4, a: z[0], b: z[2] },
+    { at: 22.4, dur: 2.6, a: n[0], b: n[2] },
+    { at: 25, dur: 5, a: w[0], b: w[2] },
   ];
 }
 
-export function sampleCinema(recT: number, ctx: ShotCtx): ShotPose {
+export function sampleCinema(recT: number, duration: number, ctx: ShotCtx): ShotPose {
   const cuts = cinemaCuts(ctx);
-  const t = Math.max(0, recT);
+  const t = Math.max(0, recT) / cinemaScale(duration);
   let cut = cuts[0];
   for (let i = 0; i < cuts.length; i++) {
     if (t >= cuts[i].at) cut = cuts[i];

@@ -4,6 +4,7 @@ import { Hud, OrthographicCamera } from "@react-three/drei";
 import * as THREE from "three";
 import { DPS_PER_SOLDIER, formatCount } from "../../game";
 import { REEL_FADE_HOLD, REEL_HOLD, reelBeats, reelFade } from "../../recordCanvas";
+import { cinemaScale } from "../../shotModes";
 
 function roundRect(
   ctx: CanvasRenderingContext2D,
@@ -101,7 +102,7 @@ function HpPlate({ hp, maxHp, soldiers, duration = 8, skipCommander = false, cin
     const recT = clock.elapsedTime - REEL_HOLD;
     const { pullStart } = reelBeats(duration, skipCommander);
     let alpha = 0;
-    const showAt = cinema ? 14.8 : pullStart;
+    const showAt = cinema ? 14.8 * cinemaScale(duration) : pullStart;
     if (recT >= showAt) {
       alpha = Math.min(1, (recT - showAt) / 0.4);
     }
@@ -221,10 +222,11 @@ function TitlesPlate({ soldiers, duration, day = 0, skipCommander = false, cinem
   useFrame(({ clock }) => {
     const recT = clock.elapsedTime - REEL_HOLD;
     const { cmd, turn, pullStart } = reelBeats(duration, skipCommander);
-    const ctaLen = cinema ? 1.6 : Math.min(1.4, Math.max(0.9, duration * 0.18));
+    const scale = cinemaScale(duration);
+    const ctaLen = cinema ? 1.6 * scale : Math.min(1.4, Math.max(0.9, duration * 0.18));
     const ctaAt = duration - ctaLen;
-    const armyAt = cinema ? 15 : cmd + turn * 0.22;
-    const armyEnd = cinema ? 19.2 : pullStart + 1.25;
+    const armyAt = cinema ? 15 * scale : cmd + turn * 0.22;
+    const armyEnd = cinema ? 19.2 * scale : pullStart + 1.25;
     let phase: "hook" | "army" | "cta" | "none" = "none";
     let alpha = 0;
     if (recT >= 0 && recT < 2.15) {
