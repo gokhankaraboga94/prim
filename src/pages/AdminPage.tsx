@@ -218,7 +218,7 @@ export function AdminPage() {
         <div>
           <p className="join-kicker">Komuta paneli</p>
           <h1>Kuşatma yönetimi</h1>
-          <p className="join-kicker">sürüm 22 — sinema yukarı vinç</p>
+          <p className="join-kicker">sürüm 23 — sinema geniş ustalayan</p>
         </div>
         <button type="button" className="btn-ghost" onClick={() => signOut(auth)}>
           Çıkış
