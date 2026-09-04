@@ -333,8 +333,8 @@ function cinemaCuts(ctx: ShotCtx): CinemaCut[] {
     {
       at: 26.2,
       dur: 3.8,
-      a: pose(10, cy + 18, gate + 18, 0, cy * 0.55, cm, 38),
-      b: pose(14, cy + 58, cm + castleFit * 0.42, 0, cy * 0.8, cm + 4, 36),
+      a: pose(2, 3.2, cmdZ - 7, 0, 1.3, cmdZ, 34),
+      b: pose(5, 72, mid + 10, 0, 4, mid, 48),
     },
   ];
 }
