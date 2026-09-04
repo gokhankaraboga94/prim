@@ -284,13 +284,13 @@ function arm(side: -1 | 1) {
 
 function wrapCape(cloth: string, lining: string) {
   return [
-    part(new THREE.BoxGeometry(0.58, 0.72, 0.13), cloth, 0, 0.86, -0.26),
-    part(new THREE.BoxGeometry(0.44, 0.42, 0.09), lining, 0, 0.74, -0.32),
-    part(new THREE.BoxGeometry(0.62, 0.16, 0.18), cloth, 0, 1.18, -0.14),
-    part(new THREE.BoxGeometry(0.18, 0.13, 0.18), cloth, -0.16, 1.17, 0.05),
-    part(new THREE.BoxGeometry(0.18, 0.13, 0.18), cloth, 0.16, 1.17, 0.05),
-    part(new THREE.BoxGeometry(0.14, 0.58, 0.08), cloth, -0.24, 0.88, -0.08, 0, 0.18, 0.04),
-    part(new THREE.BoxGeometry(0.14, 0.58, 0.08), cloth, 0.24, 0.88, -0.08, 0, -0.18, -0.04),
+    part(new THREE.BoxGeometry(0.58, 0.94, 0.05), cloth, 0, 0.76, -0.2),
+    part(new THREE.BoxGeometry(0.44, 0.58, 0.035), lining, 0, 0.62, -0.23),
+    part(new THREE.BoxGeometry(0.6, 0.14, 0.07), cloth, 0, 1.18, -0.12),
+    part(new THREE.BoxGeometry(0.16, 0.12, 0.07), cloth, -0.16, 1.17, 0.02),
+    part(new THREE.BoxGeometry(0.16, 0.12, 0.07), cloth, 0.16, 1.17, 0.02),
+    part(new THREE.BoxGeometry(0.12, 0.72, 0.04), cloth, -0.24, 0.82, -0.1, 0, 0.12, 0.03),
+    part(new THREE.BoxGeometry(0.12, 0.72, 0.04), cloth, 0.24, 0.82, -0.1, 0, -0.12, -0.03),
   ];
 }
 
@@ -329,8 +329,8 @@ function createPlumeGeometry(tall: boolean) {
 
 let archerGeoV8: THREE.BufferGeometry | null = null;
 let commanderGeoV8: THREE.BufferGeometry | null = null;
-let soldierCapeV8: THREE.BufferGeometry | null = null;
-let commanderCapeV8: THREE.BufferGeometry | null = null;
+let soldierCapeV9: THREE.BufferGeometry | null = null;
+let commanderCapeV9: THREE.BufferGeometry | null = null;
 let soldierPlumeV8: THREE.BufferGeometry | null = null;
 let commanderPlumeV8: THREE.BufferGeometry | null = null;
 let nockArrowGeo: THREE.BufferGeometry | null = null;
@@ -347,13 +347,13 @@ function getCommanderGeometry() {
 }
 
 function getSoldierCapeGeometry() {
-  if (!soldierCapeV8) soldierCapeV8 = createCapeGeometry(BLUE, BLUE_DK);
-  return soldierCapeV8;
+  if (!soldierCapeV9) soldierCapeV9 = createCapeGeometry(BLUE, BLUE_DK);
+  return soldierCapeV9;
 }
 
 function getCommanderCapeGeometry() {
-  if (!commanderCapeV8) commanderCapeV8 = createCapeGeometry(BLACK, BLACK_LINING);
-  return commanderCapeV8;
+  if (!commanderCapeV9) commanderCapeV9 = createCapeGeometry(BLACK, BLACK_LINING);
+  return commanderCapeV9;
 }
 
 function getSoldierPlumeGeometry() {
@@ -818,7 +818,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
           clearcoatRoughness={0.45}
         />
       </instancedMesh>
-      <instancedMesh key="cape-v8" ref={soldierCapes} args={[soldierCapeGeo, undefined, instanceCap]} frustumCulled={false} castShadow>
+      <instancedMesh key="cape-v9" ref={soldierCapes} args={[soldierCapeGeo, undefined, instanceCap]} frustumCulled={false} castShadow>
         <meshStandardMaterial color="#0437f2" roughness={0.88} metalness={0} envMapIntensity={0.08} side={THREE.DoubleSide} />
       </instancedMesh>
       <instancedMesh ref={soldierPlumes} args={[soldierPlumeGeo, undefined, instanceCap]} frustumCulled={false}>
