@@ -6,6 +6,7 @@ import { Army, armyFrame } from "./Army";
 import { Castle } from "./Castle";
 import { SallyRaid } from "./SallyRaid";
 import { CaptureHpHud, ReelFade, ReelTitles, ReelVignette } from "./CaptureHpHud";
+import { effectiveCommanders } from "../../game";
 import { castleFrame } from "../../castleLayout";
 import { REEL_HOLD, reelBeats } from "../../recordCanvas";
 import { CINEMA_SWORD_P, cinemaGateAt, sampleCinema, sampleShotMode, type ShotId } from "../../shotModes";
@@ -454,6 +455,8 @@ function SceneContent({
   shotMode = null,
   cinema = false,
 }: BattleSceneProps) {
+  const chiefs = effectiveCommanders(commanders, names);
+  const chiefN = skipCommander ? 0 : chiefs.length;
   return (
     <>
       <color attach="background" args={["#7eb6ee"]} />
@@ -464,14 +467,14 @@ function SceneContent({
       <Terrain />
       {cinematic && <Embers />}
       <Castle level={level} pressure={pressure} />
-      <SallyRaid soldiers={soldiers} commanders={commanders.length} />
+      <SallyRaid soldiers={soldiers} commanders={chiefN} />
       <Army count={soldiers} names={names} commanders={commanders} cinematic={cinematic} duration={duration} skipCommander={skipCommander} />
       {cinematic ? (
         <CinematicCam
           duration={duration ?? 8}
           soldiers={soldiers}
           level={level}
-          commanders={commanders.length}
+          commanders={chiefN}
           skipCommander={skipCommander}
           shotMode={shotMode}
           cinema={cinema}

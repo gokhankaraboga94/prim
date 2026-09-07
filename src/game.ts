@@ -34,6 +34,8 @@ export type SiegeView = {
 const LEVEL_HP = [0, 10_000, 50_000, 250_000, 1_000_000, 5_000_000, 25_000_000];
 const LEVEL_TARGET = [0, 10_000, 50_000, 250_000, 1_000_000, 5_000_000, 25_000_000];
 
+export const DEFAULT_COMMANDER = "Wargame2028";
+
 export const DEFAULT_GAME: GameState = {
   soldiers: 0,
   instagramHandle: "inshesabi",
@@ -222,10 +224,18 @@ export function compactCommanders(commanders: string[] | undefined, names: strin
   return out;
 }
 
+export function effectiveCommanders(commanders: string[] | undefined, names: string[] = []): string[] {
+  const listed = compactCommanders(commanders, names);
+  if (listed.length) return listed;
+  return [normalizeHandle(DEFAULT_COMMANDER)];
+}
+
 export function isCommander(handle: string, commanders: string[] | undefined): boolean {
   const key = normalizeHandle(handle).toLowerCase();
   if (!key) return false;
-  return (commanders || []).some((c) => normalizeHandle(c).toLowerCase() === key);
+  const listed = (commanders || []).map((c) => normalizeHandle(c)).filter(Boolean);
+  if (!listed.length) return key === DEFAULT_COMMANDER.toLowerCase();
+  return listed.some((c) => c.toLowerCase() === key);
 }
 
 export function toggleCommander(commanders: string[] | undefined, names: string[], handle: string): string[] {

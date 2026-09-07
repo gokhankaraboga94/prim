@@ -173,7 +173,7 @@ export function AdminPage() {
       await set(ref(db, "game"), toGameRecord(game, Date.now(), { commanders }));
       setCmdDraft(null);
       if (!incoming.length) {
-        setMsg("Komutan kalmadı.");
+        setMsg("Komutan listesi boş. Varsayılan @Wargame2028.");
       } else if (missing.length) {
         setMsg(
           `${commanders.length} komutan kaydedildi. Orduda yok: ${missing.map((n) => `@${n}`).join(", ")}`
@@ -228,7 +228,7 @@ export function AdminPage() {
         <div>
           <p className="join-kicker">Komuta paneli</p>
           <h1>Kuşatma yönetimi</h1>
-          <p className="join-kicker">sürüm 29 — silinen asker düşer</p>
+          <p className="join-kicker">sürüm 30 — varsayılan komutan</p>
         </div>
         <button type="button" className="btn-ghost" onClick={() => signOut(auth)}>
           Çıkış
@@ -321,8 +321,8 @@ export function AdminPage() {
           <form onSubmit={onSaveCommanders}>
             <label>Komutanlar</label>
             <p className="muted">
-              Ordudaki kullanıcılardan bir veya daha fazla ad yaz. Listedekiler komutan olur; adı
-              silinen komutanlıktan çıkar.
+              Liste boşsa komutan @Wargame2028. Ordudan bir veya daha fazla ad yazarsan onlar
+              komutan olur; adı silinen komutanlıktan çıkar ve liste yine boşsa varsayılan döner.
             </p>
             <textarea
               rows={4}
@@ -337,7 +337,7 @@ export function AdminPage() {
           <p className="muted">
             {namedCount(game.names, game.soldiers)} isimli ·{" "}
             {Math.max(0, game.soldiers - namedCount(game.names, game.soldiers))} isimsiz ·{" "}
-            {game.commanders.length} komutan
+            {game.commanders.length ? `${game.commanders.length} komutan` : "varsayılan @Wargame2028"}
           </p>
           <button
             type="button"

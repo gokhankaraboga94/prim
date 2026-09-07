@@ -2,9 +2,9 @@ import { useLayoutEffect, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
-import { isCommander } from "../../game";
+import { DEFAULT_COMMANDER, effectiveCommanders, isCommander } from "../../game";
 import { REEL_HOLD, reelBeats } from "../../recordCanvas";
-import { raidCount, sallyHunting, sallyLiveIndex, sallyLocal, sallyRaiderAt, swordStyleAt, swordSwingPose, swordSwingU } from "../../siegeEvent";
+import { raidCount, sallyHunting, sallyLiveIndex, sallyLocal, sallyRaiderAt, swordArmPose, swordStyleAt, swordSwingU } from "../../siegeEvent";
 
 const MAX_SOLDIERS = 5000;
 const MAX_LABELS = 400;
@@ -293,7 +293,7 @@ function horsehairPlume(tall: boolean) {
   return strands;
 }
 
-function plateArmor(withArms = true) {
+function plateArmor(withArms: boolean | "left" = true) {
   const flaps: THREE.BufferGeometry[] = [];
   for (let i = 0; i < 9; i++) {
     const x = (i - 4) * 0.05;
@@ -323,7 +323,7 @@ function plateArmor(withArms = true) {
     part(new THREE.BoxGeometry(0.2, 0.16, 0.14), ARMOR_HI, 0.34, 1.2, -0.02),
     part(new THREE.TorusGeometry(0.08, 0.012, 6, 12), GOLD, -0.34, 1.12, 0.02, Math.PI / 2),
     part(new THREE.TorusGeometry(0.08, 0.012, 6, 12), GOLD, 0.34, 1.12, 0.02, Math.PI / 2),
-    ...(withArms ? [...arm(-1), ...arm(1)] : []),
+    ...(withArms === true ? [...arm(-1), ...arm(1)] : withArms === "left" ? [...arm(-1)] : []),
   ];
 }
 
@@ -456,7 +456,26 @@ function createArcherGeometry() {
 }
 
 function createCommanderGeometry() {
-  return mergeParts([...plateArmor(true), ...commanderHelm(), ...hipScabbard()], ARMOR);
+  return mergeParts([...plateArmor("left"), ...commanderHelm(), ...hipScabbard()], ARMOR);
+}
+
+function createSwordArmGeometry() {
+  return mergeParts(
+    [
+      part(new THREE.SphereGeometry(0.056, 10, 8), ARMOR_HI, 0, 0, 0),
+      part(new THREE.TorusGeometry(0.05, 0.012, 6, 12), GOLD, 0, -0.016, 0, Math.PI / 2),
+      part(new THREE.CylinderGeometry(0.05, 0.062, 0.28, 11), ARMOR, 0.04, -0.14, 0.03, 0.28, 0, 0.12),
+      part(new THREE.SphereGeometry(0.05, 9, 7), ARMOR_HI, 0.07, -0.3, 0.07),
+      part(new THREE.CylinderGeometry(0.042, 0.05, 0.26, 11), ARMOR_DK, 0.1, -0.46, 0.12, 0.22, 0, 0.08),
+      part(new THREE.BoxGeometry(0.016, 0.16, 0.014), GOLD, 0.12, -0.46, 0.16),
+      part(new THREE.TorusGeometry(0.044, 0.009, 6, 10), GOLD, 0.12, -0.58, 0.14, Math.PI / 2),
+      part(new THREE.CylinderGeometry(0.036, 0.038, 0.05, 8), LEATHER, 0.13, -0.62, 0.16, 0.15, 0, 0.06),
+      part(new THREE.BoxGeometry(0.07, 0.088, 0.048), LEATHER, 0.14, -0.68, 0.18, 0.12, 0, 0.05),
+      part(new THREE.SphereGeometry(0.024, 7, 6), SKIN, 0.14, -0.7, 0.19),
+      ...fingers(0.14, -0.7, 0.19, 1, 0.72, 0.85),
+    ],
+    ARMOR
+  );
 }
 
 function createCapeGeometry(cloth: string, lining: string) {
@@ -472,7 +491,8 @@ function createCommanderFaceGeometry() {
 }
 
 let archerGeoV12: THREE.BufferGeometry | null = null;
-let commanderGeoV12: THREE.BufferGeometry | null = null;
+let commanderGeoV13: THREE.BufferGeometry | null = null;
+let commanderSwordArmV1: THREE.BufferGeometry | null = null;
 let commanderCapeV9: THREE.BufferGeometry | null = null;
 let soldierPlumeV10: THREE.BufferGeometry | null = null;
 let commanderPlumeV10: THREE.BufferGeometry | null = null;
@@ -481,6 +501,7 @@ let bowHoldV10: THREE.BufferGeometry | null = null;
 let drawArmV10: THREE.BufferGeometry | null = null;
 let nockArrowGeo: THREE.BufferGeometry | null = null;
 const nockOff = new THREE.Vector3();
+const handOff = new THREE.Vector3();
 
 function getArcherGeometry() {
   if (!archerGeoV12) archerGeoV12 = createArcherGeometry();
@@ -488,8 +509,13 @@ function getArcherGeometry() {
 }
 
 function getCommanderGeometry() {
-  if (!commanderGeoV12) commanderGeoV12 = createCommanderGeometry();
-  return commanderGeoV12;
+  if (!commanderGeoV13) commanderGeoV13 = createCommanderGeometry();
+  return commanderGeoV13;
+}
+
+function getSwordArmGeometry() {
+  if (!commanderSwordArmV1) commanderSwordArmV1 = createSwordArmGeometry();
+  return commanderSwordArmV1;
 }
 
 function getCommanderCapeGeometry() {
@@ -638,6 +664,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
   const chiefCapes = useRef<THREE.InstancedMesh>(null);
   const chiefPlumes = useRef<THREE.InstancedMesh>(null);
   const chiefFaces = useRef<THREE.InstancedMesh>(null);
+  const swordArms = useRef<THREE.InstancedMesh>(null);
   const swords = useRef<THREE.InstancedMesh>(null);
   const nocks = useRef<THREE.InstancedMesh>(null);
   const arrows = useRef<THREE.InstancedMesh>(null);
@@ -654,12 +681,15 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
   const commanderFaceGeo = useMemo(() => getCommanderFaceGeometry(), []);
   const bowHoldGeo = useMemo(() => getBowHoldGeometry(), []);
   const drawArmGeo = useMemo(() => getDrawArmGeometry(), []);
+  const swordArmGeo = useMemo(() => getSwordArmGeometry(), []);
   const swordGeo = useMemo(() => getSwordGeometry(), []);
   const nockGeo = useMemo(() => getNockArrowGeometry(), []);
 
   const visible = Math.min(MAX_SOLDIERS, Math.max(0, Math.floor(count)));
   const instanceCap = Math.min(MAX_SOLDIERS, Math.max(visible, 1));
-  const layout = useMemo(() => buildLayout(names, commanders, visible), [names, commanders, visible]);
+  const chiefsList = useMemo(() => effectiveCommanders(commanders, names), [commanders, names]);
+  const layout = useMemo(() => buildLayout(names, chiefsList, visible), [names, chiefsList, visible]);
+  const phantom = !skipCommander && layout.cmd.length === 0 && chiefsList.length > 0;
   const form = useMemo(() => ({ sizes: layout.sizes, scale: 1.28 }), [layout.sizes]);
   const steelRough = useMemo(() => {
     if (cinematic) return null;
@@ -688,17 +718,21 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
   const labeled = useMemo(() => {
     const cap = cinematic ? MAX_REEL_LABELS : MAX_LABELS;
     const ids: number[] = [];
+    if (phantom) ids.push(-1);
     for (let i = 0; i < visible && ids.length < cap; i++) {
-      if (names[i] && isCommander(names[i], commanders)) ids.push(i);
+      if (names[i] && isCommander(names[i], chiefsList)) ids.push(i);
     }
     for (let i = 0; i < visible && ids.length < cap; i++) {
-      if (names[i] && !isCommander(names[i], commanders)) ids.push(i);
+      if (names[i] && !isCommander(names[i], chiefsList)) ids.push(i);
     }
     return ids;
-  }, [names, visible, commanders, cinematic]);
+  }, [names, visible, chiefsList, cinematic, phantom]);
   const nameMaps = useMemo(
-    () => labeled.map((i) => makeHandleTexture(names[i], isCommander(names[i], commanders))),
-    [labeled, names, commanders]
+    () =>
+      labeled.map((i) =>
+        makeHandleTexture(i < 0 ? DEFAULT_COMMANDER : names[i], i < 0 || isCommander(names[i], chiefsList))
+      ),
+    [labeled, names, chiefsList]
   );
 
   const seeds = useMemo(() => {
@@ -851,17 +885,18 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
       if (nocks.current) nocks.current.instanceMatrix.needsUpdate = true;
     }
     if (chiefs.current) {
-      const n = Math.min(MAX_COMMANDERS, layout.cmd.length);
+      const n = skipCommander ? 0 : Math.min(MAX_COMMANDERS, Math.max(layout.cmd.length, phantom ? 1 : 0));
       chiefs.current.count = n;
       if (chiefCapes.current) chiefCapes.current.count = n;
       if (chiefPlumes.current) chiefPlumes.current.count = n;
       if (chiefFaces.current) chiefFaces.current.count = 0;
+      if (swordArms.current) swordArms.current.count = n;
       if (swords.current) swords.current.count = n;
       const p = sallyLocal(t);
-      const swing = swordSwingU(p, n);
+      const swing = swordSwingU(p, Math.max(1, n));
       const cmdScale = scale * 1.26;
       for (let k = 0; k < n; k++) {
-        const soldier = layout.cmd[k];
+        const soldier = layout.cmd[k] ?? 0;
         commanderPos(t, soldier, pos);
         dummy.position.copy(pos);
         dummy.rotation.set(0, Math.PI, 0);
@@ -870,10 +905,16 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
         stamp(chiefs.current, k);
         stamp(chiefCapes.current, k);
         stamp(chiefPlumes.current, k);
+        const style = swordStyleAt(p, k);
+        const [arx, ary, arz] = swordArmPose(style, swing);
+        _bodyQ.setFromEuler(_limbEul.set(0, Math.PI, 0, "XYZ"));
+        stampLimb(swordArms.current, k, R_SHOULDER, arx, ary, arz, cmdScale);
         if (swords.current) {
-          const [rx, ry, rz] = swordSwingPose(swordStyleAt(p, k), swing);
-          dummy.position.set(pos.x - 0.42 * cmdScale, pos.y + 0.86 * cmdScale, pos.z - 0.14 * cmdScale);
-          dummy.rotation.set(rx, ry, rz);
+          handOff.set(0.1, -0.66, 0.2);
+          handOff.applyQuaternion(_limbQuat);
+          dummy.position.copy(_limbPos).addScaledVector(handOff, 1);
+          dummy.quaternion.copy(_limbQuat);
+          dummy.rotateX(-1.05);
           dummy.scale.setScalar(cmdScale);
           dummy.updateMatrix();
           swords.current.setMatrixAt(k, dummy.matrix);
@@ -883,6 +924,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
       if (chiefCapes.current) chiefCapes.current.instanceMatrix.needsUpdate = true;
       if (chiefPlumes.current) chiefPlumes.current.instanceMatrix.needsUpdate = true;
       if (chiefFaces.current) chiefFaces.current.instanceMatrix.needsUpdate = true;
+      if (swordArms.current) swordArms.current.instanceMatrix.needsUpdate = true;
       if (swords.current) swords.current.instanceMatrix.needsUpdate = true;
     }
     if (!tags.current) return;
@@ -894,8 +936,9 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
         tag.visible = false;
         continue;
       }
-      const cmd = layout.cmdOf[idx] >= 0;
-      poseSoldier(idx, t);
+      const cmd = idx < 0 || layout.cmdOf[idx] >= 0;
+      if (idx < 0) commanderPos(t, 0, pos);
+      else poseSoldier(idx, t);
       let nameScale = 1;
       if (cinematic) {
         const recT = t - REEL_HOLD;
@@ -958,7 +1001,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
         if (layout.rest.length <= 0) break;
         const soldier = layout.rest[Math.floor(Math.random() * layout.rest.length)];
         poseSoldier(soldier, t);
-        const cmdN = layout.cmd.length;
+        const cmdN = skipCommander ? 0 : chiefsList.length;
         const idx = hunt ? sallyLiveIndex(sally, enemies, soldier + i * 11, cmdN) : -1;
         const prey = idx >= 0 ? sallyRaiderAt(sally, idx, enemies, cmdN) : null;
         const draw = t + i * 0.05;
@@ -1025,7 +1068,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
       <instancedMesh key="draw-v10" ref={drawArms} args={[drawArmGeo, undefined, instanceCap]} frustumCulled={false}>
         <meshStandardMaterial vertexColors roughness={0.48} metalness={0.32} envMapIntensity={0.75} />
       </instancedMesh>
-      <instancedMesh ref={chiefs} args={[commanderGeo, undefined, MAX_COMMANDERS]} frustumCulled={false} castShadow>
+      <instancedMesh key="cmd-body-v13" ref={chiefs} args={[commanderGeo, undefined, MAX_COMMANDERS]} frustumCulled={false} castShadow>
         <meshPhysicalMaterial
           vertexColors
           roughness={0.36}
@@ -1044,6 +1087,17 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
       </instancedMesh>
       <instancedMesh key="face-v10" ref={chiefFaces} args={[commanderFaceGeo, undefined, MAX_COMMANDERS]} frustumCulled={false}>
         <meshStandardMaterial vertexColors roughness={0.62} metalness={0.04} envMapIntensity={0.35} />
+      </instancedMesh>
+      <instancedMesh key="cmd-arm-v1" ref={swordArms} args={[swordArmGeo, undefined, MAX_COMMANDERS]} frustumCulled={false} castShadow>
+        <meshPhysicalMaterial
+          vertexColors
+          roughness={0.36}
+          metalness={0.88}
+          roughnessMap={steelRough ?? undefined}
+          envMapIntensity={1.45}
+          clearcoat={0.35}
+          clearcoatRoughness={0.38}
+        />
       </instancedMesh>
       <instancedMesh ref={swords} args={[swordGeo, undefined, MAX_COMMANDERS]} frustumCulled={false} castShadow>
         <meshPhysicalMaterial vertexColors roughness={0.2} metalness={0.9} envMapIntensity={1.5} clearcoat={0.4} />

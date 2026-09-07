@@ -50,9 +50,9 @@ export function raidCount(soldiers: number) {
   return Math.min(MAX_RAIDERS, Math.max(0, Math.floor(soldiers) * 6));
 }
 
-export const SWORD_START = 7.1;
-export const SWORD_EVERY = 2.9;
-export const SWORD_SWING = 0.78;
+export const SWORD_START = 5.75;
+export const SWORD_EVERY = 1.55;
+export const SWORD_SWING = 0.88;
 
 export function swordPairCount(n: number, commanders: number) {
   if (commanders <= 0 || n <= 0) return 0;
@@ -102,6 +102,31 @@ export function swordSwingPose(style: SwordStyle, u: number): [number, number, n
     return [restX + 1.05 * wind - 2.25 * slash, Math.PI, restZ];
   }
   return [restX + 0.85 * wind - 2.05 * slash, Math.PI, restZ + 0.08 * wind];
+}
+
+/** Right-arm raise and cut — Aragorn-style, no footwork. */
+export function swordArmPose(style: SwordStyle, u: number): [number, number, number] {
+  const rest: [number, number, number] = [0.52, 0.1, 0.2];
+  if (u <= 0) return rest;
+  let wind = 0;
+  let slash = 0;
+  if (u < 0.46) {
+    const t = u / 0.46;
+    wind = t * t * (3 - 2 * t);
+  } else if (u < 0.54) {
+    wind = 1;
+  } else {
+    wind = 1;
+    const t = (u - 0.54) / 0.46;
+    slash = t * t * (2 - t);
+  }
+  if (style === "side") {
+    return [rest[0] - 1.25 * wind + 0.95 * slash, rest[1] + 0.95 * wind - 1.25 * slash, rest[2] + 0.55 * wind - 0.75 * slash];
+  }
+  if (style === "overhead") {
+    return [rest[0] - 2.95 * wind + 2.55 * slash, rest[1] + 0.12 * wind, rest[2] - 0.18 * wind + 0.42 * slash];
+  }
+  return [rest[0] - 2.25 * wind + 1.95 * slash, rest[1] + 0.28 * wind - 0.18 * slash, rest[2] + 0.22 * wind + 0.12 * slash];
 }
 
 function hash01(i: number, salt: number) {
