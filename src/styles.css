@@ -203,7 +203,7 @@ select {
   min-height: 100dvh;
   display: flex;
   align-items: flex-end;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: 24px;
   padding: 140px 22px 28px;
   pointer-events: none;

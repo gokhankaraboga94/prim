@@ -11,10 +11,7 @@ export function JoinArmy({ handle }: JoinArmyProps) {
   return (
     <aside className="join-panel">
       <div className="join-text">
-        <p className="join-kicker">Kuşatma yetmiyor</p>
-        <h2>Askerler bir başına. Yardımın lazım.</h2>
         <p className="join-copy">
-          Kaleyi tek başlarına yıkamazlar.{" "}
           <a href={followHref} target="_blank" rel="noreferrer">
             @{owner}
           </a>{" "}
