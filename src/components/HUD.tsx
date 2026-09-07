@@ -14,7 +14,7 @@ export function HUD({ handle, soldiers, power, maxHp }: HUDProps) {
 
   return (
     <header className="hud">
-      <a className="hud-brand" href={href} target="_blank" rel="noreferrer">
+      <a className="hud-brand" href={href} target="_blank" rel="me noopener noreferrer">
         <span className="hud-kicker">Instagram</span>
         <strong>@{handle.replace(/^@/, "")}</strong>
       </a>

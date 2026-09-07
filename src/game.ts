@@ -38,7 +38,7 @@ export const DEFAULT_COMMANDER = "Wargame2028";
 
 export const DEFAULT_GAME: GameState = {
   soldiers: 0,
-  instagramHandle: "inshesabi",
+  instagramHandle: "Wargame2028",
   names: [],
   commanders: [],
   updatedAt: 0,
