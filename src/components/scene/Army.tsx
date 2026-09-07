@@ -323,7 +323,7 @@ function plateArmor(withArms: boolean | "left" = true) {
     part(new THREE.BoxGeometry(0.2, 0.16, 0.14), ARMOR_HI, 0.34, 1.2, -0.02),
     part(new THREE.TorusGeometry(0.08, 0.012, 6, 12), GOLD, -0.34, 1.12, 0.02, Math.PI / 2),
     part(new THREE.TorusGeometry(0.08, 0.012, 6, 12), GOLD, 0.34, 1.12, 0.02, Math.PI / 2),
-    ...(withArms === true ? [...arm(-1), ...arm(1)] : withArms === "left" ? [...arm(-1)] : []),
+    ...(withArms === true ? [...arm(-1), ...arm(1)] : withArms === "left" ? [...arm(1)] : []),
   ];
 }
 
@@ -464,15 +464,15 @@ function createSwordArmGeometry() {
     [
       part(new THREE.SphereGeometry(0.056, 10, 8), ARMOR_HI, 0, 0, 0),
       part(new THREE.TorusGeometry(0.05, 0.012, 6, 12), GOLD, 0, -0.016, 0, Math.PI / 2),
-      part(new THREE.CylinderGeometry(0.05, 0.062, 0.28, 11), ARMOR, 0.04, -0.14, 0.03, 0.28, 0, 0.12),
-      part(new THREE.SphereGeometry(0.05, 9, 7), ARMOR_HI, 0.07, -0.3, 0.07),
-      part(new THREE.CylinderGeometry(0.042, 0.05, 0.26, 11), ARMOR_DK, 0.1, -0.46, 0.12, 0.22, 0, 0.08),
-      part(new THREE.BoxGeometry(0.016, 0.16, 0.014), GOLD, 0.12, -0.46, 0.16),
-      part(new THREE.TorusGeometry(0.044, 0.009, 6, 10), GOLD, 0.12, -0.58, 0.14, Math.PI / 2),
-      part(new THREE.CylinderGeometry(0.036, 0.038, 0.05, 8), LEATHER, 0.13, -0.62, 0.16, 0.15, 0, 0.06),
-      part(new THREE.BoxGeometry(0.07, 0.088, 0.048), LEATHER, 0.14, -0.68, 0.18, 0.12, 0, 0.05),
-      part(new THREE.SphereGeometry(0.024, 7, 6), SKIN, 0.14, -0.7, 0.19),
-      ...fingers(0.14, -0.7, 0.19, 1, 0.72, 0.85),
+      part(new THREE.CylinderGeometry(0.05, 0.062, 0.28, 11), ARMOR, -0.04, -0.14, 0.03, 0.28, 0, -0.12),
+      part(new THREE.SphereGeometry(0.05, 9, 7), ARMOR_HI, -0.07, -0.3, 0.07),
+      part(new THREE.CylinderGeometry(0.042, 0.05, 0.26, 11), ARMOR_DK, -0.1, -0.46, 0.12, 0.22, 0, -0.08),
+      part(new THREE.BoxGeometry(0.016, 0.16, 0.014), GOLD, -0.12, -0.46, 0.16),
+      part(new THREE.TorusGeometry(0.044, 0.009, 6, 10), GOLD, -0.12, -0.58, 0.14, Math.PI / 2),
+      part(new THREE.CylinderGeometry(0.036, 0.038, 0.05, 8), LEATHER, -0.13, -0.62, 0.16, 0.15, 0, -0.06),
+      part(new THREE.BoxGeometry(0.07, 0.088, 0.048), LEATHER, -0.14, -0.68, 0.18, 0.12, 0, -0.05),
+      part(new THREE.SphereGeometry(0.024, 7, 6), SKIN, -0.14, -0.7, 0.19),
+      ...fingers(-0.14, -0.7, 0.19, -1, 0.72, 0.85),
     ],
     ARMOR
   );
@@ -491,8 +491,8 @@ function createCommanderFaceGeometry() {
 }
 
 let archerGeoV12: THREE.BufferGeometry | null = null;
-let commanderGeoV13: THREE.BufferGeometry | null = null;
-let commanderSwordArmV1: THREE.BufferGeometry | null = null;
+let commanderGeoV14: THREE.BufferGeometry | null = null;
+let commanderSwordArmV2: THREE.BufferGeometry | null = null;
 let commanderCapeV9: THREE.BufferGeometry | null = null;
 let soldierPlumeV10: THREE.BufferGeometry | null = null;
 let commanderPlumeV10: THREE.BufferGeometry | null = null;
@@ -509,13 +509,13 @@ function getArcherGeometry() {
 }
 
 function getCommanderGeometry() {
-  if (!commanderGeoV13) commanderGeoV13 = createCommanderGeometry();
-  return commanderGeoV13;
+  if (!commanderGeoV14) commanderGeoV14 = createCommanderGeometry();
+  return commanderGeoV14;
 }
 
 function getSwordArmGeometry() {
-  if (!commanderSwordArmV1) commanderSwordArmV1 = createSwordArmGeometry();
-  return commanderSwordArmV1;
+  if (!commanderSwordArmV2) commanderSwordArmV2 = createSwordArmGeometry();
+  return commanderSwordArmV2;
 }
 
 function getCommanderCapeGeometry() {
@@ -908,9 +908,9 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
         const style = swordStyleAt(p, k);
         const [arx, ary, arz] = swordArmPose(style, swing);
         _bodyQ.setFromEuler(_limbEul.set(0, Math.PI, 0, "XYZ"));
-        stampLimb(swordArms.current, k, R_SHOULDER, arx, ary, arz, cmdScale);
+        stampLimb(swordArms.current, k, L_SHOULDER, arx, -ary, -arz, cmdScale);
         if (swords.current) {
-          handOff.set(0.1, -0.66, 0.2);
+          handOff.set(-0.1, -0.66, 0.2);
           handOff.applyQuaternion(_limbQuat);
           dummy.position.copy(_limbPos).addScaledVector(handOff, 1);
           dummy.quaternion.copy(_limbQuat);
@@ -1068,7 +1068,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
       <instancedMesh key="draw-v10" ref={drawArms} args={[drawArmGeo, undefined, instanceCap]} frustumCulled={false}>
         <meshStandardMaterial vertexColors roughness={0.48} metalness={0.32} envMapIntensity={0.75} />
       </instancedMesh>
-      <instancedMesh key="cmd-body-v13" ref={chiefs} args={[commanderGeo, undefined, MAX_COMMANDERS]} frustumCulled={false} castShadow>
+      <instancedMesh key="cmd-body-v14" ref={chiefs} args={[commanderGeo, undefined, MAX_COMMANDERS]} frustumCulled={false} castShadow>
         <meshPhysicalMaterial
           vertexColors
           roughness={0.36}
@@ -1088,7 +1088,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
       <instancedMesh key="face-v10" ref={chiefFaces} args={[commanderFaceGeo, undefined, MAX_COMMANDERS]} frustumCulled={false}>
         <meshStandardMaterial vertexColors roughness={0.62} metalness={0.04} envMapIntensity={0.35} />
       </instancedMesh>
-      <instancedMesh key="cmd-arm-v1" ref={swordArms} args={[swordArmGeo, undefined, MAX_COMMANDERS]} frustumCulled={false} castShadow>
+      <instancedMesh key="cmd-arm-v2" ref={swordArms} args={[swordArmGeo, undefined, MAX_COMMANDERS]} frustumCulled={false} castShadow>
         <meshPhysicalMaterial
           vertexColors
           roughness={0.36}

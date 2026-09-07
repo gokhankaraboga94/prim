@@ -34,15 +34,6 @@ export function HomePage() {
       />
 
       <div className="home-body">
-        <div className="story">
-          <p className="join-kicker">Wargame 2028 · online oyun</p>
-          <h1>Kale yıkılmıyor.</h1>
-          <p className="seo-lead">
-            Ücretsiz online wargame, strateji oyunu ve canlı kale kuşatması. Game ve games,
-            oyun ve oyunlar: asker ol, orduya katıl, kaleyi birlikte yık.
-          </p>
-          <p className="cam-hint">Sürükle veya pinch ile bakış açısını değiştir</p>
-        </div>
         <JoinArmy handle={handle} />
       </div>
 
