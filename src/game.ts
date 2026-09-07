@@ -177,9 +177,10 @@ export function parseNameList(raw: string): string[] {
 }
 
 export function compactNames(names: string[], soldiers: number): string[] {
-  const next = names.slice(0, Math.max(0, soldiers)).map((n) => normalizeHandle(n));
-  while (next.length && !next[next.length - 1]) next.pop();
-  return next;
+  return names
+    .map((n) => normalizeHandle(n))
+    .filter(Boolean)
+    .slice(0, Math.max(0, soldiers));
 }
 
 export function renameSoldier(names: string[], soldiers: number, index: number, nextName: string): string[] {
@@ -255,19 +256,16 @@ export function retargetCommander(commanders: string[] | undefined, prev: string
 
 export function assignNames(existing: string[], soldiers: number, incoming: string[]): string[] {
   const cap = Math.max(0, Math.floor(soldiers));
-  const names = Array.from({ length: cap }, (_, i) => normalizeHandle(existing[i] || ""));
-  const empty: number[] = [];
-  for (let i = 0; i < cap; i++) if (!names[i]) empty.push(i);
-  for (let i = empty.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    const swap = empty[i];
-    empty[i] = empty[j];
-    empty[j] = swap;
+  const names = compactNames(existing, cap);
+  const have = new Set(names.map((n) => n.toLowerCase()));
+  for (const raw of incoming) {
+    if (names.length >= cap) break;
+    const name = normalizeHandle(raw);
+    const key = name.toLowerCase();
+    if (!name || have.has(key)) continue;
+    have.add(key);
+    names.push(name);
   }
-  const take = incoming.slice(0, empty.length);
-  take.forEach((name, k) => {
-    names[empty[k]] = name;
-  });
   return compactNames(names, cap);
 }
 
@@ -279,12 +277,8 @@ export function enlistWithNames(
 ): { soldiers: number; names: string[]; added: number; named: number } {
   const cap = Math.max(0, Math.floor(soldiers));
   const extra = Math.max(0, Math.floor(extraSoldiers));
-  const have = new Set(
-    existing
-      .slice(0, cap)
-      .map((n) => normalizeHandle(n).toLowerCase())
-      .filter(Boolean)
-  );
+  const packed = compactNames(existing, Math.max(cap, existing.length));
+  const have = new Set(packed.map((n) => n.toLowerCase()));
   const fresh: string[] = [];
   for (const raw of incoming) {
     const name = normalizeHandle(raw);
@@ -293,16 +287,12 @@ export function enlistWithNames(
     have.add(key);
     fresh.push(name);
   }
-  const grow = Math.max(extra, fresh.length);
-  const nextCount = cap + grow;
-  const names = Array.from({ length: nextCount }, (_, i) => normalizeHandle(existing[i] || ""));
-  fresh.forEach((name, k) => {
-    names[cap + k] = name;
-  });
+  const names = [...packed, ...fresh];
+  const nextCount = Math.max(cap + extra, names.length);
   return {
     soldiers: nextCount,
     names: compactNames(names, nextCount),
-    added: grow,
+    added: Math.max(0, nextCount - cap),
     named: fresh.length,
   };
 }

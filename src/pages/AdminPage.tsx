@@ -107,14 +107,18 @@ export function AdminPage() {
     setBusy(true);
     try {
       const next = enlistWithNames(game.names, game.soldiers, incoming);
-      if (!next.added) {
+      if (!next.added && !next.named) {
         setNamesInput("");
         setMsg("Bu kullanıcı adları zaten orduda.");
         return;
       }
       await set(ref(db, "game"), toGameRecord(game, Date.now(), { soldiers: next.soldiers, names: next.names }));
       setNamesInput("");
-      setMsg(`${next.named} asker oluşturuldu ve isimleri verildi.`);
+      setMsg(
+        next.added
+          ? `${next.named} asker oluşturuldu ve isimleri verildi.`
+          : `${next.named} isimsiz slota yazıldı.`
+      );
     } catch {
       setMsg("İsimler kaydedilemedi.");
     } finally {
@@ -228,7 +232,7 @@ export function AdminPage() {
         <div>
           <p className="join-kicker">Komuta paneli</p>
           <h1>Kuşatma yönetimi</h1>
-          <p className="join-kicker">sürüm 36 — instagram kimlik</p>
+          <p className="join-kicker">sürüm 37 — isimsiz slot dolar</p>
         </div>
         <button type="button" className="btn-ghost" onClick={() => signOut(auth)}>
           Çıkış
@@ -302,9 +306,9 @@ export function AdminPage() {
         <section className="admin-card">
           <h2>Asker kullanıcı adları</h2>
           <p className="muted">
-            Virgül, boşluk veya alt alta yaz. Asker ekle demeden isim yazarsan o kadar yeni asker
-            oluşur ve bu adlar verilir. Zaten listedeki adlar tekrar eklenmez. Sil, askeri
-            isimsiz bırakmaz; ordudan ve takipçi sayısından düşürür.
+            Virgül, boşluk veya alt alta yaz. Önce isimsiz slotlar dolar; isim sayısı
+            ordudan fazlaysa o kadar yeni asker oluşur. Listedeki adlar tekrar eklenmez.
+            Sil, askeri isimsiz bırakmaz; ordudan ve takipçi sayısından düşürür.
           </p>
           <form onSubmit={onAssignNames}>
             <label>@kullanıcıadları</label>
