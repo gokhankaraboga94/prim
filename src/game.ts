@@ -188,8 +188,17 @@ export function renameSoldier(names: string[], soldiers: number, index: number, 
   return compactNames(next, cap);
 }
 
-export function removeSoldierName(names: string[], soldiers: number, index: number): string[] {
-  return renameSoldier(names, soldiers, index, "");
+export function removeSoldier(
+  names: string[],
+  soldiers: number,
+  index: number
+): { names: string[]; soldiers: number } {
+  const cap = Math.max(0, Math.floor(soldiers));
+  const next = Array.from({ length: cap }, (_, i) => normalizeHandle(names[i] || ""));
+  if (index < 0 || index >= cap) return { names: compactNames(next, cap), soldiers: cap };
+  next.splice(index, 1);
+  const count = Math.max(0, cap - 1);
+  return { names: compactNames(next, count), soldiers: count };
 }
 
 export function namedCount(names: string[], soldiers: number): number {

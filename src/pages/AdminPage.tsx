@@ -12,7 +12,7 @@ import {
   namedCount,
   normalizeHandle,
   parseNameList,
-  removeSoldierName,
+  removeSoldier,
   renameSoldier,
   targetForLevel,
   toGameRecord,
@@ -189,7 +189,18 @@ export function AdminPage() {
   }
 
   async function onDeleteName(index: number, name: string) {
-    await saveNames(removeSoldierName(game.names, game.soldiers, index), `@${name} silindi.`);
+    const next = removeSoldier(game.names, game.soldiers, index);
+    setBusy(true);
+    try {
+      await set(ref(db, "game"), toGameRecord(game, Date.now(), { soldiers: next.soldiers, names: next.names }));
+      setEditIndex(null);
+      setEditValue("");
+      setMsg(`@${name} silindi. Ordu ${formatCount(next.soldiers)} asker.`);
+    } catch {
+      setMsg("Asker silinemedi.");
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function onSaveHandle(e: FormEvent) {
@@ -217,7 +228,7 @@ export function AdminPage() {
         <div>
           <p className="join-kicker">Komuta paneli</p>
           <h1>Kuşatma yönetimi</h1>
-          <p className="join-kicker">sürüm 28 — birleşim 30/60/90</p>
+          <p className="join-kicker">sürüm 29 — silinen asker düşer</p>
         </div>
         <button type="button" className="btn-ghost" onClick={() => signOut(auth)}>
           Çıkış
@@ -292,7 +303,8 @@ export function AdminPage() {
           <h2>Asker kullanıcı adları</h2>
           <p className="muted">
             Virgül, boşluk veya alt alta yaz. Asker ekle demeden isim yazarsan o kadar yeni asker
-            oluşur ve bu adlar verilir. Zaten listedeki adlar tekrar eklenmez.
+            oluşur ve bu adlar verilir. Zaten listedeki adlar tekrar eklenmez. Sil, askeri
+            isimsiz bırakmaz; ordudan ve takipçi sayısından düşürür.
           </p>
           <form onSubmit={onAssignNames}>
             <label>@kullanıcıadları</label>
