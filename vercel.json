@@ -1,5 +1,8 @@
 {
   "rewrites": [
-    { "source": "/((?!robots\\.txt|sitemap\\.xml).*)", "destination": "/index.html" }
+    {
+      "source": "/((?!robots\\.txt|sitemap\\.xml|manifest\\.webmanifest|llms\\.txt|seo\\.css|og\\.png|oyun/?|oyunlar/?|oyuncu/?|game/?|games/?|gamer/?|wargame/?).*)",
+      "destination": "/index.html"
+    }
   ]
 }

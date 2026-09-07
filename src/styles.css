@@ -27,6 +27,10 @@ body,
   font-family: var(--sans);
 }
 
+#root {
+  min-height: 100dvh;
+}
+
 body {
   overflow-x: hidden;
 }
