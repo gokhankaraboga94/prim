@@ -183,33 +183,46 @@ function mergeParts(pieces: THREE.BufferGeometry[], fallback: string) {
 
 function helmBowl(seg: number) {
   const pts = [
-    new THREE.Vector2(0.012, 0.21),
-    new THREE.Vector2(0.1, 0.2),
-    new THREE.Vector2(0.158, 0.15),
-    new THREE.Vector2(0.182, 0.06),
-    new THREE.Vector2(0.186, -0.02),
-    new THREE.Vector2(0.18, -0.1),
-    new THREE.Vector2(0.172, -0.2),
-    new THREE.Vector2(0.166, -0.3),
-    new THREE.Vector2(0.194, -0.34),
+    new THREE.Vector2(0.01, 0.24),
+    new THREE.Vector2(0.092, 0.228),
+    new THREE.Vector2(0.158, 0.175),
+    new THREE.Vector2(0.192, 0.08),
+    new THREE.Vector2(0.2, -0.02),
+    new THREE.Vector2(0.192, -0.12),
+    new THREE.Vector2(0.178, -0.22),
+    new THREE.Vector2(0.17, -0.32),
+    new THREE.Vector2(0.205, -0.38),
   ];
   return new THREE.LatheGeometry(pts, seg);
 }
 
+function eyeSocket(x: number) {
+  return [
+    part(new THREE.BoxGeometry(0.1, 0.062, 0.09), SLIT, x, 1.378, 0.188),
+    part(new THREE.BoxGeometry(0.086, 0.046, 0.04), "#020204", x, 1.378, 0.228),
+    part(new THREE.BoxGeometry(0.108, 0.012, 0.014), HELM_HI, x, 1.414, 0.236),
+    part(new THREE.BoxGeometry(0.108, 0.012, 0.014), HELM_HI, x, 1.342, 0.236),
+    part(new THREE.BoxGeometry(0.012, 0.066, 0.014), HELM_HI, x - 0.052, 1.378, 0.236),
+    part(new THREE.BoxGeometry(0.012, 0.066, 0.014), HELM_HI, x + 0.052, 1.378, 0.236),
+  ];
+}
+
 function corinthianShell(seg = 16) {
   return [
-    part(helmBowl(seg), ARMOR, 0, 1.46, 0.02),
-    part(new THREE.SphereGeometry(0.178, seg, 12), ARMOR_HI, 0, 1.5, 0.01),
-    part(new THREE.SphereGeometry(0.17, 12, 10), ARMOR, 0, 1.3, 0.08),
-    part(new THREE.BoxGeometry(0.3, 0.32, 0.12), ARMOR, 0, 1.27, 0.13),
-    part(new THREE.BoxGeometry(0.12, 0.28, 0.16), ARMOR, -0.138, 1.24, 0.1),
-    part(new THREE.BoxGeometry(0.12, 0.28, 0.16), ARMOR, 0.138, 1.24, 0.1),
-    part(new THREE.BoxGeometry(0.078, 0.048, 0.07), SLIT, -0.058, 1.365, 0.2),
-    part(new THREE.BoxGeometry(0.078, 0.048, 0.07), SLIT, 0.058, 1.365, 0.2),
-    part(new THREE.BoxGeometry(0.058, 0.032, 0.04), "#040406", -0.058, 1.365, 0.228),
-    part(new THREE.BoxGeometry(0.058, 0.032, 0.04), "#040406", 0.058, 1.365, 0.228),
-    part(new THREE.CylinderGeometry(0.16, 0.2, 0.06, seg), ARMOR_DK, 0, 1.12, 0.02),
-    part(new THREE.BoxGeometry(0.055, 0.08, 0.34), ARMOR_HI, 0, 1.64, 0.01),
+    part(helmBowl(seg), HELM, 0, 1.48, 0.02),
+    part(new THREE.SphereGeometry(0.192, seg, 14), HELM_HI, 0, 1.53, 0.01),
+    part(new THREE.SphereGeometry(0.128, 12, 10), HELM, -0.112, 1.28, 0.06),
+    part(new THREE.SphereGeometry(0.128, 12, 10), HELM, 0.112, 1.28, 0.06),
+    part(new THREE.SphereGeometry(0.155, 14, 12, 0, Math.PI * 2, Math.PI * 0.28, Math.PI * 0.42), HELM, 0, 1.33, 0.05),
+    part(new THREE.TorusGeometry(0.138, 0.018, 7, 18, Math.PI), HELM_HI, 0, 1.43, 0.15, -Math.PI / 2),
+    part(new THREE.BoxGeometry(0.034, 0.15, 0.05), HELM_HI, 0, 1.3, 0.208),
+    part(new THREE.BoxGeometry(0.028, 0.08, 0.04), HELM, 0, 1.22, 0.2),
+    ...eyeSocket(-0.058),
+    ...eyeSocket(0.058),
+    part(new THREE.BoxGeometry(0.042, 0.1, 0.055), SLIT, 0, 1.21, 0.198),
+    part(new THREE.CylinderGeometry(0.168, 0.218, 0.075, seg), HELM_DK, 0, 1.1, 0.02),
+    part(new THREE.TorusGeometry(0.195, 0.013, 6, seg), HELM_HI, 0, 1.132, 0.02, Math.PI / 2),
+    part(new THREE.BoxGeometry(0.046, 0.072, 0.3), HELM_HI, 0, 1.67, 0.01),
   ];
 }
 
@@ -528,7 +541,7 @@ function createCommanderFaceGeometry() {
   return mergeParts(commanderFace(), SKIN);
 }
 
-let archerGeoV13: THREE.BufferGeometry | null = null;
+let archerGeoV14: THREE.BufferGeometry | null = null;
 let commanderGeoV14: THREE.BufferGeometry | null = null;
 let commanderSwordArmV3: THREE.BufferGeometry | null = null;
 let commanderCapeV9: THREE.BufferGeometry | null = null;
@@ -542,8 +555,8 @@ const nockOff = new THREE.Vector3();
 const handOff = new THREE.Vector3();
 
 function getArcherGeometry() {
-  if (!archerGeoV13) archerGeoV13 = createArcherGeometry();
-  return archerGeoV13;
+  if (!archerGeoV14) archerGeoV14 = createArcherGeometry();
+  return archerGeoV14;
 }
 
 function getCommanderGeometry() {
@@ -1173,7 +1186,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
 
   return (
     <group>
-      <instancedMesh key={instanceCap} ref={bodies} args={[archerGeo, undefined, instanceCap]} frustumCulled={false} castShadow={!cinematic}>
+      <instancedMesh key={`archer-v14-${instanceCap}`} ref={bodies} args={[archerGeo, undefined, instanceCap]} frustumCulled={false} castShadow={!cinematic}>
         {cinematic ? (
           <meshStandardMaterial vertexColors roughness={0.46} metalness={0.72} envMapIntensity={0.9} />
         ) : (
