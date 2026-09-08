@@ -23,7 +23,7 @@ import { REEL_DURATIONS } from "../recordCanvas";
 import { CINEMA_DURATIONS, CINEMA_ID, CINEMA_MODE, SHOT_MODES, type ReelShot } from "../shotModes";
 import { HOOK_ID, HOOK_MODE, ROSTER_ID, ROSTER_MODE, isPlanB, rosterDuration, type PlanBId } from "../rosterReel";
 import { SAGA_MODES, isSaga, sagaDuration, type SagaId } from "../sagaReel";
-import { DISCOVER_ID, DISCOVER_MODE, DISCOVER_SECONDS, isDiscover, type DiscoverId } from "../discoverReel";
+import { DISCOVER_ID, DISCOVER2_ID, DISCOVER_MODE, DISCOVER2_MODE, DISCOVER_SECONDS, isDiscover, isDiscoverEngage, type DiscoverId } from "../discoverReel";
 
 export function AdminPage() {
   const { game, recruits, level, power, pressure, target, maxHp } = useGame();
@@ -235,7 +235,7 @@ export function AdminPage() {
         <div>
           <p className="join-kicker">Komuta paneli</p>
           <h1>Kuşatma yönetimi</h1>
-          <p className="join-kicker">sürüm 51 — keşfet kadraj</p>
+          <p className="join-kicker">sürüm 52 — keşfet 2</p>
         </div>
         <button type="button" className="btn-ghost" onClick={() => signOut(auth)}>
           Çıkış
@@ -517,10 +517,8 @@ export function AdminPage() {
           </div>
           <label>Keşfet — 15s</label>
           <p className="muted">
-            Algoritma klibi. İlk 3 sn kanca, komutan yakın plan yok, son kare ilk
-            kareye döner — loop görünmez. Yazı izleyiciyi isim taramaya kilitler;
-            kapı ve can çubuğu ikinci yarıda bahis. Amaç: yarıya kadar herkes,
-            sonuna kadar çoğu, tekrar izleyen loop.
+            Aynı klip, iki yazı. Keşfet: izlenme. Keşfet 2: beğeni + yorum — ikinci
+            dalga. Kamera, loop, komutansız kare aynı.
           </p>
           <div className="dur-pills shot-pills">
             <button
@@ -534,10 +532,28 @@ export function AdminPage() {
             >
               {DISCOVER_MODE.label}
             </button>
+            <button
+              type="button"
+              className={reelShot === DISCOVER2_ID ? "on" : ""}
+              onClick={() => {
+                setReelShot((cur) => (cur === DISCOVER2_ID ? null : DISCOVER2_ID));
+                setReelSeconds(DISCOVER_SECONDS);
+                setReelSkipCmd(true);
+              }}
+            >
+              {DISCOVER2_MODE.label}
+            </button>
           </div>
-          {isDiscover(reelShot) && (
+          {reelShot === DISCOVER_ID && (
             <p className="muted">
               Caption: Takip etmezsen kale yıkılmıyor. Tanıdığın var mı? Adın yoksa takip et — sonraki turda askersin. 1 takip = 1 asker. wargame.lol · @wargame2028
+              {" "}Hashtag: #wargame #oyun #reels
+            </p>
+          )}
+          {isDiscoverEngage(reelShot) && (
+            <p className="muted">
+              Caption: Adın çıkarsa yoruma SAVAŞTAYIM yaz. Kale düşsün diyorsan beğen. 1 takip = 1 asker. wargame.lol · @wargame2028
+              {" "}İlk yorumu sabitle: SAVAŞTAYIM — kopyala yapıştır, ordudasın.
               {" "}Hashtag: #wargame #oyun #reels
             </p>
           )}
@@ -635,7 +651,7 @@ export function AdminPage() {
           cinema={reelShot === CINEMA_ID}
           roster={isPlanB(reelShot) ? reelShot : null}
           saga={isSaga(reelShot) ? reelShot : null}
-          discover={isDiscover(reelShot)}
+          discover={isDiscover(reelShot) ? reelShot : null}
           day={Math.max(0, Math.floor(Number(reelDay)) || 0)}
           onClose={() => setCapturing(false)}
         />

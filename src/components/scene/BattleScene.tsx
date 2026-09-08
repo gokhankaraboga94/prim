@@ -12,7 +12,7 @@ import { REEL_HOLD, reelBeats } from "../../recordCanvas";
 import { CINEMA_SWORD_P, cinemaGateAt, sampleCinema, sampleShotMode, type ShotId } from "../../shotModes";
 import { rosterSoldierIds, sampleRoster, type PlanBId } from "../../rosterReel";
 import { sagaGateRecT, sampleSaga, type SagaId } from "../../sagaReel";
-import { discoverGateRecT, sampleDiscover } from "../../discoverReel";
+import { discoverGateRecT, sampleDiscover, type DiscoverId } from "../../discoverReel";
 import {
   SALLY_START_DELAY,
   SWORD_START,
@@ -40,7 +40,7 @@ type BattleSceneProps = {
   cinema?: boolean;
   roster?: PlanBId | null;
   saga?: SagaId | null;
-  discover?: boolean;
+  discover?: DiscoverId | null;
   onReady?: (canvas: HTMLCanvasElement) => void;
 };
 
@@ -70,7 +70,7 @@ function CinematicCam({
   cinema = false,
   roster = null,
   saga = null,
-  discover = false,
+  discover = null,
 }: {
   duration: number;
   soldiers: number;
@@ -82,7 +82,7 @@ function CinematicCam({
   cinema?: boolean;
   roster?: PlanBId | null;
   saga?: SagaId | null;
-  discover?: boolean;
+  discover?: DiscoverId | null;
 }) {
   const look = useMemo(() => new THREE.Vector3(), []);
   useFrame(({ camera, clock, size }) => {
@@ -449,10 +449,10 @@ function SceneContent({
   cinema = false,
   roster = null,
   saga = null,
-  discover = false,
+  discover = null,
 }: BattleSceneProps) {
   const chiefs = effectiveCommanders(commanders, names);
-  const hideCmd = skipCommander || discover;
+  const hideCmd = skipCommander || Boolean(discover);
   const chiefN = hideCmd ? 0 : chiefs.length;
   return (
     <>
@@ -525,11 +525,11 @@ function BattleSceneInner({
   cinema = false,
   roster = null,
   saga = null,
-  discover = false,
+  discover = null,
   onReady,
 }: BattleSceneProps) {
   const [active, setActive] = useState(() => typeof document === "undefined" || !document.hidden);
-  const hideCmd = skipCommander || discover;
+  const hideCmd = skipCommander || Boolean(discover);
 
   useLayoutEffect(() => {
     if (cinematic && roster) {

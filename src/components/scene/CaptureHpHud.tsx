@@ -7,7 +7,7 @@ import { REEL_FADE_HOLD, REEL_HOLD, reelBeats, reelFade } from "../../recordCanv
 import { cinemaScale } from "../../shotModes";
 import { rosterBeat, rosterSoldierIds, rosterTimeline, type PlanBId } from "../../rosterReel";
 import { sagaBeat, type SagaId } from "../../sagaReel";
-import { discoverBeat } from "../../discoverReel";
+import { discoverBeat, isDiscoverEngage, type DiscoverId } from "../../discoverReel";
 
 function roundRect(
   ctx: CanvasRenderingContext2D,
@@ -79,10 +79,10 @@ type CaptureHpHudProps = {
   skipCommander?: boolean;
   cinema?: boolean;
   roster?: PlanBId | null;
-  discover?: boolean;
+  discover?: DiscoverId | null;
 };
 
-function HpPlate({ hp, maxHp, soldiers, duration = 8, skipCommander = false, cinema = false, roster = null, discover = false }: CaptureHpHudProps) {
+function HpPlate({ hp, maxHp, soldiers, duration = 8, skipCommander = false, cinema = false, roster = null, discover = null }: CaptureHpHudProps) {
   const size = useThree((s) => s.size);
   const mat = useRef<THREE.MeshBasicMaterial>(null);
   const canvas = useMemo(() => {
@@ -195,7 +195,8 @@ function drawTitles(
   soldiers: number,
   day: number,
   packLabel = "",
-  packHead = ""
+  packHead = "",
+  engage = false
 ) {
   const ctx = canvas.getContext("2d");
   if (!ctx) return;
@@ -253,33 +254,63 @@ function drawTitles(
     ctx.font = "800 44px Outfit, system-ui, sans-serif";
     strokeFill(ctx, "@wargame2028", w / 2, 220, 14);
   } else if (phase === "discHook") {
-    ctx.font = "800 68px Outfit, system-ui, sans-serif";
-    strokeFill(ctx, "TAKİP ETMEZSEN", w / 2, 118, 20);
-    ctx.font = "800 72px Outfit, system-ui, sans-serif";
-    strokeFill(ctx, "KALE YIKILMIYOR", w / 2, 208, 20);
+    if (engage) {
+      ctx.font = "800 68px Outfit, system-ui, sans-serif";
+      strokeFill(ctx, "ADIN ÇIKARSA", w / 2, 118, 20);
+      ctx.font = "800 64px Outfit, system-ui, sans-serif";
+      strokeFill(ctx, "SAVAŞTAYIM YAZ", w / 2, 208, 19);
+    } else {
+      ctx.font = "800 68px Outfit, system-ui, sans-serif";
+      strokeFill(ctx, "TAKİP ETMEZSEN", w / 2, 118, 20);
+      ctx.font = "800 72px Outfit, system-ui, sans-serif";
+      strokeFill(ctx, "KALE YIKILMIYOR", w / 2, 208, 20);
+    }
   } else if (phase === "discProof") {
     const count = formatCount(soldiers);
     ctx.font = "800 150px Outfit, system-ui, sans-serif";
     strokeFill(ctx, count, w / 2, 130, 26);
     ctx.font = "800 40px Outfit, system-ui, sans-serif";
-    strokeFill(ctx, "HEPSİ GERÇEK HESAP", w / 2, 250, 14);
+    strokeFill(ctx, engage ? "İSMİN BURADA MI?" : "HEPSİ GERÇEK HESAP", w / 2, 250, 14);
   } else if (phase === "discHold") {
-    ctx.font = "800 58px Outfit, system-ui, sans-serif";
-    strokeFill(ctx, "TANIDIĞIN VAR MI?", w / 2, 118, 18);
-    ctx.font = "800 40px Outfit, system-ui, sans-serif";
-    strokeFill(ctx, "kaydırma — ismini ara", w / 2, 198, 13);
+    if (engage) {
+      ctx.font = "800 52px Outfit, system-ui, sans-serif";
+      strokeFill(ctx, "GÖRDÜYSEN YAZ", w / 2, 118, 16);
+      ctx.font = "800 64px Outfit, system-ui, sans-serif";
+      strokeFill(ctx, "SAVAŞTAYIM", w / 2, 208, 18);
+    } else {
+      ctx.font = "800 58px Outfit, system-ui, sans-serif";
+      strokeFill(ctx, "TANIDIĞIN VAR MI?", w / 2, 118, 18);
+      ctx.font = "800 40px Outfit, system-ui, sans-serif";
+      strokeFill(ctx, "kaydırma — ismini ara", w / 2, 198, 13);
+    }
   } else if (phase === "discStorm") {
-    ctx.font = "800 72px Outfit, system-ui, sans-serif";
-    strokeFill(ctx, "KAPI AÇILDI", w / 2, 130, 20);
-    ctx.font = "800 40px Outfit, system-ui, sans-serif";
-    strokeFill(ctx, "kale düşüyor", w / 2, 214, 13);
+    if (engage) {
+      ctx.font = "800 68px Outfit, system-ui, sans-serif";
+      strokeFill(ctx, "KALE DÜŞSÜN", w / 2, 118, 20);
+      ctx.font = "800 48px Outfit, system-ui, sans-serif";
+      strokeFill(ctx, "DİYE BEĞEN", w / 2, 214, 15);
+    } else {
+      ctx.font = "800 72px Outfit, system-ui, sans-serif";
+      strokeFill(ctx, "KAPI AÇILDI", w / 2, 130, 20);
+      ctx.font = "800 40px Outfit, system-ui, sans-serif";
+      strokeFill(ctx, "kale düşüyor", w / 2, 214, 13);
+    }
   } else if (phase === "discNext") {
-    ctx.font = "800 58px Outfit, system-ui, sans-serif";
-    strokeFill(ctx, "ADIN YOKSA TAKİP ET", w / 2, 108, 18);
-    ctx.font = "800 36px Outfit, system-ui, sans-serif";
-    strokeFill(ctx, "sonraki turda askersin", w / 2, 188, 12);
-    ctx.font = "800 44px Outfit, system-ui, sans-serif";
-    strokeFill(ctx, "@wargame2028", w / 2, 258, 14);
+    if (engage) {
+      ctx.font = "800 52px Outfit, system-ui, sans-serif";
+      strokeFill(ctx, "YAZ + BEĞEN", w / 2, 108, 16);
+      ctx.font = "800 36px Outfit, system-ui, sans-serif";
+      strokeFill(ctx, "sonraki saldırı gelsin", w / 2, 188, 12);
+      ctx.font = "800 44px Outfit, system-ui, sans-serif";
+      strokeFill(ctx, "@wargame2028", w / 2, 258, 14);
+    } else {
+      ctx.font = "800 58px Outfit, system-ui, sans-serif";
+      strokeFill(ctx, "ADIN YOKSA TAKİP ET", w / 2, 108, 18);
+      ctx.font = "800 36px Outfit, system-ui, sans-serif";
+      strokeFill(ctx, "sonraki turda askersin", w / 2, 188, 12);
+      ctx.font = "800 44px Outfit, system-ui, sans-serif";
+      strokeFill(ctx, "@wargame2028", w / 2, 258, 14);
+    }
   } else if (phase === "hook") {
     if (day > 0) {
       ctx.font = "800 168px Outfit, system-ui, sans-serif";
@@ -311,11 +342,11 @@ type ReelTitlesProps = {
   cinema?: boolean;
   roster?: PlanBId | null;
   saga?: SagaId | null;
-  discover?: boolean;
+  discover?: DiscoverId | null;
   names?: string[];
 };
 
-function TitlesPlate({ soldiers, duration, day = 0, skipCommander = false, cinema = false, roster = null, saga = null, discover = false, names = [] }: ReelTitlesProps) {
+function TitlesPlate({ soldiers, duration, day = 0, skipCommander = false, cinema = false, roster = null, saga = null, discover = null, names = [] }: ReelTitlesProps) {
   const size = useThree((s) => s.size);
   const mesh = useRef<THREE.Mesh>(null);
   const canvas = useMemo(() => {
@@ -367,6 +398,7 @@ function TitlesPlate({ soldiers, duration, day = 0, skipCommander = false, cinem
     let alpha = 0;
     let packLabel = "";
     let packHead = "";
+    const engage = isDiscoverEngage(discover);
     if (discover) {
       const beat = discoverBeat(recT);
       if (recT < 0) {
@@ -454,10 +486,10 @@ function TitlesPlate({ soldiers, duration, day = 0, skipCommander = false, cinem
       if (into < 0.3) alpha = into / 0.3;
       else alpha = 1;
     }
-    const key = `${phase}:${soldiers}:${day}:${packLabel}:${packHead}`;
+    const key = `${phase}:${soldiers}:${day}:${packLabel}:${packHead}:${engage}`;
     if (last.current !== key) {
       last.current = key;
-      drawTitles(canvas, phase, soldiers, day, packLabel, packHead);
+      drawTitles(canvas, phase, soldiers, day, packLabel, packHead, engage);
       tex.needsUpdate = true;
     }
     if (mat.current) mat.current.opacity = alpha;

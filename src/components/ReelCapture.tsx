@@ -5,6 +5,7 @@ import { recordCanvas, saveReelBlob, wait } from "../recordCanvas";
 import type { ShotId } from "../shotModes";
 import type { PlanBId } from "../rosterReel";
 import type { SagaId } from "../sagaReel";
+import type { DiscoverId } from "../discoverReel";
 
 type ReelCaptureProps = {
   soldiers: number;
@@ -23,11 +24,11 @@ type ReelCaptureProps = {
   cinema?: boolean;
   roster?: PlanBId | null;
   saga?: SagaId | null;
-  discover?: boolean;
+  discover?: DiscoverId | null;
   onClose: () => void;
 };
 
-export function ReelCapture({ soldiers, names, commanders = [], level, pressure, hp, maxHp, seconds, showTitles = true, warLook = false, day = 0, skipCommander = false, shotMode = null, cinema = false, roster = null, saga = null, discover = false, onClose }: ReelCaptureProps) {
+export function ReelCapture({ soldiers, names, commanders = [], level, pressure, hp, maxHp, seconds, showTitles = true, warLook = false, day = 0, skipCommander = false, shotMode = null, cinema = false, roster = null, saga = null, discover = null, onClose }: ReelCaptureProps) {
   const clip = seconds;
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [phase, setPhase] = useState<"boot" | "rec" | "done" | "err">("boot");
@@ -112,7 +113,7 @@ export function ReelCapture({ soldiers, names, commanders = [], level, pressure,
             showTitles={showTitles}
             warLook={warLook}
             day={day}
-            skipCommander={skipCommander || discover}
+            skipCommander={skipCommander || Boolean(discover)}
             shotMode={cinema || roster || saga || discover ? null : shotMode}
             cinema={cinema}
             roster={roster}

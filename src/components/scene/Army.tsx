@@ -5,7 +5,7 @@ import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js
 import { DEFAULT_COMMANDER, effectiveCommanders, isCommander } from "../../game";
 import { REEL_HOLD, reelBeats } from "../../recordCanvas";
 import { rosterBeat, rosterSoldierIds, stampRosterSoldier, type PlanBId, type RosterPose } from "../../rosterReel";
-import { discoverBeat } from "../../discoverReel";
+import { discoverBeat, type DiscoverId } from "../../discoverReel";
 import { raidCount, sallyHunting, sallyLiveIndex, sallyLocal, sallyRaiderAt, swordArmPose, swordStyleAt, swordSwingU } from "../../siegeEvent";
 
 const MAX_SOLDIERS = 5000;
@@ -44,7 +44,7 @@ type ArmyProps = {
   duration?: number;
   skipCommander?: boolean;
   roster?: PlanBId | null;
-  discover?: boolean;
+  discover?: DiscoverId | null;
 };
 
 const MAX_RANKS = 4;
@@ -709,7 +709,7 @@ function makeHandleTexture(name: string, commander = false): NameTag | null {
   return { map, sx, sy };
 }
 
-export function Army({ count, names = [], commanders = [], cinematic, duration = 8, skipCommander = false, roster = null, discover = false }: ArmyProps) {
+export function Army({ count, names = [], commanders = [], cinematic, duration = 8, skipCommander = false, roster = null, discover = null }: ArmyProps) {
   const bodies = useRef<THREE.InstancedMesh>(null);
   const soldierPlumes = useRef<THREE.InstancedMesh>(null);
   const bowHolds = useRef<THREE.InstancedMesh>(null);

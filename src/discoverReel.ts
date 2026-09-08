@@ -1,12 +1,18 @@
 import { lerpPose, type ShotCtx, type ShotPose } from "./shotModes";
 
 export const DISCOVER_ID = "kesfet" as const;
-export type DiscoverId = typeof DISCOVER_ID;
+export const DISCOVER2_ID = "kesfet2" as const;
+export type DiscoverId = typeof DISCOVER_ID | typeof DISCOVER2_ID;
 export const DISCOVER_MODE = { id: DISCOVER_ID, label: "Keşfet 15s" } as const;
+export const DISCOVER2_MODE = { id: DISCOVER2_ID, label: "Keşfet 2" } as const;
 export const DISCOVER_SECONDS = 15;
 
 export function isDiscover(id: string | null | undefined): id is DiscoverId {
-  return id === DISCOVER_ID;
+  return id === DISCOVER_ID || id === DISCOVER2_ID;
+}
+
+export function isDiscoverEngage(id: string | null | undefined) {
+  return id === DISCOVER2_ID;
 }
 
 export type DiscoverBeat = "hook" | "proof" | "hold" | "storm" | "next" | "loop";
