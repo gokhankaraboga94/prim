@@ -21,6 +21,7 @@ import { useGame } from "../hooks/useGame";
 import { ReelCapture } from "../components/ReelCapture";
 import { REEL_DURATIONS } from "../recordCanvas";
 import { CINEMA_DURATIONS, CINEMA_ID, CINEMA_MODE, SHOT_MODES, type ReelShot } from "../shotModes";
+import { HOOK_ID, HOOK_MODE, ROSTER_ID, ROSTER_MODE, isPlanB, rosterDuration, type PlanBId } from "../rosterReel";
 
 export function AdminPage() {
   const { game, recruits, level, power, pressure, target, maxHp } = useGame();
@@ -34,7 +35,7 @@ export function AdminPage() {
   const [reelSeconds, setReelSeconds] = useState<number>(7);
   const [reelText, setReelText] = useState(true);
   const [reelSkipCmd, setReelSkipCmd] = useState(false);
-  const [reelShot, setReelShot] = useState<ReelShot | null>(null);
+  const [reelShot, setReelShot] = useState<ReelShot | PlanBId | null>(null);
   const [reelDay, setReelDay] = useState("1");
   const [capturing, setCapturing] = useState(false);
   const [editIndex, setEditIndex] = useState<number | null>(null);
@@ -232,7 +233,7 @@ export function AdminPage() {
         <div>
           <p className="join-kicker">Komuta paneli</p>
           <h1>Kuşatma yönetimi</h1>
-          <p className="join-kicker">sürüm 37 — isimsiz slot dolar</p>
+          <p className="join-kicker">sürüm 38 — isim avı reels</p>
         </div>
         <button type="button" className="btn-ghost" onClick={() => signOut(auth)}>
           Çıkış
@@ -431,7 +432,13 @@ export function AdminPage() {
           </p>
           <label>Süre</label>
           <div className="dur-pills">
-            {(reelShot === CINEMA_ID ? CINEMA_DURATIONS : REEL_DURATIONS).map((sec) => (
+            {(
+              reelShot === CINEMA_ID
+                ? CINEMA_DURATIONS
+                : isPlanB(reelShot)
+                  ? [rosterDuration(reelShot, namedCount(game.names, game.soldiers))]
+                  : REEL_DURATIONS
+            ).map((sec) => (
               <button
                 key={sec}
                 type="button"
@@ -502,6 +509,40 @@ export function AdminPage() {
               {CINEMA_MODE.label}
             </button>
           </div>
+          <label>B planı — Keşfet</label>
+          <p className="muted">
+            Eski çekimler duruyor. B planı isim avı: ilk 2 sn “İSMİNİ BUL”, tepeden tüm ordu, sonra
+            5’li yakın plan (yanında kimse yok, @adlar net). 30–45 sn. İnsan kendi ismini arar,
+            videoyu sonuna ve tekrar izler. Kanca 15s: aynı fikir, ilk 15 asker, tamamlama oranı için.
+          </p>
+          <div className="dur-pills shot-pills">
+            <button
+              type="button"
+              className={reelShot === ROSTER_ID ? "on" : ""}
+              onClick={() => {
+                setReelShot((cur) => (cur === ROSTER_ID ? null : ROSTER_ID));
+                setReelSeconds(rosterDuration(ROSTER_ID, namedCount(game.names, game.soldiers)));
+              }}
+            >
+              {ROSTER_MODE.label}
+            </button>
+            <button
+              type="button"
+              className={reelShot === HOOK_ID ? "on" : ""}
+              onClick={() => {
+                setReelShot((cur) => (cur === HOOK_ID ? null : HOOK_ID));
+                setReelSeconds(15);
+              }}
+            >
+              {HOOK_MODE.label}
+            </button>
+          </div>
+          {isPlanB(reelShot) && (
+            <p className="muted">
+              Caption: İSMİNİ BUL. 1 takip = 1 asker. wargame.lol · @wargame2028
+              {" "}Hashtag: #wargame #oyun #reels
+            </p>
+          )}
           <button type="button" className="btn-gold" onClick={() => setCapturing(true)}>
             Kaydı başlat
           </button>
@@ -530,8 +571,9 @@ export function AdminPage() {
           seconds={reelSeconds}
           showTitles={reelText}
           skipCommander={reelSkipCmd}
-          shotMode={reelShot === CINEMA_ID ? null : reelShot}
+          shotMode={reelShot === CINEMA_ID || isPlanB(reelShot) ? null : reelShot}
           cinema={reelShot === CINEMA_ID}
+          roster={isPlanB(reelShot) ? reelShot : null}
           day={Math.max(0, Math.floor(Number(reelDay)) || 0)}
           onClose={() => setCapturing(false)}
         />

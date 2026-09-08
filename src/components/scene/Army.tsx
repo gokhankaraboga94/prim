@@ -4,11 +4,12 @@ import * as THREE from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import { DEFAULT_COMMANDER, effectiveCommanders, isCommander } from "../../game";
 import { REEL_HOLD, reelBeats } from "../../recordCanvas";
+import { rosterBeat, rosterSoldierIds, rosterStageSlot, type PlanBId } from "../../rosterReel";
 import { raidCount, sallyHunting, sallyLiveIndex, sallyLocal, sallyRaiderAt, swordArmPose, swordStyleAt, swordSwingU } from "../../siegeEvent";
 
 const MAX_SOLDIERS = 5000;
 const MAX_LABELS = 400;
-const MAX_REEL_LABELS = 72;
+const MAX_REEL_LABELS = 120;
 const MAX_COMMANDERS = 24;
 const MAX_ARROWS = 28;
 const IDLE_ARROWS = 8;
@@ -41,6 +42,7 @@ type ArmyProps = {
   cinematic?: boolean;
   duration?: number;
   skipCommander?: boolean;
+  roster?: PlanBId | null;
 };
 
 const MAX_RANKS = 4;
@@ -655,7 +657,7 @@ function makeHandleTexture(name: string, commander = false): NameTag | null {
   return { map, sx, sy };
 }
 
-export function Army({ count, names = [], commanders = [], cinematic, duration = 8, skipCommander = false }: ArmyProps) {
+export function Army({ count, names = [], commanders = [], cinematic, duration = 8, skipCommander = false, roster = null }: ArmyProps) {
   const bodies = useRef<THREE.InstancedMesh>(null);
   const soldierPlumes = useRef<THREE.InstancedMesh>(null);
   const bowHolds = useRef<THREE.InstancedMesh>(null);
@@ -834,6 +836,12 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
 
   function placeBodies(t: number) {
     const { scale } = form;
+    const recT = t - REEL_HOLD;
+    const huntIds = roster ? rosterSoldierIds(names, visible) : [];
+    const beat = roster ? rosterBeat(roster, recT, duration, huntIds) : null;
+    const packIds = beat && beat.id === "pack" ? beat.ids : null;
+    const packSet = packIds ? new Set(packIds) : null;
+    const isolate = Boolean(packSet);
     if (bodies.current) {
       const n = layout.rest.length;
       bodies.current.count = n;
@@ -843,6 +851,40 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
       if (nocks.current) nocks.current.count = n;
       for (let i = 0; i < n; i++) {
         const soldier = layout.rest[i];
+        const onPack = Boolean(packSet && packSet.has(soldier));
+        if (isolate && !onPack) {
+          dummy.scale.setScalar(0);
+          dummy.position.set(0, -40, 0);
+          dummy.updateMatrix();
+          stamp(bodies.current, i);
+          stamp(soldierPlumes.current, i);
+          stamp(bowHolds.current, i);
+          stamp(drawArms.current, i);
+          if (nocks.current) {
+            dummy.scale.setScalar(0);
+            dummy.updateMatrix();
+            nocks.current.setMatrixAt(i, dummy.matrix);
+          }
+          continue;
+        }
+        if (isolate && onPack && packIds) {
+          rosterStageSlot(packIds.indexOf(soldier), packIds.length, pos);
+          dummy.position.copy(pos);
+          dummy.rotation.set(0, 0, 0);
+          dummy.scale.setScalar(scale);
+          dummy.updateMatrix();
+          stamp(bodies.current, i);
+          stamp(soldierPlumes.current, i);
+          _bodyQ.setFromEuler(_limbEul.set(0, 0, 0, "XYZ"));
+          stampLimb(bowHolds.current, i, L_SHOULDER, -1.05, 0.04, 0.08, scale);
+          stampLimb(drawArms.current, i, R_SHOULDER, -1.0, 0.12, -0.1, scale);
+          if (nocks.current) {
+            dummy.scale.setScalar(0);
+            dummy.updateMatrix();
+            nocks.current.setMatrixAt(i, dummy.matrix);
+          }
+          continue;
+        }
         unitPos(i, t + seeds[soldier], form.sizes, pos);
         const cycle = bowCycle(soldier, t);
         pos.y += cycle.dy;
@@ -897,6 +939,40 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
       const cmdScale = scale * 1.26;
       for (let k = 0; k < n; k++) {
         const soldier = layout.cmd[k] ?? 0;
+        const onPack = Boolean(packSet && packSet.has(soldier));
+        if (isolate && !onPack) {
+          dummy.scale.setScalar(0);
+          dummy.position.set(0, -40, 0);
+          dummy.updateMatrix();
+          stamp(chiefs.current, k);
+          stamp(chiefCapes.current, k);
+          stamp(chiefPlumes.current, k);
+          stamp(swordArms.current, k);
+          if (swords.current) {
+            dummy.scale.setScalar(0);
+            dummy.updateMatrix();
+            swords.current.setMatrixAt(k, dummy.matrix);
+          }
+          continue;
+        }
+        if (isolate && onPack && packIds) {
+          rosterStageSlot(packIds.indexOf(soldier), packIds.length, pos);
+          dummy.position.copy(pos);
+          dummy.rotation.set(0, 0, 0);
+          dummy.scale.setScalar(cmdScale);
+          dummy.updateMatrix();
+          stamp(chiefs.current, k);
+          stamp(chiefCapes.current, k);
+          stamp(chiefPlumes.current, k);
+          _bodyQ.setFromEuler(_limbEul.set(0, 0, 0, "XYZ"));
+          stampLimb(swordArms.current, k, L_SHOULDER, -0.4, 0.1, 0.05, cmdScale);
+          if (swords.current) {
+            dummy.scale.setScalar(0);
+            dummy.updateMatrix();
+            swords.current.setMatrixAt(k, dummy.matrix);
+          }
+          continue;
+        }
         commanderPos(t, soldier, pos);
         dummy.position.copy(pos);
         dummy.rotation.set(0, Math.PI, 0);
@@ -937,11 +1013,22 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
         continue;
       }
       const cmd = idx < 0 || layout.cmdOf[idx] >= 0;
-      if (idx < 0) commanderPos(t, 0, pos);
+      if (isolate && (idx < 0 || !packSet?.has(idx))) {
+        tag.visible = false;
+        continue;
+      }
+      if (isolate && packIds && idx >= 0) {
+        rosterStageSlot(packIds.indexOf(idx), packIds.length, pos);
+      } else if (idx < 0) commanderPos(t, 0, pos);
       else poseSoldier(idx, t);
       let nameScale = 1;
-      if (cinematic) {
-        const recT = t - REEL_HOLD;
+      if (cinematic && roster) {
+        if (recT < 0) {
+          tag.visible = false;
+          continue;
+        }
+        nameScale = isolate ? 1.72 : 1.18;
+      } else if (cinematic) {
         const beats = reelBeats(duration, skipCommander);
         if (recT < 0) {
           tag.visible = false;
@@ -956,8 +1043,8 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
         }
       }
       tag.visible = true;
-      let lift = 2.92;
-      if (!cmd) {
+      let lift = isolate ? 2.55 : 2.92;
+      if (!cmd && !isolate) {
         const slot = layout.slotOf[idx];
         const { row, col } = slotCoord(slot >= 0 ? slot : 0, form.sizes);
         lift = 2.22 + row * 0.5 + (col % 2) * 0.2;
@@ -985,7 +1072,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
     }
 
     if (!arrows.current) return;
-    if (visible <= 0) {
+    if (visible <= 0 || roster) {
       shots.current = [];
       arrows.current.count = 0;
       return;

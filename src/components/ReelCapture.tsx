@@ -3,6 +3,7 @@ import { BattleScene } from "./scene/BattleScene";
 import { SceneErrorBoundary } from "./SceneErrorBoundary";
 import { recordCanvas, saveReelBlob, wait } from "../recordCanvas";
 import type { ShotId } from "../shotModes";
+import type { PlanBId } from "../rosterReel";
 
 type ReelCaptureProps = {
   soldiers: number;
@@ -19,10 +20,11 @@ type ReelCaptureProps = {
   skipCommander?: boolean;
   shotMode?: ShotId | null;
   cinema?: boolean;
+  roster?: PlanBId | null;
   onClose: () => void;
 };
 
-export function ReelCapture({ soldiers, names, commanders = [], level, pressure, hp, maxHp, seconds, showTitles = true, warLook = false, day = 0, skipCommander = false, shotMode = null, cinema = false, onClose }: ReelCaptureProps) {
+export function ReelCapture({ soldiers, names, commanders = [], level, pressure, hp, maxHp, seconds, showTitles = true, warLook = false, day = 0, skipCommander = false, shotMode = null, cinema = false, roster = null, onClose }: ReelCaptureProps) {
   const clip = seconds;
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [phase, setPhase] = useState<"boot" | "rec" | "done" | "err">("boot");
@@ -108,8 +110,9 @@ export function ReelCapture({ soldiers, names, commanders = [], level, pressure,
             warLook={warLook}
             day={day}
             skipCommander={skipCommander}
-            shotMode={cinema ? null : shotMode}
+            shotMode={cinema || roster ? null : shotMode}
             cinema={cinema}
+            roster={roster}
             onReady={(canvas) => {
               canvasRef.current = canvas;
             }}

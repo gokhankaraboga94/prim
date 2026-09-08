@@ -5,6 +5,7 @@ import * as THREE from "three";
 import { DPS_PER_SOLDIER, formatCount } from "../../game";
 import { REEL_FADE_HOLD, REEL_HOLD, reelBeats, reelFade } from "../../recordCanvas";
 import { cinemaScale } from "../../shotModes";
+import { rosterBeat, rosterSoldierIds, type PlanBId } from "../../rosterReel";
 
 function roundRect(
   ctx: CanvasRenderingContext2D,
@@ -156,9 +157,10 @@ function strokeFill(
 
 function drawTitles(
   canvas: HTMLCanvasElement,
-  phase: "hook" | "army" | "cta" | "none",
+  phase: "hook" | "army" | "cta" | "none" | "huntHook" | "huntArmy" | "huntPack" | "huntCta",
   soldiers: number,
-  day: number
+  day: number,
+  packLabel = ""
 ) {
   const ctx = canvas.getContext("2d");
   if (!ctx) return;
@@ -168,7 +170,26 @@ function drawTitles(
   if (phase === "none") return;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  if (phase === "hook") {
+  if (phase === "huntHook") {
+    ctx.font = "800 92px Outfit, system-ui, sans-serif";
+    strokeFill(ctx, "İSMİNİ BUL", w / 2, 150, 24);
+    ctx.font = "800 48px Outfit, system-ui, sans-serif";
+    strokeFill(ctx, "1 TAKİP = 1 ASKER", w / 2, 250, 16);
+  } else if (phase === "huntArmy") {
+    const count = formatCount(soldiers);
+    ctx.font = "800 150px Outfit, system-ui, sans-serif";
+    strokeFill(ctx, count, w / 2, 140, 26);
+    ctx.font = "800 44px Outfit, system-ui, sans-serif";
+    strokeFill(ctx, "İSMİN VAR MI?", w / 2, 260, 14);
+  } else if (phase === "huntPack") {
+    ctx.font = "800 40px Outfit, system-ui, sans-serif";
+    strokeFill(ctx, packLabel || "İSMİNİ ARA", w / 2, 70, 12);
+  } else if (phase === "huntCta") {
+    ctx.font = "800 72px Outfit, system-ui, sans-serif";
+    strokeFill(ctx, "İSMİN YOKSA TAKİP ET", w / 2, 130, 20);
+    ctx.font = "800 48px Outfit, system-ui, sans-serif";
+    strokeFill(ctx, "@wargame2028", w / 2, 220, 14);
+  } else if (phase === "hook") {
     if (day > 0) {
       ctx.font = "800 168px Outfit, system-ui, sans-serif";
       strokeFill(ctx, `${day}. GÜN`, w / 2, 150, 28);
@@ -197,9 +218,11 @@ type ReelTitlesProps = {
   day?: number;
   skipCommander?: boolean;
   cinema?: boolean;
+  roster?: PlanBId | null;
+  names?: string[];
 };
 
-function TitlesPlate({ soldiers, duration, day = 0, skipCommander = false, cinema = false }: ReelTitlesProps) {
+function TitlesPlate({ soldiers, duration, day = 0, skipCommander = false, cinema = false, roster = null, names = [] }: ReelTitlesProps) {
   const size = useThree((s) => s.size);
   const mesh = useRef<THREE.Mesh>(null);
   const canvas = useMemo(() => {
@@ -227,9 +250,32 @@ function TitlesPlate({ soldiers, duration, day = 0, skipCommander = false, cinem
     const ctaAt = duration - ctaLen;
     const armyAt = cinema ? 15 * scale : cmd + turn * 0.22;
     const armyEnd = cinema ? 19.2 * scale : pullStart + 1.25;
-    let phase: "hook" | "army" | "cta" | "none" = "none";
+    type Phase = "hook" | "army" | "cta" | "none" | "huntHook" | "huntArmy" | "huntPack" | "huntCta";
+    let phase: Phase = "none";
     let alpha = 0;
-    if (recT >= 0 && recT < 2.15) {
+    let packLabel = "";
+    if (roster) {
+      const ids = rosterSoldierIds(names, soldiers);
+      const beat = rosterBeat(roster, recT, duration, ids);
+      if (beat.id === "hook") {
+        phase = "huntHook";
+        alpha = recT < 0.12 ? recT / 0.12 : recT > 1.75 ? Math.max(0, (2.15 - recT) / 0.4) : 1;
+      } else if (beat.id === "overview") {
+        phase = "huntArmy";
+        alpha = 1;
+      } else if (beat.id === "pack") {
+        phase = "huntPack";
+        packLabel = `${beat.pack + 1} / ${beat.packs}`;
+        alpha = 0.92;
+      } else {
+        phase = "huntCta";
+        alpha = 1;
+      }
+      if (recT < 0) {
+        phase = "none";
+        alpha = 0;
+      }
+    } else if (recT >= 0 && recT < 2.15) {
       phase = "hook";
       if (recT < 0.12) alpha = recT / 0.12;
       else if (recT > 1.75) alpha = Math.max(0, (2.15 - recT) / 0.4);
@@ -247,24 +293,26 @@ function TitlesPlate({ soldiers, duration, day = 0, skipCommander = false, cinem
       if (into < 0.3) alpha = into / 0.3;
       else alpha = 1;
     }
-    const key = `${phase}:${soldiers}:${day}`;
+    const key = `${phase}:${soldiers}:${day}:${packLabel}`;
     if (last.current !== key) {
       last.current = key;
-      drawTitles(canvas, phase, soldiers, day);
+      drawTitles(canvas, phase, soldiers, day, packLabel);
       tex.needsUpdate = true;
     }
     if (mat.current) mat.current.opacity = alpha;
     if (mesh.current) {
-      if (phase === "hook") {
+      if (phase === "hook" || phase === "huntHook" || phase === "huntArmy") {
         mesh.current.position.y = size.height * 0.3;
       } else if (phase === "army") {
         mesh.current.position.y = size.height * 0.28;
-      } else if (phase === "cta") {
+      } else if (phase === "huntPack") {
+        mesh.current.position.y = size.height * 0.38;
+      } else if (phase === "cta" || phase === "huntCta") {
         const hpH = Math.max(64, size.height * 0.1);
         const hpY = size.height / 2 - hpH / 2 - Math.max(12, size.height * 0.02);
         const hpBottom = hpY - hpH / 2;
         const hookH = Math.max(160, size.height * 0.32);
-        mesh.current.position.y = hpBottom - Math.max(8, size.height * 0.01) - hookH / 2;
+        mesh.current.position.y = roster ? size.height * 0.28 : hpBottom - Math.max(8, size.height * 0.01) - hookH / 2;
       } else {
         mesh.current.position.y = -size.height * 0.32;
       }

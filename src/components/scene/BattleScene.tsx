@@ -10,6 +10,7 @@ import { effectiveCommanders } from "../../game";
 import { castleFrame } from "../../castleLayout";
 import { REEL_HOLD, reelBeats } from "../../recordCanvas";
 import { CINEMA_SWORD_P, cinemaGateAt, sampleCinema, sampleShotMode, type ShotId } from "../../shotModes";
+import { rosterSoldierIds, sampleRoster, type PlanBId } from "../../rosterReel";
 import {
   SALLY_START_DELAY,
   SWORD_START,
@@ -35,6 +36,7 @@ type BattleSceneProps = {
   skipCommander?: boolean;
   shotMode?: ShotId | null;
   cinema?: boolean;
+  roster?: PlanBId | null;
   onReady?: (canvas: HTMLCanvasElement) => void;
 };
 
@@ -56,19 +58,23 @@ function ease(u: number) {
 function CinematicCam({
   duration,
   soldiers,
+  names = [],
   level,
   commanders = 0,
   skipCommander = false,
   shotMode = null,
   cinema = false,
+  roster = null,
 }: {
   duration: number;
   soldiers: number;
+  names?: string[];
   level: number;
   commanders?: number;
   skipCommander?: boolean;
   shotMode?: ShotId | null;
   cinema?: boolean;
+  roster?: PlanBId | null;
 }) {
   const look = useMemo(() => new THREE.Vector3(), []);
   useFrame(({ camera, clock, size }) => {
@@ -124,13 +130,15 @@ function CinematicCam({
       fov: 38,
     };
 
-    if (cinema || shotMode) {
+    if (cinema || shotMode || roster) {
       const warm = clock.elapsedTime;
       const sampleT = warm < REEL_HOLD ? (warm / REEL_HOLD) * duration : recT;
       const ctx = { cmdZ, form, castle, fit, castleFit };
-      const pose = cinema
-        ? sampleCinema(sampleT, duration, ctx)
-        : sampleShotMode(shotMode as ShotId, sampleT, duration, skipCommander, ctx);
+      const pose = roster
+        ? sampleRoster(roster, sampleT, duration, ctx, rosterSoldierIds(names, soldiers))
+        : cinema
+          ? sampleCinema(sampleT, duration, ctx)
+          : sampleShotMode(shotMode as ShotId, sampleT, duration, skipCommander, ctx);
       const persp = camera as THREE.PerspectiveCamera;
       persp.fov = pose.fov;
       persp.updateProjectionMatrix();
@@ -454,6 +462,7 @@ function SceneContent({
   skipCommander = false,
   shotMode = null,
   cinema = false,
+  roster = null,
 }: BattleSceneProps) {
   const chiefs = effectiveCommanders(commanders, names);
   const chiefN = skipCommander ? 0 : chiefs.length;
@@ -467,17 +476,19 @@ function SceneContent({
       <Terrain />
       {cinematic && <Embers />}
       <Castle level={level} pressure={pressure} />
-      <SallyRaid soldiers={soldiers} commanders={chiefN} />
-      <Army count={soldiers} names={names} commanders={commanders} cinematic={cinematic} duration={duration} skipCommander={skipCommander} />
+      {!roster && <SallyRaid soldiers={soldiers} commanders={chiefN} />}
+      <Army count={soldiers} names={names} commanders={commanders} cinematic={cinematic} duration={duration} skipCommander={skipCommander} roster={roster} />
       {cinematic ? (
         <CinematicCam
           duration={duration ?? 8}
           soldiers={soldiers}
+          names={names}
           level={level}
           commanders={chiefN}
           skipCommander={skipCommander}
           shotMode={shotMode}
           cinema={cinema}
+          roster={roster}
         />
       ) : (
         <OrbitControls
@@ -495,11 +506,11 @@ function SceneContent({
           zoomSpeed={1.85}
         />
       )}
-      {cinematic && maxHp != null && hp != null && (
+      {cinematic && maxHp != null && hp != null && !roster && (
         <CaptureHpHud hp={hp} maxHp={maxHp} soldiers={soldiers} duration={duration ?? 8} skipCommander={skipCommander} cinema={cinema} />
       )}
       {cinematic && showTitles && (
-        <ReelTitles soldiers={soldiers} duration={duration ?? 8} day={day} skipCommander={skipCommander} cinema={cinema} />
+        <ReelTitles soldiers={soldiers} duration={duration ?? 8} day={day} skipCommander={skipCommander} cinema={cinema} roster={roster} names={names} />
       )}
       {cinematic && <ReelVignette />}
       {cinematic && <ReelFade duration={duration ?? 8} />}
@@ -523,12 +534,16 @@ function BattleSceneInner({
   skipCommander = false,
   shotMode = null,
   cinema = false,
+  roster = null,
   onReady,
 }: BattleSceneProps) {
   const [active, setActive] = useState(() => typeof document === "undefined" || !document.hidden);
 
   useLayoutEffect(() => {
-    if (cinematic && cinema) {
+    if (cinematic && roster) {
+      setSallyOrigin(80);
+      setSwordStart(80);
+    } else if (cinematic && cinema) {
       setSallyOrigin(SALLY_START_DELAY - REEL_HOLD - cinemaGateAt(duration ?? 30));
       setSwordStart(CINEMA_SWORD_P);
     } else if (cinematic) {
@@ -544,7 +559,7 @@ function BattleSceneInner({
       setSallyOrigin(0);
       setSwordStart(SWORD_START);
     };
-  }, [cinematic, cinema, duration, skipCommander]);
+  }, [cinematic, cinema, duration, skipCommander, roster]);
 
   useEffect(() => {
     const onVis = () => setActive(!document.hidden);
@@ -595,6 +610,7 @@ function BattleSceneInner({
         skipCommander={skipCommander}
         shotMode={shotMode}
         cinema={cinema}
+        roster={roster}
       />
     </Canvas>
   );
