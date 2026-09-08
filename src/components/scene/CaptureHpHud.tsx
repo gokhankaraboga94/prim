@@ -7,6 +7,7 @@ import { REEL_FADE_HOLD, REEL_HOLD, reelBeats, reelFade } from "../../recordCanv
 import { cinemaScale } from "../../shotModes";
 import { rosterBeat, rosterSoldierIds, rosterTimeline, type PlanBId } from "../../rosterReel";
 import { sagaBeat, type SagaId } from "../../sagaReel";
+import { discoverBeat } from "../../discoverReel";
 
 function roundRect(
   ctx: CanvasRenderingContext2D,
@@ -78,9 +79,10 @@ type CaptureHpHudProps = {
   skipCommander?: boolean;
   cinema?: boolean;
   roster?: PlanBId | null;
+  discover?: boolean;
 };
 
-function HpPlate({ hp, maxHp, soldiers, duration = 8, skipCommander = false, cinema = false, roster = null }: CaptureHpHudProps) {
+function HpPlate({ hp, maxHp, soldiers, duration = 8, skipCommander = false, cinema = false, roster = null, discover = false }: CaptureHpHudProps) {
   const size = useThree((s) => s.size);
   const mat = useRef<THREE.MeshBasicMaterial>(null);
   const canvas = useMemo(() => {
@@ -105,7 +107,12 @@ function HpPlate({ hp, maxHp, soldiers, duration = 8, skipCommander = false, cin
     const recT = clock.elapsedTime - REEL_HOLD;
     const { pullStart } = reelBeats(duration, skipCommander);
     let alpha = 0;
-    if (roster) {
+    if (discover) {
+      if (recT < 0) alpha = 0;
+      else if (recT < 0.22) alpha = recT / 0.22;
+      else if (recT >= 13.25) alpha = Math.max(0, 1 - (recT - 13.25) / 0.45);
+      else alpha = 1;
+    } else if (roster) {
       alpha = recT < 0 ? 0 : recT < 0.22 ? recT / 0.22 : 1;
     } else {
       const showAt = cinema ? 14.8 * cinemaScale(duration) : pullStart;
@@ -179,7 +186,12 @@ function drawTitles(
     | "sagaVolley"
     | "sagaGate"
     | "sagaFight"
-    | "sagaCta",
+    | "sagaCta"
+    | "discHook"
+    | "discProof"
+    | "discHold"
+    | "discStorm"
+    | "discNext",
   soldiers: number,
   day: number,
   packLabel = "",
@@ -240,6 +252,34 @@ function drawTitles(
     strokeFill(ctx, "ORDUYA KATIL", w / 2, 130, 20);
     ctx.font = "800 44px Outfit, system-ui, sans-serif";
     strokeFill(ctx, "@wargame2028", w / 2, 220, 14);
+  } else if (phase === "discHook") {
+    ctx.font = "800 68px Outfit, system-ui, sans-serif";
+    strokeFill(ctx, "TAKİP ETMEZSEN", w / 2, 118, 20);
+    ctx.font = "800 72px Outfit, system-ui, sans-serif";
+    strokeFill(ctx, "KALE YIKILMIYOR", w / 2, 208, 20);
+  } else if (phase === "discProof") {
+    const count = formatCount(soldiers);
+    ctx.font = "800 150px Outfit, system-ui, sans-serif";
+    strokeFill(ctx, count, w / 2, 130, 26);
+    ctx.font = "800 40px Outfit, system-ui, sans-serif";
+    strokeFill(ctx, "HEPSİ GERÇEK HESAP", w / 2, 250, 14);
+  } else if (phase === "discHold") {
+    ctx.font = "800 58px Outfit, system-ui, sans-serif";
+    strokeFill(ctx, "TANIDIĞIN VAR MI?", w / 2, 118, 18);
+    ctx.font = "800 40px Outfit, system-ui, sans-serif";
+    strokeFill(ctx, "kaydırma — ismini ara", w / 2, 198, 13);
+  } else if (phase === "discStorm") {
+    ctx.font = "800 72px Outfit, system-ui, sans-serif";
+    strokeFill(ctx, "KAPI AÇILDI", w / 2, 130, 20);
+    ctx.font = "800 40px Outfit, system-ui, sans-serif";
+    strokeFill(ctx, "kale düşüyor", w / 2, 214, 13);
+  } else if (phase === "discNext") {
+    ctx.font = "800 58px Outfit, system-ui, sans-serif";
+    strokeFill(ctx, "ADIN YOKSA TAKİP ET", w / 2, 108, 18);
+    ctx.font = "800 36px Outfit, system-ui, sans-serif";
+    strokeFill(ctx, "sonraki turda askersin", w / 2, 188, 12);
+    ctx.font = "800 44px Outfit, system-ui, sans-serif";
+    strokeFill(ctx, "@wargame2028", w / 2, 258, 14);
   } else if (phase === "hook") {
     if (day > 0) {
       ctx.font = "800 168px Outfit, system-ui, sans-serif";
@@ -271,10 +311,11 @@ type ReelTitlesProps = {
   cinema?: boolean;
   roster?: PlanBId | null;
   saga?: SagaId | null;
+  discover?: boolean;
   names?: string[];
 };
 
-function TitlesPlate({ soldiers, duration, day = 0, skipCommander = false, cinema = false, roster = null, saga = null, names = [] }: ReelTitlesProps) {
+function TitlesPlate({ soldiers, duration, day = 0, skipCommander = false, cinema = false, roster = null, saga = null, discover = false, names = [] }: ReelTitlesProps) {
   const size = useThree((s) => s.size);
   const mesh = useRef<THREE.Mesh>(null);
   const canvas = useMemo(() => {
@@ -316,12 +357,41 @@ function TitlesPlate({ soldiers, duration, day = 0, skipCommander = false, cinem
       | "sagaVolley"
       | "sagaGate"
       | "sagaFight"
-      | "sagaCta";
+      | "sagaCta"
+      | "discHook"
+      | "discProof"
+      | "discHold"
+      | "discStorm"
+      | "discNext";
     let phase: Phase = "none";
     let alpha = 0;
     let packLabel = "";
     let packHead = "";
-    if (saga) {
+    if (discover) {
+      const beat = discoverBeat(recT);
+      if (recT < 0) {
+        phase = "none";
+        alpha = 0;
+      } else if (beat === "hook") {
+        phase = "discHook";
+        alpha = recT < 0.14 ? recT / 0.14 : recT > 2.62 ? Math.max(0, (2.95 - recT) / 0.33) : 1;
+      } else if (beat === "proof") {
+        phase = "discProof";
+        alpha = 1;
+      } else if (beat === "hold") {
+        phase = "discHold";
+        alpha = 1;
+      } else if (beat === "storm") {
+        phase = "discStorm";
+        alpha = 1;
+      } else if (beat === "next") {
+        phase = "discNext";
+        alpha = recT > 12.95 ? Math.max(0, (13.25 - recT) / 0.3) : 1;
+      } else {
+        phase = "none";
+        alpha = 0;
+      }
+    } else if (saga) {
       const beat = sagaBeat(saga, recT, duration);
       phase =
         beat === "army"
@@ -392,7 +462,13 @@ function TitlesPlate({ soldiers, duration, day = 0, skipCommander = false, cinem
     }
     if (mat.current) mat.current.opacity = alpha;
     if (mesh.current) {
-      if (phase === "hook" || phase === "huntHook" || phase === "huntArmy" || phase.startsWith("saga")) {
+      if (
+        phase === "hook" ||
+        phase === "huntHook" ||
+        phase === "huntArmy" ||
+        phase.startsWith("saga") ||
+        phase.startsWith("disc")
+      ) {
         mesh.current.position.y = size.height * 0.3;
       } else if (phase === "army") {
         mesh.current.position.y = size.height * 0.28;

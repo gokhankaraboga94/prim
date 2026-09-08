@@ -23,6 +23,7 @@ import { REEL_DURATIONS } from "../recordCanvas";
 import { CINEMA_DURATIONS, CINEMA_ID, CINEMA_MODE, SHOT_MODES, type ReelShot } from "../shotModes";
 import { HOOK_ID, HOOK_MODE, ROSTER_ID, ROSTER_MODE, isPlanB, rosterDuration, type PlanBId } from "../rosterReel";
 import { SAGA_MODES, isSaga, sagaDuration, type SagaId } from "../sagaReel";
+import { DISCOVER_ID, DISCOVER_MODE, DISCOVER_SECONDS, isDiscover, type DiscoverId } from "../discoverReel";
 
 export function AdminPage() {
   const { game, recruits, level, power, pressure, target, maxHp } = useGame();
@@ -36,7 +37,7 @@ export function AdminPage() {
   const [reelSeconds, setReelSeconds] = useState<number>(7);
   const [reelText, setReelText] = useState(true);
   const [reelSkipCmd, setReelSkipCmd] = useState(false);
-  const [reelShot, setReelShot] = useState<ReelShot | PlanBId | SagaId | null>(null);
+  const [reelShot, setReelShot] = useState<ReelShot | PlanBId | SagaId | DiscoverId | null>(null);
   const [reelDay, setReelDay] = useState("1");
   const [capturing, setCapturing] = useState(false);
   const [editIndex, setEditIndex] = useState<number | null>(null);
@@ -234,7 +235,7 @@ export function AdminPage() {
         <div>
           <p className="join-kicker">Komuta paneli</p>
           <h1>Kuşatma yönetimi</h1>
-          <p className="join-kicker">sürüm 49 — sur yakın</p>
+          <p className="join-kicker">sürüm 50 — keşfet</p>
         </div>
         <button type="button" className="btn-ghost" onClick={() => signOut(auth)}>
           Çıkış
@@ -436,11 +437,13 @@ export function AdminPage() {
             {(
               reelShot === CINEMA_ID
                 ? CINEMA_DURATIONS
-                : isPlanB(reelShot)
-                  ? [rosterDuration(reelShot, namedCount(game.names, game.soldiers))]
-                  : isSaga(reelShot)
-                    ? [sagaDuration(reelShot)]
-                    : REEL_DURATIONS
+                : isDiscover(reelShot)
+                  ? [DISCOVER_SECONDS]
+                  : isPlanB(reelShot)
+                    ? [rosterDuration(reelShot, namedCount(game.names, game.soldiers))]
+                    : isSaga(reelShot)
+                      ? [sagaDuration(reelShot)]
+                      : REEL_DURATIONS
             ).map((sec) => (
               <button
                 key={sec}
@@ -512,7 +515,33 @@ export function AdminPage() {
               {CINEMA_MODE.label}
             </button>
           </div>
-          <label>B planı — Keşfet</label>
+          <label>Keşfet — 15s</label>
+          <p className="muted">
+            Algoritma klibi. İlk 3 sn kanca, komutan yakın plan yok, son kare ilk
+            kareye döner — loop görünmez. Yazı izleyiciyi isim taramaya kilitler;
+            kapı ve can çubuğu ikinci yarıda bahis. Amaç: yarıya kadar herkes,
+            sonuna kadar çoğu, tekrar izleyen loop.
+          </p>
+          <div className="dur-pills shot-pills">
+            <button
+              type="button"
+              className={reelShot === DISCOVER_ID ? "on" : ""}
+              onClick={() => {
+                setReelShot((cur) => (cur === DISCOVER_ID ? null : DISCOVER_ID));
+                setReelSeconds(DISCOVER_SECONDS);
+                setReelSkipCmd(true);
+              }}
+            >
+              {DISCOVER_MODE.label}
+            </button>
+          </div>
+          {isDiscover(reelShot) && (
+            <p className="muted">
+              Caption: Takip etmezsen kale yıkılmıyor. Tanıdığın var mı? Adın yoksa takip et — sonraki turda askersin. 1 takip = 1 asker. wargame.lol · @wargame2028
+              {" "}Hashtag: #wargame #oyun #reels
+            </p>
+          )}
+          <label>B planı — İsim avı</label>
           <p className="muted">
             Keşif izleyicisi kendi adını aramaz. İlk kare kale, yazı “bu isimler kaleyi
             yıkıyor / takip etmezsen kale duruyor”. Listede “tanıdığın var mı” ve
@@ -601,11 +630,12 @@ export function AdminPage() {
           maxHp={maxHp}
           seconds={reelSeconds}
           showTitles={reelText}
-          skipCommander={reelSkipCmd}
-          shotMode={reelShot === CINEMA_ID || isPlanB(reelShot) || isSaga(reelShot) ? null : reelShot}
+          skipCommander={reelSkipCmd || isDiscover(reelShot)}
+          shotMode={reelShot === CINEMA_ID || isPlanB(reelShot) || isSaga(reelShot) || isDiscover(reelShot) ? null : reelShot}
           cinema={reelShot === CINEMA_ID}
           roster={isPlanB(reelShot) ? reelShot : null}
           saga={isSaga(reelShot) ? reelShot : null}
+          discover={isDiscover(reelShot)}
           day={Math.max(0, Math.floor(Number(reelDay)) || 0)}
           onClose={() => setCapturing(false)}
         />

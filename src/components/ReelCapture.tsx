@@ -23,10 +23,11 @@ type ReelCaptureProps = {
   cinema?: boolean;
   roster?: PlanBId | null;
   saga?: SagaId | null;
+  discover?: boolean;
   onClose: () => void;
 };
 
-export function ReelCapture({ soldiers, names, commanders = [], level, pressure, hp, maxHp, seconds, showTitles = true, warLook = false, day = 0, skipCommander = false, shotMode = null, cinema = false, roster = null, saga = null, onClose }: ReelCaptureProps) {
+export function ReelCapture({ soldiers, names, commanders = [], level, pressure, hp, maxHp, seconds, showTitles = true, warLook = false, day = 0, skipCommander = false, shotMode = null, cinema = false, roster = null, saga = null, discover = false, onClose }: ReelCaptureProps) {
   const clip = seconds;
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [phase, setPhase] = useState<"boot" | "rec" | "done" | "err">("boot");
@@ -111,11 +112,12 @@ export function ReelCapture({ soldiers, names, commanders = [], level, pressure,
             showTitles={showTitles}
             warLook={warLook}
             day={day}
-            skipCommander={skipCommander}
-            shotMode={cinema || roster || saga ? null : shotMode}
+            skipCommander={skipCommander || discover}
+            shotMode={cinema || roster || saga || discover ? null : shotMode}
             cinema={cinema}
             roster={roster}
             saga={saga}
+            discover={discover}
             onReady={(canvas) => {
               canvasRef.current = canvas;
             }}
