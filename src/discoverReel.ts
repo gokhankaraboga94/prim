@@ -51,7 +51,15 @@ export function sampleDiscover(recT: number, ctx: ShotCtx): ShotPose {
   const mid = (form.front + castle.front) * 0.52;
   const hook = hookPose(form, castle);
   const hookPush = pose(1.35, 3.72, form.front + 2.55, 0.04, 2.42, castle.front + 3.1, 32);
-  const proof = pose(20.4, 24.2, form.back + 52, -2.2, 2.45, form.midZ, 50);
+  const proof = pose(
+    Math.min(12, Math.max(7.6, form.width * 0.15)),
+    24.2,
+    form.back + 52,
+    Math.min(10.5, Math.max(5.4, form.width * 0.24)),
+    2.45,
+    form.midZ,
+    51
+  );
   const hold = pose(10.6, 4.35, form.midZ + 5.2, -1.6, 1.85, form.front + 1, 36);
   const storm = pose(4.2, 4.7, castle.front + 19, 0.15, 2.55, mid, 38);
   const t = Math.max(0, recT);

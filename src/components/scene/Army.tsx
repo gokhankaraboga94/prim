@@ -667,13 +667,13 @@ function slotCoord(i: number, sizes: number[]) {
   return { row, col };
 }
 
-function makeHandleTexture(name: string, commander = false): NameTag | null {
+function makeHandleTexture(name: string, commander = false, crisp = false): NameTag | null {
   const label = `@${name}`;
-  const height = 160;
+  const height = crisp ? 220 : 160;
   const maxW = 1024;
   const probe = document.createElement("canvas").getContext("2d");
   if (!probe) return null;
-  let fontSize = 78;
+  let fontSize = crisp ? 96 : 78;
   probe.font = `800 ${fontSize}px Outfit, system-ui, sans-serif`;
   let textW = probe.measureText(label).width;
   while (textW + 36 > maxW && fontSize > 28) {
@@ -700,10 +700,10 @@ function makeHandleTexture(name: string, commander = false): NameTag | null {
   ctx.fillText(label, width / 2, height / 2);
   const map = new THREE.CanvasTexture(canvas);
   map.colorSpace = THREE.SRGBColorSpace;
-  map.generateMipmaps = true;
-  map.minFilter = THREE.LinearMipmapLinearFilter;
+  map.generateMipmaps = !crisp;
+  map.minFilter = crisp ? THREE.LinearFilter : THREE.LinearMipmapLinearFilter;
   map.magFilter = THREE.LinearFilter;
-  map.anisotropy = 8;
+  map.anisotropy = crisp ? 1 : 8;
   const sy = commander ? 1.02 : 0.9;
   const sx = Math.min(FILE * 0.9, sy * (width / height));
   return { map, sx, sy };
@@ -784,9 +784,9 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
   const nameMaps = useMemo(
     () =>
       labeled.map((i) =>
-        makeHandleTexture(i < 0 ? DEFAULT_COMMANDER : names[i], i < 0 || isCommander(names[i], chiefsList))
+        makeHandleTexture(i < 0 ? DEFAULT_COMMANDER : names[i], i < 0 || isCommander(names[i], chiefsList), Boolean(discover))
       ),
-    [labeled, names, chiefsList]
+    [labeled, names, chiefsList, discover]
   );
 
   const seeds = useMemo(() => {
@@ -1112,7 +1112,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
           tag.visible = false;
           continue;
         }
-        nameScale = 1;
+        nameScale = dBeat === "proof" ? 1.78 : 1.22;
       } else if (cinematic && roster) {
         if (recT < 0) {
           tag.visible = false;
