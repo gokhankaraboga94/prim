@@ -1,5 +1,4 @@
-import { useMemo, useRef } from "react";
-import { useFrame } from "@react-three/fiber";
+import { useLayoutEffect, useMemo, useRef } from "react";
 import { castleAxes } from "../../castleLayout";
 import * as THREE from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
@@ -129,20 +128,19 @@ export function Defenders({ grow, wallH }: DefendersProps) {
     [wallH, sx, sy, sz, zShift]
   );
 
-  useFrame(({ clock }) => {
+  useLayoutEffect(() => {
     if (!mesh.current) return;
-    const unit = 1.05 * grow;
-    const t = clock.elapsedTime;
+    const unit = 1.48 * grow;
     list.forEach((p, i) => {
-      dummy.position.set(p.x, p.y + Math.sin(t * 1.1 + i * 0.37) * 0.012, p.z);
-      dummy.rotation.set(0, p.rot + Math.sin(t * 0.55 + i) * 0.1, 0);
+      dummy.position.set(p.x, p.y, p.z);
+      dummy.rotation.set(0, p.rot, 0);
       dummy.scale.setScalar(unit);
       dummy.updateMatrix();
       mesh.current!.setMatrixAt(i, dummy.matrix);
     });
     mesh.current.count = list.length;
     mesh.current.instanceMatrix.needsUpdate = true;
-  });
+  }, [list, grow]);
 
   return (
     <instancedMesh ref={mesh} args={[geo, undefined, list.length]} frustumCulled={false}>
