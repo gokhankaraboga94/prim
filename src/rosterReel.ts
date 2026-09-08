@@ -28,7 +28,7 @@ export function rosterSoldierIds(names: string[], soldiers: number): number[] {
 export function rosterDuration(kind: PlanBId, named: number): number {
   if (kind === HOOK_ID) return 15;
   const packs = Math.max(1, Math.ceil(Math.max(1, named) / ROSTER_PACK));
-  const raw = 1.85 + 2.55 + packs * 3.15 + 2.8;
+  const raw = 2.1 + 2.4 + packs * 3.15 + 3.05;
   return raw <= 34 ? 30 : 45;
 }
 
@@ -91,9 +91,9 @@ export type RosterPose = {
 export function rosterTimeline(kind: PlanBId, named: number, duration: number) {
   const allPacks = Math.max(1, Math.ceil(Math.max(1, named) / ROSTER_PACK));
   const packs = kind === HOOK_ID ? Math.min(3, allPacks) : allPacks;
-  const hook = kind === HOOK_ID ? 1.7 : 1.85;
-  const overview = kind === HOOK_ID ? 2.05 : 2.55;
-  const cta = kind === HOOK_ID ? 2.15 : 2.8;
+  const hook = kind === HOOK_ID ? 1.85 : 2.1;
+  const overview = kind === HOOK_ID ? 1.95 : 2.4;
+  const cta = kind === HOOK_ID ? 2.35 : 3.05;
   const hold = Math.max(2.45, (duration - hook - overview - cta) / packs);
   return { hook, overview, cta, packs, hold, packStart: hook + overview, ctaAt: duration - cta };
 }
@@ -247,14 +247,14 @@ export function sampleRoster(
   ids: number[]
 ): ShotPose {
   const beat = rosterBeat(kind, recT, duration, ids);
-  const { form } = ctx;
-  const hookHigh = pose(0.3, 74, form.midZ + 3.5, 0, 0.15, form.midZ, 52);
+  const { form, castle } = ctx;
+  const gate = pose(1.4, 7.4, castle.front + 19, 0.1, castle.midY * 0.4, castle.front + 1.5, 40);
   const hookMid = pose(1.2, 48, form.midZ + 8, 0, 0.7, form.midZ, 48);
   const dive = pose(0.4, 14, ROSTER_STAGE_Z + 18, 0, 1.55, ROSTER_STAGE_Z + 1.2, 46);
   const tl = rosterTimeline(kind, ids.length, duration);
   if (beat.id === "hook") {
     const u = clamp01(recT / Math.max(0.2, tl.hook));
-    return lerpPose(hookHigh, hookMid, u);
+    return lerpPose(gate, hookMid, u);
   }
   if (beat.id === "overview") {
     const u = clamp01((recT - tl.hook) / Math.max(0.2, tl.overview));
@@ -262,9 +262,9 @@ export function sampleRoster(
   }
   if (beat.id === "cta") {
     const last = packCamPair(Math.max(0, tl.packs - 1))[1];
-    const up = pose(1.1, 40, form.midZ + 11, 0, 1.05, form.midZ, 48);
+    const payoff = pose(7.2, 15.5, form.midZ + 6, 0, 4.4, (form.front + castle.front) * 0.52, 42);
     const u = clamp01((recT - tl.ctaAt) / Math.max(0.2, tl.cta));
-    return lerpPose(last, up, u);
+    return lerpPose(last, payoff, u);
   }
   const [a, b] = packCamPair(beat.pack);
   if (beat.outgoing.length) {

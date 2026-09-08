@@ -233,7 +233,7 @@ export function AdminPage() {
         <div>
           <p className="join-kicker">Komuta paneli</p>
           <h1>Kuşatma yönetimi</h1>
-          <p className="join-kicker">sürüm 43 — isim avı geçiş</p>
+          <p className="join-kicker">sürüm 44 — keşif kancası</p>
         </div>
         <button type="button" className="btn-ghost" onClick={() => signOut(auth)}>
           Çıkış
@@ -511,9 +511,10 @@ export function AdminPage() {
           </div>
           <label>B planı — Keşfet</label>
           <p className="muted">
-            Eski çekimler duruyor. İsim avı: tepeden orduya dalış, sonra her 5’li karşıdan
-            girer — kamera kırpılır, diziliş ve açı değişir, isimler tek tek öne çıkar.
-            Son grup + tüm ordu CTA. İnsan kendi adını kaçırmamak için sonuna kadar bakar.
+            Keşif izleyicisi kendi adını aramaz. İlk kare kale, yazı “bu isimler kaleyi
+            yıkıyor / takip etmezsen kale duruyor”. Listede “tanıdığın var mı” ve
+            “sıradaki sen ol”. Dipte kale canı düşer — sonuna kadar bahis. CTA:
+            adın yoksa takip et, sonraki reelde asker olursun.
           </p>
           <div className="dur-pills shot-pills">
             <button
@@ -539,7 +540,7 @@ export function AdminPage() {
           </div>
           {isPlanB(reelShot) && (
             <p className="muted">
-              Caption: İSMİNİ BUL. 1 takip = 1 asker. wargame.lol · @wargame2028
+              Caption: Bu isimler kaleyi yıkıyor. Tanıdığın var mı? Yoksa takip et — sonraki reelde asker olursun. 1 takip = 1 asker. wargame.lol · @wargame2028
               {" "}Hashtag: #wargame #oyun #reels
             </p>
           )}

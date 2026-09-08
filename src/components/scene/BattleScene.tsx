@@ -478,8 +478,8 @@ function SceneContent({
           zoomSpeed={1.85}
         />
       )}
-      {cinematic && maxHp != null && hp != null && !roster && (
-        <CaptureHpHud hp={hp} maxHp={maxHp} soldiers={soldiers} duration={duration ?? 8} skipCommander={skipCommander} cinema={cinema} />
+      {cinematic && maxHp != null && hp != null && (
+        <CaptureHpHud hp={hp} maxHp={maxHp} soldiers={soldiers} duration={duration ?? 8} skipCommander={skipCommander} cinema={cinema} roster={roster} />
       )}
       {cinematic && showTitles && (
         <ReelTitles soldiers={soldiers} duration={duration ?? 8} day={day} skipCommander={skipCommander} cinema={cinema} roster={roster} names={names} />

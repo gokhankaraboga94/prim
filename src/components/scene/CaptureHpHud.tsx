@@ -5,7 +5,7 @@ import * as THREE from "three";
 import { DPS_PER_SOLDIER, formatCount } from "../../game";
 import { REEL_FADE_HOLD, REEL_HOLD, reelBeats, reelFade } from "../../recordCanvas";
 import { cinemaScale } from "../../shotModes";
-import { rosterBeat, rosterSoldierIds, type PlanBId } from "../../rosterReel";
+import { rosterBeat, rosterSoldierIds, rosterTimeline, type PlanBId } from "../../rosterReel";
 
 function roundRect(
   ctx: CanvasRenderingContext2D,
@@ -76,9 +76,10 @@ type CaptureHpHudProps = {
   duration?: number;
   skipCommander?: boolean;
   cinema?: boolean;
+  roster?: PlanBId | null;
 };
 
-function HpPlate({ hp, maxHp, soldiers, duration = 8, skipCommander = false, cinema = false }: CaptureHpHudProps) {
+function HpPlate({ hp, maxHp, soldiers, duration = 8, skipCommander = false, cinema = false, roster = null }: CaptureHpHudProps) {
   const size = useThree((s) => s.size);
   const mat = useRef<THREE.MeshBasicMaterial>(null);
   const canvas = useMemo(() => {
@@ -103,9 +104,13 @@ function HpPlate({ hp, maxHp, soldiers, duration = 8, skipCommander = false, cin
     const recT = clock.elapsedTime - REEL_HOLD;
     const { pullStart } = reelBeats(duration, skipCommander);
     let alpha = 0;
-    const showAt = cinema ? 14.8 * cinemaScale(duration) : pullStart;
-    if (recT >= showAt) {
-      alpha = Math.min(1, (recT - showAt) / 0.4);
+    if (roster) {
+      alpha = recT < 0 ? 0 : recT < 0.22 ? recT / 0.22 : 1;
+    } else {
+      const showAt = cinema ? 14.8 * cinemaScale(duration) : pullStart;
+      if (recT >= showAt) {
+        alpha = Math.min(1, (recT - showAt) / 0.4);
+      }
     }
     if (mat.current) mat.current.opacity = alpha;
 
@@ -120,7 +125,9 @@ function HpPlate({ hp, maxHp, soldiers, duration = 8, skipCommander = false, cin
 
   const width = size.width * 0.9;
   const height = Math.max(64, size.height * 0.1);
-  const y = size.height / 2 - height / 2 - Math.max(10, size.height * 0.018);
+  const y = roster
+    ? -size.height / 2 + height / 2 + Math.max(22, size.height * 0.07)
+    : size.height / 2 - height / 2 - Math.max(10, size.height * 0.018);
 
   return (
     <mesh position={[0, y, 0]} renderOrder={20}>
@@ -160,7 +167,8 @@ function drawTitles(
   phase: "hook" | "army" | "cta" | "none" | "huntHook" | "huntArmy" | "huntPack" | "huntCta",
   soldiers: number,
   day: number,
-  packLabel = ""
+  packLabel = "",
+  packHead = ""
 ) {
   const ctx = canvas.getContext("2d");
   if (!ctx) return;
@@ -171,26 +179,30 @@ function drawTitles(
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   if (phase === "huntHook") {
-    ctx.font = "800 92px Outfit, system-ui, sans-serif";
-    strokeFill(ctx, "İSMİNİ BUL", w / 2, 150, 24);
-    ctx.font = "800 48px Outfit, system-ui, sans-serif";
-    strokeFill(ctx, "1 TAKİP = 1 ASKER", w / 2, 250, 16);
+    ctx.font = "800 72px Outfit, system-ui, sans-serif";
+    strokeFill(ctx, "BU İSİMLER", w / 2, 108, 20);
+    ctx.font = "800 72px Outfit, system-ui, sans-serif";
+    strokeFill(ctx, "KALEYİ YIKIYOR", w / 2, 188, 20);
+    ctx.font = "800 40px Outfit, system-ui, sans-serif";
+    strokeFill(ctx, "takip etmezsen kale duruyor", w / 2, 268, 13);
   } else if (phase === "huntArmy") {
     const count = formatCount(soldiers);
     ctx.font = "800 150px Outfit, system-ui, sans-serif";
     strokeFill(ctx, count, w / 2, 140, 26);
-    ctx.font = "800 44px Outfit, system-ui, sans-serif";
-    strokeFill(ctx, "İSMİN VAR MI?", w / 2, 260, 14);
+    ctx.font = "800 42px Outfit, system-ui, sans-serif";
+    strokeFill(ctx, "HEPSİ GERÇEK HESAP", w / 2, 260, 14);
   } else if (phase === "huntPack") {
-    ctx.font = "800 64px Outfit, system-ui, sans-serif";
-    strokeFill(ctx, "İSMİNİ BUL", w / 2, 58, 18);
-    ctx.font = "800 44px Outfit, system-ui, sans-serif";
-    strokeFill(ctx, packLabel || "GRUP", w / 2, 128, 13);
+    ctx.font = "800 56px Outfit, system-ui, sans-serif";
+    strokeFill(ctx, packHead || "TANIDIĞIN VAR MI?", w / 2, 58, 16);
+    ctx.font = "800 40px Outfit, system-ui, sans-serif";
+    strokeFill(ctx, packLabel || "GRUP", w / 2, 128, 12);
   } else if (phase === "huntCta") {
-    ctx.font = "800 72px Outfit, system-ui, sans-serif";
-    strokeFill(ctx, "İSMİN YOKSA TAKİP ET", w / 2, 130, 20);
-    ctx.font = "800 48px Outfit, system-ui, sans-serif";
-    strokeFill(ctx, "@wargame2028", w / 2, 220, 14);
+    ctx.font = "800 62px Outfit, system-ui, sans-serif";
+    strokeFill(ctx, "ADIN YOKSA TAKİP ET", w / 2, 118, 18);
+    ctx.font = "800 40px Outfit, system-ui, sans-serif";
+    strokeFill(ctx, "sonraki reelde asker olursun", w / 2, 198, 13);
+    ctx.font = "800 44px Outfit, system-ui, sans-serif";
+    strokeFill(ctx, "@wargame2028", w / 2, 268, 14);
   } else if (phase === "hook") {
     if (day > 0) {
       ctx.font = "800 168px Outfit, system-ui, sans-serif";
@@ -256,20 +268,29 @@ function TitlesPlate({ soldiers, duration, day = 0, skipCommander = false, cinem
     let phase: Phase = "none";
     let alpha = 0;
     let packLabel = "";
+    let packHead = "";
     if (roster) {
       const ids = rosterSoldierIds(names, soldiers);
       const beat = rosterBeat(roster, recT, duration, ids);
+      const tl = rosterTimeline(roster, ids.length, duration);
       if (beat.id === "hook") {
         phase = "huntHook";
-        alpha = recT < 0.12 ? recT / 0.12 : recT > 1.75 ? Math.max(0, (2.15 - recT) / 0.4) : 1;
+        alpha = recT < 0.1 ? recT / 0.1 : recT > tl.hook - 0.32 ? Math.max(0, (tl.hook - recT) / 0.32) : 1;
       } else if (beat.id === "overview") {
         phase = "huntArmy";
         alpha = 1;
       } else if (beat.id === "pack") {
         phase = "huntPack";
-        const last = beat.pack >= beat.packs - 1;
-        packLabel = last ? `SON GRUP · ${beat.pack + 1}/${beat.packs}` : `GRUP ${beat.pack + 1} / ${beat.packs}`;
-        alpha = beat.outgoing.length || beat.u < 0.16 ? 1 : 0.9;
+        const lastPack = beat.pack >= beat.packs - 1;
+        packLabel = lastPack ? `SON · ${beat.pack + 1}/${beat.packs}` : `${beat.pack + 1} / ${beat.packs}`;
+        packHead = lastPack
+          ? "SEN YOKSUN?"
+          : beat.pack % 3 === 1
+            ? "BU HESAPLAR GERÇEK"
+            : beat.pack % 3 === 2
+              ? "SIRADAKİ SEN OL"
+              : "TANIDIĞIN VAR MI?";
+        alpha = beat.outgoing.length || beat.u < 0.16 ? 1 : 0.92;
       } else {
         phase = "huntCta";
         alpha = 1;
@@ -296,10 +317,10 @@ function TitlesPlate({ soldiers, duration, day = 0, skipCommander = false, cinem
       if (into < 0.3) alpha = into / 0.3;
       else alpha = 1;
     }
-    const key = `${phase}:${soldiers}:${day}:${packLabel}`;
+    const key = `${phase}:${soldiers}:${day}:${packLabel}:${packHead}`;
     if (last.current !== key) {
       last.current = key;
-      drawTitles(canvas, phase, soldiers, day, packLabel);
+      drawTitles(canvas, phase, soldiers, day, packLabel, packHead);
       tex.needsUpdate = true;
     }
     if (mat.current) mat.current.opacity = alpha;
