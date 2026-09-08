@@ -137,7 +137,7 @@ function layoutSlot(layout: number, i: number, n: number, out: RosterPose) {
   out.y = 0;
   const kind = ((layout % 4) + 4) % 4;
   if (count <= 3 || kind === 1) {
-    out.x = (idx - (count - 1) / 2) * (kind === 1 ? 1.52 : 1.72);
+    out.x = (idx - (count - 1) / 2) * (kind === 1 ? 1.22 : 1.38);
     out.z = ROSTER_STAGE_Z;
     return;
   }
@@ -146,28 +146,28 @@ function layoutSlot(layout: number, i: number, n: number, out: RosterPose) {
       out.x = 0;
       out.z = ROSTER_STAGE_Z - 0.12;
     } else if (idx < 3) {
-      out.x = idx === 1 ? -1.58 : 1.58;
-      out.z = ROSTER_STAGE_Z + 1.2;
+      out.x = idx === 1 ? -1.28 : 1.28;
+      out.z = ROSTER_STAGE_Z + 1.15;
     } else {
-      out.x = idx === 3 ? -2.42 : 2.42;
-      out.z = ROSTER_STAGE_Z + 2.42;
+      out.x = idx === 3 ? -1.92 : 1.92;
+      out.z = ROSTER_STAGE_Z + 2.2;
     }
     return;
   }
   if (kind === 3) {
-    out.x = (idx - (count - 1) / 2) * 1.58;
-    out.z = ROSTER_STAGE_Z + (idx % 2) * 1.65;
+    out.x = (idx - (count - 1) / 2) * 1.26;
+    out.z = ROSTER_STAGE_Z + (idx % 2) * 1.5;
     return;
   }
   const front = Math.ceil(count / 2);
   const back = count - front;
   if (idx < front) {
-    out.x = (idx - (front - 1) / 2) * 1.78;
+    out.x = (idx - (front - 1) / 2) * 1.42;
     out.z = ROSTER_STAGE_Z;
   } else {
     const j = idx - front;
-    out.x = (j - (back - 1) / 2) * 1.78;
-    out.z = ROSTER_STAGE_Z + 2.2;
+    out.x = (j - (back - 1) / 2) * 1.42;
+    out.z = ROSTER_STAGE_Z + 2.05;
   }
 }
 
@@ -197,10 +197,10 @@ export function stampRosterSoldier(
     out.z += 7.2 * (1 - inn);
     out.x += 0.35 * (1 - inn);
   } else {
-    out.x += side * 8.1 * (1 - inn);
-    out.z += 2.4 * (1 - inn);
+    out.x += side * 5.4 * (1 - inn);
+    out.z += 2.1 * (1 - inn);
   }
-  out.x -= side * 8.1 * outp;
+  out.x -= side * 5.4 * outp;
   out.z -= 1.6 * outp;
   out.y = Math.sin(recT * 3.1 + slot * 1.7) * 0.03 * inn * (1 - outp);
   const face = faceYaw(pack);
@@ -215,7 +215,7 @@ export function stampRosterSoldier(
     if (slot === scan) {
       out.z += 0.7;
       out.scaleMul *= 1.08;
-      out.nameMul *= 1.22;
+      out.nameMul *= 1.08;
       out.ry *= 0.72;
     }
   }
@@ -225,17 +225,17 @@ function packCamPair(style: number): [ShotPose, ShotPose] {
   const z = ROSTER_STAGE_Z;
   switch (((style % 6) + 6) % 6) {
     case 0:
-      return [pose(0.25, 6.5, z + 17.4, 0, 1.32, z + 0.95, 46), pose(-0.45, 5.05, z + 13.8, 0.12, 1.5, z + 0.45, 40)];
+      return [pose(0.2, 6.6, z + 17.8, 0, 1.32, z + 0.9, 46), pose(-0.25, 5.2, z + 14.6, 0, 1.48, z + 0.5, 42)];
     case 1:
-      return [pose(-5.6, 5.05, z + 15.6, 0.7, 1.38, z + 0.7, 42), pose(-2.15, 5.3, z + 14.5, 0.18, 1.44, z + 0.55, 39)];
+      return [pose(-3.8, 5.2, z + 16.4, 0.15, 1.4, z + 0.65, 44), pose(-1.6, 5.35, z + 15.2, 0.05, 1.44, z + 0.55, 42)];
     case 2:
-      return [pose(5.7, 5.25, z + 15.8, -0.65, 1.36, z + 0.65, 42), pose(2.35, 4.85, z + 14.3, -0.12, 1.46, z + 0.5, 39)];
+      return [pose(3.9, 5.3, z + 16.4, -0.15, 1.38, z + 0.65, 44), pose(1.65, 5.05, z + 15.1, -0.04, 1.46, z + 0.52, 42)];
     case 3:
-      return [pose(0.85, 3.2, z + 17.0, 0, 1.64, z + 0.15, 40), pose(-0.55, 3.5, z + 15.0, 0.06, 1.58, z + 0.32, 36)];
+      return [pose(0.55, 3.55, z + 17.6, 0, 1.62, z + 0.2, 42), pose(-0.3, 3.7, z + 15.8, 0, 1.56, z + 0.35, 40)];
     case 4:
-      return [pose(1.7, 9.5, z + 14.4, 0, 0.92, z + 1.15, 44), pose(0.35, 6.15, z + 13.9, 0, 1.34, z + 0.7, 41)];
+      return [pose(1.1, 9.2, z + 15.2, 0, 0.95, z + 1.1, 46), pose(0.2, 6.3, z + 14.6, 0, 1.34, z + 0.7, 43)];
     default:
-      return [pose(-4.0, 6.9, z + 16.4, 0.45, 1.22, z + 0.85, 45), pose(3.35, 5.35, z + 14.5, -0.28, 1.42, z + 0.52, 40)];
+      return [pose(-2.8, 6.7, z + 16.8, 0.12, 1.24, z + 0.8, 46), pose(2.2, 5.5, z + 15.2, -0.1, 1.42, z + 0.55, 42)];
   }
 }
 

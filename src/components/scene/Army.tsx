@@ -1109,7 +1109,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
           continue;
         }
         nameScale = isolate ? 0.7 * (rosterPose.nameMul || 1) : 1.05;
-        if (isolate && rosterPose.nameMul < 0.1) {
+        if (isolate && (rosterPose.nameMul < 0.1 || Math.abs(pos.x) > 2.85)) {
           tag.visible = false;
           continue;
         }
@@ -1134,8 +1134,15 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
         const { row, col } = slotCoord(slot >= 0 ? slot : 0, form.sizes);
         lift = 2.22 + row * 0.5 + (col % 2) * 0.2;
       }
-      tag.position.set(pos.x, pos.y + lift * scale, pos.z);
-      const sx = isolate ? Math.min(1.48, tagData.sx * nameScale) : tagData.sx * nameScale;
+      const sx = isolate ? Math.min(1.18, tagData.sx * nameScale) : tagData.sx * nameScale;
+      let nx = pos.x;
+      if (isolate) {
+        const half = sx * 0.5;
+        const lim = 2.12;
+        if (nx - half < -lim) nx = -lim + half;
+        if (nx + half > lim) nx = lim - half;
+      }
+      tag.position.set(nx, pos.y + lift * scale, pos.z);
       tag.scale.set(sx, tagData.sy * nameScale, 1);
     }
   }
