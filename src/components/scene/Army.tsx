@@ -5,6 +5,7 @@ import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js
 import { DEFAULT_COMMANDER, effectiveCommanders, isCommander } from "../../game";
 import { REEL_HOLD, reelBeats } from "../../recordCanvas";
 import { rosterBeat, rosterSoldierIds, stampRosterSoldier, type PlanBId, type RosterPose } from "../../rosterReel";
+import { discoverBeat } from "../../discoverReel";
 import { raidCount, sallyHunting, sallyLiveIndex, sallyLocal, sallyRaiderAt, swordArmPose, swordStyleAt, swordSwingU } from "../../siegeEvent";
 
 const MAX_SOLDIERS = 5000;
@@ -43,6 +44,7 @@ type ArmyProps = {
   duration?: number;
   skipCommander?: boolean;
   roster?: PlanBId | null;
+  discover?: boolean;
 };
 
 const MAX_RANKS = 4;
@@ -707,7 +709,7 @@ function makeHandleTexture(name: string, commander = false): NameTag | null {
   return { map, sx, sy };
 }
 
-export function Army({ count, names = [], commanders = [], cinematic, duration = 8, skipCommander = false, roster = null }: ArmyProps) {
+export function Army({ count, names = [], commanders = [], cinematic, duration = 8, skipCommander = false, roster = null, discover = false }: ArmyProps) {
   const bodies = useRef<THREE.InstancedMesh>(null);
   const soldierPlumes = useRef<THREE.InstancedMesh>(null);
   const bowHolds = useRef<THREE.InstancedMesh>(null);
@@ -1103,7 +1105,15 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
       } else if (idx < 0) commanderPos(t, 0, pos);
       else poseSoldier(idx, t);
       let nameScale = 1;
-      if (cinematic && roster) {
+      if (cinematic && discover) {
+        const dBeat = discoverBeat(recT);
+        const namesOn = (dBeat === "proof" && recT >= 3.7) || dBeat === "hold";
+        if (!namesOn) {
+          tag.visible = false;
+          continue;
+        }
+        nameScale = 1;
+      } else if (cinematic && roster) {
         if (recT < 0) {
           tag.visible = false;
           continue;

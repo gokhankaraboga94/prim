@@ -464,7 +464,7 @@ function SceneContent({
       <Terrain />
       <Castle level={level} pressure={pressure} />
       {!roster && <SallyRaid soldiers={soldiers} commanders={chiefN} />}
-      <Army count={soldiers} names={names} commanders={commanders} cinematic={cinematic} duration={duration} skipCommander={hideCmd} roster={roster} />
+      <Army count={soldiers} names={names} commanders={commanders} cinematic={cinematic} duration={duration} skipCommander={hideCmd} roster={roster} discover={discover} />
       {cinematic ? (
         <CinematicCam
           duration={duration ?? 8}
