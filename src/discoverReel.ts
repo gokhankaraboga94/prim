@@ -32,6 +32,21 @@ function clamp01(t: number) {
   return Math.max(0, Math.min(1, t));
 }
 
+function armyWidePose(form: ShotCtx["form"]): ShotPose {
+  const camX = 6.1;
+  const camY = 24.2;
+  const camZ = form.back + 52;
+  const lookX = 0;
+  const lookY = 2.45;
+  const lookZ = form.midZ;
+  const dist = Math.hypot(camX - lookX, camY - lookY, camZ - lookZ);
+  const half = form.width * 0.5 + 3.1;
+  const hHalf = half / Math.max(20, dist * 0.9);
+  const vHalf = hHalf / (9 / 16);
+  const fov = Math.max(50, Math.min(62, (Math.atan(vHalf) * 360) / Math.PI));
+  return pose(camX, camY, camZ, lookX, lookY, lookZ, fov);
+}
+
 export function discoverGateRecT() {
   return 8.55;
 }
@@ -51,15 +66,7 @@ export function sampleDiscover(recT: number, ctx: ShotCtx): ShotPose {
   const mid = (form.front + castle.front) * 0.52;
   const hook = hookPose(form, castle);
   const hookPush = pose(1.35, 3.72, form.front + 2.55, 0.04, 2.42, castle.front + 3.1, 32);
-  const proof = pose(
-    Math.min(12, Math.max(7.6, form.width * 0.15)),
-    24.2,
-    form.back + 52,
-    Math.min(10.5, Math.max(5.4, form.width * 0.24)),
-    2.45,
-    form.midZ,
-    51
-  );
+  const proof = armyWidePose(form);
   const hold = pose(10.6, 4.35, form.midZ + 5.2, -1.6, 1.85, form.front + 1, 36);
   const storm = pose(4.2, 4.7, castle.front + 19, 0.15, 2.55, mid, 38);
   const t = Math.max(0, recT);
