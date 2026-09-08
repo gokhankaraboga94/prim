@@ -233,7 +233,7 @@ export function AdminPage() {
         <div>
           <p className="join-kicker">Komuta paneli</p>
           <h1>Kuşatma yönetimi</h1>
-          <p className="join-kicker">sürüm 42 — çelik kask</p>
+          <p className="join-kicker">sürüm 43 — isim avı geçiş</p>
         </div>
         <button type="button" className="btn-ghost" onClick={() => signOut(auth)}>
           Çıkış
@@ -511,9 +511,9 @@ export function AdminPage() {
           </div>
           <label>B planı — Keşfet</label>
           <p className="muted">
-            Eski çekimler duruyor. B planı isim avı: ilk 2 sn “İSMİNİ BUL”, tepeden tüm ordu, sonra
-            5’li yakın plan (yanında kimse yok, @adlar net). 30–45 sn. İnsan kendi ismini arar,
-            videoyu sonuna ve tekrar izler. Kanca 15s: aynı fikir, ilk 15 asker, tamamlama oranı için.
+            Eski çekimler duruyor. İsim avı: tepeden orduya dalış, sonra her 5’li karşıdan
+            girer — kamera kırpılır, diziliş ve açı değişir, isimler tek tek öne çıkar.
+            Son grup + tüm ordu CTA. İnsan kendi adını kaçırmamak için sonuna kadar bakar.
           </p>
           <div className="dur-pills shot-pills">
             <button

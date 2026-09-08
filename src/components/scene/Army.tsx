@@ -4,7 +4,7 @@ import * as THREE from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import { DEFAULT_COMMANDER, effectiveCommanders, isCommander } from "../../game";
 import { REEL_HOLD, reelBeats } from "../../recordCanvas";
-import { rosterBeat, rosterSoldierIds, rosterStageSlot, type PlanBId } from "../../rosterReel";
+import { rosterBeat, rosterSoldierIds, stampRosterSoldier, type PlanBId, type RosterPose } from "../../rosterReel";
 import { raidCount, sallyHunting, sallyLiveIndex, sallyLocal, sallyRaiderAt, swordArmPose, swordStyleAt, swordSwingU } from "../../siegeEvent";
 
 const MAX_SOLDIERS = 5000;
@@ -174,6 +174,7 @@ const _limbScl = new THREE.Vector3();
 const _bodyQ = new THREE.Quaternion();
 const _extraQ = new THREE.Quaternion();
 const _limbEul = new THREE.Euler();
+const rosterPose: RosterPose = { x: 0, y: 0, z: 0, rx: 0, ry: 0, rz: 0, scaleMul: 1, nameMul: 1 };
 
 function mergeParts(pieces: THREE.BufferGeometry[], fallback: string) {
   const merged = mergeGeometries(pieces, false);
@@ -888,8 +889,9 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
     const recT = t - REEL_HOLD;
     const huntIds = roster ? rosterSoldierIds(names, visible) : [];
     const beat = roster ? rosterBeat(roster, recT, duration, huntIds) : null;
-    const packIds = beat && beat.id === "pack" ? beat.ids : null;
-    const packSet = packIds ? new Set(packIds) : null;
+    const liveIds = beat && beat.id === "pack" ? beat.ids : null;
+    const outIds = beat && beat.id === "pack" ? beat.outgoing : null;
+    const packSet = liveIds ? new Set([...(outIds ?? []), ...liveIds]) : null;
     const isolate = Boolean(packSet);
     if (bodies.current) {
       const n = layout.rest.length;
@@ -916,26 +918,42 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
           }
           continue;
         }
-        if (isolate && onPack && packIds) {
-          rosterStageSlot(packIds.indexOf(soldier), packIds.length, pos);
+        if (isolate && onPack && liveIds && beat && beat.id === "pack") {
+          const liveSlot = liveIds.indexOf(soldier);
+          const outSlot = outIds ? outIds.indexOf(soldier) : -1;
+          if (liveSlot >= 0) stampRosterSoldier(liveSlot, liveIds.length, beat.pack, recT, beat.enter, 0, beat.u, rosterPose);
+          else stampRosterSoldier(Math.max(0, outSlot), outIds?.length ?? 1, Math.max(0, beat.pack - 1), recT, 1, beat.exit, 1, rosterPose);
+          const raise = liveSlot >= 0 ? beat.enter : 1 - beat.exit;
+          const bodyScale = scale * rosterPose.scaleMul;
+          pos.set(rosterPose.x, rosterPose.y, rosterPose.z);
           dummy.position.copy(pos);
-          dummy.rotation.set(0.08, 0.1, 0);
-          dummy.scale.setScalar(scale);
+          dummy.rotation.set(rosterPose.rx, rosterPose.ry, rosterPose.rz);
+          dummy.scale.setScalar(bodyScale);
           dummy.updateMatrix();
           stamp(bodies.current, i);
           stamp(soldierPlumes.current, i);
-          _bodyQ.setFromEuler(_limbEul.set(0.08, 0.1, 0, "XYZ"));
-          stampLimb(bowHolds.current, i, L_SHOULDER, 0.05, 0.04, 0.1, scale);
-          stampLimb(drawArms.current, i, R_SHOULDER, -0.02, -0.06, 0.05, scale);
+          _bodyQ.setFromEuler(_limbEul.set(rosterPose.rx, rosterPose.ry, rosterPose.rz, "XYZ"));
+          const holdRx = (1 - raise) * -1.18 + 0.05 * raise;
+          const drawRx = (1 - raise) * -1.08 - 0.02 * raise;
+          const drawRy = (1 - raise) * 0.42 - 0.06 * raise;
+          const drawRz = (1 - raise) * -0.18 + 0.05 * raise;
+          stampLimb(bowHolds.current, i, L_SHOULDER, holdRx, 0.04 * raise, 0.1 * raise, bodyScale);
+          stampLimb(drawArms.current, i, R_SHOULDER, drawRx, drawRy, drawRz, bodyScale);
           if (nocks.current) {
-            nockOff.set(-0.1, 1.2, -0.14);
-            nockOff.applyQuaternion(_bodyQ);
-            nockOff.multiplyScalar(scale);
-            dummy.position.set(pos.x + nockOff.x, pos.y + nockOff.y, pos.z + nockOff.z);
-            dummy.rotation.set(0.08, 0.1, 0);
-            dummy.scale.setScalar(scale);
-            dummy.updateMatrix();
-            nocks.current.setMatrixAt(i, dummy.matrix);
+            if (raise > 0.18) {
+              nockOff.set(-0.1, 1.2, -0.34 + raise * 0.2);
+              nockOff.applyQuaternion(_bodyQ);
+              nockOff.multiplyScalar(bodyScale);
+              dummy.position.set(pos.x + nockOff.x, pos.y + nockOff.y, pos.z + nockOff.z);
+              dummy.rotation.set(rosterPose.rx, rosterPose.ry, rosterPose.rz);
+              dummy.scale.setScalar(bodyScale);
+              dummy.updateMatrix();
+              nocks.current.setMatrixAt(i, dummy.matrix);
+            } else {
+              dummy.scale.setScalar(0);
+              dummy.updateMatrix();
+              nocks.current.setMatrixAt(i, dummy.matrix);
+            }
           }
           continue;
         }
@@ -1009,17 +1027,22 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
           }
           continue;
         }
-        if (isolate && onPack && packIds) {
-          rosterStageSlot(packIds.indexOf(soldier), packIds.length, pos);
+        if (isolate && onPack && liveIds && beat && beat.id === "pack") {
+          const liveSlot = liveIds.indexOf(soldier);
+          const outSlot = outIds ? outIds.indexOf(soldier) : -1;
+          if (liveSlot >= 0) stampRosterSoldier(liveSlot, liveIds.length, beat.pack, recT, beat.enter, 0, beat.u, rosterPose);
+          else stampRosterSoldier(Math.max(0, outSlot), outIds?.length ?? 1, Math.max(0, beat.pack - 1), recT, 1, beat.exit, 1, rosterPose);
+          const bodyScale = scale * rosterPose.scaleMul;
+          pos.set(rosterPose.x, rosterPose.y, rosterPose.z);
           dummy.position.copy(pos);
-          dummy.rotation.set(0.08, 0.1, 0);
-          dummy.scale.setScalar(scale);
+          dummy.rotation.set(rosterPose.rx, rosterPose.ry, rosterPose.rz);
+          dummy.scale.setScalar(bodyScale);
           dummy.updateMatrix();
           stamp(chiefs.current, k);
           stamp(chiefCapes.current, k);
           stamp(chiefPlumes.current, k);
-          _bodyQ.setFromEuler(_limbEul.set(0.08, 0.1, 0, "XYZ"));
-          stampLimb(swordArms.current, k, L_SHOULDER, -0.55, 0.18, 0.12, scale);
+          _bodyQ.setFromEuler(_limbEul.set(rosterPose.rx, rosterPose.ry, rosterPose.rz, "XYZ"));
+          stampLimb(swordArms.current, k, L_SHOULDER, -0.55, 0.18, 0.12, bodyScale);
           if (swords.current) {
             dummy.scale.setScalar(0);
             dummy.updateMatrix();
@@ -1071,8 +1094,12 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
         tag.visible = false;
         continue;
       }
-      if (isolate && packIds && idx >= 0) {
-        rosterStageSlot(packIds.indexOf(idx), packIds.length, pos);
+      if (isolate && liveIds && beat && beat.id === "pack" && idx >= 0) {
+        const liveSlot = liveIds.indexOf(idx);
+        const outSlot = outIds ? outIds.indexOf(idx) : -1;
+        if (liveSlot >= 0) stampRosterSoldier(liveSlot, liveIds.length, beat.pack, recT, beat.enter, 0, beat.u, rosterPose);
+        else stampRosterSoldier(Math.max(0, outSlot), outIds?.length ?? 1, Math.max(0, beat.pack - 1), recT, 1, beat.exit, 1, rosterPose);
+        pos.set(rosterPose.x, rosterPose.y, rosterPose.z);
       } else if (idx < 0) commanderPos(t, 0, pos);
       else poseSoldier(idx, t);
       let nameScale = 1;
@@ -1081,7 +1108,11 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
           tag.visible = false;
           continue;
         }
-        nameScale = isolate ? 0.7 : 1.05;
+        nameScale = isolate ? 0.7 * (rosterPose.nameMul || 1) : 1.05;
+        if (isolate && rosterPose.nameMul < 0.1) {
+          tag.visible = false;
+          continue;
+        }
       } else if (cinematic) {
         const beats = reelBeats(duration, skipCommander);
         if (recT < 0) {
@@ -1121,7 +1152,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
     const enemies = raidCount(visible);
 
     acc.current += dt;
-      if (acc.current >= 1 / 40) {
+    if (roster || acc.current >= 1 / 40) {
       acc.current = 0;
       placeBodies(t);
     }

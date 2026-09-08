@@ -182,8 +182,10 @@ function drawTitles(
     ctx.font = "800 44px Outfit, system-ui, sans-serif";
     strokeFill(ctx, "İSMİN VAR MI?", w / 2, 260, 14);
   } else if (phase === "huntPack") {
-    ctx.font = "800 40px Outfit, system-ui, sans-serif";
-    strokeFill(ctx, packLabel || "İSMİNİ ARA", w / 2, 70, 12);
+    ctx.font = "800 64px Outfit, system-ui, sans-serif";
+    strokeFill(ctx, "İSMİNİ BUL", w / 2, 58, 18);
+    ctx.font = "800 44px Outfit, system-ui, sans-serif";
+    strokeFill(ctx, packLabel || "GRUP", w / 2, 128, 13);
   } else if (phase === "huntCta") {
     ctx.font = "800 72px Outfit, system-ui, sans-serif";
     strokeFill(ctx, "İSMİN YOKSA TAKİP ET", w / 2, 130, 20);
@@ -265,8 +267,9 @@ function TitlesPlate({ soldiers, duration, day = 0, skipCommander = false, cinem
         alpha = 1;
       } else if (beat.id === "pack") {
         phase = "huntPack";
-        packLabel = `${beat.pack + 1} / ${beat.packs}`;
-        alpha = 0.92;
+        const last = beat.pack >= beat.packs - 1;
+        packLabel = last ? `SON GRUP · ${beat.pack + 1}/${beat.packs}` : `GRUP ${beat.pack + 1} / ${beat.packs}`;
+        alpha = beat.outgoing.length || beat.u < 0.16 ? 1 : 0.9;
       } else {
         phase = "huntCta";
         alpha = 1;
