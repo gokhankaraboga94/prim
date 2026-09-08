@@ -11,6 +11,7 @@ import { castleFrame } from "../../castleLayout";
 import { REEL_HOLD, reelBeats } from "../../recordCanvas";
 import { CINEMA_SWORD_P, cinemaGateAt, sampleCinema, sampleShotMode, type ShotId } from "../../shotModes";
 import { rosterSoldierIds, sampleRoster, type PlanBId } from "../../rosterReel";
+import { sagaGateRecT, sampleSaga, type SagaId } from "../../sagaReel";
 import {
   SALLY_START_DELAY,
   SWORD_START,
@@ -37,6 +38,7 @@ type BattleSceneProps = {
   shotMode?: ShotId | null;
   cinema?: boolean;
   roster?: PlanBId | null;
+  saga?: SagaId | null;
   onReady?: (canvas: HTMLCanvasElement) => void;
 };
 
@@ -65,6 +67,7 @@ function CinematicCam({
   shotMode = null,
   cinema = false,
   roster = null,
+  saga = null,
 }: {
   duration: number;
   soldiers: number;
@@ -75,6 +78,7 @@ function CinematicCam({
   shotMode?: ShotId | null;
   cinema?: boolean;
   roster?: PlanBId | null;
+  saga?: SagaId | null;
 }) {
   const look = useMemo(() => new THREE.Vector3(), []);
   useFrame(({ camera, clock, size }) => {
@@ -130,15 +134,17 @@ function CinematicCam({
       fov: 38,
     };
 
-    if (cinema || shotMode || roster) {
+    if (cinema || shotMode || roster || saga) {
       const warm = clock.elapsedTime;
       const sampleT = warm < REEL_HOLD ? (warm / REEL_HOLD) * duration : recT;
       const ctx = { cmdZ, form, castle, fit, castleFit };
       const pose = roster
         ? sampleRoster(roster, sampleT, duration, ctx, rosterSoldierIds(names, soldiers))
-        : cinema
-          ? sampleCinema(sampleT, duration, ctx)
-          : sampleShotMode(shotMode as ShotId, sampleT, duration, skipCommander, ctx);
+        : saga
+          ? sampleSaga(saga, sampleT, duration, ctx)
+          : cinema
+            ? sampleCinema(sampleT, duration, ctx)
+            : sampleShotMode(shotMode as ShotId, sampleT, duration, skipCommander, ctx);
       const persp = camera as THREE.PerspectiveCamera;
       persp.fov = pose.fov;
       persp.updateProjectionMatrix();
@@ -436,6 +442,7 @@ function SceneContent({
   shotMode = null,
   cinema = false,
   roster = null,
+  saga = null,
 }: BattleSceneProps) {
   const chiefs = effectiveCommanders(commanders, names);
   const chiefN = skipCommander ? 0 : chiefs.length;
@@ -461,6 +468,7 @@ function SceneContent({
           shotMode={shotMode}
           cinema={cinema}
           roster={roster}
+          saga={saga}
         />
       ) : (
         <OrbitControls
@@ -507,6 +515,7 @@ function BattleSceneInner({
   shotMode = null,
   cinema = false,
   roster = null,
+  saga = null,
   onReady,
 }: BattleSceneProps) {
   const [active, setActive] = useState(() => typeof document === "undefined" || !document.hidden);
@@ -515,6 +524,15 @@ function BattleSceneInner({
     if (cinematic && roster) {
       setSallyOrigin(80);
       setSwordStart(80);
+    } else if (cinematic && saga) {
+      const gateAt = sagaGateRecT(saga);
+      if (gateAt == null) {
+        setSallyOrigin(80);
+        setSwordStart(80);
+      } else {
+        setSallyOrigin(SALLY_START_DELAY - REEL_HOLD - gateAt);
+        setSwordStart(9.2);
+      }
     } else if (cinematic && cinema) {
       setSallyOrigin(SALLY_START_DELAY - REEL_HOLD - cinemaGateAt(duration ?? 30));
       setSwordStart(CINEMA_SWORD_P);
@@ -531,7 +549,7 @@ function BattleSceneInner({
       setSallyOrigin(0);
       setSwordStart(SWORD_START);
     };
-  }, [cinematic, cinema, duration, skipCommander, roster]);
+  }, [cinematic, cinema, duration, skipCommander, roster, saga]);
 
   useEffect(() => {
     const onVis = () => setActive(!document.hidden);
@@ -583,6 +601,7 @@ function BattleSceneInner({
         shotMode={shotMode}
         cinema={cinema}
         roster={roster}
+        saga={saga}
       />
     </Canvas>
   );

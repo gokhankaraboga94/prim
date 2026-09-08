@@ -22,6 +22,7 @@ import { ReelCapture } from "../components/ReelCapture";
 import { REEL_DURATIONS } from "../recordCanvas";
 import { CINEMA_DURATIONS, CINEMA_ID, CINEMA_MODE, SHOT_MODES, type ReelShot } from "../shotModes";
 import { HOOK_ID, HOOK_MODE, ROSTER_ID, ROSTER_MODE, isPlanB, rosterDuration, type PlanBId } from "../rosterReel";
+import { SAGA_MODES, isSaga, sagaDuration, type SagaId } from "../sagaReel";
 
 export function AdminPage() {
   const { game, recruits, level, power, pressure, target, maxHp } = useGame();
@@ -35,7 +36,7 @@ export function AdminPage() {
   const [reelSeconds, setReelSeconds] = useState<number>(7);
   const [reelText, setReelText] = useState(true);
   const [reelSkipCmd, setReelSkipCmd] = useState(false);
-  const [reelShot, setReelShot] = useState<ReelShot | PlanBId | null>(null);
+  const [reelShot, setReelShot] = useState<ReelShot | PlanBId | SagaId | null>(null);
   const [reelDay, setReelDay] = useState("1");
   const [capturing, setCapturing] = useState(false);
   const [editIndex, setEditIndex] = useState<number | null>(null);
@@ -233,7 +234,7 @@ export function AdminPage() {
         <div>
           <p className="join-kicker">Komuta paneli</p>
           <h1>Kuşatma yönetimi</h1>
-          <p className="join-kicker">sürüm 46 — yay öne</p>
+          <p className="join-kicker">sürüm 47 — kuşatma senaryo</p>
         </div>
         <button type="button" className="btn-ghost" onClick={() => signOut(auth)}>
           Çıkış
@@ -437,7 +438,9 @@ export function AdminPage() {
                 ? CINEMA_DURATIONS
                 : isPlanB(reelShot)
                   ? [rosterDuration(reelShot, namedCount(game.names, game.soldiers))]
-                  : REEL_DURATIONS
+                  : isSaga(reelShot)
+                    ? [sagaDuration(reelShot)]
+                    : REEL_DURATIONS
             ).map((sec) => (
               <button
                 key={sec}
@@ -544,6 +547,33 @@ export function AdminPage() {
               {" "}Hashtag: #wargame #oyun #reels
             </p>
           )}
+          <label>C planı — Senaryo</label>
+          <p className="muted">
+            Eski çekimler duruyor. Kuşatma: ordu → surdaki düşman bizi izliyor → ok
+            yağmuru → kapı açılır, hücum, savaş. Sur bakışı ve Hücum aynı hikâyenin
+            kısa kesimleri.
+          </p>
+          <div className="dur-pills shot-pills">
+            {SAGA_MODES.map((mode) => (
+              <button
+                key={mode.id}
+                type="button"
+                className={reelShot === mode.id ? "on" : ""}
+                onClick={() => {
+                  setReelShot((cur) => (cur === mode.id ? null : mode.id));
+                  setReelSeconds(mode.seconds);
+                }}
+              >
+                {mode.label}
+              </button>
+            ))}
+          </div>
+          {isSaga(reelShot) && (
+            <p className="muted">
+              Caption: Kale bizi izliyor. 1 takip = 1 asker. wargame.lol · @wargame2028
+              {" "}Hashtag: #wargame #oyun #reels
+            </p>
+          )}
           <button type="button" className="btn-gold" onClick={() => setCapturing(true)}>
             Kaydı başlat
           </button>
@@ -572,9 +602,10 @@ export function AdminPage() {
           seconds={reelSeconds}
           showTitles={reelText}
           skipCommander={reelSkipCmd}
-          shotMode={reelShot === CINEMA_ID || isPlanB(reelShot) ? null : reelShot}
+          shotMode={reelShot === CINEMA_ID || isPlanB(reelShot) || isSaga(reelShot) ? null : reelShot}
           cinema={reelShot === CINEMA_ID}
           roster={isPlanB(reelShot) ? reelShot : null}
+          saga={isSaga(reelShot) ? reelShot : null}
           day={Math.max(0, Math.floor(Number(reelDay)) || 0)}
           onClose={() => setCapturing(false)}
         />

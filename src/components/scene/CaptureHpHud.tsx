@@ -6,6 +6,7 @@ import { DPS_PER_SOLDIER, formatCount } from "../../game";
 import { REEL_FADE_HOLD, REEL_HOLD, reelBeats, reelFade } from "../../recordCanvas";
 import { cinemaScale } from "../../shotModes";
 import { rosterBeat, rosterSoldierIds, rosterTimeline, type PlanBId } from "../../rosterReel";
+import { sagaBeat, type SagaId } from "../../sagaReel";
 
 function roundRect(
   ctx: CanvasRenderingContext2D,
@@ -164,7 +165,21 @@ function strokeFill(
 
 function drawTitles(
   canvas: HTMLCanvasElement,
-  phase: "hook" | "army" | "cta" | "none" | "huntHook" | "huntArmy" | "huntPack" | "huntCta",
+  phase:
+    | "hook"
+    | "army"
+    | "cta"
+    | "none"
+    | "huntHook"
+    | "huntArmy"
+    | "huntPack"
+    | "huntCta"
+    | "sagaArmy"
+    | "sagaWall"
+    | "sagaVolley"
+    | "sagaGate"
+    | "sagaFight"
+    | "sagaCta",
   soldiers: number,
   day: number,
   packLabel = "",
@@ -203,6 +218,28 @@ function drawTitles(
     strokeFill(ctx, "sonraki reelde asker olursun", w / 2, 198, 13);
     ctx.font = "800 44px Outfit, system-ui, sans-serif";
     strokeFill(ctx, "@wargame2028", w / 2, 268, 14);
+  } else if (phase === "sagaArmy") {
+    ctx.font = "800 72px Outfit, system-ui, sans-serif";
+    strokeFill(ctx, "ORDUMUZ", w / 2, 150, 20);
+    ctx.font = "800 40px Outfit, system-ui, sans-serif";
+    strokeFill(ctx, "1 TAKİP = 1 ASKER", w / 2, 240, 13);
+  } else if (phase === "sagaWall") {
+    ctx.font = "800 58px Outfit, system-ui, sans-serif";
+    strokeFill(ctx, "KALE BİZİ İZLİYOR", w / 2, 150, 18);
+  } else if (phase === "sagaVolley") {
+    ctx.font = "800 80px Outfit, system-ui, sans-serif";
+    strokeFill(ctx, "ATEŞ", w / 2, 150, 22);
+  } else if (phase === "sagaGate") {
+    ctx.font = "800 64px Outfit, system-ui, sans-serif";
+    strokeFill(ctx, "KAPI AÇILDI", w / 2, 150, 18);
+  } else if (phase === "sagaFight") {
+    ctx.font = "800 80px Outfit, system-ui, sans-serif";
+    strokeFill(ctx, "SAVAŞ", w / 2, 150, 22);
+  } else if (phase === "sagaCta") {
+    ctx.font = "800 72px Outfit, system-ui, sans-serif";
+    strokeFill(ctx, "ORDUYA KATIL", w / 2, 130, 20);
+    ctx.font = "800 44px Outfit, system-ui, sans-serif";
+    strokeFill(ctx, "@wargame2028", w / 2, 220, 14);
   } else if (phase === "hook") {
     if (day > 0) {
       ctx.font = "800 168px Outfit, system-ui, sans-serif";
@@ -233,10 +270,11 @@ type ReelTitlesProps = {
   skipCommander?: boolean;
   cinema?: boolean;
   roster?: PlanBId | null;
+  saga?: SagaId | null;
   names?: string[];
 };
 
-function TitlesPlate({ soldiers, duration, day = 0, skipCommander = false, cinema = false, roster = null, names = [] }: ReelTitlesProps) {
+function TitlesPlate({ soldiers, duration, day = 0, skipCommander = false, cinema = false, roster = null, saga = null, names = [] }: ReelTitlesProps) {
   const size = useThree((s) => s.size);
   const mesh = useRef<THREE.Mesh>(null);
   const canvas = useMemo(() => {
@@ -264,12 +302,41 @@ function TitlesPlate({ soldiers, duration, day = 0, skipCommander = false, cinem
     const ctaAt = duration - ctaLen;
     const armyAt = cinema ? 15 * scale : cmd + turn * 0.22;
     const armyEnd = cinema ? 19.2 * scale : pullStart + 1.25;
-    type Phase = "hook" | "army" | "cta" | "none" | "huntHook" | "huntArmy" | "huntPack" | "huntCta";
+    type Phase =
+      | "hook"
+      | "army"
+      | "cta"
+      | "none"
+      | "huntHook"
+      | "huntArmy"
+      | "huntPack"
+      | "huntCta"
+      | "sagaArmy"
+      | "sagaWall"
+      | "sagaVolley"
+      | "sagaGate"
+      | "sagaFight"
+      | "sagaCta";
     let phase: Phase = "none";
     let alpha = 0;
     let packLabel = "";
     let packHead = "";
-    if (roster) {
+    if (saga) {
+      const beat = sagaBeat(saga, recT, duration);
+      phase =
+        beat === "army"
+          ? "sagaArmy"
+          : beat === "wall"
+            ? "sagaWall"
+            : beat === "volley"
+              ? "sagaVolley"
+              : beat === "gate"
+                ? "sagaGate"
+                : beat === "fight"
+                  ? "sagaFight"
+                  : "sagaCta";
+      alpha = recT < 0 ? 0 : recT < 0.12 ? recT / 0.12 : 1;
+    } else if (roster) {
       const ids = rosterSoldierIds(names, soldiers);
       const beat = rosterBeat(roster, recT, duration, ids);
       const tl = rosterTimeline(roster, ids.length, duration);
@@ -325,7 +392,7 @@ function TitlesPlate({ soldiers, duration, day = 0, skipCommander = false, cinem
     }
     if (mat.current) mat.current.opacity = alpha;
     if (mesh.current) {
-      if (phase === "hook" || phase === "huntHook" || phase === "huntArmy") {
+      if (phase === "hook" || phase === "huntHook" || phase === "huntArmy" || phase.startsWith("saga")) {
         mesh.current.position.y = size.height * 0.3;
       } else if (phase === "army") {
         mesh.current.position.y = size.height * 0.28;
