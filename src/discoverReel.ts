@@ -18,6 +18,7 @@ export function isDiscoverEngage(id: string | null | undefined) {
 export type DiscoverBeat = "hook" | "proof" | "hold" | "storm" | "next" | "loop";
 
 export const DISCOVER_HOOK_END = 2.45;
+export const DISCOVER_PROOF_END = 6.45;
 
 function pose(x: number, y: number, z: number, lx: number, ly: number, lz: number, fov: number): ShotPose {
   return { x, y: Math.max(3.4, y), z, lx, ly: Math.max(1.45, ly), lz, fov };
@@ -38,7 +39,7 @@ export function discoverGateRecT() {
 export function discoverBeat(recT: number): DiscoverBeat {
   const t = Math.max(0, recT);
   if (t < DISCOVER_HOOK_END) return "hook";
-  if (t < 5.45) return "proof";
+  if (t < DISCOVER_PROOF_END) return "proof";
   if (t < 8.55) return "hold";
   if (t < 11.7) return "storm";
   if (t < 13.25) return "next";
@@ -50,14 +51,16 @@ export function sampleDiscover(recT: number, ctx: ShotCtx): ShotPose {
   const mid = (form.front + castle.front) * 0.52;
   const hook = hookPose(form, castle);
   const hookPush = pose(1.35, 3.72, form.front + 2.55, 0.04, 2.42, castle.front + 3.1, 32);
-  const proof = pose(16.8, 19.6, form.back + 36, -3.2, 2.2, form.midZ + 1, 46);
+  const proof = pose(20.4, 24.2, form.back + 52, -2.2, 2.45, form.midZ, 50);
   const hold = pose(10.6, 4.35, form.midZ + 5.2, -1.6, 1.85, form.front + 1, 36);
   const storm = pose(4.2, 4.7, castle.front + 19, 0.15, 2.55, mid, 38);
   const t = Math.max(0, recT);
+  const pullEnd = DISCOVER_HOOK_END + 1.65;
   if (t >= 14.82) return hook;
   if (t < DISCOVER_HOOK_END) return lerpPose(hook, hookPush, clamp01(t / DISCOVER_HOOK_END));
-  if (t < 5.45) return lerpPose(hookPush, proof, clamp01((t - DISCOVER_HOOK_END) / (5.45 - DISCOVER_HOOK_END)));
-  if (t < 8.55) return lerpPose(proof, hold, clamp01((t - 5.45) / 3.1));
+  if (t < pullEnd) return lerpPose(hookPush, proof, clamp01((t - DISCOVER_HOOK_END) / (pullEnd - DISCOVER_HOOK_END)));
+  if (t < DISCOVER_PROOF_END) return proof;
+  if (t < 8.55) return lerpPose(proof, hold, clamp01((t - DISCOVER_PROOF_END) / (8.55 - DISCOVER_PROOF_END)));
   if (t < 13.15) return lerpPose(hold, storm, clamp01((t - 8.55) / 4.6));
   const u = clamp01((t - 13.15) / 1.67);
   return lerpPose(storm, hook, u * u);
