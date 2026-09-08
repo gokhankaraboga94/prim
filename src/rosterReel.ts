@@ -74,7 +74,7 @@ export function sampleRoster(
   const { form } = ctx;
   const overview = pose(1.4, 56, form.midZ + 7, 0, 0.55, form.midZ, 50);
   const overviewIn = pose(0.8, 44, form.midZ + 10, 0, 0.95, form.midZ, 46);
-  const packCam = pose(0, 2.58, ROSTER_STAGE_Z + 7.6, 0, 1.52, ROSTER_STAGE_Z, 26);
+  const packCam = pose(0, 5.6, ROSTER_STAGE_Z + 14.8, 0, 1.42, ROSTER_STAGE_Z + 0.85, 44);
   const tl = rosterTimeline(kind, ids.length, duration);
   if (beat.id === "hook") return overview;
   if (beat.id === "overview") {
@@ -86,8 +86,22 @@ export function sampleRoster(
 }
 
 export function rosterStageSlot(i: number, n: number, out: { x: number; y: number; z: number }) {
-  const gap = 2.28;
-  out.x = (i - (Math.max(1, n) - 1) / 2) * gap;
+  const count = Math.max(1, n);
+  const idx = Math.max(0, i);
   out.y = 0;
-  out.z = ROSTER_STAGE_Z;
+  if (count <= 3) {
+    out.x = (idx - (count - 1) / 2) * 1.72;
+    out.z = ROSTER_STAGE_Z;
+    return;
+  }
+  const front = Math.ceil(count / 2);
+  const back = count - front;
+  if (idx < front) {
+    out.x = (idx - (front - 1) / 2) * 1.78;
+    out.z = ROSTER_STAGE_Z;
+  } else {
+    const j = idx - front;
+    out.x = (j - (back - 1) / 2) * 1.78;
+    out.z = ROSTER_STAGE_Z + 2.2;
+  }
 }

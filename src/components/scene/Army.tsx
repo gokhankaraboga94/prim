@@ -959,13 +959,13 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
           rosterStageSlot(packIds.indexOf(soldier), packIds.length, pos);
           dummy.position.copy(pos);
           dummy.rotation.set(0, 0, 0);
-          dummy.scale.setScalar(cmdScale);
+          dummy.scale.setScalar(scale);
           dummy.updateMatrix();
           stamp(chiefs.current, k);
           stamp(chiefCapes.current, k);
           stamp(chiefPlumes.current, k);
           _bodyQ.setFromEuler(_limbEul.set(0, 0, 0, "XYZ"));
-          stampLimb(swordArms.current, k, L_SHOULDER, -0.4, 0.1, 0.05, cmdScale);
+          stampLimb(swordArms.current, k, L_SHOULDER, -0.4, 0.1, 0.05, scale);
           if (swords.current) {
             dummy.scale.setScalar(0);
             dummy.updateMatrix();
@@ -1027,7 +1027,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
           tag.visible = false;
           continue;
         }
-        nameScale = isolate ? 1.72 : 1.18;
+        nameScale = isolate ? 0.7 : 1.05;
       } else if (cinematic) {
         const beats = reelBeats(duration, skipCommander);
         if (recT < 0) {
@@ -1043,14 +1043,15 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
         }
       }
       tag.visible = true;
-      let lift = isolate ? 2.55 : 2.92;
+      let lift = isolate ? 2.38 : 2.92;
       if (!cmd && !isolate) {
         const slot = layout.slotOf[idx];
         const { row, col } = slotCoord(slot >= 0 ? slot : 0, form.sizes);
         lift = 2.22 + row * 0.5 + (col % 2) * 0.2;
       }
       tag.position.set(pos.x, pos.y + lift * scale, pos.z);
-      tag.scale.set(tagData.sx * nameScale, tagData.sy * nameScale, 1);
+      const sx = isolate ? Math.min(1.48, tagData.sx * nameScale) : tagData.sx * nameScale;
+      tag.scale.set(sx, tagData.sy * nameScale, 1);
     }
   }
 
