@@ -7,7 +7,7 @@ import { REEL_FADE_HOLD, REEL_HOLD, reelBeats, reelFade } from "../../recordCanv
 import { cinemaScale } from "../../shotModes";
 import { rosterBeat, rosterSoldierIds, rosterTimeline, type PlanBId } from "../../rosterReel";
 import { sagaBeat, type SagaId } from "../../sagaReel";
-import { discoverBeat, isDiscoverEngage, type DiscoverId } from "../../discoverReel";
+import { discoverBeat, DISCOVER_HOOK_END, isDiscoverEngage, type DiscoverId } from "../../discoverReel";
 
 function roundRect(
   ctx: CanvasRenderingContext2D,
@@ -406,7 +406,7 @@ function TitlesPlate({ soldiers, duration, day = 0, skipCommander = false, cinem
         alpha = 0;
       } else if (beat === "hook") {
         phase = "discHook";
-        alpha = recT < 0.14 ? recT / 0.14 : recT > 2.62 ? Math.max(0, (2.95 - recT) / 0.33) : 1;
+        alpha = recT < 0.14 ? recT / 0.14 : recT > DISCOVER_HOOK_END - 0.33 ? Math.max(0, (DISCOVER_HOOK_END - recT) / 0.33) : 1;
       } else if (beat === "proof") {
         phase = "discProof";
         alpha = 1;
