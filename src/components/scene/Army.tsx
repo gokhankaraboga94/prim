@@ -199,20 +199,16 @@ function corinthianShell(seg = 16) {
   return [
     part(helmBowl(seg), ARMOR, 0, 1.46, 0.02),
     part(new THREE.SphereGeometry(0.178, seg, 12), ARMOR_HI, 0, 1.5, 0.01),
-    part(new THREE.SphereGeometry(0.155, 10, 8), ARMOR_DK, 0, 1.28, 0.08),
-    part(new THREE.BoxGeometry(0.11, 0.24, 0.16), ARMOR, -0.135, 1.24, 0.12),
-    part(new THREE.BoxGeometry(0.11, 0.24, 0.16), ARMOR, 0.135, 1.24, 0.12),
-    part(new THREE.BoxGeometry(0.26, 0.07, 0.07), SLIT, 0, 1.37, 0.185),
-    part(new THREE.BoxGeometry(0.038, 0.2, 0.07), SLIT, 0, 1.25, 0.188),
-    part(new THREE.BoxGeometry(0.28, 0.016, 0.02), GOLD, 0, 1.408, 0.212),
-    part(new THREE.BoxGeometry(0.28, 0.016, 0.02), GOLD, 0, 1.332, 0.212),
-    part(new THREE.BoxGeometry(0.016, 0.22, 0.02), GOLD, -0.128, 1.37, 0.212),
-    part(new THREE.BoxGeometry(0.016, 0.22, 0.02), GOLD, 0.128, 1.37, 0.212),
-    part(new THREE.BoxGeometry(0.05, 0.22, 0.022), GOLD, 0, 1.25, 0.218),
+    part(new THREE.SphereGeometry(0.17, 12, 10), ARMOR, 0, 1.3, 0.08),
+    part(new THREE.BoxGeometry(0.3, 0.32, 0.12), ARMOR, 0, 1.27, 0.13),
+    part(new THREE.BoxGeometry(0.12, 0.28, 0.16), ARMOR, -0.138, 1.24, 0.1),
+    part(new THREE.BoxGeometry(0.12, 0.28, 0.16), ARMOR, 0.138, 1.24, 0.1),
+    part(new THREE.BoxGeometry(0.078, 0.048, 0.07), SLIT, -0.058, 1.365, 0.2),
+    part(new THREE.BoxGeometry(0.078, 0.048, 0.07), SLIT, 0.058, 1.365, 0.2),
+    part(new THREE.BoxGeometry(0.058, 0.032, 0.04), "#040406", -0.058, 1.365, 0.228),
+    part(new THREE.BoxGeometry(0.058, 0.032, 0.04), "#040406", 0.058, 1.365, 0.228),
     part(new THREE.CylinderGeometry(0.16, 0.2, 0.06, seg), ARMOR_DK, 0, 1.12, 0.02),
-    part(new THREE.TorusGeometry(0.178, 0.012, 6, seg), GOLD, 0, 1.135, 0.02, Math.PI / 2),
     part(new THREE.BoxGeometry(0.055, 0.08, 0.34), ARMOR_HI, 0, 1.64, 0.01),
-    part(new THREE.BoxGeometry(0.07, 0.03, 0.28), GOLD_DK, 0, 1.58, 0.01),
   ];
 }
 
@@ -492,7 +488,7 @@ function createCommanderFaceGeometry() {
   return mergeParts(commanderFace(), SKIN);
 }
 
-let archerGeoV12: THREE.BufferGeometry | null = null;
+let archerGeoV13: THREE.BufferGeometry | null = null;
 let commanderGeoV14: THREE.BufferGeometry | null = null;
 let commanderSwordArmV2: THREE.BufferGeometry | null = null;
 let commanderCapeV9: THREE.BufferGeometry | null = null;
@@ -506,8 +502,8 @@ const nockOff = new THREE.Vector3();
 const handOff = new THREE.Vector3();
 
 function getArcherGeometry() {
-  if (!archerGeoV12) archerGeoV12 = createArcherGeometry();
-  return archerGeoV12;
+  if (!archerGeoV13) archerGeoV13 = createArcherGeometry();
+  return archerGeoV13;
 }
 
 function getCommanderGeometry() {

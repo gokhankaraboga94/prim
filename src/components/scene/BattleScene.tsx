@@ -420,33 +420,6 @@ function DayLights({ cinematic = false }: { cinematic?: boolean }) {
   );
 }
 
-function Embers() {
-  const mesh = useRef<THREE.InstancedMesh>(null);
-  const dummy = useMemo(() => new THREE.Object3D(), []);
-  const seeds = useMemo(() => Float32Array.from({ length: 90 }, () => Math.random()), []);
-  useFrame(({ clock }) => {
-    if (!mesh.current) return;
-    const t = clock.elapsedTime;
-    for (let i = 0; i < 90; i++) {
-      const s = seeds[i];
-      const life = (t * (0.35 + s * 0.45) + s * 8) % 3.2;
-      const u = life / 3.2;
-      dummy.position.set((s - 0.5) * 6.5 + Math.sin(t * 1.4 + i) * 0.4, 1.1 + u * 7.2, 16.2 + (s * 3 - 1.2));
-      const sc = 0.04 + (1 - u) * 0.07;
-      dummy.scale.setScalar(sc);
-      dummy.updateMatrix();
-      mesh.current.setMatrixAt(i, dummy.matrix);
-    }
-    mesh.current.instanceMatrix.needsUpdate = true;
-  });
-  return (
-    <instancedMesh ref={mesh} args={[undefined, undefined, 90]} frustumCulled={false}>
-      <sphereGeometry args={[1, 6, 5]} />
-      <meshBasicMaterial color="#ffb060" toneMapped={false} transparent opacity={0.85} />
-    </instancedMesh>
-  );
-}
-
 function SceneContent({
   soldiers,
   names = [],
@@ -474,7 +447,6 @@ function SceneContent({
       <SteelSky />
       <DayLights cinematic={cinematic} />
       <Terrain />
-      {cinematic && <Embers />}
       <Castle level={level} pressure={pressure} />
       {!roster && <SallyRaid soldiers={soldiers} commanders={chiefN} />}
       <Army count={soldiers} names={names} commanders={commanders} cinematic={cinematic} duration={duration} skipCommander={skipCommander} roster={roster} />
