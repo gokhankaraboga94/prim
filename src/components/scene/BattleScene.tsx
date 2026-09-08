@@ -137,7 +137,7 @@ function CinematicCam({
     if (cinema || shotMode || roster || saga) {
       const warm = clock.elapsedTime;
       const sampleT = warm < REEL_HOLD ? (warm / REEL_HOLD) * duration : recT;
-      const ctx = { cmdZ, form, castle, fit, castleFit };
+      const ctx = { cmdZ, form, castle, fit, castleFit, level };
       const pose = roster
         ? sampleRoster(roster, sampleT, duration, ctx, rosterSoldierIds(names, soldiers))
         : saga

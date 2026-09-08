@@ -35,6 +35,7 @@ export type ShotCtx = {
   castle: { width: number; height: number; front: number; back: number; midZ: number; midY: number };
   fit: number;
   castleFit: number;
+  level?: number;
 };
 
 function pose(x: number, y: number, z: number, lx: number, ly: number, lz: number, fov: number): ShotPose {

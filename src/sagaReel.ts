@@ -1,3 +1,4 @@
+import { frontWalk } from "./castleLayout";
 import { lerpPose, type ShotCtx, type ShotPose } from "./shotModes";
 
 export const SAGA_KUSATMA = "kusatma" as const;
@@ -40,16 +41,18 @@ type Cut = { id: SagaBeat; at: number; dur: number; a: ShotPose; b: ShotPose };
 
 function cutsFor(id: SagaId, ctx: ShotCtx): Cut[] {
   const { form, castle } = ctx;
-  const walkY = Math.max(8.5, castle.midY * 0.62);
-  const wallZ = castle.front - 2.4;
+  const walk = frontWalk(ctx.level ?? 1);
   const mid = (form.front + castle.front) * 0.5;
+  const wy = walk.y;
+  const wz = walk.z;
+  const wx = walk.leftX;
 
   const armyA = pose(1.15, 2.45, form.front - 9.2, 0.04, 1.28, form.front, 32);
   const armyB = pose(0.7, 2.65, form.front - 7.1, 0.02, 1.32, form.front + 0.8, 34);
-  const wallA = pose(-16, walkY + 2.1, wallZ + 15, -11, walkY + 1.05, wallZ + 1.2, 36);
-  const wallB = pose(-7.5, walkY + 1.85, wallZ + 9.5, -4.2, walkY + 0.95, wallZ + 2.2, 34);
-  const lookA = pose(-9.5, walkY + 2.3, wallZ + 3.2, 0.4, 2.1, form.midZ, 40);
-  const lookB = pose(-4.2, walkY + 1.7, wallZ + 5.5, 0.2, 1.8, form.front, 38);
+  const wallA = pose(wx - 16, wy + 6.4, wz + 12, wx + 10, wy + 1.55, wz + 0.4, 32);
+  const wallB = pose(wx - 5, wy + 4.8, wz + 7.2, wx + 12, wy + 1.45, wz + 0.6, 30);
+  const lookA = pose(wx + 1.5, wy + 2.6, wz - 1.6, 0.8, 2.3, form.front, 36);
+  const lookB = pose(wx - 2.4, wy + 2.35, wz - 0.8, 0.3, 2.05, form.midZ, 38);
   const volleyA = pose(7.6, 4.1, form.back + 5.5, -0.4, 1.95, form.midZ, 38);
   const volleyB = pose(2.4, 3.15, form.front + 1.4, 0, 1.55, castle.front + 5, 36);
   const gateA = pose(1.6, 4.6, castle.front + 21, 0.1, 3.1, castle.front + 1, 38);

@@ -16,6 +16,20 @@ export function castleAxes(grow: number) {
   return { sx, sy, sz, zShift };
 }
 
+/** Front parapet walk — matches Defenders posts on the army-facing wall. */
+export function frontWalk(level: number) {
+  const grow = castleGrow(level);
+  const { sx, sy, sz, zShift } = castleAxes(grow);
+  const wallH = 3.85 + ((((Math.max(1, level) - 1) % 5) + 1) * 0.18);
+  return {
+    y: (wallH + 0.04) * sy,
+    z: 6.15 * sz + zShift,
+    leftX: -6.2 * sx,
+    innerX: -2.55 * sx,
+    merlonY: (wallH + 0.36) * sy,
+  };
+}
+
 export function castleFrame(level: number) {
   const grow = castleGrow(level);
   const { sx, sy, sz, zShift } = castleAxes(grow);
