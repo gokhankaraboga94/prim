@@ -25,10 +25,12 @@ type ReelCaptureProps = {
   roster?: PlanBId | null;
   saga?: SagaId | null;
   discover?: DiscoverId | null;
+  rosterIds?: number[] | null;
+  onRecorded?: () => void;
   onClose: () => void;
 };
 
-export function ReelCapture({ soldiers, names, commanders = [], level, pressure, hp, maxHp, seconds, showTitles = true, warLook = false, day = 0, skipCommander = false, shotMode = null, cinema = false, roster = null, saga = null, discover = null, onClose }: ReelCaptureProps) {
+export function ReelCapture({ soldiers, names, commanders = [], level, pressure, hp, maxHp, seconds, showTitles = true, warLook = false, day = 0, skipCommander = false, shotMode = null, cinema = false, roster = null, saga = null, discover = null, rosterIds = null, onRecorded, onClose }: ReelCaptureProps) {
   const clip = seconds;
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [phase, setPhase] = useState<"boot" | "rec" | "done" | "err">("boot");
@@ -60,6 +62,7 @@ export function ReelCapture({ soldiers, names, commanders = [], level, pressure,
         setBlob(recorded);
         setPreview(URL.createObjectURL(recorded));
         setPhase("done");
+        onRecorded?.();
         try {
           await saveReelBlob(recorded, clip);
         } catch {
@@ -119,6 +122,7 @@ export function ReelCapture({ soldiers, names, commanders = [], level, pressure,
             roster={roster}
             saga={saga}
             discover={discover}
+            rosterIds={rosterIds}
             onReady={(canvas) => {
               canvasRef.current = canvas;
             }}

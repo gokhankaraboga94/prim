@@ -41,6 +41,7 @@ type BattleSceneProps = {
   roster?: PlanBId | null;
   saga?: SagaId | null;
   discover?: DiscoverId | null;
+  rosterIds?: number[] | null;
   onReady?: (canvas: HTMLCanvasElement) => void;
 };
 
@@ -71,6 +72,7 @@ function CinematicCam({
   roster = null,
   saga = null,
   discover = null,
+  rosterIds = null,
 }: {
   duration: number;
   soldiers: number;
@@ -83,6 +85,7 @@ function CinematicCam({
   roster?: PlanBId | null;
   saga?: SagaId | null;
   discover?: DiscoverId | null;
+  rosterIds?: number[] | null;
 }) {
   const look = useMemo(() => new THREE.Vector3(), []);
   useFrame(({ camera, clock, size }) => {
@@ -145,7 +148,7 @@ function CinematicCam({
       const pose = discover
         ? sampleDiscover(sampleT, ctx)
         : roster
-          ? sampleRoster(roster, sampleT, duration, ctx, rosterSoldierIds(names, soldiers))
+          ? sampleRoster(roster, sampleT, duration, ctx, rosterIds?.length ? rosterIds : rosterSoldierIds(names, soldiers))
           : saga
             ? sampleSaga(saga, sampleT, duration, ctx)
             : cinema
@@ -450,6 +453,7 @@ function SceneContent({
   roster = null,
   saga = null,
   discover = null,
+  rosterIds = null,
 }: BattleSceneProps) {
   const chiefs = effectiveCommanders(commanders, names);
   const hideCmd = skipCommander || Boolean(discover);
@@ -464,7 +468,7 @@ function SceneContent({
       <Terrain />
       <Castle level={level} pressure={pressure} />
       {!roster && <SallyRaid soldiers={soldiers} commanders={chiefN} />}
-      <Army count={soldiers} names={names} commanders={commanders} cinematic={cinematic} duration={duration} skipCommander={hideCmd} roster={roster} discover={discover} />
+      <Army count={soldiers} names={names} commanders={commanders} cinematic={cinematic} duration={duration} skipCommander={hideCmd} roster={roster} discover={discover} rosterIds={rosterIds} />
       {cinematic ? (
         <CinematicCam
           duration={duration ?? 8}
@@ -478,6 +482,7 @@ function SceneContent({
           roster={roster}
           saga={saga}
           discover={discover}
+          rosterIds={rosterIds}
         />
       ) : (
         <OrbitControls
@@ -499,7 +504,7 @@ function SceneContent({
         <CaptureHpHud hp={hp} maxHp={maxHp} soldiers={soldiers} duration={duration ?? 8} skipCommander={hideCmd} cinema={cinema} roster={roster} discover={discover} />
       )}
       {cinematic && showTitles && (
-        <ReelTitles soldiers={soldiers} duration={duration ?? 8} day={day} skipCommander={hideCmd} cinema={cinema} roster={roster} saga={saga} discover={discover} names={names} />
+        <ReelTitles soldiers={soldiers} duration={duration ?? 8} day={day} skipCommander={hideCmd} cinema={cinema} roster={roster} saga={saga} discover={discover} names={names} rosterIds={rosterIds} />
       )}
       {cinematic && <ReelVignette />}
       {cinematic && !discover && <ReelFade duration={duration ?? 8} />}
@@ -526,6 +531,7 @@ function BattleSceneInner({
   roster = null,
   saga = null,
   discover = null,
+  rosterIds = null,
   onReady,
 }: BattleSceneProps) {
   const [active, setActive] = useState(() => typeof document === "undefined" || !document.hidden);
@@ -617,6 +623,7 @@ function BattleSceneInner({
         roster={roster}
         saga={saga}
         discover={discover}
+        rosterIds={rosterIds}
       />
     </Canvas>
   );

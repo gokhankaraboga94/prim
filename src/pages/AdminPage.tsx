@@ -1,4 +1,4 @@
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { signOut } from "firebase/auth";
 import { ref, set } from "firebase/database";
 import { auth, db } from "../firebase";
@@ -21,7 +21,7 @@ import { useGame } from "../hooks/useGame";
 import { ReelCapture } from "../components/ReelCapture";
 import { REEL_DURATIONS } from "../recordCanvas";
 import { CINEMA_DURATIONS, CINEMA_ID, CINEMA_MODE, SHOT_MODES, type ReelShot } from "../shotModes";
-import { HOOK_ID, HOOK_MODE, ROSTER_ID, ROSTER_MODE, isPlanB, rosterDuration, type PlanBId } from "../rosterReel";
+import { HOOK_ID, HOOK_MODE, JOIN_ID, JOIN_MODE, ROSTER_ID, ROSTER_MODE, ensureJoinMark, isJoin, isPlanB, joinSoldierIds, rosterDuration, saveJoinMark, type PlanBId } from "../rosterReel";
 import { SAGA_MODES, isSaga, sagaDuration, type SagaId } from "../sagaReel";
 import { DISCOVER_ID, DISCOVER2_ID, DISCOVER_MODE, DISCOVER2_MODE, DISCOVER_SECONDS, isDiscover, isDiscoverEngage, type DiscoverId } from "../discoverReel";
 
@@ -43,9 +43,18 @@ export function AdminPage() {
   const [editIndex, setEditIndex] = useState<number | null>(null);
   const [editValue, setEditValue] = useState("");
   const [listOpen, setListOpen] = useState(false);
+  const [joinTick, setJoinTick] = useState(0);
 
   const handle = handleInput || game.instagramHandle;
   const cmdValue = cmdDraft ?? game.commanders.join("\n");
+  const pendingJoin = useMemo(() => {
+    ensureJoinMark(game.names, game.soldiers);
+    return joinSoldierIds(game.names, game.soldiers);
+  }, [game.names, game.soldiers, joinTick]);
+
+  useEffect(() => {
+    ensureJoinMark(game.names, game.soldiers);
+  }, [game.names, game.soldiers]);
 
   async function saveSoldiers(next: number) {
     const soldiers = Math.max(0, Math.floor(next));
@@ -235,7 +244,7 @@ export function AdminPage() {
         <div>
           <p className="join-kicker">Komuta paneli</p>
           <h1>Kuşatma yönetimi</h1>
-          <p className="join-kicker">sürüm 56 — keşfet iki kanat</p>
+          <p className="join-kicker">sürüm 57 — yeni katılanlar</p>
         </div>
         <button type="button" className="btn-ghost" onClick={() => signOut(auth)}>
           Çıkış
@@ -439,9 +448,11 @@ export function AdminPage() {
                 ? CINEMA_DURATIONS
                 : isDiscover(reelShot)
                   ? [DISCOVER_SECONDS]
-                  : isPlanB(reelShot)
-                    ? [rosterDuration(reelShot, namedCount(game.names, game.soldiers))]
-                    : isSaga(reelShot)
+                  : isJoin(reelShot)
+                    ? [rosterDuration(JOIN_ID, pendingJoin.length)]
+                    : isPlanB(reelShot)
+                      ? [rosterDuration(reelShot, namedCount(game.names, game.soldiers))]
+                      : isSaga(reelShot)
                       ? [sagaDuration(reelShot)]
                       : REEL_DURATIONS
             ).map((sec) => (
@@ -585,8 +596,28 @@ export function AdminPage() {
             >
               {HOOK_MODE.label}
             </button>
+            <button
+              type="button"
+              className={reelShot === JOIN_ID ? "on" : ""}
+              onClick={() => {
+                setReelShot((cur) => (cur === JOIN_ID ? null : JOIN_ID));
+                setReelSeconds(rosterDuration(JOIN_ID, pendingJoin.length));
+              }}
+            >
+              {JOIN_MODE.label}
+            </button>
           </div>
-          {isPlanB(reelShot) && (
+          {isJoin(reelShot) && (
+            <p className="muted">
+              İşaretli ordu bellekten duruyor. Kuyrukta {pendingJoin.length} yeni asker.
+              Azsa ikişer, çoğalsa üçer/beşer. Önce tüm ordu uzaktan, sonra yeni katılanlar.
+              Gün alanına yazdığın sayı ekranda çıkar. Kayıt bitince bu isimler işaretlenir;
+              sonraki basışta yalnızca ondan sonra eklenenler gelir.
+              {" "}Caption: Adın çıkarsa yoruma SAVAŞTAYIM yaz. Kale düşsün diyorsan beğen. Canlı kuşatma. 1 takip = 1 asker. wargame.lol
+              {" "}Hashtag: #wargame #stratejioyunu #kalekuşatma #ordu #wargame2028
+            </p>
+          )}
+          {isPlanB(reelShot) && !isJoin(reelShot) && (
             <p className="muted">
               Caption: Bu isimler kaleyi yıkıyor. Tanıdığın var mı? Yoksa takip et — sonraki reelde asker olursun. 1 takip = 1 asker. wargame.lol · @wargame2028
               {" "}Hashtag: #wargame #oyun #reels
@@ -619,7 +650,18 @@ export function AdminPage() {
               {" "}Hashtag: #wargame #oyun #reels
             </p>
           )}
-          <button type="button" className="btn-gold" onClick={() => setCapturing(true)}>
+          <button
+            type="button"
+            className="btn-gold"
+            onClick={() => {
+              if (isJoin(reelShot) && pendingJoin.length === 0) {
+                setMsg("Yeni asker yok. Önce isim ekle, günü yaz, sonra Yeni katılanlar’ı çek.");
+                return;
+              }
+              if (isJoin(reelShot)) setReelSeconds(rosterDuration(JOIN_ID, pendingJoin.length));
+              setCapturing(true);
+            }}
+          >
             Kaydı başlat
           </button>
         </section>
@@ -652,7 +694,14 @@ export function AdminPage() {
           roster={isPlanB(reelShot) ? reelShot : null}
           saga={isSaga(reelShot) ? reelShot : null}
           discover={isDiscover(reelShot) ? reelShot : null}
+          rosterIds={isJoin(reelShot) ? pendingJoin : null}
           day={Math.max(0, Math.floor(Number(reelDay)) || 0)}
+          onRecorded={() => {
+            if (isJoin(reelShot)) {
+              saveJoinMark(game.names, game.soldiers);
+              setJoinTick((n) => n + 1);
+            }
+          }}
           onClose={() => setCapturing(false)}
         />
       )}

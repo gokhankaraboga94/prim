@@ -45,6 +45,7 @@ type ArmyProps = {
   skipCommander?: boolean;
   roster?: PlanBId | null;
   discover?: DiscoverId | null;
+  rosterIds?: number[] | null;
 };
 
 const MAX_RANKS = 4;
@@ -709,7 +710,7 @@ function makeHandleTexture(name: string, commander = false, crisp = false): Name
   return { map, sx, sy };
 }
 
-export function Army({ count, names = [], commanders = [], cinematic, duration = 8, skipCommander = false, roster = null, discover = null }: ArmyProps) {
+export function Army({ count, names = [], commanders = [], cinematic, duration = 8, skipCommander = false, roster = null, discover = null, rosterIds = null }: ArmyProps) {
   const bodies = useRef<THREE.InstancedMesh>(null);
   const soldierPlumes = useRef<THREE.InstancedMesh>(null);
   const bowHolds = useRef<THREE.InstancedMesh>(null);
@@ -889,7 +890,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
   function placeBodies(t: number) {
     const { scale } = form;
     const recT = t - REEL_HOLD;
-    const huntIds = roster ? rosterSoldierIds(names, visible) : [];
+    const huntIds = roster ? (rosterIds?.length ? rosterIds : rosterSoldierIds(names, visible)) : [];
     const beat = roster ? rosterBeat(roster, recT, duration, huntIds) : null;
     const liveIds = beat && beat.id === "pack" ? beat.ids : null;
     const outIds = beat && beat.id === "pack" ? beat.outgoing : null;

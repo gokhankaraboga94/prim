@@ -3,17 +3,24 @@ import { lerpPose, type ShotCtx, type ShotPose } from "./shotModes";
 
 export const ROSTER_ID = "isimavi" as const;
 export const HOOK_ID = "kanca" as const;
-export type PlanBId = typeof ROSTER_ID | typeof HOOK_ID;
+export const JOIN_ID = "katilan" as const;
+export type PlanBId = typeof ROSTER_ID | typeof HOOK_ID | typeof JOIN_ID;
 
 export const ROSTER_PACK = 5;
 export const ROSTER_STAGE_Z = 36.2;
 const CROSS = 0.44;
+const JOIN_MARK_KEY = "wars.joinMark.v1";
 
 export const ROSTER_MODE = { id: ROSTER_ID, label: "İsim avı" } as const;
 export const HOOK_MODE = { id: HOOK_ID, label: "Kanca 15s" } as const;
+export const JOIN_MODE = { id: JOIN_ID, label: "Yeni katılanlar" } as const;
 
 export function isPlanB(id: string | null | undefined): id is PlanBId {
-  return id === ROSTER_ID || id === HOOK_ID;
+  return id === ROSTER_ID || id === HOOK_ID || id === JOIN_ID;
+}
+
+export function isJoin(id: string | null | undefined): id is typeof JOIN_ID {
+  return id === JOIN_ID;
 }
 
 export function rosterSoldierIds(names: string[], soldiers: number): number[] {
@@ -25,11 +32,58 @@ export function rosterSoldierIds(names: string[], soldiers: number): number[] {
   return ids;
 }
 
+export function rosterPackSize(kind: PlanBId, named: number) {
+  if (kind !== JOIN_ID) return ROSTER_PACK;
+  const n = Math.max(0, named);
+  if (n <= 4) return 2;
+  if (n <= 9) return 3;
+  return 5;
+}
+
 export function rosterDuration(kind: PlanBId, named: number): number {
   if (kind === HOOK_ID) return 15;
-  const packs = Math.max(1, Math.ceil(Math.max(1, named) / ROSTER_PACK));
+  const size = rosterPackSize(kind, named);
+  const packs = Math.max(1, Math.ceil(Math.max(1, named) / size));
+  if (kind === JOIN_ID) {
+    const raw = 1.65 + 2.05 + packs * 2.25 + 1.9;
+    return Math.min(20, Math.max(10, Math.round(raw)));
+  }
   const raw = 2.1 + 2.4 + packs * 3.15 + 3.05;
   return raw <= 34 ? 30 : 45;
+}
+
+export function loadJoinMark(): string[] {
+  try {
+    const raw = localStorage.getItem(JOIN_MARK_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) return [];
+    return parsed.map((item) => normalizeHandle(String(item || ""))).filter(Boolean);
+  } catch {
+    return [];
+  }
+}
+
+export function saveJoinMark(names: string[], soldiers: number) {
+  const handles = rosterSoldierIds(names, soldiers).map((i) => normalizeHandle(names[i])).filter(Boolean);
+  try {
+    localStorage.setItem(JOIN_MARK_KEY, JSON.stringify(handles));
+  } catch {
+    /* ignore */
+  }
+}
+
+export function ensureJoinMark(names: string[], soldiers: number) {
+  try {
+    if (localStorage.getItem(JOIN_MARK_KEY) == null) saveJoinMark(names, soldiers);
+  } catch {
+    /* ignore */
+  }
+}
+
+export function joinSoldierIds(names: string[], soldiers: number, marked = loadJoinMark()): number[] {
+  const seen = new Set(marked.map((n) => n.toLowerCase()));
+  return rosterSoldierIds(names, soldiers).filter((i) => !seen.has(normalizeHandle(names[i]).toLowerCase()));
 }
 
 function pose(x: number, y: number, z: number, lx: number, ly: number, lz: number, fov: number): ShotPose {
@@ -89,18 +143,19 @@ export type RosterPose = {
 };
 
 export function rosterTimeline(kind: PlanBId, named: number, duration: number) {
-  const allPacks = Math.max(1, Math.ceil(Math.max(1, named) / ROSTER_PACK));
+  const size = rosterPackSize(kind, named);
+  const allPacks = Math.max(1, Math.ceil(Math.max(1, named) / size));
   const packs = kind === HOOK_ID ? Math.min(3, allPacks) : allPacks;
-  const hook = kind === HOOK_ID ? 1.85 : 2.1;
-  const overview = kind === HOOK_ID ? 1.95 : 2.4;
-  const cta = kind === HOOK_ID ? 2.35 : 3.05;
-  const hold = Math.max(2.45, (duration - hook - overview - cta) / packs);
-  return { hook, overview, cta, packs, hold, packStart: hook + overview, ctaAt: duration - cta };
+  const hook = kind === JOIN_ID ? 1.65 : kind === HOOK_ID ? 1.85 : 2.1;
+  const overview = kind === JOIN_ID ? 2.05 : kind === HOOK_ID ? 1.95 : 2.4;
+  const cta = kind === JOIN_ID ? 1.9 : kind === HOOK_ID ? 2.35 : 3.05;
+  const hold = Math.max(kind === JOIN_ID ? 2.05 : 2.45, (duration - hook - overview - cta) / packs);
+  return { hook, overview, cta, packs, hold, packStart: hook + overview, ctaAt: duration - cta, size };
 }
 
-function packSlice(ids: number[], pack: number) {
-  const start = pack * ROSTER_PACK;
-  return ids.slice(start, start + ROSTER_PACK);
+function packSlice(ids: number[], pack: number, size: number) {
+  const start = pack * size;
+  return ids.slice(start, start + size);
 }
 
 export function rosterBeat(kind: PlanBId, recT: number, duration: number, ids: number[]): RosterBeat {
@@ -109,11 +164,11 @@ export function rosterBeat(kind: PlanBId, recT: number, duration: number, ids: n
   if (t < tl.hook) return { id: "hook" };
   if (t < tl.packStart) return { id: "overview" };
   if (t >= tl.ctaAt) return { id: "cta" };
-  const shown = kind === HOOK_ID ? ids.slice(0, tl.packs * ROSTER_PACK) : ids;
+  const shown = kind === HOOK_ID ? ids.slice(0, tl.packs * tl.size) : ids;
   const pack = Math.min(tl.packs - 1, Math.floor((t - tl.packStart) / Math.max(0.08, tl.hold)));
   const local = t - tl.packStart - pack * tl.hold;
   const u = clamp01(local / Math.max(0.08, tl.hold));
-  const current = packSlice(shown, pack);
+  const current = packSlice(shown, pack, tl.size);
   if (pack > 0 && local < CROSS) {
     const k = clamp01(local / CROSS);
     return {
@@ -121,7 +176,7 @@ export function rosterBeat(kind: PlanBId, recT: number, duration: number, ids: n
       pack,
       packs: tl.packs,
       ids: current,
-      outgoing: packSlice(shown, pack - 1),
+      outgoing: packSlice(shown, pack - 1, tl.size),
       u,
       enter: k,
       exit: k,
