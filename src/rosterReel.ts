@@ -33,6 +33,7 @@ export function rosterSoldierIds(names: string[], soldiers: number): number[] {
 }
 
 export function rosterPackSize(kind: PlanBId, named: number) {
+  if (kind === JOIN_ID && joinForcePack) return joinForcePack;
   if (kind !== JOIN_ID) return ROSTER_PACK;
   const n = Math.max(0, named);
   if (n <= 4) return 2;
@@ -40,9 +41,9 @@ export function rosterPackSize(kind: PlanBId, named: number) {
   return 5;
 }
 
-export function rosterDuration(kind: PlanBId, named: number): number {
+export function rosterDuration(kind: PlanBId, named: number, packSize?: number): number {
   if (kind === HOOK_ID) return 15;
-  const size = rosterPackSize(kind, named);
+  const size = packSize ?? rosterPackSize(kind, named);
   const packs = Math.max(1, Math.ceil(Math.max(1, named) / size));
   if (kind === JOIN_ID) {
     const raw = 1.65 + 2.05 + packs * 2.25 + 1.9;
@@ -50,6 +51,12 @@ export function rosterDuration(kind: PlanBId, named: number): number {
   }
   const raw = 2.1 + 2.4 + packs * 3.15 + 3.05;
   return raw <= 34 ? 30 : 45;
+}
+
+let joinForcePack: number | null = null;
+
+export function setJoinForcePack(size: number | null) {
+  joinForcePack = size != null && size > 0 ? Math.floor(size) : null;
 }
 
 export function loadJoinMark(): string[] {
@@ -81,9 +88,28 @@ export function ensureJoinMark(names: string[], soldiers: number) {
   }
 }
 
-export function joinSoldierIds(names: string[], soldiers: number, marked = loadJoinMark()): number[] {
+export function joinSoldierIds(
+  names: string[],
+  soldiers: number,
+  marked = loadJoinMark(),
+  includeLast = 0
+): number[] {
+  const all = rosterSoldierIds(names, soldiers);
   const seen = new Set(marked.map((n) => n.toLowerCase()));
-  return rosterSoldierIds(names, soldiers).filter((i) => !seen.has(normalizeHandle(names[i]).toLowerCase()));
+  const keyOf = (i: number) => normalizeHandle(names[i]).toLowerCase();
+  const fresh = all.filter((i) => !seen.has(keyOf(i)));
+  if (includeLast <= 0) return fresh;
+  const markedIds = all.filter((i) => seen.has(keyOf(i)));
+  const last = markedIds.slice(-Math.max(0, Math.floor(includeLast)));
+  const out = [...last];
+  const have = new Set(out);
+  for (const i of fresh) {
+    if (!have.has(i)) {
+      out.push(i);
+      have.add(i);
+    }
+  }
+  return out;
 }
 
 function pose(x: number, y: number, z: number, lx: number, ly: number, lz: number, fov: number): ShotPose {
