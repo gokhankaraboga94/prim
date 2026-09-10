@@ -23,7 +23,7 @@ import { REEL_DURATIONS } from "../recordCanvas";
 import { CINEMA_DURATIONS, CINEMA_ID, CINEMA_MODE, SHOT_MODES, type ReelShot } from "../shotModes";
 import { HOOK_ID, HOOK_MODE, JOIN_ID, JOIN_MODE, ROSTER_ID, ROSTER_MODE, ensureJoinMark, isJoin, isPlanB, joinSoldierIds, rosterDuration, saveJoinMark, setJoinForcePack, type PlanBId } from "../rosterReel";
 import { SAGA_MODES, isSaga, sagaDuration, type SagaId } from "../sagaReel";
-import { DISCOVER_ID, DISCOVER2_ID, DISCOVER3_ID, DISCOVER_MODE, DISCOVER2_MODE, DISCOVER3_MODE, DISCOVER_SECONDS, DISCOVER3_SECONDS, isDiscover, isDiscoverEngage, isDiscoverTrailer, type DiscoverId } from "../discoverReel";
+import { DISCOVER_ID, DISCOVER2_ID, DISCOVER3_ID, RAF2_ID, DISCOVER_MODE, DISCOVER2_MODE, DISCOVER3_MODE, RAF2_MODE, DISCOVER_SECONDS, DISCOVER3_SECONDS, RAF2_SECONDS, isDiscover, isDiscoverEngage, isDiscoverShelf, isDiscoverTrailer, type DiscoverId } from "../discoverReel";
 
 export function AdminPage() {
   const { game, recruits, level, power, pressure, target, maxHp } = useGame();
@@ -245,7 +245,7 @@ export function AdminPage() {
         <div>
           <p className="join-kicker">Komuta paneli</p>
           <h1>Kuşatma yönetimi</h1>
-          <p className="join-kicker">sürüm 59 — keşfet 3</p>
+          <p className="join-kicker">sürüm 60 — raf 2</p>
         </div>
         <button type="button" className="btn-ghost" onClick={() => signOut(auth)}>
           Çıkış
@@ -449,6 +449,8 @@ export function AdminPage() {
                 ? CINEMA_DURATIONS
                 : isDiscoverTrailer(reelShot)
                   ? [DISCOVER3_SECONDS]
+                  : isDiscoverShelf(reelShot)
+                    ? [RAF2_SECONDS]
                   : isDiscover(reelShot)
                     ? [DISCOVER_SECONDS]
                   : isJoin(reelShot)
@@ -532,7 +534,8 @@ export function AdminPage() {
           <label>Keşfet — 15s</label>
           <p className="muted">
             Aynı klip, iki yazı. Keşfet: izlenme. Keşfet 2: beğeni + yorum — ikinci
-            dalga. Kamera, loop, komutansız kare aynı.
+            dalga. Kamera, loop, komutansız kare aynı. Raf 2 ayrı: 14 sn, en çok
+            takip ve izlenme getiren kesit + yazı.
           </p>
           <div className="dur-pills shot-pills">
             <button
@@ -568,6 +571,17 @@ export function AdminPage() {
             >
               {DISCOVER3_MODE.label}
             </button>
+            <button
+              type="button"
+              className={reelShot === RAF2_ID ? "on" : ""}
+              onClick={() => {
+                setReelShot((cur) => (cur === RAF2_ID ? null : RAF2_ID));
+                setReelSeconds(RAF2_SECONDS);
+                setReelSkipCmd(true);
+              }}
+            >
+              {RAF2_MODE.label}
+            </button>
           </div>
           {reelShot === DISCOVER_ID && (
             <p className="muted">
@@ -589,6 +603,16 @@ export function AdminPage() {
               {" "}Ses: Bugün X. gün. Takipçimiz Y. Kale duruyor. Ok yağmuru. Kapı açıldı. Savaş. Takip et, orduya katıl, kale düşsün.
               {" "}Caption: Adın çıkarsa yoruma SAVAŞTAYIM yaz. Kale düşsün diyorsan beğen. Canlı kuşatma. 1 takip = 1 asker. wargame.lol
               {" "}Hashtag: #wargame #stratejioyunu #kalekuşatma #ordu #wargame2028
+            </p>
+          )}
+          {isDiscoverShelf(reelShot) && (
+            <p className="muted">
+              14 sn. Verideki kazanan kesit: DUR + ordu + paylaş + takip. Kapı yok, komutan yakın plan yok.
+              Kullanıcı adları sadece ordu kadrajında. Günde bir kez at.
+              {" "}Ses (14 sn): Dur. Orduda bir asker eksiğiz. Çünkü sen yoksun. Takip edince bu orduda asker oluyorsun. Bir takip, bir asker. Bu videoyu birine at. O da yazılsın. Takip et. Kale düşsün.
+              {" "}Caption: Dur. 1 asker eksiğiz — sen yoksun. Takip et, orduda asker ol. Videoyu birine at, o da yazılsın. 1 takip = 1 asker. wargame.lol
+              {" "}Hashtag: #wargame #stratejioyunu #kalekuşatma #ordu #wargame2028
+              {" "}Pin yok. İlk saat gelen yoruma hemen cevap.
             </p>
           )}
           <label>B planı — İsim avı</label>

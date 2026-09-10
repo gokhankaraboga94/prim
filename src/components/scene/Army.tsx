@@ -5,7 +5,7 @@ import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js
 import { DEFAULT_COMMANDER, effectiveCommanders, isCommander } from "../../game";
 import { REEL_HOLD, reelBeats } from "../../recordCanvas";
 import { rosterBeat, rosterSoldierIds, stampRosterSoldier, type PlanBId, type RosterPose } from "../../rosterReel";
-import { discoverBeat, DISCOVER_HOOK_END, DISCOVER3_ID, trailerBeat, type DiscoverId } from "../../discoverReel";
+import { discoverBeat, DISCOVER_HOOK_END, DISCOVER3_ID, RAF2_ID, shelfBeat, trailerBeat, type DiscoverId } from "../../discoverReel";
 import { raidCount, sallyHunting, sallyLiveIndex, sallyLocal, sallyRaiderAt, swordArmPose, swordStyleAt, swordSwingU } from "../../siegeEvent";
 
 const MAX_SOLDIERS = 5000;
@@ -1115,6 +1115,13 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
             continue;
           }
           nameScale = 1.45;
+        } else if (discover === RAF2_ID) {
+          const namesOn = shelfBeat(recT) === "army";
+          if (!namesOn) {
+            tag.visible = false;
+            continue;
+          }
+          nameScale = 1.72;
         } else {
           const dBeat = discoverBeat(recT);
           const namesOn = (dBeat === "proof" && recT >= DISCOVER_HOOK_END + 0.8) || dBeat === "hold";

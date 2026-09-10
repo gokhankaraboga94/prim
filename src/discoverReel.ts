@@ -4,15 +4,18 @@ import { lerpPose, type ShotCtx, type ShotPose } from "./shotModes";
 export const DISCOVER_ID = "kesfet" as const;
 export const DISCOVER2_ID = "kesfet2" as const;
 export const DISCOVER3_ID = "kesfet3" as const;
-export type DiscoverId = typeof DISCOVER_ID | typeof DISCOVER2_ID | typeof DISCOVER3_ID;
+export const RAF2_ID = "raf2" as const;
+export type DiscoverId = typeof DISCOVER_ID | typeof DISCOVER2_ID | typeof DISCOVER3_ID | typeof RAF2_ID;
 export const DISCOVER_MODE = { id: DISCOVER_ID, label: "Keşfet 15s" } as const;
 export const DISCOVER2_MODE = { id: DISCOVER2_ID, label: "Keşfet 2" } as const;
 export const DISCOVER3_MODE = { id: DISCOVER3_ID, label: "Keşfet 3" } as const;
+export const RAF2_MODE = { id: RAF2_ID, label: "Raf 2" } as const;
 export const DISCOVER_SECONDS = 15;
 export const DISCOVER3_SECONDS = 40;
+export const RAF2_SECONDS = 14;
 
 export function isDiscover(id: string | null | undefined): id is DiscoverId {
-  return id === DISCOVER_ID || id === DISCOVER2_ID || id === DISCOVER3_ID;
+  return id === DISCOVER_ID || id === DISCOVER2_ID || id === DISCOVER3_ID || id === RAF2_ID;
 }
 
 export function isDiscoverEngage(id: string | null | undefined) {
@@ -21,6 +24,10 @@ export function isDiscoverEngage(id: string | null | undefined) {
 
 export function isDiscoverTrailer(id: string | null | undefined): id is typeof DISCOVER3_ID {
   return id === DISCOVER3_ID;
+}
+
+export function isDiscoverShelf(id: string | null | undefined): id is typeof RAF2_ID {
+  return id === RAF2_ID;
 }
 
 export type DiscoverBeat = "hook" | "proof" | "hold" | "storm" | "next" | "loop";
@@ -57,7 +64,18 @@ function armyWidePose(form: ShotCtx["form"]): ShotPose {
 
 export function discoverGateRecT(id?: DiscoverId | null) {
   if (id === DISCOVER3_ID) return 22.4;
+  if (id === RAF2_ID) return 99;
   return 8.55;
+}
+
+export type ShelfBeat = "hook" | "army" | "share" | "cta";
+
+export function shelfBeat(recT: number): ShelfBeat {
+  const t = Math.max(0, recT);
+  if (t < 2.2) return "hook";
+  if (t < 6.8) return "army";
+  if (t < 10.4) return "share";
+  return "cta";
 }
 
 export type TrailerBeat = "title" | "army" | "volley" | "wall" | "gate" | "fight" | "cta";
@@ -119,8 +137,26 @@ export function discoverBeat(recT: number): DiscoverBeat {
   return "loop";
 }
 
+function sampleShelf(recT: number, ctx: ShotCtx): ShotPose {
+  const { form, castle } = ctx;
+  const mid = (form.front + castle.front) * 0.52;
+  const hook = hookPose(form, castle);
+  const hookPush = pose(1.35, 3.72, form.front + 2.55, 0.04, 2.42, castle.front + 3.1, 32);
+  const army = armyWidePose(form);
+  const hold = pose(10.6, 4.35, form.midZ + 5.2, -1.6, 1.85, form.front + 1, 36);
+  const storm = pose(4.2, 4.7, castle.front + 19, 0.15, 2.55, mid, 38);
+  const t = Math.max(0, recT);
+  if (t < 2.2) return lerpPose(hook, hookPush, clamp01(t / 2.2));
+  if (t < 3.6) return lerpPose(hookPush, army, clamp01((t - 2.2) / 1.4));
+  if (t < 6.8) return army;
+  if (t < 10.4) return lerpPose(army, hold, clamp01((t - 6.8) / 3.6));
+  if (t < 12.55) return lerpPose(hold, storm, clamp01((t - 10.4) / 2.15));
+  return lerpPose(storm, hook, clamp01((t - 12.55) / 1.45));
+}
+
 export function sampleDiscover(recT: number, ctx: ShotCtx, id?: DiscoverId | null): ShotPose {
   if (id === DISCOVER3_ID) return sampleTrailer(recT, ctx);
+  if (id === RAF2_ID) return sampleShelf(recT, ctx);
   const { form, castle } = ctx;
   const mid = (form.front + castle.front) * 0.52;
   const hook = hookPose(form, castle);
