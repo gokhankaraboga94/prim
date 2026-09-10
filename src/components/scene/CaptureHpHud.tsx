@@ -7,7 +7,7 @@ import { REEL_FADE_HOLD, REEL_HOLD, reelBeats, reelFade } from "../../recordCanv
 import { cinemaScale } from "../../shotModes";
 import { isJoin, rosterBeat, rosterSoldierIds, rosterTimeline, type PlanBId } from "../../rosterReel";
 import { sagaBeat, type SagaId } from "../../sagaReel";
-import { discoverBeat, DISCOVER_HOOK_END, isDiscoverEngage, type DiscoverId } from "../../discoverReel";
+import { discoverBeat, DISCOVER_HOOK_END, isDiscoverEngage, isDiscoverTrailer, trailerBeat, type DiscoverId } from "../../discoverReel";
 
 function roundRect(
   ctx: CanvasRenderingContext2D,
@@ -107,7 +107,12 @@ function HpPlate({ hp, maxHp, soldiers, duration = 8, skipCommander = false, cin
     const recT = clock.elapsedTime - REEL_HOLD;
     const { pullStart } = reelBeats(duration, skipCommander);
     let alpha = 0;
-    if (discover) {
+    if (isDiscoverTrailer(discover)) {
+      if (recT < 0) alpha = 0;
+      else if (recT < 0.28) alpha = recT / 0.28;
+      else if (recT >= 32.4) alpha = Math.max(0, 1 - (recT - 32.4) / 0.7);
+      else alpha = 1;
+    } else if (discover) {
       if (recT < 0) alpha = 0;
       else if (recT < 0.22) alpha = recT / 0.22;
       else if (recT >= 13.25) alpha = Math.max(0, 1 - (recT - 13.25) / 0.45);
@@ -133,7 +138,7 @@ function HpPlate({ hp, maxHp, soldiers, duration = 8, skipCommander = false, cin
 
   const width = size.width * 0.9;
   const height = Math.max(64, size.height * 0.1);
-  const y = roster
+  const y = roster || isDiscoverTrailer(discover)
     ? -size.height / 2 + height / 2 + Math.max(22, size.height * 0.07)
     : size.height / 2 - height / 2 - Math.max(10, size.height * 0.018);
 
@@ -191,7 +196,14 @@ function drawTitles(
     | "discProof"
     | "discHold"
     | "discStorm"
-    | "discNext",
+    | "discNext"
+    | "trailTitle"
+    | "trailArmy"
+    | "trailVolley"
+    | "trailWall"
+    | "trailGate"
+    | "trailFight"
+    | "trailCta",
   soldiers: number,
   day: number,
   packLabel = "",
@@ -337,6 +349,41 @@ function drawTitles(
       ctx.font = "800 44px Outfit, system-ui, sans-serif";
       strokeFill(ctx, "@wargame2028", w / 2, 258, 14);
     }
+  } else if (phase === "trailTitle") {
+    if (day > 0) {
+      ctx.font = "800 120px Outfit, system-ui, sans-serif";
+      strokeFill(ctx, `${day}. GÜN`, w / 2, 118, 24);
+      ctx.font = "800 48px Outfit, system-ui, sans-serif";
+      strokeFill(ctx, "KUŞATMA SÜRÜYOR", w / 2, 228, 15);
+    } else {
+      ctx.font = "800 64px Outfit, system-ui, sans-serif";
+      strokeFill(ctx, "KUŞATMA SÜRÜYOR", w / 2, 160, 18);
+    }
+  } else if (phase === "trailArmy") {
+    const count = formatCount(soldiers);
+    ctx.font = "800 140px Outfit, system-ui, sans-serif";
+    strokeFill(ctx, count, w / 2, 124, 24);
+    ctx.font = "800 36px Outfit, system-ui, sans-serif";
+    strokeFill(ctx, "1 TAKİP = 1 ASKER", w / 2, 250, 12);
+  } else if (phase === "trailVolley") {
+    ctx.font = "800 88px Outfit, system-ui, sans-serif";
+    strokeFill(ctx, "ATEŞ", w / 2, 150, 22);
+  } else if (phase === "trailWall") {
+    ctx.font = "800 52px Outfit, system-ui, sans-serif";
+    strokeFill(ctx, "KALE BİZİ İZLİYOR", w / 2, 150, 16);
+  } else if (phase === "trailGate") {
+    ctx.font = "800 68px Outfit, system-ui, sans-serif";
+    strokeFill(ctx, "KAPI AÇILDI", w / 2, 150, 20);
+  } else if (phase === "trailFight") {
+    ctx.font = "800 88px Outfit, system-ui, sans-serif";
+    strokeFill(ctx, "SAVAŞ", w / 2, 150, 22);
+  } else if (phase === "trailCta") {
+    ctx.font = "800 52px Outfit, system-ui, sans-serif";
+    strokeFill(ctx, "TAKİP ET · DESTEK OL", w / 2, 108, 16);
+    ctx.font = "800 48px Outfit, system-ui, sans-serif";
+    strokeFill(ctx, "ORDUYA KATIL", w / 2, 188, 15);
+    ctx.font = "800 44px Outfit, system-ui, sans-serif";
+    strokeFill(ctx, "@wargame2028", w / 2, 268, 14);
   } else if (phase === "hook") {
     if (day > 0) {
       ctx.font = "800 168px Outfit, system-ui, sans-serif";
@@ -420,14 +467,50 @@ function TitlesPlate({ soldiers, duration, day = 0, skipCommander = false, cinem
       | "discProof"
       | "discHold"
       | "discStorm"
-      | "discNext";
+      | "discNext"
+      | "trailTitle"
+      | "trailArmy"
+      | "trailVolley"
+      | "trailWall"
+      | "trailGate"
+      | "trailFight"
+      | "trailCta";
     let phase: Phase = "none";
     let alpha = 0;
     let packLabel = "";
     let packHead = "";
     const engage = isDiscoverEngage(discover);
     const join = isJoin(roster);
-    if (discover) {
+    if (isDiscoverTrailer(discover)) {
+      const beat = trailerBeat(recT);
+      if (recT < 0) {
+        phase = "none";
+        alpha = 0;
+      } else {
+        phase =
+          beat === "title"
+            ? "trailTitle"
+            : beat === "army"
+              ? "trailArmy"
+              : beat === "volley"
+                ? "trailVolley"
+                : beat === "wall"
+                  ? "trailWall"
+                  : beat === "gate"
+                    ? "trailGate"
+                    : beat === "fight"
+                      ? "trailFight"
+                      : "trailCta";
+        alpha = recT < 0.16 ? recT / 0.16 : 1;
+        if (beat === "volley" || beat === "wall" || beat === "gate" || beat === "fight") {
+          const into = recT - (beat === "volley" ? 8.4 : beat === "wall" ? 13.6 : beat === "gate" ? 19.2 : 25);
+          const left =
+            (beat === "volley" ? 13.6 : beat === "wall" ? 19.2 : beat === "gate" ? 25 : 32.4) - recT;
+          if (into < 0.28) alpha = into / 0.28;
+          else if (left < 0.32) alpha = Math.max(0, left / 0.32);
+        }
+      }
+    } else if (discover) {
       const beat = discoverBeat(recT);
       if (recT < 0) {
         phase = "none";
@@ -531,7 +614,8 @@ function TitlesPlate({ soldiers, duration, day = 0, skipCommander = false, cinem
         phase === "huntHook" ||
         phase === "huntArmy" ||
         phase.startsWith("saga") ||
-        phase.startsWith("disc")
+        phase.startsWith("disc") ||
+        phase.startsWith("trail")
       ) {
         mesh.current.position.y = size.height * 0.3;
       } else if (phase === "army") {

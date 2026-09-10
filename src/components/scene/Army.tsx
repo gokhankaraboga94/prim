@@ -5,7 +5,7 @@ import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js
 import { DEFAULT_COMMANDER, effectiveCommanders, isCommander } from "../../game";
 import { REEL_HOLD, reelBeats } from "../../recordCanvas";
 import { rosterBeat, rosterSoldierIds, stampRosterSoldier, type PlanBId, type RosterPose } from "../../rosterReel";
-import { discoverBeat, DISCOVER_HOOK_END, type DiscoverId } from "../../discoverReel";
+import { discoverBeat, DISCOVER_HOOK_END, DISCOVER3_ID, trailerBeat, type DiscoverId } from "../../discoverReel";
 import { raidCount, sallyHunting, sallyLiveIndex, sallyLocal, sallyRaiderAt, swordArmPose, swordStyleAt, swordSwingU } from "../../siegeEvent";
 
 const MAX_SOLDIERS = 5000;
@@ -1107,13 +1107,23 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
       else poseSoldier(idx, t);
       let nameScale = 1;
       if (cinematic && discover) {
-        const dBeat = discoverBeat(recT);
-        const namesOn = (dBeat === "proof" && recT >= DISCOVER_HOOK_END + 0.8) || dBeat === "hold";
-        if (!namesOn) {
-          tag.visible = false;
-          continue;
+        if (discover === DISCOVER3_ID) {
+          const tBeat = trailerBeat(recT);
+          const namesOn = recT >= 3.4 && (tBeat === "army" || tBeat === "volley");
+          if (!namesOn) {
+            tag.visible = false;
+            continue;
+          }
+          nameScale = 1.45;
+        } else {
+          const dBeat = discoverBeat(recT);
+          const namesOn = (dBeat === "proof" && recT >= DISCOVER_HOOK_END + 0.8) || dBeat === "hold";
+          if (!namesOn) {
+            tag.visible = false;
+            continue;
+          }
+          nameScale = dBeat === "proof" ? 1.78 : 1.22;
         }
-        nameScale = dBeat === "proof" ? 1.78 : 1.22;
       } else if (cinematic && roster) {
         if (recT < 0) {
           tag.visible = false;

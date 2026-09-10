@@ -146,7 +146,7 @@ function CinematicCam({
       const sampleT = warm < REEL_HOLD ? (warm / REEL_HOLD) * duration : recT;
       const ctx = { cmdZ, form, castle, fit, castleFit, level };
       const pose = discover
-        ? sampleDiscover(sampleT, ctx)
+        ? sampleDiscover(sampleT, ctx, discover)
         : roster
           ? sampleRoster(roster, sampleT, duration, ctx, rosterIds?.length ? rosterIds : rosterSoldierIds(names, soldiers))
           : saga
@@ -542,7 +542,7 @@ function BattleSceneInner({
       setSallyOrigin(80);
       setSwordStart(80);
     } else if (cinematic && discover) {
-      setSallyOrigin(SALLY_START_DELAY - REEL_HOLD - discoverGateRecT());
+      setSallyOrigin(SALLY_START_DELAY - REEL_HOLD - discoverGateRecT(discover));
       setSwordStart(80);
     } else if (cinematic && saga) {
       const gateAt = sagaGateRecT(saga);

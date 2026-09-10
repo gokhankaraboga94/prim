@@ -23,7 +23,7 @@ import { REEL_DURATIONS } from "../recordCanvas";
 import { CINEMA_DURATIONS, CINEMA_ID, CINEMA_MODE, SHOT_MODES, type ReelShot } from "../shotModes";
 import { HOOK_ID, HOOK_MODE, JOIN_ID, JOIN_MODE, ROSTER_ID, ROSTER_MODE, ensureJoinMark, isJoin, isPlanB, joinSoldierIds, rosterDuration, saveJoinMark, setJoinForcePack, type PlanBId } from "../rosterReel";
 import { SAGA_MODES, isSaga, sagaDuration, type SagaId } from "../sagaReel";
-import { DISCOVER_ID, DISCOVER2_ID, DISCOVER_MODE, DISCOVER2_MODE, DISCOVER_SECONDS, isDiscover, isDiscoverEngage, type DiscoverId } from "../discoverReel";
+import { DISCOVER_ID, DISCOVER2_ID, DISCOVER3_ID, DISCOVER_MODE, DISCOVER2_MODE, DISCOVER3_MODE, DISCOVER_SECONDS, DISCOVER3_SECONDS, isDiscover, isDiscoverEngage, isDiscoverTrailer, type DiscoverId } from "../discoverReel";
 
 export function AdminPage() {
   const { game, recruits, level, power, pressure, target, maxHp } = useGame();
@@ -245,7 +245,7 @@ export function AdminPage() {
         <div>
           <p className="join-kicker">Komuta paneli</p>
           <h1>Kuşatma yönetimi</h1>
-          <p className="join-kicker">sürüm 58 — son 10</p>
+          <p className="join-kicker">sürüm 59 — keşfet 3</p>
         </div>
         <button type="button" className="btn-ghost" onClick={() => signOut(auth)}>
           Çıkış
@@ -447,8 +447,10 @@ export function AdminPage() {
             {(
               reelShot === CINEMA_ID
                 ? CINEMA_DURATIONS
-                : isDiscover(reelShot)
-                  ? [DISCOVER_SECONDS]
+                : isDiscoverTrailer(reelShot)
+                  ? [DISCOVER3_SECONDS]
+                  : isDiscover(reelShot)
+                    ? [DISCOVER_SECONDS]
                   : isJoin(reelShot)
                     ? [rosterDuration(JOIN_ID, pendingJoin.length, joinLastTen ? 3 : undefined)]
                     : isPlanB(reelShot)
@@ -555,6 +557,17 @@ export function AdminPage() {
             >
               {DISCOVER2_MODE.label}
             </button>
+            <button
+              type="button"
+              className={reelShot === DISCOVER3_ID ? "on" : ""}
+              onClick={() => {
+                setReelShot((cur) => (cur === DISCOVER3_ID ? null : DISCOVER3_ID));
+                setReelSeconds(DISCOVER3_SECONDS);
+                setReelSkipCmd(true);
+              }}
+            >
+              {DISCOVER3_MODE.label}
+            </button>
           </div>
           {reelShot === DISCOVER_ID && (
             <p className="muted">
@@ -567,6 +580,15 @@ export function AdminPage() {
               Caption: Adın çıkarsa yoruma SAVAŞTAYIM yaz. Kale düşsün diyorsan beğen. 1 takip = 1 asker. wargame.lol · @wargame2028
               {" "}İlk yorumu sabitle: SAVAŞTAYIM — kopyala yapıştır, ordudasın.
               {" "}Hashtag: #wargame #oyun #reels
+            </p>
+          )}
+          {isDiscoverTrailer(reelShot) && (
+            <p className="muted">
+              40 sn fragman. Gün alanına yazdığın sayı ve ordu sayısı ekranda. Ses senin:
+              kale, ordu, ok, kapı, savaş, sonra takip. Komutan yakın plan yok.
+              {" "}Ses: Bugün X. gün. Takipçimiz Y. Kale duruyor. Ok yağmuru. Kapı açıldı. Savaş. Takip et, orduya katıl, kale düşsün.
+              {" "}Caption: Adın çıkarsa yoruma SAVAŞTAYIM yaz. Kale düşsün diyorsan beğen. Canlı kuşatma. 1 takip = 1 asker. wargame.lol
+              {" "}Hashtag: #wargame #stratejioyunu #kalekuşatma #ordu #wargame2028
             </p>
           )}
           <label>B planı — İsim avı</label>
