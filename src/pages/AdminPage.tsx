@@ -245,7 +245,7 @@ export function AdminPage() {
         <div>
           <p className="join-kicker">Komuta paneli</p>
           <h1>Kuşatma yönetimi</h1>
-          <p className="join-kicker">sürüm 61 — raf 2 tepe</p>
+          <p className="join-kicker">sürüm 62 — paylaş çağrı</p>
         </div>
         <button type="button" className="btn-ghost" onClick={() => signOut(auth)}>
           Çıkış
@@ -609,8 +609,8 @@ export function AdminPage() {
             <p className="muted">
               14 sn. Açılış tepeden tüm ordu, sonra geniş ordu, final tüm kale — kapı yok.
               Kullanıcı adları tepede ve geniş orduda. Günde bir kez at.
-              {" "}Ses (14 sn): Dur. Orduda bir asker eksiğiz. Çünkü sen yoksun. Takip edince bu orduda asker oluyorsun. Bir takip, bir asker. Bu videoyu birine at. O da yazılsın. Takip et. Kale düşsün.
-              {" "}Caption: Dur. 1 asker eksiğiz — sen yoksun. Takip et, orduda asker ol. Videoyu birine at, o da yazılsın. 1 takip = 1 asker. wargame.lol
+              {" "}Ses (14 sn): Dur. Orduda bir asker eksiğiz. Çünkü sen yoksun. Takip edince bu orduda asker oluyorsun. Bir takip, bir asker. Videoyu paylaş. Orduya asker çağır. Takip et. Kale düşsün.
+              {" "}Caption: Dur. 1 asker eksiğiz — sen yoksun. Takip et, orduda asker ol. Videoyu paylaş, orduya asker çağır. 1 takip = 1 asker. wargame.lol
               {" "}Hashtag: #wargame #stratejioyunu #kalekuşatma #ordu #wargame2028
               {" "}Pin yok. İlk saat gelen yoruma hemen cevap.
             </p>

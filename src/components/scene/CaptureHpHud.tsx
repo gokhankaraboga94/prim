@@ -407,10 +407,10 @@ function drawTitles(
     ctx.font = "800 40px Outfit, system-ui, sans-serif";
     strokeFill(ctx, "1 TAKİP = 1 ASKER", w / 2, 250, 13);
   } else if (phase === "shelfShare") {
-    ctx.font = "800 72px Outfit, system-ui, sans-serif";
-    strokeFill(ctx, "BİRİNE AT", w / 2, 118, 20);
-    ctx.font = "800 40px Outfit, system-ui, sans-serif";
-    strokeFill(ctx, "O DA ASKER OLSUN", w / 2, 214, 13);
+    ctx.font = "800 58px Outfit, system-ui, sans-serif";
+    strokeFill(ctx, "VİDEOYU PAYLAŞ", w / 2, 118, 18);
+    ctx.font = "800 48px Outfit, system-ui, sans-serif";
+    strokeFill(ctx, "ORDUYA ASKER ÇAĞIR", w / 2, 214, 15);
   } else if (phase === "shelfCta") {
     ctx.font = "800 64px Outfit, system-ui, sans-serif";
     strokeFill(ctx, "TAKİP ET", w / 2, 108, 18);
