@@ -1116,7 +1116,8 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
           }
           nameScale = 1.45;
         } else if (discover === RAF2_ID) {
-          const namesOn = shelfBeat(recT) === "army";
+          const sBeat = shelfBeat(recT);
+          const namesOn = sBeat === "hook" || sBeat === "army";
           if (!namesOn) {
             tag.visible = false;
             continue;

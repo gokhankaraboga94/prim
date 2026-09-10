@@ -62,6 +62,34 @@ function armyWidePose(form: ShotCtx["form"]): ShotPose {
   return pose(camX, camY, camZ, lookX, lookY, lookZ, fov);
 }
 
+function armyTopPose(form: ShotCtx["form"], pull = 0): ShotPose {
+  const camX = 0.35 + pull * 1.1;
+  const camY = 48 - pull * 6;
+  const camZ = form.midZ + 7.2 - pull * 1.4;
+  const lookX = 0;
+  const lookY = 1.55;
+  const lookZ = form.midZ;
+  const dist = Math.hypot(camX - lookX, camY - lookY, camZ - lookZ);
+  const half = form.width * 0.5 + 2.6;
+  const hHalf = half / Math.max(16, dist * 0.88);
+  const vHalf = hHalf / (9 / 16);
+  const fov = Math.max(48, Math.min(58, (Math.atan(vHalf) * 360) / Math.PI));
+  return pose(camX, camY, camZ, lookX, lookY, lookZ, fov);
+}
+
+function castleWholePose(ctx: ShotCtx): ShotPose {
+  const { castle, castleFit } = ctx;
+  return pose(
+    Math.max(16, castle.width * 0.24),
+    Math.max(34, castle.midY + 40 + castleFit * 0.14),
+    castle.midZ + Math.max(34, castleFit * 0.42),
+    0.12,
+    Math.max(1.55, castle.midY * 0.55),
+    castle.midZ,
+    40
+  );
+}
+
 export function discoverGateRecT(id?: DiscoverId | null) {
   if (id === DISCOVER3_ID) return 22.4;
   if (id === RAF2_ID) return 99;
@@ -138,20 +166,18 @@ export function discoverBeat(recT: number): DiscoverBeat {
 }
 
 function sampleShelf(recT: number, ctx: ShotCtx): ShotPose {
-  const { form, castle } = ctx;
-  const mid = (form.front + castle.front) * 0.52;
-  const hook = hookPose(form, castle);
-  const hookPush = pose(1.35, 3.72, form.front + 2.55, 0.04, 2.42, castle.front + 3.1, 32);
+  const { form } = ctx;
+  const topA = armyTopPose(form, 0);
+  const topB = armyTopPose(form, 1);
   const army = armyWidePose(form);
   const hold = pose(10.6, 4.35, form.midZ + 5.2, -1.6, 1.85, form.front + 1, 36);
-  const storm = pose(4.2, 4.7, castle.front + 19, 0.15, 2.55, mid, 38);
+  const whole = castleWholePose(ctx);
   const t = Math.max(0, recT);
-  if (t < 2.2) return lerpPose(hook, hookPush, clamp01(t / 2.2));
-  if (t < 3.6) return lerpPose(hookPush, army, clamp01((t - 2.2) / 1.4));
+  if (t < 2.3) return lerpPose(topA, topB, clamp01(t / 2.3));
+  if (t < 4.1) return lerpPose(topB, army, clamp01((t - 2.3) / 1.8));
   if (t < 6.8) return army;
-  if (t < 10.4) return lerpPose(army, hold, clamp01((t - 6.8) / 3.6));
-  if (t < 12.55) return lerpPose(hold, storm, clamp01((t - 10.4) / 2.15));
-  return lerpPose(storm, hook, clamp01((t - 12.55) / 1.45));
+  if (t < 10.2) return lerpPose(army, hold, clamp01((t - 6.8) / 3.4));
+  return lerpPose(hold, whole, clamp01((t - 10.2) / 3.8));
 }
 
 export function sampleDiscover(recT: number, ctx: ShotCtx, id?: DiscoverId | null): ShotPose {
