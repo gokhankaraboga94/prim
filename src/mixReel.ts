@@ -30,11 +30,11 @@ function lerpLinear(a: ShotPose, b: ShotPose, t: number): ShotPose {
   );
 }
 
-/** Side castle: farther back so every rank fits; look holds castle + army. */
+/** Closer 3/4: castle stays the same mass, army reads diagonal so every rank fits. */
 export function sampleMixTop(_recT: number, ctx: ShotCtx): ShotPose {
   const { form, castle } = ctx;
-  const lookZ = (castle.front + form.midZ) * 0.5;
-  return pose(-122, 40, form.back + 22, 0, 6.4, lookZ, 44);
+  const lookZ = castle.front + (form.front - castle.front) * 0.22;
+  return pose(-78, 26, form.back + 9, 2.2, 5.6, lookZ, 36);
 }
 
 function behindLine(form: ShotCtx["form"], x: number): ShotPose {
