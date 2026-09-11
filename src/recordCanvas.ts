@@ -3,6 +3,9 @@ export type ReelDuration = (typeof REEL_DURATIONS)[number];
 
 /** Warmup before MediaRecorder starts — keep in sync with ReelCapture wait. */
 export const REEL_HOLD = 2.25;
+/** Capture buffer — Instagram Reels native. CSS scales the preview down. */
+export const REEL_WIDTH = 1080;
+export const REEL_HEIGHT = 1920;
 
 export function reelFade(duration: number) {
   return Math.min(1.15, Math.max(0.6, duration * 0.14));
@@ -52,7 +55,7 @@ export async function recordCanvas(canvas: HTMLCanvasElement, seconds: number) {
   const mime = pickMime();
   if (!mime) throw new Error("Bu tarayıcı video kaydını desteklemiyor. Safari veya Chrome dene.");
   const stream = canvas.captureStream(60);
-  const rec = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 14_000_000 });
+  const rec = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 20_000_000 });
   const chunks: BlobPart[] = [];
   rec.ondataavailable = (e) => {
     if (e.data.size) chunks.push(e.data);

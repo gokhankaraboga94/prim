@@ -8,7 +8,7 @@ import { SallyRaid } from "./SallyRaid";
 import { CaptureHpHud, ReelFade, ReelTitles, ReelVignette } from "./CaptureHpHud";
 import { effectiveCommanders } from "../../game";
 import { castleFrame } from "../../castleLayout";
-import { REEL_HOLD, reelBeats } from "../../recordCanvas";
+import { REEL_HEIGHT, REEL_HOLD, REEL_WIDTH, reelBeats } from "../../recordCanvas";
 import { CINEMA_SWORD_P, cinemaGateAt, sampleCinema, sampleShotMode, type ShotId } from "../../shotModes";
 import { rosterSoldierIds, sampleRoster, type PlanBId } from "../../rosterReel";
 import { sagaGateRecT, sampleSaga, type SagaId } from "../../sagaReel";
@@ -416,8 +416,8 @@ function DayLights({ cinematic = false }: { cinematic?: boolean }) {
   useLayoutEffect(() => {
     const light = sun.current;
     if (!light) return;
-    light.castShadow = cinematic;
-    light.shadow.mapSize.set(2048, 2048);
+    light.castShadow = false;
+    light.shadow.mapSize.set(1024, 1024);
     light.shadow.camera.near = 8;
     light.shadow.camera.far = 220;
     light.shadow.camera.left = -64;
@@ -519,6 +519,23 @@ function SceneContent({
   );
 }
 
+function LockReelBuffer() {
+  const gl = useThree((s) => s.gl);
+  const set = useThree((s) => s.set);
+  useLayoutEffect(() => {
+    gl.setPixelRatio(1);
+    gl.setSize(REEL_WIDTH, REEL_HEIGHT, false);
+    set({ size: { width: REEL_WIDTH, height: REEL_HEIGHT, top: 0, left: 0 } });
+  }, [gl, set]);
+  useFrame(() => {
+    if (gl.domElement.width !== REEL_WIDTH || gl.domElement.height !== REEL_HEIGHT) {
+      gl.setPixelRatio(1);
+      gl.setSize(REEL_WIDTH, REEL_HEIGHT, false);
+    }
+  });
+  return null;
+}
+
 function BattleSceneInner({
   soldiers,
   names,
@@ -590,15 +607,15 @@ function BattleSceneInner({
 
   return (
     <Canvas
-      shadows
-      dpr={cinematic ? 1.25 : [1, 1.5]}
+      shadows={!cinematic}
+      dpr={cinematic ? 1 : [1, 1.5]}
       gl={{
         antialias: true,
         alpha: false,
         powerPreference: "high-performance",
         stencil: false,
         depth: true,
-        logarithmicDepthBuffer: true,
+        logarithmicDepthBuffer: !cinematic,
         preserveDrawingBuffer: Boolean(cinematic),
         failIfMajorPerformanceCaveat: false,
       }}
@@ -609,12 +626,17 @@ function BattleSceneInner({
         gl.toneMapping = THREE.ACESFilmicToneMapping;
         gl.toneMappingExposure = cinematic ? 1.16 : 1.22;
         gl.outputColorSpace = THREE.SRGBColorSpace;
-        gl.shadowMap.enabled = true;
+        gl.shadowMap.enabled = !cinematic;
         gl.shadowMap.type = THREE.PCFSoftShadowMap;
         gl.setClearColor("#7eb6ee", 1);
+        if (cinematic) {
+          gl.setPixelRatio(1);
+          gl.setSize(REEL_WIDTH, REEL_HEIGHT, false);
+        }
         onReady?.(gl.domElement);
       }}
     >
+      {cinematic && <LockReelBuffer />}
       <SceneContent
         soldiers={soldiers}
         names={names}
