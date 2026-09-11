@@ -698,8 +698,8 @@ function makeHandleTexture(name: string, commander = false, crisp = false): Name
   ctx.lineJoin = "round";
   ctx.miterLimit = 2;
   ctx.lineWidth = Math.max(10, fontSize * 0.2);
-  ctx.strokeStyle = commander ? "rgba(4, 18, 8, 0.96)" : "rgba(0,0,0,0.94)";
-  ctx.fillStyle = commander ? "#c8ffb0" : "#fff";
+  ctx.strokeStyle = commander ? "rgba(4, 22, 40, 0.96)" : "rgba(0,0,0,0.94)";
+  ctx.fillStyle = commander ? "#2eb8d4" : "#fff";
   ctx.strokeText(label, width / 2, height / 2);
   ctx.fillText(label, width / 2, height / 2);
   const map = new THREE.CanvasTexture(canvas);

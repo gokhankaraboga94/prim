@@ -293,12 +293,12 @@ function useGroundTexture() {
     canvas.height = 2048;
     const ctx = canvas.getContext("2d");
     if (!ctx) return null;
-    ctx.fillStyle = "#6bb84a";
+    ctx.fillStyle = "#4e9a38";
     ctx.fillRect(0, 0, 2048, 2048);
     for (let i = 0; i < 28000; i++) {
       const n = i % 7;
       ctx.fillStyle =
-        n === 0 ? "#9ae06a" : n === 1 ? "#5aa83c" : n === 2 ? "#7fd055" : n === 3 ? "#4e9a34" : n === 4 ? "#b4ee7a" : n === 5 ? "#6fc24a" : "#8ad45e";
+        n === 0 ? "#7ec85a" : n === 1 ? "#3d8228" : n === 2 ? "#68b448" : n === 3 ? "#357820" : n === 4 ? "#96d868" : n === 5 ? "#5aa838" : "#2c681c";
       ctx.fillRect(Math.random() * 2048, Math.random() * 2048, 2 + Math.random() * 9, 2 + Math.random() * 8);
     }
     for (let i = 0; i < 260; i++) {
@@ -375,7 +375,7 @@ function Terrain() {
     <group>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow>
         <planeGeometry args={[720, 720]} />
-        <meshStandardMaterial map={ground} color="#8ed45c" roughness={0.92} envMapIntensity={0.2} depthWrite={false} />
+        <meshStandardMaterial map={ground} color="#68b44a" roughness={0.92} envMapIntensity={0.2} depthWrite={false} />
       </mesh>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.06, 13]} receiveShadow>
         <planeGeometry args={[9.2, 32]} />
@@ -430,7 +430,7 @@ function DayLights({ cinematic = false }: { cinematic?: boolean }) {
   return (
     <>
       <ambientLight intensity={0.42} color="#dce6f2" />
-      <hemisphereLight args={["#9ec4f0", "#6a9a48", 0.78]} />
+      <hemisphereLight args={["#9ec4f0", "#548a3c", 0.78]} />
       <directionalLight ref={sun} position={[-28, 42, 18]} intensity={2.7} color="#fff4dc" />
       <directionalLight position={[22, 14, 8]} intensity={0.55} color="#a8c4e8" />
       <directionalLight position={[6, 8, 56]} intensity={0.85} color="#ffe0b8" />
