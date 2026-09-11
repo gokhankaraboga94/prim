@@ -2,17 +2,11 @@ import { type ShotCtx, type ShotPose } from "./shotModes";
 
 export const MIX1_ID = "mix1" as const;
 export const MIX2_ID = "mix2" as const;
-export const MIX3_ID = "mix3" as const;
-export const MIX4_ID = "mix4" as const;
-export const MIX5_ID = "mix5" as const;
 export const MIX6_ID = "mix6" as const;
-export type MixId = typeof MIX1_ID | typeof MIX2_ID | typeof MIX3_ID | typeof MIX4_ID | typeof MIX5_ID | typeof MIX6_ID;
+export type MixId = typeof MIX1_ID | typeof MIX2_ID | typeof MIX6_ID;
 export const MIX_MODES = [
   { id: MIX1_ID, label: "Mix 1" },
   { id: MIX2_ID, label: "Mix 2" },
-  { id: MIX3_ID, label: "Mix 3" },
-  { id: MIX4_ID, label: "Mix 4" },
-  { id: MIX5_ID, label: "Mix 5" },
   { id: MIX6_ID, label: "Mix 6" },
 ] as const;
 export const MIX_SECONDS = 15;
@@ -50,17 +44,13 @@ function armyFitFov(camX: number, camY: number, camZ: number, lookX: number, loo
   return Math.max(36, Math.min(50, (Math.atan(need) * 360) / Math.PI));
 }
 
-/** Six top angles; bottom sweep is shared. FOV always fits the full army. */
+/** Mix 1 left 3/4, Mix 2 high left, Mix 6 high right. Bottom sweep is shared. */
 export function sampleMixTop(_recT: number, ctx: ShotCtx, id: MixId = MIX1_ID): ShotPose {
   const { form, castle } = ctx;
   const lookZ = (castle.front + form.midZ) * 0.5;
-  const gapZ = (castle.front + form.front) * 0.5;
   const shots: Record<MixId, { x: number; y: number; z: number; lx: number; ly: number; lz: number }> = {
     mix1: { x: -100, y: 33, z: form.back + 16, lx: 0, ly: 5.8, lz: lookZ },
     mix2: { x: -64, y: 46, z: form.back + 34, lx: 0, ly: 3.8, lz: form.midZ },
-    mix3: { x: 100, y: 33, z: form.back + 16, lx: 0, ly: 5.8, lz: lookZ },
-    mix4: { x: -92, y: 16, z: gapZ, lx: 6, ly: 4.6, lz: lookZ + 2 },
-    mix5: { x: -38, y: 28, z: form.back + 42, lx: 0, ly: 5.2, lz: lookZ },
     mix6: { x: 64, y: 46, z: form.back + 34, lx: 0, ly: 3.8, lz: form.midZ },
   };
   const s = shots[id];

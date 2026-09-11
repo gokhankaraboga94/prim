@@ -246,7 +246,7 @@ export function AdminPage() {
         <div>
           <p className="join-kicker">Komuta paneli</p>
           <h1>Kuşatma yönetimi</h1>
-          <p className="join-kicker">sürüm 70 — saha temiz</p>
+          <p className="join-kicker">sürüm 71 — mix 1 2 6</p>
         </div>
         <button type="button" className="btn-ghost" onClick={() => signOut(auth)}>
           Çıkış
@@ -620,9 +620,8 @@ export function AdminPage() {
           )}
           <label>Mix — 15s</label>
           <p className="muted">
-            Alt hepsinde aynı: okçuların arkasından yavaş sağ–sol. Üst altı farklı açı,
-            tüm ordu kadrajda. 1 sol çapraz, 2 tepe sol, 3 sağ çapraz, 4 yan alçak,
-            5 arkadan, 6 tepe sağ. Yazı ve kale canı yok; sen eklersin. Kapı açılmaz.
+            Alt üçünde aynı. Üst: Mix 1 sol çapraz, Mix 2 tepe sol, Mix 6 tepe sağ.
+            Yazı ve kale canı yok; sen eklersin. Kapı açılmaz.
           </p>
           <div className="dur-pills shot-pills">
             {MIX_MODES.map((mode) => (
