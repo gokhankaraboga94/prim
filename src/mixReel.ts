@@ -22,17 +22,17 @@ function ease(u: number) {
   return x * x * (3 - 2 * x);
 }
 
-/** Side castle: army-facing wall left, volley on the right. Static hold. */
+/** Side castle: higher and further so the full army sits on the right. */
 export function sampleMixTop(_recT: number, ctx: ShotCtx): ShotPose {
   const { form, castle } = ctx;
-  const gapZ = (castle.front + form.front) * 0.5;
-  return pose(-42, 10.6, gapZ - 1.2, 8.5, Math.max(3.4, castle.midY * 0.14), gapZ + 2.4, 30);
+  const midZ = (castle.front + form.midZ) * 0.5;
+  return pose(-68, 24, form.midZ - 6, 0, 4.1, midZ + 2, 36);
 }
 
 function behindLine(form: ShotCtx["form"], x: number): ShotPose {
   const span = Math.max(4.2, form.width * 0.5 - 1.1);
   const cx = Math.max(-span, Math.min(span, x));
-  return pose(cx, 3.62, form.back + 6.5, cx * 1.08, 1.78, form.back - 0.85, 34);
+  return pose(cx, 4.4, form.back + 10.4, cx * 1.04, 2.42, form.back - 1.8, 36);
 }
 
 /** Behind the archers: center → right → center → left over 15s. */
