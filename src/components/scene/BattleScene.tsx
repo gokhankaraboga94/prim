@@ -371,55 +371,6 @@ function SkyDome() {
 
 function Terrain() {
   const ground = useGroundTexture();
-  const dummy = useMemo(() => new THREE.Object3D(), []);
-  const rocks = useRef<THREE.InstancedMesh>(null);
-  const trunks = useRef<THREE.InstancedMesh>(null);
-  const canopy = useRef<THREE.InstancedMesh>(null);
-
-  useEffect(() => {
-    if (rocks.current) {
-      const spots = [
-        [-10, 14], [9, 16], [-14, 10], [13, 11], [-8, 20], [11, 19],
-        [-20, 6], [19, 8], [-16, -8], [17, -11], [-22, 14], [21, 15],
-        [-6, 18], [7, 22], [-18, 18], [16, 21], [-38, 28], [42, 24],
-        [-44, -18], [36, -32], [-28, 48], [52, -8], [-56, 12], [48, 40],
-      ];
-      spots.forEach(([x, z], i) => {
-        dummy.position.set(x, 0.25 + (i % 3) * 0.12, z);
-        dummy.scale.set(0.7 + (i % 4) * 0.35, 0.35 + (i % 3) * 0.2, 0.65 + (i % 5) * 0.25);
-        dummy.rotation.set(0.2, i * 0.8, 0.1);
-        dummy.updateMatrix();
-        rocks.current!.setMatrixAt(i, dummy.matrix);
-      });
-      rocks.current.instanceMatrix.needsUpdate = true;
-    }
-    const trees = [
-      [-22, 8], [23, -8], [-20, -14], [21, 16], [-26, 2], [25, -4],
-      [-18, 22], [19, -18], [-24, 16], [22, 20], [-48, 18], [52, -22],
-      [-60, -8], [58, 14], [-36, 55], [40, 62], [-70, 32], [66, -40],
-      [-42, -52], [74, 8], [-80, 20], [28, -68],
-    ];
-    trees.forEach(([x, z], i) => {
-      const s = 0.9 + (i % 4) * 0.18;
-      if (trunks.current) {
-        dummy.position.set(x, 0.7 * s, z);
-        dummy.scale.set(s * 0.35, s, s * 0.35);
-        dummy.rotation.set(0, i * 0.4, 0);
-        dummy.updateMatrix();
-        trunks.current.setMatrixAt(i, dummy.matrix);
-      }
-      if (canopy.current) {
-        dummy.position.set(x, 2.15 * s, z);
-        dummy.scale.setScalar(s);
-        dummy.rotation.set(0, i * 0.7, 0);
-        dummy.updateMatrix();
-        canopy.current.setMatrixAt(i, dummy.matrix);
-      }
-    });
-    if (trunks.current) trunks.current.instanceMatrix.needsUpdate = true;
-    if (canopy.current) canopy.current.instanceMatrix.needsUpdate = true;
-  }, [dummy]);
-
   return (
     <group>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow>
@@ -430,18 +381,6 @@ function Terrain() {
         <planeGeometry args={[9.2, 32]} />
         <meshStandardMaterial color="#a8824c" roughness={0.88} polygonOffset polygonOffsetFactor={-1} polygonOffsetUnits={-1} />
       </mesh>
-      <instancedMesh ref={rocks} args={[undefined, undefined, 24]} castShadow receiveShadow>
-        <dodecahedronGeometry args={[0.9, 1]} />
-        <meshStandardMaterial color="#7a7468" roughness={0.92} />
-      </instancedMesh>
-      <instancedMesh ref={trunks} args={[undefined, undefined, 22]} castShadow>
-        <cylinderGeometry args={[0.22, 0.32, 1.5, 8]} />
-        <meshStandardMaterial color="#4a2e1a" roughness={0.88} />
-      </instancedMesh>
-      <instancedMesh ref={canopy} args={[undefined, undefined, 22]} castShadow>
-        <sphereGeometry args={[1.15, 10, 8]} />
-        <meshStandardMaterial color="#2a7a32" roughness={0.78} />
-      </instancedMesh>
     </group>
   );
 }
