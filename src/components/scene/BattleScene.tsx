@@ -532,7 +532,7 @@ function SceneContent({
       <Terrain />
       <Castle level={level} pressure={pressure} />
       {!roster && !split && <SallyRaid soldiers={soldiers} commanders={chiefN} />}
-      <Army count={soldiers} names={names} commanders={commanders} cinematic={cinematic} duration={duration} skipCommander={hideCmd} roster={roster} discover={discover} mix={split} rosterIds={rosterIds} />
+      <Army count={soldiers} names={names} commanders={commanders} cinematic={cinematic} duration={duration} skipCommander={hideCmd} roster={roster} discover={discover} mix={split} level={level} rosterIds={rosterIds} />
       {cinematic && split ? (
         <MixSplitCam duration={duration ?? 15} soldiers={soldiers} level={level} commanders={chiefN} />
       ) : cinematic ? (
@@ -605,7 +605,10 @@ function BattleSceneInner({
   const hideCmd = skipCommander || Boolean(discover);
 
   useLayoutEffect(() => {
-    if (cinematic && (roster || mix)) {
+    if (cinematic && mix) {
+      setSallyOrigin(SALLY_START_DELAY - 90);
+      setSwordStart(80);
+    } else if (cinematic && roster) {
       setSallyOrigin(80);
       setSwordStart(80);
     } else if (cinematic && discover) {

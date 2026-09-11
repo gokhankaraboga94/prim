@@ -7,6 +7,7 @@ import { REEL_HOLD, reelBeats } from "../../recordCanvas";
 import { rosterBeat, rosterSoldierIds, stampRosterSoldier, type PlanBId, type RosterPose } from "../../rosterReel";
 import { discoverBeat, DISCOVER_HOOK_END, DISCOVER3_ID, RAF2_ID, shelfBeat, trailerBeat, type DiscoverId } from "../../discoverReel";
 import { raidCount, sallyHunting, sallyLiveIndex, sallyLocal, sallyRaiderAt, swordArmPose, swordStyleAt, swordSwingU } from "../../siegeEvent";
+import { castleFrame } from "../../castleLayout";
 
 const MAX_SOLDIERS = 5000;
 const MAX_LABELS = 400;
@@ -46,6 +47,7 @@ type ArmyProps = {
   roster?: PlanBId | null;
   discover?: DiscoverId | null;
   mix?: boolean;
+  level?: number;
   rosterIds?: number[] | null;
 };
 
@@ -711,7 +713,7 @@ function makeHandleTexture(name: string, commander = false, crisp = false): Name
   return { map, sx, sy };
 }
 
-export function Army({ count, names = [], commanders = [], cinematic, duration = 8, skipCommander = false, roster = null, discover = null, mix = false, rosterIds = null }: ArmyProps) {
+export function Army({ count, names = [], commanders = [], cinematic, duration = 8, skipCommander = false, roster = null, discover = null, mix = false, level = 1, rosterIds = null }: ArmyProps) {
   const bodies = useRef<THREE.InstancedMesh>(null);
   const soldierPlumes = useRef<THREE.InstancedMesh>(null);
   const bowHolds = useRef<THREE.InstancedMesh>(null);
@@ -1191,8 +1193,9 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
     const t = state.clock.elapsedTime;
     const { scale } = form;
     const sally = sallyLocal(t);
-    const hunt = sallyHunting(sally);
+    const hunt = mix ? false : sallyHunting(sally);
     const enemies = raidCount(visible);
+    const door = mix ? castleFrame(level) : null;
 
     acc.current += dt;
     if (roster || acc.current >= 1 / 40) {
@@ -1228,10 +1231,10 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
           sx: pos.x,
           sy: pos.y + 1.25 * scale,
           sz: pos.z,
-          tx: prey ? prey.x : GATE.x,
-          ty: prey ? 1.05 : GATE.y,
-          tz: prey ? prey.z : GATE.z,
-          flight: prey ? 0.46 : ARROW_FLIGHT,
+          tx: mix ? 0 : prey ? prey.x : GATE.x,
+          ty: mix ? 3.55 : prey ? 1.05 : GATE.y,
+          tz: mix ? door?.front ?? GATE.z : prey ? prey.z : GATE.z,
+          flight: mix ? 2.55 : prey ? 0.46 : ARROW_FLIGHT,
           thin: Boolean(prey),
         });
       }
@@ -1246,7 +1249,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
       const fly = Math.max(0, Math.min(1, (t - s.born) / s.flight));
       dummy.position.set(
         s.sx + (s.tx - s.sx) * fly,
-        s.sy + (s.ty - s.sy) * fly + Math.sin(fly * Math.PI) * (s.thin ? 1.15 : 2.6),
+        s.sy + (s.ty - s.sy) * fly + Math.sin(fly * Math.PI) * (mix ? 0.55 : s.thin ? 1.15 : 2.6),
         s.sz + (s.tz - s.sz) * fly
       );
       dummy.lookAt(s.tx, s.ty, s.tz);
