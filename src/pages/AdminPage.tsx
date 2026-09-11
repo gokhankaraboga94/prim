@@ -24,6 +24,7 @@ import { CINEMA_DURATIONS, CINEMA_ID, CINEMA_MODE, SHOT_MODES, type ReelShot } f
 import { HOOK_ID, HOOK_MODE, JOIN_ID, JOIN_MODE, ROSTER_ID, ROSTER_MODE, ensureJoinMark, isJoin, isPlanB, joinSoldierIds, rosterDuration, saveJoinMark, setJoinForcePack, type PlanBId } from "../rosterReel";
 import { SAGA_MODES, isSaga, sagaDuration, type SagaId } from "../sagaReel";
 import { DISCOVER_ID, DISCOVER2_ID, DISCOVER3_ID, RAF2_ID, DISCOVER_MODE, DISCOVER2_MODE, DISCOVER3_MODE, RAF2_MODE, DISCOVER_SECONDS, DISCOVER3_SECONDS, RAF2_SECONDS, isDiscover, isDiscoverEngage, isDiscoverShelf, isDiscoverTrailer, type DiscoverId } from "../discoverReel";
+import { MIX_ID, MIX_MODE, MIX_SECONDS, isMix, type MixId } from "../mixReel";
 
 export function AdminPage() {
   const { game, recruits, level, power, pressure, target, maxHp } = useGame();
@@ -37,7 +38,7 @@ export function AdminPage() {
   const [reelSeconds, setReelSeconds] = useState<number>(7);
   const [reelText, setReelText] = useState(true);
   const [reelSkipCmd, setReelSkipCmd] = useState(false);
-  const [reelShot, setReelShot] = useState<ReelShot | PlanBId | SagaId | DiscoverId | null>(null);
+  const [reelShot, setReelShot] = useState<ReelShot | PlanBId | SagaId | DiscoverId | MixId | null>(null);
   const [reelDay, setReelDay] = useState("1");
   const [capturing, setCapturing] = useState(false);
   const [editIndex, setEditIndex] = useState<number | null>(null);
@@ -245,7 +246,7 @@ export function AdminPage() {
         <div>
           <p className="join-kicker">Komuta paneli</p>
           <h1>Kuşatma yönetimi</h1>
-          <p className="join-kicker">sürüm 62 — paylaş çağrı</p>
+          <p className="join-kicker">sürüm 63 — mix</p>
         </div>
         <button type="button" className="btn-ghost" onClick={() => signOut(auth)}>
           Çıkış
@@ -451,6 +452,8 @@ export function AdminPage() {
                   ? [DISCOVER3_SECONDS]
                   : isDiscoverShelf(reelShot)
                     ? [RAF2_SECONDS]
+                  : isMix(reelShot)
+                    ? [MIX_SECONDS]
                   : isDiscover(reelShot)
                     ? [DISCOVER_SECONDS]
                   : isJoin(reelShot)
@@ -615,6 +618,24 @@ export function AdminPage() {
               {" "}Pin yok. İlk saat gelen yoruma hemen cevap.
             </p>
           )}
+          <label>Mix — 15s</label>
+          <p className="muted">
+            Ekran ikiye bölünür. Üst: yandan kale + sağda ok. Alt: okçuların arkasından
+            orta → sağ → orta → sol. Yazı ve kale canı yok; sen eklersin. Kapı açılmaz.
+          </p>
+          <div className="dur-pills shot-pills">
+            <button
+              type="button"
+              className={reelShot === MIX_ID ? "on" : ""}
+              onClick={() => {
+                setReelShot((cur) => (cur === MIX_ID ? null : MIX_ID));
+                setReelSeconds(MIX_SECONDS);
+                setReelText(false);
+              }}
+            >
+              {MIX_MODE.label}
+            </button>
+          </div>
           <label>B planı — İsim avı</label>
           <p className="muted">
             Keşif izleyicisi kendi adını aramaz. İlk kare kale, yazı “bu isimler kaleyi
@@ -757,11 +778,12 @@ export function AdminPage() {
           seconds={reelSeconds}
           showTitles={reelText}
           skipCommander={reelSkipCmd || isDiscover(reelShot)}
-          shotMode={reelShot === CINEMA_ID || isPlanB(reelShot) || isSaga(reelShot) || isDiscover(reelShot) ? null : reelShot}
+          shotMode={reelShot === CINEMA_ID || isPlanB(reelShot) || isSaga(reelShot) || isDiscover(reelShot) || isMix(reelShot) ? null : reelShot}
           cinema={reelShot === CINEMA_ID}
           roster={isPlanB(reelShot) ? reelShot : null}
           saga={isSaga(reelShot) ? reelShot : null}
           discover={isDiscover(reelShot) ? reelShot : null}
+          mix={isMix(reelShot) ? reelShot : null}
           rosterIds={isJoin(reelShot) ? pendingJoin : null}
           day={Math.max(0, Math.floor(Number(reelDay)) || 0)}
           onRecorded={() => {

@@ -13,6 +13,7 @@ import { CINEMA_SWORD_P, cinemaGateAt, sampleCinema, sampleShotMode, type ShotId
 import { rosterSoldierIds, sampleRoster, type PlanBId } from "../../rosterReel";
 import { sagaGateRecT, sampleSaga, type SagaId } from "../../sagaReel";
 import { discoverGateRecT, sampleDiscover, type DiscoverId } from "../../discoverReel";
+import { sampleMixBottom, sampleMixTop, type MixId } from "../../mixReel";
 import {
   SALLY_START_DELAY,
   SWORD_START,
@@ -41,6 +42,7 @@ type BattleSceneProps = {
   roster?: PlanBId | null;
   saga?: SagaId | null;
   discover?: DiscoverId | null;
+  mix?: MixId | null;
   rosterIds?: number[] | null;
   onReady?: (canvas: HTMLCanvasElement) => void;
 };
@@ -219,6 +221,66 @@ function CinematicCam({
     );
     camera.lookAt(look);
   });
+  return null;
+}
+
+function applyMixCam(cam: THREE.PerspectiveCamera, p: { x: number; y: number; z: number; lx: number; ly: number; lz: number; fov: number }, aspect: number) {
+  cam.aspect = aspect;
+  cam.fov = p.fov;
+  cam.near = 0.35;
+  cam.far = 2400;
+  cam.position.set(p.x, p.y, p.z);
+  cam.lookAt(p.lx, p.ly, p.lz);
+  cam.updateProjectionMatrix();
+  cam.updateMatrixWorld();
+}
+
+function MixSplitCam({
+  duration,
+  soldiers,
+  level,
+  commanders = 0,
+}: {
+  duration: number;
+  soldiers: number;
+  level: number;
+  commanders?: number;
+}) {
+  const topCam = useMemo(() => new THREE.PerspectiveCamera(30, 1.125, 0.35, 2400), []);
+  const botCam = useMemo(() => new THREE.PerspectiveCamera(34, 1.125, 0.35, 2400), []);
+  useFrame(({ gl, scene, size, clock }) => {
+    const aspect = size.width / Math.max(1, size.height * 0.5);
+    const recT = Math.max(0, clock.elapsedTime - REEL_HOLD);
+    const sampleT = clock.elapsedTime < REEL_HOLD ? (clock.elapsedTime / REEL_HOLD) * duration : recT;
+    const form = armyFrame(soldiers, commanders);
+    const castle = castleFrame(level);
+    const spanX = Math.max(form.width, 12);
+    const spanZ = Math.max(8, form.back - form.front + 6);
+    const fit = distToFit(spanX, spanZ, aspect, 1.2);
+    const castleFit = distToFit(castle.width, castle.height, aspect, 1.18);
+    const ctx = { cmdZ: form.front, form, castle, fit, castleFit, level };
+    applyMixCam(topCam, sampleMixTop(sampleT, ctx), aspect);
+    applyMixCam(botCam, sampleMixBottom(sampleT, ctx), aspect);
+    const w = size.width;
+    const h = size.height;
+    const gap = 3;
+    const half = Math.floor(h / 2);
+    gl.autoClear = true;
+    gl.setClearColor("#000000", 1);
+    gl.clear();
+    gl.setScissorTest(true);
+    gl.setViewport(0, 0, w, half - gap);
+    gl.setScissor(0, 0, w, half - gap);
+    gl.render(scene, botCam);
+    gl.autoClear = false;
+    gl.clearDepth();
+    gl.setViewport(0, half + gap, w, h - half - gap);
+    gl.setScissor(0, half + gap, w, h - half - gap);
+    gl.render(scene, topCam);
+    gl.setScissorTest(false);
+    gl.autoClear = true;
+    gl.setClearColor("#7eb6ee", 1);
+  }, 1);
   return null;
 }
 
@@ -453,11 +515,13 @@ function SceneContent({
   roster = null,
   saga = null,
   discover = null,
+  mix = null,
   rosterIds = null,
 }: BattleSceneProps) {
   const chiefs = effectiveCommanders(commanders, names);
   const hideCmd = skipCommander || Boolean(discover);
   const chiefN = hideCmd ? 0 : chiefs.length;
+  const split = Boolean(mix);
   return (
     <>
       <color attach="background" args={["#7eb6ee"]} />
@@ -467,9 +531,11 @@ function SceneContent({
       <DayLights cinematic={cinematic} />
       <Terrain />
       <Castle level={level} pressure={pressure} />
-      {!roster && <SallyRaid soldiers={soldiers} commanders={chiefN} />}
-      <Army count={soldiers} names={names} commanders={commanders} cinematic={cinematic} duration={duration} skipCommander={hideCmd} roster={roster} discover={discover} rosterIds={rosterIds} />
-      {cinematic ? (
+      {!roster && !split && <SallyRaid soldiers={soldiers} commanders={chiefN} />}
+      <Army count={soldiers} names={names} commanders={commanders} cinematic={cinematic} duration={duration} skipCommander={hideCmd} roster={roster} discover={discover} mix={split} rosterIds={rosterIds} />
+      {cinematic && split ? (
+        <MixSplitCam duration={duration ?? 15} soldiers={soldiers} level={level} commanders={chiefN} />
+      ) : cinematic ? (
         <CinematicCam
           duration={duration ?? 8}
           soldiers={soldiers}
@@ -500,14 +566,14 @@ function SceneContent({
           zoomSpeed={1.85}
         />
       )}
-      {cinematic && maxHp != null && hp != null && (
+      {cinematic && !split && maxHp != null && hp != null && (
         <CaptureHpHud hp={hp} maxHp={maxHp} soldiers={soldiers} duration={duration ?? 8} skipCommander={hideCmd} cinema={cinema} roster={roster} discover={discover} />
       )}
-      {cinematic && showTitles && (
+      {cinematic && showTitles && !split && (
         <ReelTitles soldiers={soldiers} duration={duration ?? 8} day={day} skipCommander={hideCmd} cinema={cinema} roster={roster} saga={saga} discover={discover} names={names} rosterIds={rosterIds} />
       )}
-      {cinematic && <ReelVignette />}
-      {cinematic && !discover && <ReelFade duration={duration ?? 8} />}
+      {cinematic && !split && <ReelVignette />}
+      {cinematic && !discover && !split && <ReelFade duration={duration ?? 8} />}
     </>
   );
 }
@@ -531,6 +597,7 @@ function BattleSceneInner({
   roster = null,
   saga = null,
   discover = null,
+  mix = null,
   rosterIds = null,
   onReady,
 }: BattleSceneProps) {
@@ -538,7 +605,7 @@ function BattleSceneInner({
   const hideCmd = skipCommander || Boolean(discover);
 
   useLayoutEffect(() => {
-    if (cinematic && roster) {
+    if (cinematic && (roster || mix)) {
       setSallyOrigin(80);
       setSwordStart(80);
     } else if (cinematic && discover) {
@@ -569,7 +636,7 @@ function BattleSceneInner({
       setSallyOrigin(0);
       setSwordStart(SWORD_START);
     };
-  }, [cinematic, cinema, duration, hideCmd, roster, saga, discover]);
+  }, [cinematic, cinema, duration, hideCmd, roster, saga, discover, mix]);
 
   useEffect(() => {
     const onVis = () => setActive(!document.hidden);
@@ -623,6 +690,7 @@ function BattleSceneInner({
         roster={roster}
         saga={saga}
         discover={discover}
+        mix={mix}
         rosterIds={rosterIds}
       />
     </Canvas>

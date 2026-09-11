@@ -45,6 +45,7 @@ type ArmyProps = {
   skipCommander?: boolean;
   roster?: PlanBId | null;
   discover?: DiscoverId | null;
+  mix?: boolean;
   rosterIds?: number[] | null;
 };
 
@@ -710,7 +711,7 @@ function makeHandleTexture(name: string, commander = false, crisp = false): Name
   return { map, sx, sy };
 }
 
-export function Army({ count, names = [], commanders = [], cinematic, duration = 8, skipCommander = false, roster = null, discover = null, rosterIds = null }: ArmyProps) {
+export function Army({ count, names = [], commanders = [], cinematic, duration = 8, skipCommander = false, roster = null, discover = null, mix = false, rosterIds = null }: ArmyProps) {
   const bodies = useRef<THREE.InstancedMesh>(null);
   const soldierPlumes = useRef<THREE.InstancedMesh>(null);
   const bowHolds = useRef<THREE.InstancedMesh>(null);
@@ -1106,7 +1107,13 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
       } else if (idx < 0) commanderPos(t, 0, pos);
       else poseSoldier(idx, t);
       let nameScale = 1;
-      if (cinematic && discover) {
+      if (cinematic && mix) {
+        if (recT < 0) {
+          tag.visible = false;
+          continue;
+        }
+        nameScale = 1.28;
+      } else if (cinematic && discover) {
         if (discover === DISCOVER3_ID) {
           const tBeat = trailerBeat(recT);
           const namesOn = recT >= 3.4 && (tBeat === "army" || tBeat === "volley");
