@@ -1,12 +1,18 @@
 import { type ShotCtx, type ShotPose } from "./shotModes";
 
-export const MIX_ID = "mix" as const;
-export type MixId = typeof MIX_ID;
-export const MIX_MODE = { id: MIX_ID, label: "Mix" } as const;
+export const MIX1_ID = "mix1" as const;
+export const MIX2_ID = "mix2" as const;
+export const MIX3_ID = "mix3" as const;
+export type MixId = typeof MIX1_ID | typeof MIX2_ID | typeof MIX3_ID;
+export const MIX_MODES = [
+  { id: MIX1_ID, label: "Mix 1" },
+  { id: MIX2_ID, label: "Mix 2" },
+  { id: MIX3_ID, label: "Mix 3" },
+] as const;
 export const MIX_SECONDS = 15;
 
 export function isMix(id: string | null | undefined): id is MixId {
-  return id === MIX_ID;
+  return id === MIX1_ID || id === MIX2_ID || id === MIX3_ID;
 }
 
 function pose(x: number, y: number, z: number, lx: number, ly: number, lz: number, fov: number): ShotPose {
@@ -30,11 +36,43 @@ function lerpLinear(a: ShotPose, b: ShotPose, t: number): ShotPose {
   );
 }
 
-/** Closer 3/4: castle stays the same mass, army reads diagonal so every rank fits. */
-export function sampleMixTop(_recT: number, ctx: ShotCtx): ShotPose {
+function armyFitFov(camX: number, camY: number, camZ: number, lookX: number, lookY: number, lookZ: number, form: ShotCtx["form"]) {
+  const dist = Math.hypot(camX - lookX, camY - lookY, camZ - lookZ);
+  const half = form.width * 0.5 + 3.4;
+  const deep = (form.back - form.front) * 0.5 + 3.2;
+  const need = Math.max(half, deep) / Math.max(18, dist * 0.78);
+  return Math.max(36, Math.min(50, (Math.atan(need) * 360) / Math.PI));
+}
+
+/** Mix 1 left 3/4, Mix 2 high rear diagonal, Mix 3 right 3/4. Bottom sweep is shared. */
+export function sampleMixTop(_recT: number, ctx: ShotCtx, id: MixId = MIX1_ID): ShotPose {
   const { form, castle } = ctx;
-  const lookZ = castle.front + (form.front - castle.front) * 0.22;
-  return pose(-78, 26, form.back + 9, 2.2, 5.6, lookZ, 36);
+  const lookZ = (castle.front + form.midZ) * 0.5;
+  if (id === MIX2_ID) {
+    const x = -64;
+    const y = 46;
+    const z = form.back + 34;
+    const lx = 0;
+    const ly = 3.8;
+    const lz = form.midZ;
+    return pose(x, y, z, lx, ly, lz, armyFitFov(x, y, z, lx, ly, lz, form));
+  }
+  if (id === MIX3_ID) {
+    const x = 100;
+    const y = 33;
+    const z = form.back + 16;
+    const lx = 0;
+    const ly = 5.8;
+    const lz = lookZ;
+    return pose(x, y, z, lx, ly, lz, armyFitFov(x, y, z, lx, ly, lz, form));
+  }
+  const x = -100;
+  const y = 33;
+  const z = form.back + 16;
+  const lx = 0;
+  const ly = 5.8;
+  const lz = lookZ;
+  return pose(x, y, z, lx, ly, lz, armyFitFov(x, y, z, lx, ly, lz, form));
 }
 
 function behindLine(form: ShotCtx["form"], x: number): ShotPose {

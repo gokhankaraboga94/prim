@@ -24,7 +24,7 @@ import { CINEMA_DURATIONS, CINEMA_ID, CINEMA_MODE, SHOT_MODES, type ReelShot } f
 import { HOOK_ID, HOOK_MODE, JOIN_ID, JOIN_MODE, ROSTER_ID, ROSTER_MODE, ensureJoinMark, isJoin, isPlanB, joinSoldierIds, rosterDuration, saveJoinMark, setJoinForcePack, type PlanBId } from "../rosterReel";
 import { SAGA_MODES, isSaga, sagaDuration, type SagaId } from "../sagaReel";
 import { DISCOVER_ID, DISCOVER2_ID, DISCOVER3_ID, RAF2_ID, DISCOVER_MODE, DISCOVER2_MODE, DISCOVER3_MODE, RAF2_MODE, DISCOVER_SECONDS, DISCOVER3_SECONDS, RAF2_SECONDS, isDiscover, isDiscoverEngage, isDiscoverShelf, isDiscoverTrailer, type DiscoverId } from "../discoverReel";
-import { MIX_ID, MIX_MODE, MIX_SECONDS, isMix, type MixId } from "../mixReel";
+import { MIX_MODES, MIX_SECONDS, isMix, type MixId } from "../mixReel";
 
 export function AdminPage() {
   const { game, recruits, level, power, pressure, target, maxHp } = useGame();
@@ -246,7 +246,7 @@ export function AdminPage() {
         <div>
           <p className="join-kicker">Komuta paneli</p>
           <h1>Kuşatma yönetimi</h1>
-          <p className="join-kicker">sürüm 67 — mix çapraz</p>
+          <p className="join-kicker">sürüm 68 — mix 1 2 3</p>
         </div>
         <button type="button" className="btn-ghost" onClick={() => signOut(auth)}>
           Çıkış
@@ -620,21 +620,25 @@ export function AdminPage() {
           )}
           <label>Mix — 15s</label>
           <p className="muted">
-            Ekran ikiye bölünür. Üst: yandan kale + sağda ok. Alt: okçuların arkasından
-            orta → sağ → orta → sol. Yazı ve kale canı yok; sen eklersin. Kapı açılmaz.
+            Alt üçünde aynı: okçuların arkasından yavaş sağ–sol. Üst farklı açı, tüm
+            ordu kadrajda. Mix 1 sol çapraz, Mix 2 tepeden çapraz, Mix 3 sağ çapraz.
+            Yazı ve kale canı yok; sen eklersin. Kapı açılmaz.
           </p>
           <div className="dur-pills shot-pills">
-            <button
-              type="button"
-              className={reelShot === MIX_ID ? "on" : ""}
-              onClick={() => {
-                setReelShot((cur) => (cur === MIX_ID ? null : MIX_ID));
-                setReelSeconds(MIX_SECONDS);
-                setReelText(false);
-              }}
-            >
-              {MIX_MODE.label}
-            </button>
+            {MIX_MODES.map((mode) => (
+              <button
+                key={mode.id}
+                type="button"
+                className={reelShot === mode.id ? "on" : ""}
+                onClick={() => {
+                  setReelShot((cur) => (cur === mode.id ? null : mode.id));
+                  setReelSeconds(MIX_SECONDS);
+                  setReelText(false);
+                }}
+              >
+                {mode.label}
+              </button>
+            ))}
           </div>
           <label>B planı — İsim avı</label>
           <p className="muted">

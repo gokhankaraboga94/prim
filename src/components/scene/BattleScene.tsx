@@ -240,11 +240,13 @@ function MixSplitCam({
   soldiers,
   level,
   commanders = 0,
+  mix,
 }: {
   duration: number;
   soldiers: number;
   level: number;
   commanders?: number;
+  mix: MixId;
 }) {
   const topCam = useMemo(() => new THREE.PerspectiveCamera(30, 1.125, 0.35, 2400), []);
   const botCam = useMemo(() => new THREE.PerspectiveCamera(34, 1.125, 0.35, 2400), []);
@@ -259,7 +261,7 @@ function MixSplitCam({
     const fit = distToFit(spanX, spanZ, aspect, 1.2);
     const castleFit = distToFit(castle.width, castle.height, aspect, 1.18);
     const ctx = { cmdZ: form.front, form, castle, fit, castleFit, level };
-    applyMixCam(topCam, sampleMixTop(sampleT, ctx), aspect);
+    applyMixCam(topCam, sampleMixTop(sampleT, ctx, mix), aspect);
     applyMixCam(botCam, sampleMixBottom(sampleT, ctx), aspect);
     const w = size.width;
     const h = size.height;
@@ -534,7 +536,7 @@ function SceneContent({
       {!roster && !split && <SallyRaid soldiers={soldiers} commanders={chiefN} />}
       <Army count={soldiers} names={names} commanders={commanders} cinematic={cinematic} duration={duration} skipCommander={hideCmd} roster={roster} discover={discover} mix={split} level={level} rosterIds={rosterIds} />
       {cinematic && split ? (
-        <MixSplitCam duration={duration ?? 15} soldiers={soldiers} level={level} commanders={chiefN} />
+        <MixSplitCam duration={duration ?? 15} soldiers={soldiers} level={level} commanders={chiefN} mix={mix!} />
       ) : cinematic ? (
         <CinematicCam
           duration={duration ?? 8}
