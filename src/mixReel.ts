@@ -22,11 +22,10 @@ function ease(u: number) {
   return x * x * (3 - 2 * x);
 }
 
-/** Side castle: higher and further so the full army sits on the right. */
+/** Side castle: behind the last rank, far and high, looking at the gate. */
 export function sampleMixTop(_recT: number, ctx: ShotCtx): ShotPose {
   const { form, castle } = ctx;
-  const midZ = (castle.front + form.midZ) * 0.5;
-  return pose(-68, 24, form.midZ - 6, 0, 4.1, midZ + 2, 36);
+  return pose(-86, 30, form.back + 12, 0, 5.2, castle.front + 5, 38);
 }
 
 function behindLine(form: ShotCtx["form"], x: number): ShotPose {
@@ -35,7 +34,7 @@ function behindLine(form: ShotCtx["form"], x: number): ShotPose {
   return pose(cx, 4.4, form.back + 10.4, cx * 1.04, 2.42, form.back - 1.8, 36);
 }
 
-/** Behind the archers: center → right → center → left over 15s. */
+/** Behind the archers: center → right → center → left, slow crawl. */
 export function sampleMixBottom(recT: number, ctx: ShotCtx): ShotPose {
   const { form } = ctx;
   const half = Math.max(4.2, form.width * 0.5 - 1.1);
@@ -43,7 +42,7 @@ export function sampleMixBottom(recT: number, ctx: ShotCtx): ShotPose {
   const center = behindLine(form, 0);
   const right = behindLine(form, half);
   const left = behindLine(form, -half);
-  if (t < 5) return lerpPose(center, right, ease(t / 5));
-  if (t < 8) return lerpPose(right, center, ease((t - 5) / 3));
-  return lerpPose(center, left, ease((t - 8) / 7));
+  if (t < 7) return lerpPose(center, right, ease(t / 7));
+  if (t < 10.4) return lerpPose(right, center, ease((t - 7) / 3.4));
+  return lerpPose(center, left, ease((t - 10.4) / 4.6));
 }
