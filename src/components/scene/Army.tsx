@@ -1115,10 +1115,6 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
       else poseSoldier(idx, t);
       let nameScale = 1;
       if (cinematic && mix) {
-        if (recT < 0) {
-          hideTag(tag);
-          continue;
-        }
         nameScale = 1.28;
       } else if (cinematic && discover) {
         if (discover === DISCOVER3_ID) {
@@ -1218,13 +1214,12 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
 
   useLayoutEffect(() => {
     if (!mix) return;
-    mixTagPass.apply = (pane, camX = 0) => {
+    mixTagPass.apply = (pane) => {
       if (!tags.current) return;
       for (const tag of tags.current.children) {
         const want = tag.userData.mixWantVisible !== false;
         if (pane === "bottom") {
-          const near = Math.abs((tag.userData.mixSoldierX ?? 0) - camX) < 5.2;
-          const show = want && tag.userData.mixBottomShow !== false && near;
+          const show = want && tag.userData.mixBottomShow !== false;
           tag.visible = show;
           if (show) {
             tag.position.x = tag.userData.mixBottomX ?? tag.position.x;
