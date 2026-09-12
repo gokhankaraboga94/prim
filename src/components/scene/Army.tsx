@@ -8,7 +8,7 @@ import { rosterBeat, rosterSoldierIds, stampRosterSoldier, type PlanBId, type Ro
 import { discoverBeat, DISCOVER_HOOK_END, DISCOVER3_ID, RAF2_ID, shelfBeat, trailerBeat, type DiscoverId } from "../../discoverReel";
 import { raidCount, sallyHunting, sallyLiveIndex, sallyLocal, sallyRaiderAt, swordArmPose, swordStyleAt, swordSwingU } from "../../siegeEvent";
 import { castleFrame } from "../../castleLayout";
-import { mixPane } from "../../mixReel";
+import { mixTagPass } from "../../mixReel";
 
 const MAX_SOLDIERS = 5000;
 const MAX_LABELS = 400;
@@ -662,16 +662,6 @@ type NameTag = {
   sy: number;
 };
 
-function applyMixTagPane(this: THREE.Object3D) {
-  if (mixPane.draw === "bottom") {
-    this.position.y = this.userData.mixBottomY ?? this.position.y;
-    this.renderOrder = this.userData.mixBottomOrder ?? 2;
-  } else {
-    this.position.y = this.userData.mixBaseY ?? this.position.y;
-    this.renderOrder = 2;
-  }
-}
-
 function slotCoord(i: number, sizes: number[]) {
   let row = 0;
   let col = i;
@@ -1098,17 +1088,21 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
       if (swords.current) swords.current.instanceMatrix.needsUpdate = true;
     }
     if (!tags.current) return;
+    const hideTag = (tag: THREE.Object3D) => {
+      tag.visible = false;
+      tag.userData.mixWantVisible = false;
+    };
     for (let k = 0; k < tags.current.children.length; k++) {
       const idx = labeled[k];
       const tag = tags.current.children[k];
       const tagData = nameMaps[k];
       if (idx == null || !tagData) {
-        tag.visible = false;
+        hideTag(tag);
         continue;
       }
       const cmd = idx < 0 || layout.cmdOf[idx] >= 0;
       if (isolate && (idx < 0 || !packSet?.has(idx))) {
-        tag.visible = false;
+        hideTag(tag);
         continue;
       }
       if (isolate && liveIds && beat && beat.id === "pack" && idx >= 0) {
@@ -1122,7 +1116,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
       let nameScale = 1;
       if (cinematic && mix) {
         if (recT < 0) {
-          tag.visible = false;
+          hideTag(tag);
           continue;
         }
         nameScale = 1.28;
@@ -1131,7 +1125,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
           const tBeat = trailerBeat(recT);
           const namesOn = recT >= 3.4 && (tBeat === "army" || tBeat === "volley");
           if (!namesOn) {
-            tag.visible = false;
+            hideTag(tag);
             continue;
           }
           nameScale = 1.45;
@@ -1139,7 +1133,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
           const sBeat = shelfBeat(recT);
           const namesOn = sBeat === "hook" || sBeat === "army";
           if (!namesOn) {
-            tag.visible = false;
+            hideTag(tag);
             continue;
           }
           nameScale = 1.72;
@@ -1147,25 +1141,25 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
           const dBeat = discoverBeat(recT);
           const namesOn = (dBeat === "proof" && recT >= DISCOVER_HOOK_END + 0.8) || dBeat === "hold";
           if (!namesOn) {
-            tag.visible = false;
+            hideTag(tag);
             continue;
           }
           nameScale = dBeat === "proof" ? 1.78 : 1.22;
         }
       } else if (cinematic && roster) {
         if (recT < 0) {
-          tag.visible = false;
+          hideTag(tag);
           continue;
         }
         nameScale = isolate ? 0.7 * (rosterPose.nameMul || 1) : 1.05;
         if (isolate && (rosterPose.nameMul < 0.1 || Math.abs(pos.x) > 2.85)) {
-          tag.visible = false;
+          hideTag(tag);
           continue;
         }
       } else if (cinematic) {
         const beats = reelBeats(duration, skipCommander);
         if (recT < 0) {
-          tag.visible = false;
+          hideTag(tag);
           continue;
         }
         if (skipCommander) nameScale = 1;
@@ -1177,6 +1171,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
         }
       }
       tag.visible = true;
+      tag.userData.mixWantVisible = true;
       let lift = isolate ? 2.38 : 2.92;
       let row = 0;
       let col = 0;
@@ -1197,13 +1192,16 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
       tag.position.set(nx, baseY, pos.z);
       tag.scale.set(sx, tagData.sy * nameScale, 1);
       if (mix) {
-        const ranks = Math.max(1, form.sizes.length);
-        const fromBack = cmd ? ranks : Math.max(0, ranks - 1 - row);
-        const botLift = cmd ? 2.08 + ranks * 1.08 : 2.08 + fromBack * 1.08 + (col % 2) * 0.28;
+        const frontTwo = cmd || row <= 1;
+        const botLift = cmd ? 2.88 : 2.32 + row * 0.2 + (col % 2) * 0.14;
         tag.userData.mixBaseY = baseY;
+        tag.userData.mixBaseSx = sx;
+        tag.userData.mixBaseSy = tagData.sy * nameScale;
+        tag.userData.mixBottomShow = frontTwo;
         tag.userData.mixBottomY = pos.y + botLift * scale;
-        tag.userData.mixBottomOrder = 8 + fromBack;
-        tag.onBeforeRender = applyMixTagPane;
+        tag.userData.mixBottomOrder = cmd ? 16 : 14 - row;
+        tag.userData.mixBottomSx = sx * (cmd ? 1.06 : 1.22);
+        tag.userData.mixBottomSy = tagData.sy * nameScale * (cmd ? 1.06 : 1.22);
       }
     }
   }
@@ -1211,6 +1209,38 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
   useLayoutEffect(() => {
     placeBodies(0);
   }, [visible, instanceCap, labeled]);
+
+  useLayoutEffect(() => {
+    if (!mix) return;
+    mixTagPass.apply = (pane) => {
+      if (!tags.current) return;
+      for (const tag of tags.current.children) {
+        const want = tag.userData.mixWantVisible !== false;
+        if (pane === "bottom") {
+          const show = want && tag.userData.mixBottomShow !== false;
+          tag.visible = show;
+          if (show) {
+            tag.position.y = tag.userData.mixBottomY ?? tag.position.y;
+            tag.renderOrder = tag.userData.mixBottomOrder ?? 14;
+            const sx = tag.userData.mixBottomSx;
+            const sy = tag.userData.mixBottomSy;
+            if (sx && sy) tag.scale.set(sx, sy, 1);
+          }
+        } else {
+          tag.visible = want;
+          tag.position.y = tag.userData.mixBaseY ?? tag.position.y;
+          tag.renderOrder = 2;
+          const sx = tag.userData.mixBaseSx;
+          const sy = tag.userData.mixBaseSy;
+          if (sx && sy) tag.scale.set(sx, sy, 1);
+        }
+        tag.updateMatrixWorld();
+      }
+    };
+    return () => {
+      mixTagPass.apply = () => {};
+    };
+  }, [mix]);
 
   useFrame((state, dt) => {
     const t = state.clock.elapsedTime;

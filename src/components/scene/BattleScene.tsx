@@ -13,7 +13,7 @@ import { CINEMA_SWORD_P, cinemaGateAt, sampleCinema, sampleShotMode, type ShotId
 import { rosterSoldierIds, sampleRoster, type PlanBId } from "../../rosterReel";
 import { sagaGateRecT, sampleSaga, type SagaId } from "../../sagaReel";
 import { discoverGateRecT, sampleDiscover, type DiscoverId } from "../../discoverReel";
-import { mixPane, sampleMixBottom, sampleMixTop, type MixId } from "../../mixReel";
+import { mixTagPass, sampleMixBottom, sampleMixTop, type MixId } from "../../mixReel";
 import {
   SALLY_START_DELAY,
   SWORD_START,
@@ -273,15 +273,14 @@ function MixSplitCam({
     gl.setScissorTest(true);
     gl.setViewport(0, 0, w, half - gap);
     gl.setScissor(0, 0, w, half - gap);
-    mixPane.draw = "bottom";
+    mixTagPass.apply("bottom");
     gl.render(scene, botCam);
     gl.autoClear = false;
     gl.clearDepth();
     gl.setViewport(0, half + gap, w, h - half - gap);
     gl.setScissor(0, half + gap, w, h - half - gap);
-    mixPane.draw = "top";
+    mixTagPass.apply("top");
     gl.render(scene, topCam);
-    mixPane.draw = null;
     gl.setScissorTest(false);
     gl.autoClear = true;
     gl.setClearColor("#7eb6ee", 1);
