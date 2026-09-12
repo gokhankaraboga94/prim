@@ -13,6 +13,9 @@ export const MIX_MODES = [
 ] as const;
 export const MIX_SECONDS = 15;
 
+/** MixSplitCam sets this around each pane so name tags can unstack only on the bottom view. */
+export const mixPane = { draw: null as "top" | "bottom" | null };
+
 export function isMix(id: string | null | undefined): id is MixId {
   return MIX_MODES.some((m) => m.id === id);
 }

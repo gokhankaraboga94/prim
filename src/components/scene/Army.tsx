@@ -8,6 +8,7 @@ import { rosterBeat, rosterSoldierIds, stampRosterSoldier, type PlanBId, type Ro
 import { discoverBeat, DISCOVER_HOOK_END, DISCOVER3_ID, RAF2_ID, shelfBeat, trailerBeat, type DiscoverId } from "../../discoverReel";
 import { raidCount, sallyHunting, sallyLiveIndex, sallyLocal, sallyRaiderAt, swordArmPose, swordStyleAt, swordSwingU } from "../../siegeEvent";
 import { castleFrame } from "../../castleLayout";
+import { mixPane } from "../../mixReel";
 
 const MAX_SOLDIERS = 5000;
 const MAX_LABELS = 400;
@@ -661,6 +662,16 @@ type NameTag = {
   sy: number;
 };
 
+function applyMixTagPane(this: THREE.Object3D) {
+  if (mixPane.draw === "bottom") {
+    this.position.y = this.userData.mixBottomY ?? this.position.y;
+    this.renderOrder = this.userData.mixBottomOrder ?? 2;
+  } else {
+    this.position.y = this.userData.mixBaseY ?? this.position.y;
+    this.renderOrder = 2;
+  }
+}
+
 function slotCoord(i: number, sizes: number[]) {
   let row = 0;
   let col = i;
@@ -1167,9 +1178,11 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
       }
       tag.visible = true;
       let lift = isolate ? 2.38 : 2.92;
+      let row = 0;
+      let col = 0;
       if (!cmd && !isolate) {
         const slot = layout.slotOf[idx];
-        const { row, col } = slotCoord(slot >= 0 ? slot : 0, form.sizes);
+        ({ row, col } = slotCoord(slot >= 0 ? slot : 0, form.sizes));
         lift = 2.22 + row * 0.5 + (col % 2) * 0.2;
       }
       const sx = isolate ? Math.min(1.18, tagData.sx * nameScale) : tagData.sx * nameScale;
@@ -1180,8 +1193,18 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
         if (nx - half < -lim) nx = -lim + half;
         if (nx + half > lim) nx = lim - half;
       }
-      tag.position.set(nx, pos.y + lift * scale, pos.z);
+      const baseY = pos.y + lift * scale;
+      tag.position.set(nx, baseY, pos.z);
       tag.scale.set(sx, tagData.sy * nameScale, 1);
+      if (mix) {
+        const ranks = Math.max(1, form.sizes.length);
+        const fromBack = cmd ? ranks : Math.max(0, ranks - 1 - row);
+        const botLift = cmd ? 2.08 + ranks * 1.08 : 2.08 + fromBack * 1.08 + (col % 2) * 0.28;
+        tag.userData.mixBaseY = baseY;
+        tag.userData.mixBottomY = pos.y + botLift * scale;
+        tag.userData.mixBottomOrder = 8 + fromBack;
+        tag.onBeforeRender = applyMixTagPane;
+      }
     }
   }
 
