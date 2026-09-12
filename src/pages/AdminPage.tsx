@@ -246,7 +246,7 @@ export function AdminPage() {
         <div>
           <p className="join-kicker">Komuta paneli</p>
           <h1>Kuşatma yönetimi</h1>
-          <p className="join-kicker">sürüm 76 — kalın ok</p>
+          <p className="join-kicker">sürüm 77 — mix 7</p>
         </div>
         <button type="button" className="btn-ghost" onClick={() => signOut(auth)}>
           Çıkış
@@ -620,7 +620,8 @@ export function AdminPage() {
           )}
           <label>Mix — 15s</label>
           <p className="muted">
-            Alt üçünde aynı. Üst: Mix 1 sol çapraz, Mix 2 tepe sol, Mix 6 tepe sağ.
+            Alt 1/2/6 aynı. Mix 7 alt daha uzak-yüksek, yavaş sağ-sol.
+            Üst: Mix 1 sol çapraz, Mix 2 tepe sol, Mix 6 tepe sağ, Mix 7 daha yakın ordu+kale.
             Yazı ve kale canı yok; sen eklersin. Kapı açılmaz.
           </p>
           <div className="dur-pills shot-pills">

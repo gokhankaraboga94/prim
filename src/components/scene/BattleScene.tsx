@@ -262,7 +262,7 @@ function MixSplitCam({
     const castleFit = distToFit(castle.width, castle.height, aspect, 1.18);
     const ctx = { cmdZ: form.front, form, castle, fit, castleFit, level };
     applyMixCam(topCam, sampleMixTop(sampleT, ctx, mix), aspect);
-    applyMixCam(botCam, sampleMixBottom(sampleT, ctx), aspect);
+    applyMixCam(botCam, sampleMixBottom(sampleT, ctx, mix), aspect);
     const w = size.width;
     const h = size.height;
     const gap = 3;
