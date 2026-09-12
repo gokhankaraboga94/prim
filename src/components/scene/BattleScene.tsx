@@ -273,7 +273,7 @@ function MixSplitCam({
     gl.setScissorTest(true);
     gl.setViewport(0, 0, w, half - gap);
     gl.setScissor(0, 0, w, half - gap);
-    mixTagPass.apply("bottom");
+    mixTagPass.apply("bottom", botCam.position.x);
     gl.render(scene, botCam);
     gl.autoClear = false;
     gl.clearDepth();

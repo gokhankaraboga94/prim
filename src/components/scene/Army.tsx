@@ -1192,16 +1192,20 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
       tag.position.set(nx, baseY, pos.z);
       tag.scale.set(sx, tagData.sy * nameScale, 1);
       if (mix) {
-        const frontTwo = cmd || row <= 1;
-        const botLift = cmd ? 2.88 : 2.32 + row * 0.2 + (col % 2) * 0.14;
+        const frontTwo = cmd || pos.z <= FRONT_Z + RANK + 0.85;
+        const botLift = cmd ? 3.05 : row === 0 ? 3.22 : 2.42;
+        const botNx = nx + (row === 0 ? -0.42 : 0.42) + (col % 2 ? 0.28 : -0.28);
+        tag.userData.mixSoldierX = pos.x;
+        tag.userData.mixBaseX = nx;
         tag.userData.mixBaseY = baseY;
         tag.userData.mixBaseSx = sx;
         tag.userData.mixBaseSy = tagData.sy * nameScale;
         tag.userData.mixBottomShow = frontTwo;
+        tag.userData.mixBottomX = botNx;
         tag.userData.mixBottomY = pos.y + botLift * scale;
-        tag.userData.mixBottomOrder = cmd ? 16 : 14 - row;
-        tag.userData.mixBottomSx = sx * (cmd ? 1.06 : 1.22);
-        tag.userData.mixBottomSy = tagData.sy * nameScale * (cmd ? 1.06 : 1.22);
+        tag.userData.mixBottomOrder = cmd ? 16 : row === 0 ? 15 : 13;
+        tag.userData.mixBottomSx = sx * (cmd ? 0.72 : 0.58);
+        tag.userData.mixBottomSy = tagData.sy * nameScale * (cmd ? 0.72 : 0.58);
       }
     }
   }
@@ -1212,14 +1216,16 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
 
   useLayoutEffect(() => {
     if (!mix) return;
-    mixTagPass.apply = (pane) => {
+    mixTagPass.apply = (pane, camX = 0) => {
       if (!tags.current) return;
       for (const tag of tags.current.children) {
         const want = tag.userData.mixWantVisible !== false;
         if (pane === "bottom") {
-          const show = want && tag.userData.mixBottomShow !== false;
+          const near = Math.abs((tag.userData.mixSoldierX ?? 0) - camX) < 6.1;
+          const show = want && tag.userData.mixBottomShow !== false && near;
           tag.visible = show;
           if (show) {
+            tag.position.x = tag.userData.mixBottomX ?? tag.position.x;
             tag.position.y = tag.userData.mixBottomY ?? tag.position.y;
             tag.renderOrder = tag.userData.mixBottomOrder ?? 14;
             const sx = tag.userData.mixBottomSx;
@@ -1228,6 +1234,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
           }
         } else {
           tag.visible = want;
+          tag.position.x = tag.userData.mixBaseX ?? tag.position.x;
           tag.position.y = tag.userData.mixBaseY ?? tag.position.y;
           tag.renderOrder = 2;
           const sx = tag.userData.mixBaseSx;

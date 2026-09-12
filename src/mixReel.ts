@@ -15,7 +15,7 @@ export const MIX_SECONDS = 15;
 
 /** Army fills this so MixSplitCam can restack names before each pane render. */
 export const mixTagPass = {
-  apply(_pane: "top" | "bottom") {},
+  apply(_pane: "top" | "bottom", _camX?: number) {},
 };
 
 export function isMix(id: string | null | undefined): id is MixId {
@@ -94,7 +94,7 @@ function behindLine(form: ShotCtx["form"], x: number): ShotPose {
 function behindLineFar(form: ShotCtx["form"], x: number): ShotPose {
   const span = Math.max(4.2, form.width * 0.5 - 1.1);
   const cx = Math.max(-span, Math.min(span, x));
-  return pose(cx, 6.85, form.back + 15.8, cx * 1.02, 2.58, form.back - 3.1, 36);
+  return pose(cx, 9.4, form.back + 16.6, cx * 1.02, 2.12, form.front + 1.4, 34);
 }
 
 /** Behind the archers: Mix 7 is higher, further, slower. Others share the same crawl. */
