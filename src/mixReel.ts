@@ -94,7 +94,7 @@ function behindLine(form: ShotCtx["form"], x: number): ShotPose {
 function behindLineFar(form: ShotCtx["form"], x: number): ShotPose {
   const span = Math.max(4.2, form.width * 0.5 - 1.1);
   const cx = Math.max(-span, Math.min(span, x));
-  return pose(cx, 9.4, form.back + 16.6, cx * 1.02, 2.12, form.front + 1.4, 34);
+  return pose(cx, 8.6, form.back + 16.2, cx * 1.02, 2.28, form.midZ, 35);
 }
 
 /** Behind the archers: Mix 7 is higher, further, slower. Others share the same crawl. */

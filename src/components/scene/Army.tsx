@@ -1192,20 +1192,22 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
       tag.position.set(nx, baseY, pos.z);
       tag.scale.set(sx, tagData.sy * nameScale, 1);
       if (mix) {
-        const frontTwo = cmd || pos.z <= FRONT_Z + RANK + 0.85;
-        const botLift = cmd ? 3.05 : row === 0 ? 3.22 : 2.42;
-        const botNx = nx + (row === 0 ? -0.42 : 0.42) + (col % 2 ? 0.28 : -0.28);
+        const ranks = Math.max(1, form.sizes.length);
+        const fromBack = cmd ? ranks : Math.max(0, ranks - 1 - row);
+        const botLift = cmd ? 3.42 : 2.06 + fromBack * 0.78;
+        const botNx = nx + ((row + col) % 2 ? 0.34 : -0.34);
+        const nameMul = cmd ? 0.7 : 0.44 + fromBack * 0.09;
         tag.userData.mixSoldierX = pos.x;
         tag.userData.mixBaseX = nx;
         tag.userData.mixBaseY = baseY;
         tag.userData.mixBaseSx = sx;
         tag.userData.mixBaseSy = tagData.sy * nameScale;
-        tag.userData.mixBottomShow = frontTwo;
+        tag.userData.mixBottomShow = true;
         tag.userData.mixBottomX = botNx;
         tag.userData.mixBottomY = pos.y + botLift * scale;
-        tag.userData.mixBottomOrder = cmd ? 16 : row === 0 ? 15 : 13;
-        tag.userData.mixBottomSx = sx * (cmd ? 0.72 : 0.58);
-        tag.userData.mixBottomSy = tagData.sy * nameScale * (cmd ? 0.72 : 0.58);
+        tag.userData.mixBottomOrder = 10 + fromBack;
+        tag.userData.mixBottomSx = sx * nameMul;
+        tag.userData.mixBottomSy = tagData.sy * nameScale * nameMul;
       }
     }
   }
@@ -1221,7 +1223,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
       for (const tag of tags.current.children) {
         const want = tag.userData.mixWantVisible !== false;
         if (pane === "bottom") {
-          const near = Math.abs((tag.userData.mixSoldierX ?? 0) - camX) < 6.1;
+          const near = Math.abs((tag.userData.mixSoldierX ?? 0) - camX) < 5.2;
           const show = want && tag.userData.mixBottomShow !== false && near;
           tag.visible = show;
           if (show) {
