@@ -1325,7 +1325,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
         <meshStandardMaterial vertexColors roughness={0.55} metalness={0.28} />
       </instancedMesh>
       <instancedMesh ref={arrows} args={[undefined, undefined, MAX_ARROWS]} frustumCulled={false}>
-        <cylinderGeometry args={[0.055, 0.02, 1.45, 6]} />
+        <cylinderGeometry args={[0.085, 0.032, 1.45, 6]} />
         <meshBasicMaterial color="#e81818" />
       </instancedMesh>
       <SwordFlash />
