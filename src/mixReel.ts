@@ -94,7 +94,7 @@ function behindLine(form: ShotCtx["form"], x: number): ShotPose {
 }
 
 function behindLineFar(form: ShotCtx["form"], x: number): ShotPose {
-  const span = Math.max(4.2, form.width * 0.5 - 1.1);
+  const span = Math.max(4.2, form.width * 0.5 + 2.2);
   const cx = Math.max(-span, Math.min(span, x));
   return pose(cx, 8.6, form.back + 16.2, cx * 1.02, 2.28, form.midZ, 35);
 }
@@ -104,7 +104,7 @@ export function sampleMixBottom(recT: number, ctx: ShotCtx, id: MixId = MIX1_ID)
   const { form } = ctx;
   const t = Math.max(0, recT);
   if (id === MIX7_ID || id === MIX8_ID) {
-    const half = Math.max(3.2, form.width * 0.24);
+    const half = Math.max(4.2, form.width * 0.5 + 1.6);
     const center = behindLineFar(form, 0);
     const right = behindLineFar(form, half);
     const left = behindLineFar(form, -half);
