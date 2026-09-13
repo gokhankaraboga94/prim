@@ -4,12 +4,14 @@ export const MIX1_ID = "mix1" as const;
 export const MIX2_ID = "mix2" as const;
 export const MIX6_ID = "mix6" as const;
 export const MIX7_ID = "mix7" as const;
-export type MixId = typeof MIX1_ID | typeof MIX2_ID | typeof MIX6_ID | typeof MIX7_ID;
+export const MIX8_ID = "mix8" as const;
+export type MixId = typeof MIX1_ID | typeof MIX2_ID | typeof MIX6_ID | typeof MIX7_ID | typeof MIX8_ID;
 export const MIX_MODES = [
   { id: MIX1_ID, label: "Mix 1" },
   { id: MIX2_ID, label: "Mix 2" },
   { id: MIX6_ID, label: "Mix 6" },
   { id: MIX7_ID, label: "Mix 7" },
+  { id: MIX8_ID, label: "Mix 8" },
 ] as const;
 export const MIX_SECONDS = 15;
 
@@ -72,11 +74,11 @@ function armyCastleFitFov(
 export function sampleMixTop(_recT: number, ctx: ShotCtx, id: MixId = MIX1_ID): ShotPose {
   const { form, castle } = ctx;
   const lookZ = (castle.front + form.midZ) * 0.5;
-  if (id === MIX7_ID) {
+  if (id === MIX7_ID || id === MIX8_ID) {
     const s = { x: -58, y: 22, z: form.back + 7, lx: 0, ly: 5.15, lz: lookZ };
     return pose(s.x, s.y, s.z, s.lx, s.ly, s.lz, armyCastleFitFov(s.x, s.y, s.z, s.lx, s.ly, s.lz, form, castle));
   }
-  const shots: Record<Exclude<MixId, typeof MIX7_ID>, { x: number; y: number; z: number; lx: number; ly: number; lz: number }> = {
+  const shots: Record<Exclude<MixId, typeof MIX7_ID | typeof MIX8_ID>, { x: number; y: number; z: number; lx: number; ly: number; lz: number }> = {
     mix1: { x: -100, y: 33, z: form.back + 16, lx: 0, ly: 5.8, lz: lookZ },
     mix2: { x: -64, y: 46, z: form.back + 34, lx: 0, ly: 3.8, lz: form.midZ },
     mix6: { x: 64, y: 46, z: form.back + 34, lx: 0, ly: 3.8, lz: form.midZ },
@@ -101,7 +103,7 @@ function behindLineFar(form: ShotCtx["form"], x: number): ShotPose {
 export function sampleMixBottom(recT: number, ctx: ShotCtx, id: MixId = MIX1_ID): ShotPose {
   const { form } = ctx;
   const t = Math.max(0, recT);
-  if (id === MIX7_ID) {
+  if (id === MIX7_ID || id === MIX8_ID) {
     const half = Math.max(3.2, form.width * 0.24);
     const center = behindLineFar(form, 0);
     const right = behindLineFar(form, half);

@@ -13,7 +13,7 @@ import { CINEMA_SWORD_P, cinemaGateAt, sampleCinema, sampleShotMode, type ShotId
 import { rosterSoldierIds, sampleRoster, type PlanBId } from "../../rosterReel";
 import { sagaGateRecT, sampleSaga, type SagaId } from "../../sagaReel";
 import { discoverGateRecT, sampleDiscover, type DiscoverId } from "../../discoverReel";
-import { mixTagPass, sampleMixBottom, sampleMixTop, type MixId } from "../../mixReel";
+import { MIX8_ID, mixTagPass, sampleMixBottom, sampleMixTop, type MixId } from "../../mixReel";
 import {
   SALLY_START_DELAY,
   SWORD_START,
@@ -263,6 +263,11 @@ function MixSplitCam({
     const ctx = { cmdZ: form.front, form, castle, fit, castleFit, level };
     applyMixCam(topCam, sampleMixTop(sampleT, ctx, mix), aspect);
     applyMixCam(botCam, sampleMixBottom(sampleT, ctx, mix), aspect);
+    const swap = mix === MIX8_ID;
+    const lowerCam = swap ? topCam : botCam;
+    const upperCam = swap ? botCam : topCam;
+    const lowerTags = swap ? "top" : "bottom";
+    const upperTags = swap ? "bottom" : "top";
     const w = size.width;
     const h = size.height;
     const gap = 3;
@@ -273,14 +278,14 @@ function MixSplitCam({
     gl.setScissorTest(true);
     gl.setViewport(0, 0, w, half - gap);
     gl.setScissor(0, 0, w, half - gap);
-    mixTagPass.apply("bottom", botCam.position.x);
-    gl.render(scene, botCam);
+    mixTagPass.apply(lowerTags, lowerCam.position.x);
+    gl.render(scene, lowerCam);
     gl.autoClear = false;
     gl.clearDepth();
     gl.setViewport(0, half + gap, w, h - half - gap);
     gl.setScissor(0, half + gap, w, h - half - gap);
-    mixTagPass.apply("top");
-    gl.render(scene, topCam);
+    mixTagPass.apply(upperTags, upperCam.position.x);
+    gl.render(scene, upperCam);
     gl.setScissorTest(false);
     gl.autoClear = true;
     gl.setClearColor("#7eb6ee", 1);
