@@ -7,7 +7,7 @@ import { REEL_HOLD, reelBeats } from "../../recordCanvas";
 import { rosterBeat, rosterSoldierIds, stampRosterSoldier, type PlanBId, type RosterPose } from "../../rosterReel";
 import { discoverBeat, DISCOVER_HOOK_END, DISCOVER3_ID, RAF2_ID, shelfBeat, trailerBeat, type DiscoverId } from "../../discoverReel";
 import { COUNT_1_END, countdownBeat, countdownVolley } from "../../countdownReel";
-import { DEFEND_CZ, defendAimPoint, defendArmyRadius, defendSoldierPos, defendYawOut } from "../../defendReel";
+import { DEFEND_CZ, defendArmyRadius, defendSoldierPos, defendYawOut } from "../../defendReel";
 import { sfxArrowLoose, sfxBowDraw, sfxVolleyPeak } from "../../reelSfx";
 import { raidCount, sallyHunting, sallyLiveIndex, sallyLocal, sallyRaiderAt, swordArmPose, swordStyleAt, swordSwingU } from "../../siegeEvent";
 import { castleFrame } from "../../castleLayout";
@@ -18,10 +18,9 @@ const MAX_LABELS = 400;
 const MAX_REEL_LABELS = 120;
 const MAX_DEFEND_LABELS = 400;
 const MAX_COMMANDERS = 24;
-const MAX_ARROWS = 40;
+const MAX_ARROWS = 28;
 const IDLE_ARROWS = 8;
 const dummy = new THREE.Object3D();
-const aim = new THREE.Vector3();
 const ARROW_FLIGHT = 3.2;
 const FRONT_Z = 52;
 const FILE = 2.55;
@@ -1348,7 +1347,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
     }
 
     if (!arrows.current) return;
-    if (visible <= 0 || roster) {
+    if (visible <= 0 || roster || defend) {
       shots.current = [];
       arrows.current.count = 0;
       return;
@@ -1356,17 +1355,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
 
     shots.current = shots.current.filter((s) => t - s.draw < s.flight + 0.45);
 
-    const cap = defend
-      ? recClock < 0.12
-        ? 0
-        : 36
-      : volley
-        ? volley.active
-          ? volley.cap
-          : 0
-        : hunt
-          ? MAX_ARROWS
-          : IDLE_ARROWS;
+    const cap = volley ? (volley.active ? volley.cap : 0) : hunt ? MAX_ARROWS : IDLE_ARROWS;
 
     if (cinematic && countdown && recClock >= 0) {
       const beat = countdownBeat(recClock);
@@ -1397,9 +1386,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
     }
     if (t >= nextShot.current && shots.current.length < cap) {
       const pair = visible > 6 && shots.current.length === 0 && (hunt || Math.random() < 0.38);
-      const burst = defend
-        ? 4
-        : volley?.active
+      const burst = volley?.active
         ? volley.burst
         : hunt
           ? pair
@@ -1410,39 +1397,33 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
             : 1;
       for (let i = 0; i < burst && shots.current.length < cap; i++) {
         if (layout.rest.length <= 0) break;
-        const nRest = layout.rest.length;
-        const soldier = defend
-          ? layout.rest[(shots.current.length * 47 + Math.floor(t * 13) + i * 19) % nRest]
-          : layout.rest[Math.floor(Math.random() * nRest)];
+        const soldier = layout.rest[Math.floor(Math.random() * layout.rest.length)];
         poseSoldier(soldier, t);
         const cmdN = skipCommander ? 0 : chiefsList.length;
         const idx = hunt ? sallyLiveIndex(sally, enemies, soldier + i * 11, cmdN) : -1;
         const prey = idx >= 0 ? sallyRaiderAt(sally, idx, enemies, cmdN) : null;
         const gateShot = mix || volley?.gate;
-        const draw = t + i * (defend ? 0.03 : volley?.active ? volley.pace * 0.28 : 0.05);
-        if (defend) defendAimPoint(pos.x, pos.z, recT, defendArmyRadius(Math.max(1, layout.rest.length)), aim);
+        const draw = t + i * (volley?.active ? volley.pace * 0.28 : 0.05);
         shots.current.push({
           soldier,
           draw,
-          born: draw + (defend ? 0.12 : countdown ? 0.1 : gateShot ? 0.28 : 0.36),
+          born: draw + (countdown ? 0.1 : gateShot ? 0.28 : 0.36),
           sx: pos.x,
           sy: pos.y + 1.25 * scale,
           sz: pos.z,
-          tx: defend ? aim.x : gateShot ? 0 : prey ? prey.x : GATE.x,
-          ty: defend ? aim.y : gateShot ? 3.55 : prey ? 1.05 : GATE.y,
-          tz: defend ? aim.z : gateShot ? door?.front ?? GATE.z : prey ? prey.z : GATE.z,
-          flight: defend ? 0.78 : countdown ? 1.05 : gateShot ? 2.45 : prey ? 0.46 : ARROW_FLIGHT,
+          tx: gateShot ? 0 : prey ? prey.x : GATE.x,
+          ty: gateShot ? 3.55 : prey ? 1.05 : GATE.y,
+          tz: gateShot ? door?.front ?? GATE.z : prey ? prey.z : GATE.z,
+          flight: countdown ? 1.05 : gateShot ? 2.45 : prey ? 0.46 : ARROW_FLIGHT,
           thin: Boolean(prey),
         });
       }
-      const pace = defend
-        ? 0.055
-        : volley?.active
+      const pace = volley?.active
         ? volley.pace + Math.random() * 0.04
         : hunt
           ? 0.08
           : 0.7 - Math.min(0.35, (visible / 5000) * 0.35);
-      nextShot.current = t + pace + Math.random() * (defend ? 0.02 : volley?.active ? 0.02 : hunt ? 0.04 : 0.28);
+      nextShot.current = t + pace + Math.random() * (volley?.active ? 0.02 : hunt ? 0.04 : 0.28);
     }
 
     const live = shots.current.filter((s) => t >= s.born && t - s.born < s.flight);
@@ -1452,12 +1433,12 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
       const fly = Math.max(0, Math.min(1, (t - s.born) / s.flight));
       dummy.position.set(
         s.sx + (s.tx - s.sx) * fly,
-        s.sy + (s.ty - s.sy) * fly + Math.sin(fly * Math.PI) * (mix || countdown || defend ? 0.45 : s.thin ? 1.15 : 2.6),
+        s.sy + (s.ty - s.sy) * fly + Math.sin(fly * Math.PI) * (mix || countdown ? 0.55 : s.thin ? 1.15 : 2.6),
         s.sz + (s.tz - s.sz) * fly
       );
       dummy.lookAt(s.tx, s.ty, s.tz);
       dummy.rotateX(Math.PI / 2);
-      const gateArrow = mix || countdown || defend;
+      const gateArrow = mix || countdown;
       dummy.scale.set(s.thin ? 0.34 : gateArrow ? 1.15 : 1.15, s.thin ? 1.02 : gateArrow ? 1.35 : 1.35, s.thin ? 0.34 : gateArrow ? 1.15 : 1.15);
       dummy.updateMatrix();
       arrows.current.setMatrixAt(i, dummy.matrix);
@@ -1528,7 +1509,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
       <instancedMesh ref={nocks} args={[nockGeo, undefined, instanceCap]} frustumCulled={false}>
         <meshStandardMaterial vertexColors roughness={0.55} metalness={0.28} />
       </instancedMesh>
-      <instancedMesh key={`arrows-${MAX_ARROWS}`} ref={arrows} args={[undefined, undefined, MAX_ARROWS]} frustumCulled={false}>
+      <instancedMesh ref={arrows} args={[undefined, undefined, MAX_ARROWS]} frustumCulled={false}>
         <cylinderGeometry args={[0.085, 0.032, 1.45, 6]} />
         <meshBasicMaterial color="#e81818" />
       </instancedMesh>

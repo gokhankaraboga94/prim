@@ -117,18 +117,6 @@ export function defendYawOut(x: number, z: number) {
   return Math.atan2(x - DEFEND_CX, z - DEFEND_CZ) + Math.PI;
 }
 
-export function defendInnerAt(recT: number, armyR: number) {
-  return Math.max(armyR + 2.4, defendOuterAt(recT, armyR) - ringBand());
-}
-
-export function defendAimPoint(x: number, z: number, recT: number, armyR: number, out: { set: (x: number, y: number, z: number) => void }) {
-  const inner = defendInnerAt(recT, armyR);
-  const dx = x - DEFEND_CX;
-  const dz = z - DEFEND_CZ;
-  const len = Math.hypot(dx, dz) || 1;
-  out.set(DEFEND_CX + (dx / len) * inner, 1.12, DEFEND_CZ + (dz / len) * inner);
-}
-
 export function defendEnemyAt(
   layout: DefendRingLayout,
   recT: number,
