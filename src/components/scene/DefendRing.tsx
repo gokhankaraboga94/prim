@@ -28,9 +28,11 @@ export function DefendRing({ soldiers }: DefendRingProps) {
       for (let i = 0; i < spec.n; i++) {
         if (shown >= cap) break;
         defendEnemyAt(layout, recT, r, i, t, scratch);
-        dummy.position.set(scratch.x, scratch.y, scratch.z);
-        dummy.rotation.set(0, scratch.yaw, 0);
-        dummy.scale.setScalar(0.94);
+        const march = t * 9.2 + i * 0.37 + r;
+        const stride = Math.sin(march);
+        dummy.position.set(scratch.x, scratch.y + Math.abs(stride) * 0.1, scratch.z);
+        dummy.rotation.set(0.12, scratch.yaw, stride * 0.18);
+        dummy.scale.setScalar(1.72);
         dummy.updateMatrix();
         bodies.current.setMatrixAt(shown, dummy.matrix);
         shown += 1;
@@ -41,7 +43,7 @@ export function DefendRing({ soldiers }: DefendRingProps) {
   });
 
   return (
-    <instancedMesh key={cap} ref={bodies} args={[geo, undefined, cap]} frustumCulled={false}>
+    <instancedMesh key={`${cap}-human`} ref={bodies} args={[geo, undefined, cap]} frustumCulled={false}>
       <meshStandardMaterial vertexColors roughness={0.58} metalness={0.16} />
     </instancedMesh>
   );

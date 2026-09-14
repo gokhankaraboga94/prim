@@ -4,7 +4,7 @@ export const DEFEND_ID = "savunma" as const;
 export type DefendId = typeof DEFEND_ID;
 
 export const DEFEND_MODE = { id: DEFEND_ID, label: "Savunma" } as const;
-export const DEFEND_PULL_END = 1.2;
+export const DEFEND_PULL_END = 0.96;
 export const DEFEND_MAIN_SECONDS = 14;
 export const DEFEND_SECONDS = DEFEND_PULL_END + DEFEND_MAIN_SECONDS;
 
@@ -117,6 +117,18 @@ export function defendYawOut(x: number, z: number) {
   return Math.atan2(x - DEFEND_CX, z - DEFEND_CZ) + Math.PI;
 }
 
+export function defendInnerAt(recT: number, armyR: number) {
+  return Math.max(armyR + 2.4, defendOuterAt(recT, armyR) - ringBand());
+}
+
+export function defendAimPoint(x: number, z: number, recT: number, armyR: number, out: { set: (x: number, y: number, z: number) => void }) {
+  const inner = defendInnerAt(recT, armyR);
+  const dx = x - DEFEND_CX;
+  const dz = z - DEFEND_CZ;
+  const len = Math.hypot(dx, dz) || 1;
+  out.set(DEFEND_CX + (dx / len) * inner, 1.12, DEFEND_CZ + (dz / len) * inner);
+}
+
 export function defendEnemyAt(
   layout: DefendRingLayout,
   recT: number,
@@ -151,16 +163,19 @@ export function sampleDefend(recT: number, soldiers: number): ShotPose {
   const armyR = defendArmyRadius(Math.max(1, soldiers));
   const outer = defendOuterAt(t, armyR);
   const pull = easeOutCubic(clamp01(t / DEFEND_PULL_END));
-  const mainU = easeInOut(clamp01((t - DEFEND_PULL_END) / DEFEND_MAIN_SECONDS));
-  const polar = 0.07 + pull * 0.12 + mainU * 0.22;
-  const pad = 1.343 - pull * 0.12 - mainU * 0.04;
-  const fov = 46 - pull * 2 - mainU * 6;
-  const az = 0.015 + mainU * 0.08;
+  const zoomU = easeOutCubic(clamp01((t - DEFEND_PULL_END) / (DEFEND_MAIN_SECONDS * 0.8)));
+  const polar = 0.07 + pull * 0.2 + zoomU * 0.7;
+  const pad = 1.343 - pull * 0.12 - zoomU * 0.2;
+  const fov = 46 - pull * 2 - zoomU * 12;
+  const az = 0.015 + zoomU * 0.12;
   const ringDist = distToFitRing(outer, polar, fov, pad);
-  const nameDist = distToFitRing(armyR + 3.4, polar, fov, 1.18);
-  const dist = ringDist + (nameDist - ringDist) * mainU;
+  const closeDist = 15.8 + Math.min(5.5, armyR * 0.08);
+  const dist = (ringDist * (1 - zoomU) + closeDist * zoomU) * 0.9;
+  const lookR = zoomU * Math.min(armyR * 0.55, Math.max(0, armyR - 0.9));
+  const lx = DEFEND_CX + Math.sin(az) * lookR;
+  const lz = DEFEND_CZ + Math.cos(az) * lookR;
   const x = DEFEND_CX + Math.sin(polar) * Math.sin(az) * dist;
   const y = Math.cos(polar) * dist;
   const z = DEFEND_CZ + Math.sin(polar) * Math.cos(az) * dist;
-  return pose(x, y, z, DEFEND_CX, 1.5, DEFEND_CZ, fov);
+  return pose(x, y, z, lx, 1.45 + zoomU * 0.18, lz, fov);
 }
