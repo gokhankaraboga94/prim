@@ -249,7 +249,7 @@ export function AdminPage() {
         <div>
           <p className="join-kicker">Komuta paneli</p>
           <h1>Kuşatma yönetimi</h1>
-          <p className="join-kicker">sürüm 99 — yeni katılanlar + son 10</p>
+          <p className="join-kicker">sürüm 100 — savunma çember + yoğun düşman</p>
         </div>
         <button type="button" className="btn-ghost" onClick={() => signOut(auth)}>
           Çıkış
@@ -648,7 +648,7 @@ export function AdminPage() {
           )}
           {isDefend(reelShot) && (
             <p className="muted">
-              14 sn. Kale yok. Askerler ortada, düşman simetrik çemberde — kalabalık, daralıyor, yaklaşıyor.
+              15.2 sn. İlk karede tüm çember, hızlı yaklaşma, sonrası aynı. Kale yok. Düşman 3 kat kalabalık, simetrik daralıyor.
               Kullanıcı adları askerlerin üstünde. Komutansız, kale canı yok.
               {" "}Caption: Adın çıkarsa yoruma BURADAYIM yaz. Kale düşsün diyorsan beğen. Canlı kuşatma. 1 takip = 1 asker. wargame.lol
               {" "}İlk yorumu sabitle: BURADAYIM

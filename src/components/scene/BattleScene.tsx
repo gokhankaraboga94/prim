@@ -491,7 +491,7 @@ function SceneContent({
   return (
     <>
       <color attach="background" args={["#7eb6ee"]} />
-      <fog attach="fog" args={["#9ec8ee", 380, 1500]} />
+      <fog attach="fog" args={defend ? ["#9ec8ee", 720, 2800] : ["#9ec8ee", 380, 1500]} />
       <SkyDome />
       <SteelSky />
       <DayLights cinematic={cinematic} />

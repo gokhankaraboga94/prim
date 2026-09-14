@@ -9,7 +9,7 @@ import { isJoin, rosterBeat, rosterSoldierIds, rosterTimeline, type PlanBId } fr
 import { sagaBeat, type SagaId } from "../../sagaReel";
 import { discoverBeat, DISCOVER_HOOK_END, isDiscoverEngage, isDiscoverShelf, isDiscoverTrailer, shelfBeat, trailerBeat, type DiscoverId } from "../../discoverReel";
 import { countdownBeat, countdownFlash, type CountdownId } from "../../countdownReel";
-import { DEFEND_SECONDS, defendBeat, type DefendId } from "../../defendReel";
+import { DEFEND_HOOK_END, DEFEND_SECONDS, defendBeat, type DefendId } from "../../defendReel";
 
 function roundRect(
   ctx: CanvasRenderingContext2D,
@@ -664,11 +664,11 @@ function TitlesPlate({ soldiers, duration, day = 0, skipCommander = false, cinem
           beat === "hook" ? "defHook" : beat === "proof" ? "defProof" : beat === "hold" ? "defHold" : "defCta";
         alpha = recT < 0.12 ? recT / 0.12 : 1;
         if (beat === "hook") {
-          const left = 2.2 - recT;
+          const left = DEFEND_HOOK_END - recT;
           if (left < 0.14) alpha = Math.max(0, left / 0.14);
         }
         if (beat === "proof") {
-          const into = recT - 2.2;
+          const into = recT - DEFEND_HOOK_END;
           if (into < 0.12) alpha = into / 0.12;
         }
         if (beat === "cta" && recT > DEFEND_SECONDS - 0.5) alpha = Math.max(0, (DEFEND_SECONDS - recT) / 0.5);
