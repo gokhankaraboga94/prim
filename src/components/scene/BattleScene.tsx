@@ -5,7 +5,7 @@ import * as THREE from "three";
 import { Army, armyFrame } from "./Army";
 import { Castle } from "./Castle";
 import { SallyRaid } from "./SallyRaid";
-import { CaptureHpHud, CountdownFlash, ReelFade, ReelTitles, ReelVignette } from "./CaptureHpHud";
+import { CaptureHpHud, CountdownFlash, CountdownNameHud, ReelFade, ReelTitles, ReelVignette } from "./CaptureHpHud";
 import { effectiveCommanders } from "../../game";
 import { castleFrame } from "../../castleLayout";
 import { REEL_HEIGHT, REEL_HOLD, REEL_WIDTH, reelBeats } from "../../recordCanvas";
@@ -530,6 +530,7 @@ function SceneContent({
         <ReelTitles soldiers={soldiers} duration={duration ?? 8} day={day} skipCommander={hideCmd} cinema={cinema} roster={roster} saga={saga} discover={discover} countdown={countdown} names={names} rosterIds={rosterIds} />
       )}
       {cinematic && !split && <ReelVignette />}
+      {countdown && <CountdownNameHud names={names} soldiers={soldiers} />}
       {countdown && <CountdownFlash />}
       {cinematic && !discover && !countdown && !split && <ReelFade duration={duration ?? 8} />}
     </>

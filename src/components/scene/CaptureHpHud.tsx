@@ -8,7 +8,7 @@ import { cinemaScale } from "../../shotModes";
 import { isJoin, rosterBeat, rosterSoldierIds, rosterTimeline, type PlanBId } from "../../rosterReel";
 import { sagaBeat, type SagaId } from "../../sagaReel";
 import { discoverBeat, DISCOVER_HOOK_END, isDiscoverEngage, isDiscoverShelf, isDiscoverTrailer, shelfBeat, trailerBeat, type DiscoverId } from "../../discoverReel";
-import { countdownBeat, countdownFlash, type CountdownId } from "../../countdownReel";
+import { COUNT_NAMES_END, countdownBeat, countdownFlash, countdownNameList, countdownNamesOn, type CountdownId } from "../../countdownReel";
 
 function roundRect(
   ctx: CanvasRenderingContext2D,
@@ -201,6 +201,38 @@ function strokeFillGold(
   ctx.fillStyle = grad;
   ctx.strokeText(text, x, y);
   ctx.fillText(text, x, y);
+}
+
+function drawCountdownNameStrip(canvas: HTMLCanvasElement, handles: string[]) {
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return;
+  const w = canvas.width;
+  const h = canvas.height;
+  ctx.clearRect(0, 0, w, h);
+  if (!handles.length) return;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  const mid = Math.ceil(handles.length / 2);
+  const row1 = handles.slice(0, mid);
+  const row2 = handles.slice(mid);
+  const drawRow = (row: string[], y: number) => {
+    if (!row.length) return;
+    const slotW = w / row.length;
+    let fontSize = row.length > 5 ? 30 : 36;
+    row.forEach((handle, i) => {
+      const label = `@${handle}`;
+      ctx.font = `800 ${fontSize}px Outfit, system-ui, sans-serif`;
+      let tw = ctx.measureText(label).width;
+      while (tw > slotW * 0.92 && fontSize > 20) {
+        fontSize -= 2;
+        ctx.font = `800 ${fontSize}px Outfit, system-ui, sans-serif`;
+        tw = ctx.measureText(label).width;
+      }
+      strokeFill(ctx, label, slotW * (i + 0.5), y, Math.max(7, fontSize * 0.3));
+    });
+  };
+  drawRow(row1, h * 0.36);
+  drawRow(row2, h * 0.74);
 }
 
 function strokeFillRed(
@@ -959,6 +991,63 @@ export function CountdownFlash() {
     <Hud renderPriority={4}>
       <OrthographicCamera makeDefault position={[0, 0, 10]} />
       <CountdownFlashPlate />
+    </Hud>
+  );
+}
+
+function CountdownNamesPlate({ names, soldiers }: { names: string[]; soldiers: number }) {
+  const size = useThree((s) => s.size);
+  const mesh = useRef<THREE.Mesh>(null);
+  const mat = useRef<THREE.MeshBasicMaterial>(null);
+  const handles = useMemo(() => countdownNameList(names, soldiers), [names, soldiers]);
+  const canvas = useMemo(() => {
+    const c = document.createElement("canvas");
+    c.width = 1080;
+    c.height = 200;
+    return c;
+  }, []);
+  const tex = useMemo(() => {
+    drawCountdownNameStrip(canvas, handles);
+    const t = new THREE.CanvasTexture(canvas);
+    t.colorSpace = THREE.SRGBColorSpace;
+    t.minFilter = THREE.LinearFilter;
+    t.magFilter = THREE.LinearFilter;
+    return t;
+  }, [canvas, handles]);
+  const last = useRef("");
+
+  useFrame(({ clock }) => {
+    const recT = clock.elapsedTime - REEL_HOLD;
+    const on = countdownNamesOn(recT);
+    let alpha = 0;
+    if (on) {
+      alpha = recT < 0.12 ? recT / 0.12 : recT > COUNT_NAMES_END - 0.2 ? Math.max(0, (COUNT_NAMES_END - recT) / 0.2) : 1;
+    }
+    if (mat.current) mat.current.opacity = alpha;
+    const key = handles.join("|");
+    if (last.current !== key) {
+      last.current = key;
+      drawCountdownNameStrip(canvas, handles);
+      tex.needsUpdate = true;
+    }
+  });
+
+  const width = size.width * 0.96;
+  const height = Math.max(88, size.height * 0.14);
+
+  return (
+    <mesh ref={mesh} position={[0, -size.height * 0.36, 0]} renderOrder={28}>
+      <planeGeometry args={[width, height]} />
+      <meshBasicMaterial ref={mat} map={tex} transparent opacity={0} depthTest={false} toneMapped={false} />
+    </mesh>
+  );
+}
+
+export function CountdownNameHud({ names, soldiers }: { names: string[]; soldiers: number }) {
+  return (
+    <Hud renderPriority={3}>
+      <OrthographicCamera makeDefault position={[0, 0, 10]} />
+      <CountdownNamesPlate names={names} soldiers={soldiers} />
     </Hud>
   );
 }

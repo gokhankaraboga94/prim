@@ -1,3 +1,4 @@
+import { normalizeHandle } from "./game";
 import { lerpPose, type ShotCtx, type ShotPose } from "./shotModes";
 
 export const COUNTDOWN_ID = "gerisayim" as const;
@@ -109,6 +110,16 @@ function castleWidePose(ctx: ShotCtx): ShotPose {
 export function countdownNamesOn(recT: number) {
   const t = Math.max(0, recT);
   return t < COUNT_NAMES_END;
+}
+
+export function countdownNameList(names: string[], soldiers: number, limit = 10) {
+  const out: string[] = [];
+  const cap = Math.min(Math.max(0, Math.floor(soldiers)), names.length);
+  for (let i = 0; i < cap && out.length < limit; i++) {
+    const h = normalizeHandle(names[i] || "");
+    if (h) out.push(h);
+  }
+  return out;
 }
 
 export function countdownBeat(recT: number): CountdownBeat {
