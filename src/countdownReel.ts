@@ -33,75 +33,72 @@ function easeOutCubic(t: number) {
   return 1 - u * u * u;
 }
 
-function castleFitFov(
-  camX: number,
-  camY: number,
-  camZ: number,
-  lookX: number,
-  lookY: number,
-  lookZ: number,
-  castle: ShotCtx["castle"],
-  margin = 0.52
-) {
-  const dist = Math.hypot(camX - lookX, camY - lookY, camZ - lookZ);
-  const need = (castle.width * margin + 8) / Math.max(16, dist * 0.7);
-  return Math.max(40, Math.min(52, (Math.atan(need) * 360) / Math.PI));
+function lerpLinear(a: ShotPose, b: ShotPose, t: number): ShotPose {
+  const u = clamp01(t);
+  return pose(
+    a.x + (b.x - a.x) * u,
+    a.y + (b.y - a.y) * u,
+    a.z + (b.z - a.z) * u,
+    a.lx + (b.lx - a.lx) * u,
+    a.ly + (b.ly - a.ly) * u,
+    a.lz + (b.lz - a.lz) * u,
+    a.fov + (b.fov - a.fov) * u
+  );
 }
 
-/** İlk sahne: kale + ordu — surun büyük kısmı kadraja girer. */
-function hookWidePose(ctx: ShotCtx): ShotPose {
-  const { form, castle, castleFit } = ctx;
-  const lookY = castle.midY * 0.62;
-  const lookZ = castle.midZ - 1.2;
-  const camX = 16;
-  const camY = castle.midY + 24 + castleFit * 0.1;
-  const camZ = form.midZ + 36;
-  const fov = castleFitFov(camX, camY, camZ, 0.05, lookY, lookZ, castle, 0.58);
-  return pose(camX, camY, camZ, 0.05, lookY, lookZ, fov);
+function armySpan(form: ShotCtx["form"]) {
+  return Math.max(3.8, form.width * 0.4);
 }
 
-function hookPushPose(ctx: ShotCtx): ShotPose {
-  const { form, castle, castleFit } = ctx;
-  const lookY = castle.midY * 0.56;
-  const lookZ = castle.midZ + 0.8;
-  const camX = 9;
-  const camY = castle.midY + 16 + castleFit * 0.08;
-  const camZ = form.front + 22;
-  const fov = castleFitFov(camX, camY, camZ, 0, lookY, lookZ, castle, 0.5);
-  return pose(camX, camY, camZ, 0, lookY, lookZ, fov);
+/** Mix-style: immediately behind the ranks — names and faces fill the frame. */
+function armyFacePose(form: ShotCtx["form"], x: number): ShotPose {
+  const cx = Math.max(-armySpan(form), Math.min(armySpan(form), x));
+  return pose(cx, 4.55, form.back + 10.4, cx * 1.02, 2.38, form.back - 2.1, 34);
+}
+
+/** Through the ranks toward the front — bows, names, arrows leaving. Castle is only a sliver. */
+function armyReadyPose(form: ShotCtx["form"], x: number, pull = 0): ShotPose {
+  const cx = Math.max(-armySpan(form), Math.min(armySpan(form), x));
+  return pose(
+    cx,
+    5.35 - pull * 0.25,
+    form.back + 12.4 - pull * 2.2,
+    cx * 0.55,
+    2.22,
+    form.front + 1.4 + pull * 1.1,
+    36 - pull * 2
+  );
 }
 
 function armyWidePose(form: ShotCtx["form"]): ShotPose {
   const camX = 5.4;
-  const camY = 22.8;
-  const camZ = form.back + 48;
+  const camY = 16.5;
+  const camZ = form.back + 32;
   const lookX = 0;
-  const lookY = 2.35;
+  const lookY = 2.2;
   const lookZ = form.midZ;
   const dist = Math.hypot(camX - lookX, camY - lookY, camZ - lookZ);
   const half = form.width * 0.5 + 3.4;
   const hHalf = half / Math.max(20, dist * 0.9);
   const vHalf = hHalf / (9 / 16);
-  const fov = Math.max(50, Math.min(62, (Math.atan(vHalf) * 360) / Math.PI));
+  const fov = Math.max(46, Math.min(58, (Math.atan(vHalf) * 360) / Math.PI));
   return pose(camX, camY, camZ, lookX, lookY, lookZ, fov);
 }
 
-function armyHoldPose(form: ShotCtx["form"], castle: ShotCtx["castle"]): ShotPose {
-  const mid = (form.front + castle.front) * 0.5;
-  return pose(9.8, 5.2, form.midZ + 8.5, -0.8, 2.05, mid, 38);
+/** Three-quarter: soldiers loosing toward the gate. */
+function volleySidePose(form: ShotCtx["form"], castle: ShotCtx["castle"]): ShotPose {
+  const lookZ = (form.front + castle.front) * 0.62;
+  return pose(10.8, 5.05, form.midZ + 7.2, -2.4, 2.08, lookZ, 36);
 }
 
-function castleWidePose(ctx: ShotCtx): ShotPose {
-  const { castle, castleFit } = ctx;
-  return pose(
-    Math.max(14, castle.width * 0.22),
-    Math.max(32, castle.midY + 38 + castleFit * 0.12),
-    castle.midZ + Math.max(32, castleFit * 0.4),
-    0.1,
-    Math.max(1.65, castle.midY * 0.52),
-    castle.midZ,
-    40
-  );
+function armyYouPose(form: ShotCtx["form"]): ShotPose {
+  return pose(5.6, 6.4, form.back + 14.5, -0.35, 2.18, form.midZ, 38);
+}
+
+/** Army still in frame; castle as the target behind them. */
+function armyCastlePayoff(form: ShotCtx["form"], castle: ShotCtx["castle"]): ShotPose {
+  const lookZ = (form.front + castle.front) * 0.58;
+  return pose(14.8, 8.6, form.back + 16, -1.6, 2.45, lookZ, 40);
 }
 
 export function countdownBeat(recT: number): CountdownBeat {
@@ -159,32 +156,29 @@ export function countdownVolley(recT: number): CountdownVolley {
 export function sampleCountdown(recT: number, ctx: ShotCtx): ShotPose {
   const { form, castle } = ctx;
   const t = Math.max(0, recT);
-  const hookWide = hookWidePose(ctx);
-  const hookPush = hookPushPose(ctx);
+  const span = armySpan(form);
+  const hookStart = armyFacePose(form, 0.35);
+  const hookEnd = armyReadyPose(form, -span * 0.18, 0.35);
+  const countEnd = armyReadyPose(form, span * 0.72, 0.95);
+  const fire = volleySidePose(form, castle);
   const wide = armyWidePose(form);
-  const hold = armyHoldPose(form, castle);
-  const whole = castleWidePose(ctx);
+  const you = armyYouPose(form);
+  const payoff = armyCastlePayoff(form, castle);
 
   if (t < COUNT_HOOK_END) {
-    return lerpPose(hookWide, hookPush, easeOutCubic(t / COUNT_HOOK_END));
+    return lerpPose(hookStart, hookEnd, easeOutCubic(t / COUNT_HOOK_END));
   }
   if (t < COUNT_1_END) {
-    const drift = Math.sin((t - COUNT_HOOK_END) * 0.85) * 0.6;
-    const p = hookPushPose(ctx);
-    return pose(p.x + drift, p.y, p.z - drift * 0.35, p.lx, p.ly, p.lz, p.fov);
+    return lerpLinear(hookEnd, countEnd, (t - COUNT_HOOK_END) / (COUNT_1_END - COUNT_HOOK_END));
   }
   if (t < COUNT_FIRE_END) {
-    const u = easeOutCubic((t - COUNT_1_END) / (COUNT_FIRE_END - COUNT_1_END));
-    return lerpPose(hookPushPose(ctx), hold, u);
+    return lerpPose(countEnd, fire, easeOutCubic((t - COUNT_1_END) / (COUNT_FIRE_END - COUNT_1_END)));
   }
   if (t < COUNT_PROOF_END) {
-    const u = easeOutCubic((t - COUNT_FIRE_END) / (COUNT_PROOF_END - COUNT_FIRE_END));
-    return lerpPose(hold, wide, u);
+    return lerpPose(fire, wide, easeOutCubic((t - COUNT_FIRE_END) / (COUNT_PROOF_END - COUNT_FIRE_END)));
   }
   if (t < COUNT_YOU_END) {
-    const u = (t - COUNT_PROOF_END) / (COUNT_YOU_END - COUNT_PROOF_END);
-    return lerpPose(wide, hold, easeOutCubic(u) * 0.55);
+    return lerpPose(wide, you, easeOutCubic((t - COUNT_PROOF_END) / (COUNT_YOU_END - COUNT_PROOF_END)));
   }
-  const u = easeOutCubic((t - COUNT_YOU_END) / (COUNTDOWN_SECONDS - COUNT_YOU_END));
-  return lerpPose(hold, whole, u);
+  return lerpPose(you, payoff, easeOutCubic((t - COUNT_YOU_END) / (COUNTDOWN_SECONDS - COUNT_YOU_END)));
 }

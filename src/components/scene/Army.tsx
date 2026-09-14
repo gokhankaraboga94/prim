@@ -1122,7 +1122,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
           hideTag(tag);
           continue;
         }
-        nameScale = 0.92;
+        nameScale = 1.12;
         countdownTag = true;
       } else if (cinematic && mix) {
         nameScale = 1.28;
