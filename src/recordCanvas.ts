@@ -38,7 +38,14 @@ export const REEL_FADE_HOLD = 0.15;
 function pickMime(withAudio = false) {
   if (typeof MediaRecorder === "undefined") return "";
   const types = withAudio
-    ? ["video/webm;codecs=vp9,opus", "video/webm;codecs=vp8,opus", "video/webm;codecs=vp9", "video/webm", "video/mp4"]
+    ? [
+        "video/mp4;codecs=avc1.640028,mp4a.40.2",
+        "video/mp4;codecs=avc1.42E01E,mp4a.40.2",
+        "video/webm;codecs=vp9,opus",
+        "video/webm;codecs=vp8,opus",
+        "video/webm",
+        "video/mp4",
+      ]
     : ["video/mp4", "video/mp4;codecs=avc1.42E01E", "video/webm;codecs=vp9,opus", "video/webm;codecs=vp8", "video/webm"];
   return types.find((t) => MediaRecorder.isTypeSupported(t)) || "";
 }
@@ -56,7 +63,14 @@ export async function recordCanvas(canvas: HTMLCanvasElement, seconds: number, a
     for (const track of audio.getAudioTracks()) tracks.push(track.clone());
   }
   const stream = new MediaStream(tracks);
-  const rec = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 20_000_000 });
+  const opts: MediaRecorderOptions = { mimeType: mime, videoBitsPerSecond: 16_000_000 };
+  if (audio) opts.audioBitsPerSecond = 192_000;
+  let rec: MediaRecorder;
+  try {
+    rec = new MediaRecorder(stream, opts);
+  } catch {
+    rec = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 16_000_000 });
+  }
   const chunks: BlobPart[] = [];
   rec.ondataavailable = (e) => {
     if (e.data.size) chunks.push(e.data);

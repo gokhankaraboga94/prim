@@ -472,11 +472,11 @@ function drawTitles(
     ctx.font = "800 44px Outfit, system-ui, sans-serif";
     strokeFill(ctx, "@wargame2028", w / 2, 268, 14);
   } else if (phase === "cdHook") {
-    strokeFillRed(ctx, "DUR", w / 2, 118, 128, 28);
-    ctx.font = "800 44px Outfit, system-ui, sans-serif";
-    strokeFill(ctx, "3 SANİYE SONRA ATEŞ", w / 2, 228, 14);
-    ctx.font = "800 34px Outfit, system-ui, sans-serif";
-    strokeFill(ctx, "kaydırma — sonunu gör", w / 2, 292, 11);
+    strokeFillRed(ctx, "DUR", w / 2, 78, 108, 24);
+    ctx.font = "800 40px Outfit, system-ui, sans-serif";
+    strokeFill(ctx, "3 SANİYE SONRA ATEŞ", w / 2, 158, 13);
+    ctx.font = "800 30px Outfit, system-ui, sans-serif";
+    strokeFill(ctx, "kaydırma — sonunu gör", w / 2, 204, 10);
   } else if (phase === "cd3") {
     strokeFillGold(ctx, "3", w / 2, 148, 220, 30);
   } else if (phase === "cd2") {
@@ -803,7 +803,11 @@ function TitlesPlate({ soldiers, duration, day = 0, skipCommander = false, cinem
     }
     if (mat.current) mat.current.opacity = alpha;
     if (mesh.current) {
-      if (
+      mesh.current.scale.set(1, 1, 1);
+      if (phase === "cdHook") {
+        mesh.current.position.y = size.height * 0.44;
+        mesh.current.scale.set(1, 0.52, 1);
+      } else if (
         phase === "hook" ||
         phase === "huntHook" ||
         phase === "huntArmy" ||

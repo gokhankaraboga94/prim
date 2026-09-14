@@ -908,7 +908,10 @@ select:focus {
 }
 
 .reel-capture-done video {
-  width: min(280px, 70vw);
+  width: min(270px, 38vw);
+  aspect-ratio: 9 / 16;
+  height: auto;
+  object-fit: contain;
   border-radius: 12px;
   background: #000;
 }

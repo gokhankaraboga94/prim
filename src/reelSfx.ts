@@ -15,14 +15,14 @@ let voices = 0;
 let drawI = 0;
 let looseI = 0;
 
-const MAX_VOICES = 10;
+const MAX_VOICES = 16;
 
 function getCtx() {
   if (typeof window === "undefined" || typeof AudioContext === "undefined") return null;
   if (!ctx) {
     ctx = new AudioContext();
     master = ctx.createGain();
-    master.gain.value = 0.92;
+    master.gain.value = 1.12;
     recDest = ctx.createMediaStreamDestination();
     master.connect(ctx.destination);
     master.connect(recDest);
@@ -102,16 +102,20 @@ export function sfxArrowLoose() {
   const context = getCtx();
   if (!context || !looses.length) return;
   const now = context.currentTime;
-  if (now - lastLoose < 0.05) return;
+  if (now - lastLoose < 0.028) return;
   lastLoose = now;
-  const buf = looses[looseI % looses.length];
+  const whoosh = looses[looseI % Math.min(3, looses.length)];
   looseI += 1;
-  playBuf(buf, 0.95, (Math.random() - 0.5) * 1.15, 0.92 + Math.random() * 0.16);
+  playBuf(whoosh, 1.35, (Math.random() - 0.5) * 1.2, 1.22 + Math.random() * 0.28);
+  if (looses.length > 3) {
+    const snap = looses[3 + (looseI % Math.max(1, looses.length - 3))];
+    playBuf(snap, 0.85, (Math.random() - 0.5) * 0.9, 1.35 + Math.random() * 0.22);
+  }
 }
 
 export function sfxVolleyPeak() {
   sfxBowDraw(true);
-  for (let i = 0; i < 5; i++) {
-    window.setTimeout(() => sfxArrowLoose(), 40 + i * 55);
+  for (let i = 0; i < 8; i++) {
+    window.setTimeout(() => sfxArrowLoose(), 18 + i * 28);
   }
 }

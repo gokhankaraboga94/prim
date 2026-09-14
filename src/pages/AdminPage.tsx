@@ -248,7 +248,7 @@ export function AdminPage() {
         <div>
           <p className="join-kicker">Komuta paneli</p>
           <h1>Kuşatma yönetimi</h1>
-          <p className="join-kicker">sürüm 95 — gerçek yay sesi</p>
+          <p className="join-kicker">sürüm 96 — 9:16 + ok şiddeti</p>
         </div>
         <button type="button" className="btn-ghost" onClick={() => signOut(auth)}>
           Çıkış

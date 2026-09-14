@@ -1344,18 +1344,18 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
         const idx = hunt ? sallyLiveIndex(sally, enemies, soldier + i * 11, cmdN) : -1;
         const prey = idx >= 0 ? sallyRaiderAt(sally, idx, enemies, cmdN) : null;
         const gateShot = mix || volley?.gate;
-        const draw = t + i * (volley?.active ? volley.pace * 0.42 : 0.05);
+        const draw = t + i * (volley?.active ? volley.pace * 0.28 : 0.05);
         shots.current.push({
           soldier,
           draw,
-          born: draw + (gateShot ? 0.28 : 0.36),
+          born: draw + (countdown ? 0.1 : gateShot ? 0.28 : 0.36),
           sx: pos.x,
           sy: pos.y + 1.25 * scale,
           sz: pos.z,
           tx: gateShot ? 0 : prey ? prey.x : GATE.x,
           ty: gateShot ? 3.55 : prey ? 1.05 : GATE.y,
           tz: gateShot ? door?.front ?? GATE.z : prey ? prey.z : GATE.z,
-          flight: gateShot ? 2.45 : prey ? 0.46 : ARROW_FLIGHT,
+          flight: countdown ? 1.05 : gateShot ? 2.45 : prey ? 0.46 : ARROW_FLIGHT,
           thin: Boolean(prey),
         });
       }

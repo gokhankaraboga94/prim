@@ -143,9 +143,9 @@ export function countdownVolley(recT: number): CountdownVolley {
   const t = Math.max(0, recT);
   const beat = countdownBeat(t);
   if (t < COUNT_1_END) return { active: false, burst: 0, pace: 1, cap: 0, gate: true };
-  if (beat === "fire") return { active: true, burst: 14, pace: 0.05, cap: 28, gate: true };
+  if (beat === "fire") return { active: true, burst: 18, pace: 0.028, cap: 28, gate: true };
   if (beat === "proof" || beat === "you" || beat === "cta") {
-    return { active: true, burst: 3, pace: 0.14, cap: 20, gate: true };
+    return { active: true, burst: 5, pace: 0.08, cap: 24, gate: true };
   }
   return { active: false, burst: 0, pace: 1, cap: 0, gate: true };
 }
