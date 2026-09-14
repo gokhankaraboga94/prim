@@ -492,7 +492,7 @@ function drawTitles(
     ctx.font = "800 150px Outfit, system-ui, sans-serif";
     strokeFill(ctx, count, w / 2, 124, 26);
     ctx.font = "800 44px Outfit, system-ui, sans-serif";
-    strokeFill(ctx, "ASKER ATTI", w / 2, 250, 14);
+    strokeFill(ctx, "ASKER SAVAŞIYOR", w / 2, 250, 14);
     ctx.font = "800 36px Outfit, system-ui, sans-serif";
     strokeFill(ctx, "hepsi gerçek takipçi", w / 2, 302, 11);
   } else if (phase === "cdYou") {
@@ -505,9 +505,9 @@ function drawTitles(
     strokeFill(ctx, "takip et · +1 asker", w / 2, 288, 12);
   } else if (phase === "cdCta") {
     ctx.font = "800 52px Outfit, system-ui, sans-serif";
-    strokeFill(ctx, "BEĞEN = BİR DALGA DAHA", w / 2, 98, 16);
+    strokeFill(ctx, "BEĞEN = ORDUYA DESTEK VER", w / 2, 98, 16);
     ctx.font = "800 56px Outfit, system-ui, sans-serif";
-    strokeFill(ctx, "SAVAŞTAYIM YAZ", w / 2, 178, 17);
+    strokeFill(ctx, "BURADAYIM YAZ", w / 2, 178, 17);
     ctx.font = "800 44px Outfit, system-ui, sans-serif";
     strokeFill(ctx, "@wargame2028", w / 2, 258, 14);
   } else if (phase === "hook") {

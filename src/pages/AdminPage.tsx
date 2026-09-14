@@ -247,7 +247,7 @@ export function AdminPage() {
         <div>
           <p className="join-kicker">Komuta paneli</p>
           <h1>Kuşatma yönetimi</h1>
-          <p className="join-kicker">sürüm 85 — geri sayım</p>
+          <p className="join-kicker">sürüm 86 — geri sayım 2</p>
         </div>
         <button type="button" className="btn-ghost" onClick={() => signOut(auth)}>
           Çıkış
@@ -624,10 +624,10 @@ export function AdminPage() {
           )}
           {isCountdown(reelShot) && (
             <p className="muted">
-              14 sn. DUR → 3·2·1·ATEŞ (ok dalgaları) → asker sayısı → sensin → beğen + SAVAŞTAYIM.
+              14 sn. DUR (kale geniş + ön sıra isimler) → 3·2·1·ATEŞ → asker savaşıyor → sensin → beğen + buradayım.
               Komutansız, kale canı yok, kapı açılmaz. Kırmızı oklar kale kapısına.
-              {" "}Caption: Adın çıkarsa yoruma SAVAŞTAYIM yaz. Kale düşsün diyorsan beğen. Canlı kuşatma. 1 takip = 1 asker. wargame.lol
-              {" "}İlk yorumu sabitle: SAVAŞTAYIM
+              {" "}Caption: Adın çıkarsa yoruma BURADAYIM yaz. Kale düşsün diyorsan beğen. Canlı kuşatma. 1 takip = 1 asker. wargame.lol
+              {" "}İlk yorumu sabitle: BURADAYIM
               {" "}Hashtag: #wargame #stratejioyunu #kalekuşatma #ordu #wargame2028
             </p>
           )}

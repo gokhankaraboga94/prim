@@ -34,13 +34,42 @@ function easeOutCubic(t: number) {
   return 1 - u * u * u;
 }
 
-function gateClosePose(ctx: ShotCtx): ShotPose {
-  const { form, castle } = ctx;
-  const walk = frontWalk(ctx.level ?? 1);
-  const wx = walk.leftX;
-  const wy = walk.y;
-  const wz = walk.z;
-  return pose(wx - 2.8, wy + 2.05, wz + 2.4, wx + 4.2, wy + 1.35, castle.front + 2.8, 30);
+function castleFitFov(
+  camX: number,
+  camY: number,
+  camZ: number,
+  lookX: number,
+  lookY: number,
+  lookZ: number,
+  castle: ShotCtx["castle"],
+  margin = 0.52
+) {
+  const dist = Math.hypot(camX - lookX, camY - lookY, camZ - lookZ);
+  const need = (castle.width * margin + 8) / Math.max(16, dist * 0.7);
+  return Math.max(40, Math.min(52, (Math.atan(need) * 360) / Math.PI));
+}
+
+/** İlk sahne: kale + ordu — surun büyük kısmı kadraja girer. */
+function hookWidePose(ctx: ShotCtx): ShotPose {
+  const { form, castle, castleFit } = ctx;
+  const lookY = castle.midY * 0.62;
+  const lookZ = castle.midZ - 1.2;
+  const camX = 16;
+  const camY = castle.midY + 24 + castleFit * 0.1;
+  const camZ = form.midZ + 36;
+  const fov = castleFitFov(camX, camY, camZ, 0.05, lookY, lookZ, castle, 0.58);
+  return pose(camX, camY, camZ, 0.05, lookY, lookZ, fov);
+}
+
+function hookPushPose(ctx: ShotCtx): ShotPose {
+  const { form, castle, castleFit } = ctx;
+  const lookY = castle.midY * 0.56;
+  const lookZ = castle.midZ + 0.8;
+  const camX = 9;
+  const camY = castle.midY + 16 + castleFit * 0.08;
+  const camZ = form.front + 22;
+  const fov = castleFitFov(camX, camY, camZ, 0, lookY, lookZ, castle, 0.5);
+  return pose(camX, camY, camZ, 0, lookY, lookZ, fov);
 }
 
 function gateTensionPose(ctx: ShotCtx, pull = 0): ShotPose {
@@ -149,18 +178,18 @@ export function countdownVolley(recT: number): CountdownVolley {
 export function sampleCountdown(recT: number, ctx: ShotCtx): ShotPose {
   const { form, castle } = ctx;
   const t = Math.max(0, recT);
-  const gateA = gateClosePose(ctx);
-  const gateB = gateTensionPose(ctx, 1);
+  const hookWide = hookWidePose(ctx);
+  const hookPush = hookPushPose(ctx);
   const wide = armyWidePose(form);
   const hold = armyHoldPose(form, castle);
   const whole = castleWidePose(ctx);
 
   if (t < COUNT_HOOK_END) {
-    return lerpPose(gateA, gateB, easeOutCubic(t / COUNT_HOOK_END));
+    return lerpPose(hookWide, hookPush, easeOutCubic(t / COUNT_HOOK_END));
   }
   if (t < COUNT_3_END) {
     const u = easeOutCubic((t - COUNT_HOOK_END) / (COUNT_3_END - COUNT_HOOK_END));
-    return lerpPose(gateB, gateTensionPose(ctx, 0.35), u * 0.4);
+    return lerpPose(hookPush, gateTensionPose(ctx, 0.35), u * 0.55);
   }
   if (t < COUNT_2_END) {
     const u = (t - COUNT_3_END) / (COUNT_2_END - COUNT_3_END);

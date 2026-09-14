@@ -6,7 +6,7 @@ import { DEFAULT_COMMANDER, effectiveCommanders, isCommander } from "../../game"
 import { REEL_HOLD, reelBeats } from "../../recordCanvas";
 import { rosterBeat, rosterSoldierIds, stampRosterSoldier, type PlanBId, type RosterPose } from "../../rosterReel";
 import { discoverBeat, DISCOVER_HOOK_END, DISCOVER3_ID, RAF2_ID, shelfBeat, trailerBeat, type DiscoverId } from "../../discoverReel";
-import { countdownVolley } from "../../countdownReel";
+import { COUNT_HOOK_END, countdownBeat, countdownVolley } from "../../countdownReel";
 import { raidCount, sallyHunting, sallyLiveIndex, sallyLocal, sallyRaiderAt, swordArmPose, swordStyleAt, swordSwingU } from "../../siegeEvent";
 import { castleFrame } from "../../castleLayout";
 import { mixTagPass } from "../../mixReel";
@@ -791,9 +791,9 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
   const nameMaps = useMemo(
     () =>
       labeled.map((i) =>
-        makeHandleTexture(i < 0 ? DEFAULT_COMMANDER : names[i], i < 0 || isCommander(names[i], chiefsList), Boolean(discover))
+        makeHandleTexture(i < 0 ? DEFAULT_COMMANDER : names[i], i < 0 || isCommander(names[i], chiefsList), Boolean(discover) || countdown)
       ),
-    [labeled, names, chiefsList, discover]
+    [labeled, names, chiefsList, discover, countdown]
   );
 
   const seeds = useMemo(() => {
@@ -1116,9 +1116,42 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
       } else if (idx < 0) commanderPos(t, 0, pos);
       else poseSoldier(idx, t);
       let nameScale = 1;
+      let countdownHookTag = false;
+      let countdownLift = 2.92;
+      let countdownNx = pos.x;
       if (cinematic && countdown) {
-        hideTag(tag);
-        continue;
+        const cBeat = countdownBeat(recT);
+        if (cBeat !== "hook" || recT >= COUNT_HOOK_END) {
+          hideTag(tag);
+          continue;
+        }
+        if (idx < 0 || cmd) {
+          hideTag(tag);
+          continue;
+        }
+        const slot = layout.slotOf[idx];
+        const { row, col } = slotCoord(slot >= 0 ? slot : 0, form.sizes);
+        const frontCols = form.sizes[0] ?? 1;
+        if (row > 0) {
+          hideTag(tag);
+          continue;
+        }
+        const maxShow = Math.min(8, frontCols);
+        const shownCols: number[] = [];
+        for (let k = 0; k < maxShow; k++) {
+          shownCols.push(maxShow <= 1 ? 0 : Math.round((k / (maxShow - 1)) * (frontCols - 1)));
+        }
+        const showSlot = shownCols.indexOf(col);
+        if (showSlot < 0) {
+          hideTag(tag);
+          continue;
+        }
+        const lane = showSlot % 3;
+        const stack = Math.floor(showSlot / 3);
+        nameScale = 0.46;
+        countdownHookTag = true;
+        countdownLift = 1.72 + lane * 0.62 + stack * 0.28;
+        countdownNx = pos.x + (lane === 0 ? -0.2 : lane === 2 ? 0.2 : 0);
       } else if (cinematic && mix) {
         nameScale = 1.28;
       } else if (cinematic && discover) {
@@ -1173,16 +1206,16 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
       }
       tag.visible = true;
       tag.userData.mixWantVisible = true;
-      let lift = isolate ? 2.38 : 2.92;
+      let lift = countdownHookTag ? countdownLift : isolate ? 2.38 : 2.92;
       let row = 0;
       let col = 0;
-      if (!cmd && !isolate) {
+      if (!cmd && !isolate && !countdownHookTag) {
         const slot = layout.slotOf[idx];
         ({ row, col } = slotCoord(slot >= 0 ? slot : 0, form.sizes));
         lift = 2.22 + row * 0.5 + (col % 2) * 0.2;
       }
       const sx = isolate ? Math.min(1.18, tagData.sx * nameScale) : tagData.sx * nameScale;
-      let nx = pos.x;
+      let nx = countdownHookTag ? countdownNx : pos.x;
       if (isolate) {
         const half = sx * 0.5;
         const lim = 2.12;
