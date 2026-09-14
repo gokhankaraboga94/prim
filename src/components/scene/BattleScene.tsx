@@ -486,7 +486,7 @@ function SceneContent({
       <SteelSky />
       <DayLights cinematic={cinematic} />
       <Terrain />
-      <Castle level={level} pressure={pressure} />
+      <Castle level={level} pressure={pressure} gateClosed={Boolean(countdown) || split} />
       {!roster && !split && !countdown && <SallyRaid soldiers={soldiers} commanders={chiefN} />}
       <Army count={soldiers} names={names} commanders={commanders} cinematic={cinematic} duration={duration} skipCommander={hideCmd} roster={roster} discover={discover} countdown={Boolean(countdown)} mix={split} level={level} rosterIds={rosterIds} />
       {cinematic && split ? (
@@ -588,7 +588,7 @@ function BattleSceneInner({
       setSallyOrigin(80);
       setSwordStart(80);
     } else if (cinematic && countdown) {
-      setSallyOrigin(80);
+      setSallyOrigin(SALLY_START_DELAY - 90);
       setSwordStart(80);
     } else if (cinematic && discover) {
       setSallyOrigin(SALLY_START_DELAY - REEL_HOLD - discoverGateRecT(discover));

@@ -57,19 +57,19 @@ export function wait(ms: number) {
 export async function recordCanvas(canvas: HTMLCanvasElement, seconds: number, audio?: MediaStream | null) {
   const mime = pickMime(Boolean(audio));
   if (!mime) throw new Error("Bu tarayıcı video kaydını desteklemiyor. Safari veya Chrome dene.");
-  const video = canvas.captureStream(60);
+  const video = canvas.captureStream(30);
   const tracks: MediaStreamTrack[] = [...video.getVideoTracks()];
   if (audio) {
     for (const track of audio.getAudioTracks()) tracks.push(track.clone());
   }
   const stream = new MediaStream(tracks);
-  const opts: MediaRecorderOptions = { mimeType: mime, videoBitsPerSecond: 16_000_000 };
+  const opts: MediaRecorderOptions = { mimeType: mime, videoBitsPerSecond: 8_000_000 };
   if (audio) opts.audioBitsPerSecond = 192_000;
   let rec: MediaRecorder;
   try {
     rec = new MediaRecorder(stream, opts);
   } catch {
-    rec = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 16_000_000 });
+    rec = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 8_000_000 });
   }
   const chunks: BlobPart[] = [];
   rec.ondataavailable = (e) => {

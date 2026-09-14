@@ -8,6 +8,7 @@ import { Defenders } from "./Defenders";
 type CastleProps = {
   level: number;
   pressure: number;
+  gateClosed?: boolean;
 };
 
 const STONE = "#8a847c";
@@ -180,9 +181,11 @@ function SquareTower({
 function Gatehouse({
   wallH,
   stone,
+  closed = false,
 }: {
   wallH: number;
   stone: THREE.Texture | null;
+  closed?: boolean;
 }) {
   const bars = useMemo(() => Array.from({ length: 7 }, (_, i) => i), []);
   const rails = useMemo(() => Array.from({ length: 4 }, (_, i) => i), []);
@@ -191,7 +194,7 @@ function Gatehouse({
   const grate = useRef<THREE.Group>(null);
 
   useFrame((state) => {
-    const open = sallyGate(sallyLocal(state.clock.elapsedTime));
+    const open = closed ? 0 : sallyGate(sallyLocal(state.clock.elapsedTime));
     if (leftDoor.current) leftDoor.current.rotation.y = 0.12 + open * 1.35;
     if (rightDoor.current) rightDoor.current.rotation.y = -0.12 - open * 1.35;
     if (grate.current) grate.current.position.y = 1.35 + open * 2.35;
@@ -308,7 +311,7 @@ function RoundTower({
   );
 }
 
-export function Castle({ level }: CastleProps) {
+export function Castle({ level, gateClosed = false }: CastleProps) {
   const stone = useStoneTexture();
   const visualTier = ((level - 1) % 5) + 1;
   const grow = castleGrow(level);
@@ -354,7 +357,7 @@ export function Castle({ level }: CastleProps) {
         <Merlons count={15} width={20.8} y={wallH + 0.36} z={10.85} axis="z" map={stone} />
       </group>
 
-      <Gatehouse wallH={wallH} stone={stone} />
+      <Gatehouse wallH={wallH} stone={stone} closed={gateClosed} />
       <mesh position={[0, wallH * 0.72, -13.05]}>
         <boxGeometry args={[0.2, 0.62, 0.1]} />
         <meshStandardMaterial color={STONE_DARK} />
