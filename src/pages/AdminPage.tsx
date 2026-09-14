@@ -21,7 +21,7 @@ import { useGame } from "../hooks/useGame";
 import { ReelCapture } from "../components/ReelCapture";
 import { REEL_DURATIONS } from "../recordCanvas";
 import { CINEMA_DURATIONS, CINEMA_ID, CINEMA_MODE, SHOT_MODES, type ReelShot } from "../shotModes";
-import { HOOK_ID, HOOK_MODE, JOIN_ID, JOIN_MODE, ROSTER_ID, ROSTER_MODE, ensureJoinMark, isJoin, isPlanB, joinSoldierIds, rosterDuration, saveJoinMark, setJoinForcePack, type PlanBId } from "../rosterReel";
+import { HOOK_ID, HOOK_MODE, JOIN_ID, JOIN_MODE, ROSTER_ID, ROSTER_MODE, ensureJoinMark, isJoin, isPlanB, joinQueue, rosterDuration, saveJoinMark, setJoinForcePack, type PlanBId } from "../rosterReel";
 import { SAGA_MODES, isSaga, sagaDuration, type SagaId } from "../sagaReel";
 import { DISCOVER_ID, DISCOVER2_ID, DISCOVER3_ID, RAF2_ID, DISCOVER_MODE, DISCOVER2_MODE, DISCOVER3_MODE, RAF2_MODE, DISCOVER_SECONDS, DISCOVER3_SECONDS, RAF2_SECONDS, isDiscover, isDiscoverEngage, isDiscoverShelf, isDiscoverTrailer, type DiscoverId } from "../discoverReel";
 import { MIX_MODES, MIX_SECONDS, isMix, type MixId } from "../mixReel";
@@ -54,7 +54,7 @@ export function AdminPage() {
   const cmdValue = cmdDraft ?? game.commanders.join("\n");
   const pendingJoin = useMemo(() => {
     ensureJoinMark(game.names, game.soldiers);
-    return joinSoldierIds(game.names, game.soldiers, undefined, joinLastTen ? 10 : 0);
+    return joinQueue(game.names, game.soldiers, joinLastTen);
   }, [game.names, game.soldiers, joinTick, joinLastTen]);
 
   useEffect(() => {
@@ -249,7 +249,7 @@ export function AdminPage() {
         <div>
           <p className="join-kicker">Komuta paneli</p>
           <h1>Kuşatma yönetimi</h1>
-          <p className="join-kicker">sürüm 98 — savunma çemberi</p>
+          <p className="join-kicker">sürüm 99 — yeni katılanlar + son 10</p>
         </div>
         <button type="button" className="btn-ghost" onClick={() => signOut(auth)}>
           Çıkış
@@ -464,7 +464,7 @@ export function AdminPage() {
                   : isDiscover(reelShot)
                     ? [DISCOVER_SECONDS]
                   : isJoin(reelShot)
-                    ? [rosterDuration(JOIN_ID, pendingJoin.length, joinLastTen ? 3 : undefined)]
+                    ? [pendingJoin.seconds]
                     : isPlanB(reelShot)
                       ? [rosterDuration(reelShot, namedCount(game.names, game.soldiers))]
                       : isSaga(reelShot)
@@ -721,7 +721,7 @@ export function AdminPage() {
               className={reelShot === JOIN_ID ? "on" : ""}
               onClick={() => {
                 setReelShot((cur) => (cur === JOIN_ID ? null : JOIN_ID));
-                setReelSeconds(rosterDuration(JOIN_ID, pendingJoin.length, joinLastTen ? 3 : undefined));
+                setReelSeconds(pendingJoin.seconds);
               }}
             >
               {JOIN_MODE.label}
@@ -736,9 +736,7 @@ export function AdminPage() {
                   onChange={(e) => {
                     const on = e.target.checked;
                     setJoinLastTen(on);
-                    setReelSeconds(
-                      rosterDuration(JOIN_ID, joinSoldierIds(game.names, game.soldiers, undefined, on ? 10 : 0).length, on ? 3 : undefined)
-                    );
+                    setReelSeconds(joinQueue(game.names, game.soldiers, on).seconds);
                   }}
                 />
                 Son 10’u da dahil et
@@ -747,7 +745,7 @@ export function AdminPage() {
                 İşaretlemezsen yalnızca bellekten sonra eklenenler. İşaretlersen son 10
                 işaretli isim bellekten çıkar, yenilerle birleşir; yalnız onlarsa üçer
                 üçer. Kayıt bitince bu onlu ve yeniler yeniden belleğe yazılır. Kuyrukta{" "}
-                {pendingJoin.length} asker.
+                {pendingJoin.ids.length} asker.
                 {" "}Caption: Adın çıkarsa yoruma SAVAŞTAYIM yaz. Kale düşsün diyorsan beğen. Canlı kuşatma. 1 takip = 1 asker. wargame.lol
                 {" "}Hashtag: #wargame #stratejioyunu #kalekuşatma #ordu #wargame2028
               </p>
@@ -791,13 +789,13 @@ export function AdminPage() {
             className="btn-gold"
             onClick={() => {
               void unlockReelSfx();
-              if (isJoin(reelShot) && pendingJoin.length === 0) {
+              if (isJoin(reelShot) && pendingJoin.ids.length === 0) {
                 setMsg("Yeni asker yok. Son 10’u da dahil et kutusunu işaretle veya isim ekle.");
                 return;
               }
               if (isJoin(reelShot)) {
-                setJoinForcePack(joinLastTen ? 3 : null);
-                setReelSeconds(rosterDuration(JOIN_ID, pendingJoin.length, joinLastTen ? 3 : undefined));
+                setJoinForcePack(pendingJoin.pack);
+                setReelSeconds(pendingJoin.seconds);
               } else {
                 setJoinForcePack(null);
               }
@@ -839,7 +837,7 @@ export function AdminPage() {
           countdown={isCountdown(reelShot) ? reelShot : null}
           defend={isDefend(reelShot) ? reelShot : null}
           mix={isMix(reelShot) ? reelShot : null}
-          rosterIds={isJoin(reelShot) ? pendingJoin : null}
+          rosterIds={isJoin(reelShot) ? pendingJoin.ids : null}
           day={Math.max(0, Math.floor(Number(reelDay)) || 0)}
           onRecorded={() => {
             if (isJoin(reelShot)) {

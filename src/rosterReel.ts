@@ -32,13 +32,18 @@ export function rosterSoldierIds(names: string[], soldiers: number): number[] {
   return ids;
 }
 
-export function rosterPackSize(kind: PlanBId, named: number) {
-  if (kind === JOIN_ID && joinForcePack) return joinForcePack;
-  if (kind !== JOIN_ID) return ROSTER_PACK;
+export function joinPackSize(named: number, lastTenOnly = false) {
+  if (lastTenOnly) return 3;
   const n = Math.max(0, named);
   if (n <= 4) return 2;
   if (n <= 9) return 3;
   return 5;
+}
+
+export function rosterPackSize(kind: PlanBId, named: number) {
+  if (kind === JOIN_ID && joinForcePack) return joinForcePack;
+  if (kind !== JOIN_ID) return ROSTER_PACK;
+  return joinPackSize(named);
 }
 
 export function rosterDuration(kind: PlanBId, named: number, packSize?: number): number {
@@ -46,8 +51,8 @@ export function rosterDuration(kind: PlanBId, named: number, packSize?: number):
   const size = packSize ?? rosterPackSize(kind, named);
   const packs = Math.max(1, Math.ceil(Math.max(1, named) / size));
   if (kind === JOIN_ID) {
-    const raw = 1.65 + 2.05 + packs * 2.25 + 1.9;
-    return Math.min(20, Math.max(10, Math.round(raw)));
+    const raw = 1.65 + 2.05 + packs * 2.15 + 1.9;
+    return Math.min(60, Math.max(10, Math.round(raw)));
   }
   const raw = 2.1 + 2.4 + packs * 3.15 + 3.05;
   return raw <= 34 ? 30 : 45;
@@ -95,14 +100,24 @@ export function joinSoldierIds(
   includeLast = 0
 ): number[] {
   const all = rosterSoldierIds(names, soldiers);
+  const take = Math.max(0, Math.floor(includeLast));
   const seen = new Set(marked.map((n) => n.toLowerCase()));
   const keyOf = (i: number) => normalizeHandle(names[i]).toLowerCase();
   const fresh = all.filter((i) => !seen.has(keyOf(i)));
-  if (includeLast <= 0) return fresh;
-  const markedIds = all.filter((i) => seen.has(keyOf(i)));
-  const last = markedIds.slice(-Math.max(0, Math.floor(includeLast)));
+  if (take <= 0) return fresh;
+  if (marked.length === 0) return all.slice(-take);
+  const byKey = new Map<string, number>();
+  for (const i of all) byKey.set(keyOf(i), i);
+  const last: number[] = [];
+  const have = new Set<number>();
+  for (let i = marked.length - 1; i >= 0 && last.length < take; i--) {
+    const id = byKey.get(marked[i].toLowerCase());
+    if (id == null || have.has(id)) continue;
+    last.push(id);
+    have.add(id);
+  }
+  last.reverse();
   const out = [...last];
-  const have = new Set(out);
   for (const i of fresh) {
     if (!have.has(i)) {
       out.push(i);
@@ -110,6 +125,20 @@ export function joinSoldierIds(
     }
   }
   return out;
+}
+
+export function joinQueue(names: string[], soldiers: number, includeLastTen: boolean) {
+  const marked = loadJoinMark();
+  const fresh = joinSoldierIds(names, soldiers, marked, 0);
+  const ids = joinSoldierIds(names, soldiers, marked, includeLastTen ? 10 : 0);
+  const lastTenOnly = includeLastTen && fresh.length === 0;
+  const pack = joinPackSize(ids.length, lastTenOnly);
+  return {
+    ids,
+    fresh: fresh.length,
+    pack,
+    seconds: rosterDuration(JOIN_ID, ids.length, pack),
+  };
 }
 
 function pose(x: number, y: number, z: number, lx: number, ly: number, lz: number, fov: number): ShotPose {
@@ -175,7 +204,8 @@ export function rosterTimeline(kind: PlanBId, named: number, duration: number) {
   const hook = kind === JOIN_ID ? 1.65 : kind === HOOK_ID ? 1.85 : 2.1;
   const overview = kind === JOIN_ID ? 2.05 : kind === HOOK_ID ? 1.95 : 2.4;
   const cta = kind === JOIN_ID ? 1.9 : kind === HOOK_ID ? 2.35 : 3.05;
-  const hold = Math.max(kind === JOIN_ID ? 2.05 : 2.45, (duration - hook - overview - cta) / packs);
+  const packWindow = Math.max(0.5, duration - hook - overview - cta);
+  const hold = kind === JOIN_ID ? packWindow / Math.max(1, packs) : Math.max(2.45, packWindow / Math.max(1, packs));
   return { hook, overview, cta, packs, hold, packStart: hook + overview, ctaAt: duration - cta, size };
 }
 

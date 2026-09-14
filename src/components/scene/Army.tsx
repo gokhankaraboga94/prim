@@ -798,9 +798,10 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
     return tex;
   }, [cinematic]);
   const labeled = useMemo(() => {
-    const cap = defend ? MAX_DEFEND_LABELS : cinematic ? MAX_REEL_LABELS : MAX_LABELS;
+    const hunt = roster ? (rosterIds?.length ? rosterIds : rosterSoldierIds(names, visible)) : null;
+    const cap = hunt ? MAX_LABELS : defend ? MAX_DEFEND_LABELS : cinematic ? MAX_REEL_LABELS : MAX_LABELS;
     const ids: number[] = [];
-    if (phantom && !defend) ids.push(-1);
+    if (phantom && !defend && !hunt) ids.push(-1);
     if (defend) {
       const named: number[] = [];
       for (let i = 0; i < visible; i++) {
@@ -816,6 +817,16 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
       named.sort((a, b) => zOf(b) - zOf(a));
       return named.slice(0, cap);
     }
+    if (hunt) {
+      const seen = new Set<number>();
+      for (const i of hunt) {
+        if (ids.length >= cap) break;
+        if (i < 0 || i >= visible || seen.has(i) || !names[i]?.trim()) continue;
+        seen.add(i);
+        ids.push(i);
+      }
+      return ids;
+    }
     for (let i = 0; i < visible && ids.length < cap; i++) {
       if (names[i] && isCommander(names[i], chiefsList)) ids.push(i);
     }
@@ -823,7 +834,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
       if (names[i] && !isCommander(names[i], chiefsList)) ids.push(i);
     }
     return ids;
-  }, [names, visible, chiefsList, cinematic, phantom, defend]);
+  }, [names, visible, chiefsList, cinematic, phantom, defend, roster, rosterIds]);
   const nameMaps = useMemo(
     () =>
       labeled.map((i) =>
