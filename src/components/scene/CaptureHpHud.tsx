@@ -8,7 +8,7 @@ import { cinemaScale } from "../../shotModes";
 import { isJoin, rosterBeat, rosterSoldierIds, rosterTimeline, type PlanBId } from "../../rosterReel";
 import { sagaBeat, type SagaId } from "../../sagaReel";
 import { discoverBeat, DISCOVER_HOOK_END, isDiscoverEngage, isDiscoverShelf, isDiscoverTrailer, shelfBeat, trailerBeat, type DiscoverId } from "../../discoverReel";
-import { COUNT_NAMES_END, countdownBeat, countdownFlash, countdownNameList, countdownNamesOn, type CountdownId } from "../../countdownReel";
+import { COUNT_NAMES_END, COUNT_NAMES_START, countdownBeat, countdownFlash, countdownNameList, countdownNamesOn, type CountdownId } from "../../countdownReel";
 
 function roundRect(
   ctx: CanvasRenderingContext2D,
@@ -1021,7 +1021,11 @@ function CountdownNamesPlate({ names, soldiers }: { names: string[]; soldiers: n
     const on = countdownNamesOn(recT);
     let alpha = 0;
     if (on) {
-      alpha = recT < 0.12 ? recT / 0.12 : recT > COUNT_NAMES_END - 0.2 ? Math.max(0, (COUNT_NAMES_END - recT) / 0.2) : 1;
+      const fadeIn = recT - COUNT_NAMES_START;
+      const fadeOut = COUNT_NAMES_END - recT;
+      if (fadeIn < 0.14) alpha = fadeIn / 0.14;
+      else if (fadeOut < 0.22) alpha = Math.max(0, fadeOut / 0.22);
+      else alpha = 1;
     }
     if (mat.current) mat.current.opacity = alpha;
     const key = handles.join("|");

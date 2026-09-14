@@ -8,7 +8,9 @@ export const COUNTDOWN_MODE = { id: COUNTDOWN_ID, label: "Geri Sayım" } as cons
 export const COUNTDOWN_SECONDS = 14;
 
 export const COUNT_HOOK_END = 1.2;
-export const COUNT_NAMES_END = 4.8;
+/** İsim şeridi: oklar başladığında (3) açılır, ATEŞ bitince kapanır. */
+export const COUNT_NAMES_START = COUNT_HOOK_END;
+export const COUNT_NAMES_END = COUNT_FIRE_END;
 export const COUNT_3_END = 2.4;
 export const COUNT_2_END = 3.6;
 export const COUNT_1_END = 4.8;
@@ -106,10 +108,10 @@ function castleWidePose(ctx: ShotCtx): ShotPose {
   );
 }
 
-/** İsimler geniş kadrajda (DUR + 3·2·1) görünür. */
+/** İsim şeridi sadece ok atışı sırasında (3·2·1·ATEŞ). */
 export function countdownNamesOn(recT: number) {
   const t = Math.max(0, recT);
-  return t < COUNT_NAMES_END;
+  return t >= COUNT_NAMES_START && t < COUNT_NAMES_END;
 }
 
 export function countdownNameList(names: string[], soldiers: number, limit = 10) {
