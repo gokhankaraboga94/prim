@@ -129,9 +129,15 @@ export function joinSoldierIds(
 
 export function joinQueue(names: string[], soldiers: number, includeLastTen: boolean) {
   const marked = loadJoinMark();
-  const fresh = joinSoldierIds(names, soldiers, marked, 0);
-  const ids = joinSoldierIds(names, soldiers, marked, includeLastTen ? 10 : 0);
-  const lastTenOnly = includeLastTen && fresh.length === 0;
+  const all = rosterSoldierIds(names, soldiers);
+  const seen = new Set(marked.map((n) => n.toLowerCase()));
+  const keyOf = (i: number) => normalizeHandle(names[i]).toLowerCase();
+  const fresh = all.filter((i) => !seen.has(keyOf(i)));
+  let ids: number[];
+  if (fresh.length > 0) ids = fresh;
+  else if (includeLastTen) ids = all.slice(-Math.min(10, all.length));
+  else ids = [];
+  const lastTenOnly = includeLastTen && fresh.length === 0 && ids.length > 0;
   const pack = joinPackSize(ids.length, lastTenOnly);
   return {
     ids,

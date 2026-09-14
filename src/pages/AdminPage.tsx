@@ -48,7 +48,7 @@ export function AdminPage() {
   const [editValue, setEditValue] = useState("");
   const [listOpen, setListOpen] = useState(false);
   const [joinTick, setJoinTick] = useState(0);
-  const [joinLastTen, setJoinLastTen] = useState(false);
+  const [joinLastTen, setJoinLastTen] = useState(true);
 
   const handle = handleInput || game.instagramHandle;
   const cmdValue = cmdDraft ?? game.commanders.join("\n");
@@ -249,7 +249,7 @@ export function AdminPage() {
         <div>
           <p className="join-kicker">Komuta paneli</p>
           <h1>Kuşatma yönetimi</h1>
-          <p className="join-kicker">sürüm 102 — savunma kask + isim</p>
+          <p className="join-kicker">sürüm 103 — son 10 kuralı</p>
         </div>
         <button type="button" className="btn-ghost" onClick={() => signOut(auth)}>
           Çıkış
@@ -742,10 +742,10 @@ export function AdminPage() {
                 Son 10’u da dahil et
               </label>
               <p className="muted">
-                İşaretlemezsen yalnızca bellekten sonra eklenenler. İşaretlersen son 10
-                işaretli isim bellekten çıkar, yenilerle birleşir; yalnız onlarsa üçer
-                üçer. Kayıt bitince bu onlu ve yeniler yeniden belleğe yazılır. Kuyrukta{" "}
-                {pendingJoin.ids.length} asker.
+                Yeni asker varsa yalnızca onlar (son 10 karışmaz). Yeni yoksa ve kutu seçiliyse
+                ordunun son 10’u yine çıkar — önceki videoda kullanılmış olsa da. Yalnız son
+                10 ise üçer üçer. Kuyrukta {pendingJoin.ids.length} asker
+                {pendingJoin.fresh > 0 ? ` · ${pendingJoin.fresh} yeni` : joinLastTen ? " · son 10" : ""}.
                 {" "}Caption: Adın çıkarsa yoruma SAVAŞTAYIM yaz. Kale düşsün diyorsan beğen. Canlı kuşatma. 1 takip = 1 asker. wargame.lol
                 {" "}Hashtag: #wargame #stratejioyunu #kalekuşatma #ordu #wargame2028
               </p>
