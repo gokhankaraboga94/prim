@@ -247,7 +247,7 @@ export function AdminPage() {
         <div>
           <p className="join-kicker">Komuta paneli</p>
           <h1>Kuşatma yönetimi</h1>
-          <p className="join-kicker">sürüm 89 — ok + isim</p>
+          <p className="join-kicker">sürüm 90 — asker isimleri</p>
         </div>
         <button type="button" className="btn-ghost" onClick={() => signOut(auth)}>
           Çıkış
@@ -624,7 +624,7 @@ export function AdminPage() {
           )}
           {isCountdown(reelShot) && (
             <p className="muted">
-              14 sn. DUR (kale geniş) → 3·2·1·ATEŞ (ok + altta isimler) → asker savaşıyor → sensin → beğen + buradayım.
+              14 sn. DUR → 3·2·1·ATEŞ → asker savaşıyor → sensin → beğen + buradayım. Mix gibi: her askerin üstünde @ad (isim yoksa etiket yok).
               Komutansız, kale canı yok, kapı açılmaz. Kırmızı oklar kale kapısına.
               {" "}Caption: Adın çıkarsa yoruma BURADAYIM yaz. Kale düşsün diyorsan beğen. Canlı kuşatma. 1 takip = 1 asker. wargame.lol
               {" "}İlk yorumu sabitle: BURADAYIM

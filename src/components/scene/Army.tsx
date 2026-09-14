@@ -18,6 +18,7 @@ const MAX_COMMANDERS = 24;
 const MAX_ARROWS = 28;
 const IDLE_ARROWS = 8;
 const dummy = new THREE.Object3D();
+const tagWorld = new THREE.Vector3();
 const ARROW_FLIGHT = 3.2;
 const FRONT_Z = 52;
 const FILE = 2.55;
@@ -893,7 +894,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
     mesh.setMatrixAt(i, dummy.matrix);
   }
 
-  function placeBodies(t: number) {
+  function placeBodies(t: number, cam?: THREE.Camera) {
     const { scale } = form;
     const recT = t - REEL_HOLD;
     const huntIds = roster ? (rosterIds?.length ? rosterIds : rosterSoldierIds(names, visible)) : [];
@@ -1116,9 +1117,14 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
       } else if (idx < 0) commanderPos(t, 0, pos);
       else poseSoldier(idx, t);
       let nameScale = 1;
+      let countdownTag = false;
       if (cinematic && countdown) {
-        hideTag(tag);
-        continue;
+        if (recT < 0 || idx < 0 || cmd || !names[idx]?.trim()) {
+          hideTag(tag);
+          continue;
+        }
+        nameScale = 1.28;
+        countdownTag = true;
       } else if (cinematic && mix) {
         nameScale = 1.28;
       } else if (cinematic && discover) {
@@ -1176,13 +1182,25 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
       let lift = isolate ? 2.38 : 2.92;
       let row = 0;
       let col = 0;
+      let rowMul = 1;
       if (!cmd && !isolate) {
         const slot = layout.slotOf[idx];
         ({ row, col } = slotCoord(slot >= 0 ? slot : 0, form.sizes));
-        lift = 2.22 + row * 0.5 + (col % 2) * 0.2;
+        if (countdownTag) {
+          const ranks = Math.max(1, form.sizes.length);
+          const fromBack = Math.max(0, ranks - 1 - row);
+          lift = 2.06 + fromBack * 0.78;
+          rowMul = 0.44 + fromBack * 0.09;
+          tag.renderOrder = 14 + fromBack;
+        } else {
+          lift = 2.22 + row * 0.5 + (col % 2) * 0.2;
+        }
       }
-      const sx = isolate ? Math.min(1.18, tagData.sx * nameScale) : tagData.sx * nameScale;
+      const sx = (isolate ? Math.min(1.18, tagData.sx * nameScale) : tagData.sx * nameScale) * rowMul;
       let nx = pos.x;
+      if (countdownTag) {
+        nx = pos.x + ((row + col) % 2 ? 0.34 : -0.34);
+      }
       if (isolate) {
         const half = sx * 0.5;
         const lim = 2.12;
@@ -1191,7 +1209,14 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
       }
       const baseY = pos.y + lift * scale;
       tag.position.set(nx, baseY, pos.z);
-      tag.scale.set(sx, tagData.sy * nameScale, 1);
+      const sy = tagData.sy * nameScale * rowMul;
+      if (countdownTag && cam) {
+        tagWorld.copy(tag.position);
+        const distMul = Math.max(0.95, Math.min(3.4, cam.position.distanceTo(tagWorld) / 12.5));
+        tag.scale.set(sx * distMul, sy * distMul, 1);
+      } else {
+        tag.scale.set(sx, sy, 1);
+      }
       if (mix) {
         const ranks = Math.max(1, form.sizes.length);
         const fromBack = cmd ? ranks : Math.max(0, ranks - 1 - row);
@@ -1262,9 +1287,9 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
     const volley = countdown ? countdownVolley(recT) : null;
 
     acc.current += dt;
-    if (roster || acc.current >= 1 / 40) {
+    if (roster || countdown || acc.current >= 1 / 40) {
       acc.current = 0;
-      placeBodies(t);
+      placeBodies(t, state.camera);
     }
 
     if (!arrows.current) return;

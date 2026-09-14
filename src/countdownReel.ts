@@ -1,4 +1,3 @@
-import { normalizeHandle } from "./game";
 import { lerpPose, type ShotCtx, type ShotPose } from "./shotModes";
 
 export const COUNTDOWN_ID = "gerisayim" as const;
@@ -12,9 +11,6 @@ export const COUNT_3_END = 2.4;
 export const COUNT_2_END = 3.6;
 export const COUNT_1_END = 4.8;
 export const COUNT_FIRE_END = 6.0;
-/** İsim şeridi: oklar başladığında (3) açılır, ATEŞ bitince kapanır. */
-export const COUNT_NAMES_START = COUNT_HOOK_END;
-export const COUNT_NAMES_END = COUNT_FIRE_END;
 export const COUNT_PROOF_END = 9.0;
 export const COUNT_YOU_END = 11.5;
 
@@ -106,22 +102,6 @@ function castleWidePose(ctx: ShotCtx): ShotPose {
     castle.midZ,
     40
   );
-}
-
-/** İsim şeridi sadece ok atışı sırasında (3·2·1·ATEŞ). */
-export function countdownNamesOn(recT: number) {
-  const t = Math.max(0, recT);
-  return t >= COUNT_NAMES_START && t < COUNT_NAMES_END;
-}
-
-export function countdownNameList(names: string[], soldiers: number, limit = 10) {
-  const out: string[] = [];
-  const cap = Math.min(Math.max(0, Math.floor(soldiers)), names.length);
-  for (let i = 0; i < cap && out.length < limit; i++) {
-    const h = normalizeHandle(names[i] || "");
-    if (h) out.push(h);
-  }
-  return out;
 }
 
 export function countdownBeat(recT: number): CountdownBeat {
