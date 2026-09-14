@@ -248,7 +248,7 @@ export function AdminPage() {
         <div>
           <p className="join-kicker">Komuta paneli</p>
           <h1>Kuşatma yönetimi</h1>
-          <p className="join-kicker">sürüm 94 — yay / ok sesi</p>
+          <p className="join-kicker">sürüm 95 — gerçek yay sesi</p>
         </div>
         <button type="button" className="btn-ghost" onClick={() => signOut(auth)}>
           Çıkış
@@ -626,7 +626,7 @@ export function AdminPage() {
           {isCountdown(reelShot) && (
             <p className="muted">
               14 sn. DUR → 3·2·1·ATEŞ → asker savaşıyor → sensin → beğen + buradayım. Mix gibi: her askerin üstünde ad (isim yoksa etiket yok).
-              Yay çekme + ok sesi kayda girer. Komutansız, kale canı yok, kapı açılmaz. Kırmızı oklar kale kapısına.
+              Oklar ATEŞ’te gider. Gerçek yay/ok kaydı sesi videoya girer. Komutansız, kale canı yok, kapı açılmaz.
               {" "}Caption: Adın çıkarsa yoruma BURADAYIM yaz. Kale düşsün diyorsan beğen. Canlı kuşatma. 1 takip = 1 asker. wargame.lol
               {" "}İlk yorumu sabitle: BURADAYIM
               {" "}Hashtag: #wargame #stratejioyunu #kalekuşatma #ordu #wargame2028

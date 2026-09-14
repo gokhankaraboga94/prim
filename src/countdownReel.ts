@@ -142,10 +142,7 @@ export type CountdownVolley = {
 export function countdownVolley(recT: number): CountdownVolley {
   const t = Math.max(0, recT);
   const beat = countdownBeat(t);
-  if (beat === "hook") return { active: false, burst: 0, pace: 1, cap: 0, gate: true };
-  if (beat === "count3") return { active: true, burst: 5, pace: 0.12, cap: 14, gate: true };
-  if (beat === "count2") return { active: true, burst: 7, pace: 0.1, cap: 18, gate: true };
-  if (beat === "count1") return { active: true, burst: 9, pace: 0.08, cap: 22, gate: true };
+  if (t < COUNT_1_END) return { active: false, burst: 0, pace: 1, cap: 0, gate: true };
   if (beat === "fire") return { active: true, burst: 14, pace: 0.05, cap: 28, gate: true };
   if (beat === "proof" || beat === "you" || beat === "cta") {
     return { active: true, burst: 3, pace: 0.14, cap: 20, gate: true };

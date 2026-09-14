@@ -1,0 +1,9 @@
+Bow / arrow recordings (CC0 — public domain, no credit required):
+
+English Longbow Draw, Nock, Shoot
+  Ben Jaszczak & Brian Nelson / Still North Media
+  https://opengameart.org/content/medieval-sound-effects-weapon-textures
+
+ARROW_SHOOT_SINGLE / SHOOTING_ARROW foley
+  Joe Dines (JoeDinesSound) — 40 lb English longbow field recording
+  https://freesound.org/people/JoeDinesSound/packs/30151/

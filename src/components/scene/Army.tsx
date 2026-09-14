@@ -6,7 +6,7 @@ import { DEFAULT_COMMANDER, effectiveCommanders, isCommander } from "../../game"
 import { REEL_HOLD, reelBeats } from "../../recordCanvas";
 import { rosterBeat, rosterSoldierIds, stampRosterSoldier, type PlanBId, type RosterPose } from "../../rosterReel";
 import { discoverBeat, DISCOVER_HOOK_END, DISCOVER3_ID, RAF2_ID, shelfBeat, trailerBeat, type DiscoverId } from "../../discoverReel";
-import { COUNT_1_END, countdownVolley } from "../../countdownReel";
+import { COUNT_1_END, countdownBeat, countdownVolley } from "../../countdownReel";
 import { sfxArrowLoose, sfxBowDraw, sfxVolleyPeak } from "../../reelSfx";
 import { raidCount, sallyHunting, sallyLiveIndex, sallyLocal, sallyRaiderAt, swordArmPose, swordStyleAt, swordSwingU } from "../../siegeEvent";
 import { castleFrame } from "../../castleLayout";
@@ -738,6 +738,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
   const nextShot = useRef(0.6);
   const hookSfx = useRef(false);
   const fireSfx = useRef(false);
+  const countSfx = useRef("");
   const pos = useMemo(() => new THREE.Vector3(), []);
   const archerGeo = useMemo(() => getArcherGeometry(), []);
   const commanderGeo = useMemo(() => getCommanderGeometry(), []);
@@ -1297,13 +1298,20 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
 
     const cap = volley ? (volley.active ? volley.cap : 0) : hunt ? MAX_ARROWS : IDLE_ARROWS;
 
-    if (cinematic && countdown && recClock >= 0 && recClock < 0.25 && !hookSfx.current) {
-      hookSfx.current = true;
-      sfxBowDraw(true);
-    }
-    if (cinematic && countdown && recClock >= COUNT_1_END && recClock < COUNT_1_END + 0.2 && !fireSfx.current) {
-      fireSfx.current = true;
-      sfxVolleyPeak();
+    if (cinematic && countdown && recClock >= 0) {
+      const beat = countdownBeat(recClock);
+      if (beat === "hook" && !hookSfx.current) {
+        hookSfx.current = true;
+        sfxBowDraw(true);
+      }
+      if ((beat === "count3" || beat === "count2" || beat === "count1") && countSfx.current !== beat) {
+        countSfx.current = beat;
+        sfxBowDraw(true);
+      }
+      if (beat === "fire" && recClock < COUNT_1_END + 0.2 && !fireSfx.current) {
+        fireSfx.current = true;
+        sfxVolleyPeak();
+      }
     }
     if (cinematic) {
       for (const s of shots.current) {
