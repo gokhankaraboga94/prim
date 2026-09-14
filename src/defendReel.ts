@@ -12,8 +12,8 @@ export const DEFEND_CX = 0;
 export const DEFEND_CZ = 0;
 export const DEFEND_SPACING = 2.05;
 export const DEFEND_RINGS = 16;
-export const DEFEND_RING_GAP = 1.35;
-export const DEFEND_RING_SPACING = 1.22 / 3;
+export const DEFEND_RING_GAP = 1.02;
+export const DEFEND_RING_SPACING = 0.74;
 export const DEFEND_MAX_ENEMIES = 5400;
 export const DEFEND_INNER_GAP = 5.4;
 export const DEFEND_APPROACH = 26;
@@ -64,19 +64,6 @@ function easeOutCubic(t: number) {
 
 function pose(x: number, y: number, z: number, lx: number, ly: number, lz: number, fov: number): ShotPose {
   return { x, y: Math.max(3.4, y), z, lx, ly: Math.max(1.45, ly), lz, fov };
-}
-
-function lerpLinear(a: ShotPose, b: ShotPose, t: number): ShotPose {
-  const u = clamp01(t);
-  return pose(
-    a.x + (b.x - a.x) * u,
-    a.y + (b.y - a.y) * u,
-    a.z + (b.z - a.z) * u,
-    a.lx + (b.lx - a.lx) * u,
-    a.ly + (b.ly - a.ly) * u,
-    a.lz + (b.lz - a.lz) * u,
-    a.fov + (b.fov - a.fov) * u
-  );
 }
 
 export function defendArmyRadius(n: number) {
@@ -151,36 +138,27 @@ export function defendEnemyAt(
   out.yaw = Math.atan2(DEFEND_CX - x, DEFEND_CZ - z);
 }
 
-/** Previous opening pose — punch-in lands here, then the old 14s path continues. */
-function defendMainCam(mainT: number, soldiers: number): ShotPose {
-  const t = Math.max(0, mainT);
-  const u = easeInOut(clamp01(t / DEFEND_MAIN_SECONDS));
-  const armyR = defendArmyRadius(Math.max(1, soldiers));
-  const outer = defendOuterAt(t + DEFEND_PULL_END, armyR);
-  const az = -0.18 + u * 0.42 + Math.sin(t * 0.15) * 0.05;
-  const polar = 0.7 + u * 0.3;
-  const dist = outer + 15 - u * 2.8;
-  const x = DEFEND_CX + Math.sin(polar) * Math.sin(az) * dist;
-  const y = Math.cos(polar) * dist;
-  const z = DEFEND_CZ + Math.sin(polar) * Math.cos(az) * dist;
-  return pose(x, y, z, DEFEND_CX, 1.85 + u * 0.35, DEFEND_CZ, 48 - u * 6);
-}
-
-function defendWideCam(soldiers: number): ShotPose {
-  const armyR = defendArmyRadius(Math.max(1, soldiers));
-  const outer = defendOuterAt(0, armyR);
-  const polar = 0.28;
-  const dist = outer * 4.6 + 24;
-  const az = -0.05;
-  const x = DEFEND_CX + Math.sin(polar) * Math.sin(az) * dist;
-  const y = Math.cos(polar) * dist;
-  const z = DEFEND_CZ + Math.sin(polar) * Math.cos(az) * dist;
-  return pose(x, y, z, DEFEND_CX, 1.5, DEFEND_CZ, 52);
+function distToFitRing(outer: number, polar: number, fovDeg: number, pad: number) {
+  const vfov = (fovDeg * Math.PI) / 180;
+  const hfov = 2 * Math.atan(Math.tan(vfov / 2) * (9 / 16));
+  const radius = Math.max(6, outer) * pad;
+  const y = radius / Math.tan(hfov / 2);
+  return y / Math.max(0.22, Math.cos(polar));
 }
 
 export function sampleDefend(recT: number, soldiers: number): ShotPose {
   const t = Math.max(0, recT);
-  const here = defendMainCam(Math.max(0, t - DEFEND_PULL_END), soldiers);
-  if (t >= DEFEND_PULL_END) return here;
-  return lerpLinear(defendWideCam(soldiers), here, easeOutCubic(t / DEFEND_PULL_END));
+  const armyR = defendArmyRadius(Math.max(1, soldiers));
+  const outer = defendOuterAt(t, armyR);
+  const pull = easeOutCubic(clamp01(t / DEFEND_PULL_END));
+  const mainU = easeInOut(clamp01((t - DEFEND_PULL_END) / DEFEND_MAIN_SECONDS));
+  const polar = 0.07 + pull * 0.12 + mainU * 0.16;
+  const pad = 1.58 - pull * 0.2 - mainU * 0.08;
+  const fov = 46 - pull * 2 - mainU * 2;
+  const az = 0.015 + mainU * 0.08;
+  const dist = distToFitRing(outer, polar, fov, pad);
+  const x = DEFEND_CX + Math.sin(polar) * Math.sin(az) * dist;
+  const y = Math.cos(polar) * dist;
+  const z = DEFEND_CZ + Math.sin(polar) * Math.cos(az) * dist;
+  return pose(x, y, z, DEFEND_CX, 1.5, DEFEND_CZ, fov);
 }

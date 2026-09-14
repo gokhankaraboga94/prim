@@ -30,7 +30,7 @@ export function DefendRing({ soldiers }: DefendRingProps) {
         defendEnemyAt(layout, recT, r, i, t, scratch);
         dummy.position.set(scratch.x, scratch.y, scratch.z);
         dummy.rotation.set(0, scratch.yaw, 0);
-        dummy.scale.setScalar(1.0);
+        dummy.scale.setScalar(0.94);
         dummy.updateMatrix();
         bodies.current.setMatrixAt(shown, dummy.matrix);
         shown += 1;

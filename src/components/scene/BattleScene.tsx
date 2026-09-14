@@ -172,6 +172,10 @@ function CinematicCam({
               : sampleShotMode(shotMode as ShotId, sampleT, duration, skipCommander, ctx);
       const persp = camera as THREE.PerspectiveCamera;
       persp.fov = pose.fov;
+      if (defend) {
+        persp.near = 1.2;
+        persp.far = 6000;
+      }
       persp.updateProjectionMatrix();
       camera.position.set(pose.x + shake, pose.y, pose.z);
       look.set(pose.lx + shake * 0.25, pose.ly, pose.lz);
@@ -491,7 +495,7 @@ function SceneContent({
   return (
     <>
       <color attach="background" args={["#7eb6ee"]} />
-      <fog attach="fog" args={defend ? ["#9ec8ee", 720, 2800] : ["#9ec8ee", 380, 1500]} />
+      <fog attach="fog" args={defend ? ["#9ec8ee", 1400, 4200] : ["#9ec8ee", 380, 1500]} />
       <SkyDome />
       <SteelSky />
       <DayLights cinematic={cinematic} />
