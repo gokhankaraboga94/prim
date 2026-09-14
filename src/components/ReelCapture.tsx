@@ -7,6 +7,7 @@ import type { PlanBId } from "../rosterReel";
 import type { SagaId } from "../sagaReel";
 import type { DiscoverId } from "../discoverReel";
 import type { MixId } from "../mixReel";
+import type { CountdownId } from "../countdownReel";
 
 type ReelCaptureProps = {
   soldiers: number;
@@ -26,13 +27,14 @@ type ReelCaptureProps = {
   roster?: PlanBId | null;
   saga?: SagaId | null;
   discover?: DiscoverId | null;
+  countdown?: CountdownId | null;
   mix?: MixId | null;
   rosterIds?: number[] | null;
   onRecorded?: () => void;
   onClose: () => void;
 };
 
-export function ReelCapture({ soldiers, names, commanders = [], level, pressure, hp, maxHp, seconds, showTitles = true, warLook = false, day = 0, skipCommander = false, shotMode = null, cinema = false, roster = null, saga = null, discover = null, mix = null, rosterIds = null, onRecorded, onClose }: ReelCaptureProps) {
+export function ReelCapture({ soldiers, names, commanders = [], level, pressure, hp, maxHp, seconds, showTitles = true, warLook = false, day = 0, skipCommander = false, shotMode = null, cinema = false, roster = null, saga = null, discover = null, countdown = null, mix = null, rosterIds = null, onRecorded, onClose }: ReelCaptureProps) {
   const clip = seconds;
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [phase, setPhase] = useState<"boot" | "rec" | "done" | "err">("boot");
@@ -117,12 +119,13 @@ export function ReelCapture({ soldiers, names, commanders = [], level, pressure,
             duration={clip}
             warLook={warLook}
             day={day}
-            skipCommander={skipCommander || Boolean(discover)}
-            shotMode={cinema || roster || saga || discover || mix ? null : shotMode}
+            skipCommander={skipCommander || Boolean(discover) || Boolean(countdown)}
+            shotMode={cinema || roster || saga || discover || countdown || mix ? null : shotMode}
             cinema={cinema}
             roster={roster}
             saga={saga}
             discover={discover}
+            countdown={countdown}
             mix={mix}
             showTitles={showTitles && !mix}
             rosterIds={rosterIds}

@@ -1,0 +1,187 @@
+import { frontWalk } from "./castleLayout";
+import { lerpPose, type ShotCtx, type ShotPose } from "./shotModes";
+
+export const COUNTDOWN_ID = "gerisayim" as const;
+export type CountdownId = typeof COUNTDOWN_ID;
+
+export const COUNTDOWN_MODE = { id: COUNTDOWN_ID, label: "Geri Sayım" } as const;
+export const COUNTDOWN_SECONDS = 14;
+
+export const COUNT_HOOK_END = 1.2;
+export const COUNT_3_END = 2.4;
+export const COUNT_2_END = 3.6;
+export const COUNT_1_END = 4.8;
+export const COUNT_FIRE_END = 6.0;
+export const COUNT_PROOF_END = 9.0;
+export const COUNT_YOU_END = 11.5;
+
+export type CountdownBeat = "hook" | "count3" | "count2" | "count1" | "fire" | "proof" | "you" | "cta";
+
+export function isCountdown(id: string | null | undefined): id is CountdownId {
+  return id === COUNTDOWN_ID;
+}
+
+function pose(x: number, y: number, z: number, lx: number, ly: number, lz: number, fov: number): ShotPose {
+  return { x, y: Math.max(3.4, y), z, lx, ly: Math.max(1.45, ly), lz, fov };
+}
+
+function clamp01(t: number) {
+  return Math.max(0, Math.min(1, t));
+}
+
+function easeOutCubic(t: number) {
+  const u = 1 - clamp01(t);
+  return 1 - u * u * u;
+}
+
+function gateClosePose(ctx: ShotCtx): ShotPose {
+  const { form, castle } = ctx;
+  const walk = frontWalk(ctx.level ?? 1);
+  const wx = walk.leftX;
+  const wy = walk.y;
+  const wz = walk.z;
+  return pose(wx - 2.8, wy + 2.05, wz + 2.4, wx + 4.2, wy + 1.35, castle.front + 2.8, 30);
+}
+
+function gateTensionPose(ctx: ShotCtx, pull = 0): ShotPose {
+  const { form, castle } = ctx;
+  const walk = frontWalk(ctx.level ?? 1);
+  const wx = walk.leftX;
+  const wy = walk.y;
+  const wz = walk.z;
+  const u = clamp01(pull);
+  return pose(
+    wx - 1.6 - u * 1.4,
+    wy + 1.72 + u * 0.35,
+    wz + 1.1 + u * 2.2,
+    wx + 5.8 + u * 1.2,
+    wy + 1.22 + u * 0.18,
+    castle.front + 4.5 - u * 0.8,
+    28 + u * 4
+  );
+}
+
+function armyWidePose(form: ShotCtx["form"]): ShotPose {
+  const camX = 5.4;
+  const camY = 22.8;
+  const camZ = form.back + 48;
+  const lookX = 0;
+  const lookY = 2.35;
+  const lookZ = form.midZ;
+  const dist = Math.hypot(camX - lookX, camY - lookY, camZ - lookZ);
+  const half = form.width * 0.5 + 3.4;
+  const hHalf = half / Math.max(20, dist * 0.9);
+  const vHalf = hHalf / (9 / 16);
+  const fov = Math.max(50, Math.min(62, (Math.atan(vHalf) * 360) / Math.PI));
+  return pose(camX, camY, camZ, lookX, lookY, lookZ, fov);
+}
+
+function armyHoldPose(form: ShotCtx["form"], castle: ShotCtx["castle"]): ShotPose {
+  const mid = (form.front + castle.front) * 0.5;
+  return pose(9.8, 5.2, form.midZ + 8.5, -0.8, 2.05, mid, 38);
+}
+
+function castleWidePose(ctx: ShotCtx): ShotPose {
+  const { castle, castleFit } = ctx;
+  return pose(
+    Math.max(14, castle.width * 0.22),
+    Math.max(32, castle.midY + 38 + castleFit * 0.12),
+    castle.midZ + Math.max(32, castleFit * 0.4),
+    0.1,
+    Math.max(1.65, castle.midY * 0.52),
+    castle.midZ,
+    40
+  );
+}
+
+export function countdownBeat(recT: number): CountdownBeat {
+  const t = Math.max(0, recT);
+  if (t < COUNT_HOOK_END) return "hook";
+  if (t < COUNT_3_END) return "count3";
+  if (t < COUNT_2_END) return "count2";
+  if (t < COUNT_1_END) return "count1";
+  if (t < COUNT_FIRE_END) return "fire";
+  if (t < COUNT_PROOF_END) return "proof";
+  if (t < COUNT_YOU_END) return "you";
+  return "cta";
+}
+
+/** Camera shake on ATEŞ beat. */
+export function countdownShake(recT: number) {
+  const t = Math.max(0, recT);
+  if (t < COUNT_1_END || t > COUNT_FIRE_END + 0.85) return 0;
+  const peak = t < COUNT_FIRE_END ? (t - COUNT_1_END) / (COUNT_FIRE_END - COUNT_1_END) : 1 - (t - COUNT_FIRE_END) / 0.85;
+  const wave = Math.sin((t - COUNT_1_END) * 38) * 0.35 + Math.sin((t - COUNT_1_END) * 21) * 0.2;
+  return Math.max(0, peak) * wave * 0.14;
+}
+
+/** Brief screen flash intensity 0–1 on fire. */
+export function countdownFlash(recT: number) {
+  const t = Math.max(0, recT);
+  if (t < COUNT_1_END + 0.05 || t > COUNT_FIRE_END + 0.35) return 0;
+  const u = clamp01((t - COUNT_1_END - 0.05) / 0.22);
+  const fade = t > COUNT_FIRE_END ? 1 - clamp01((t - COUNT_FIRE_END) / 0.35) : 1;
+  return Math.sin(u * Math.PI) * 0.42 * fade;
+}
+
+export type CountdownVolley = {
+  active: boolean;
+  burst: number;
+  pace: number;
+  cap: number;
+  gate: boolean;
+};
+
+export function countdownVolley(recT: number): CountdownVolley {
+  const t = Math.max(0, recT);
+  const beat = countdownBeat(t);
+  if (beat === "hook") return { active: false, burst: 0, pace: 1, cap: 0, gate: true };
+  if (beat === "count3") return { active: true, burst: 5, pace: 0.12, cap: 14, gate: true };
+  if (beat === "count2") return { active: true, burst: 7, pace: 0.1, cap: 18, gate: true };
+  if (beat === "count1") return { active: true, burst: 9, pace: 0.08, cap: 22, gate: true };
+  if (beat === "fire") return { active: true, burst: 14, pace: 0.05, cap: 28, gate: true };
+  if (beat === "proof" || beat === "you" || beat === "cta") {
+    return { active: true, burst: 3, pace: 0.14, cap: 20, gate: true };
+  }
+  return { active: false, burst: 0, pace: 1, cap: 0, gate: true };
+}
+
+export function sampleCountdown(recT: number, ctx: ShotCtx): ShotPose {
+  const { form, castle } = ctx;
+  const t = Math.max(0, recT);
+  const gateA = gateClosePose(ctx);
+  const gateB = gateTensionPose(ctx, 1);
+  const wide = armyWidePose(form);
+  const hold = armyHoldPose(form, castle);
+  const whole = castleWidePose(ctx);
+
+  if (t < COUNT_HOOK_END) {
+    return lerpPose(gateA, gateB, easeOutCubic(t / COUNT_HOOK_END));
+  }
+  if (t < COUNT_3_END) {
+    const u = easeOutCubic((t - COUNT_HOOK_END) / (COUNT_3_END - COUNT_HOOK_END));
+    return lerpPose(gateB, gateTensionPose(ctx, 0.35), u * 0.4);
+  }
+  if (t < COUNT_2_END) {
+    const u = (t - COUNT_3_END) / (COUNT_2_END - COUNT_3_END);
+    return lerpPose(gateTensionPose(ctx, 0.35), gateTensionPose(ctx, 0.62), easeOutCubic(u));
+  }
+  if (t < COUNT_1_END) {
+    const u = (t - COUNT_2_END) / (COUNT_1_END - COUNT_2_END);
+    return lerpPose(gateTensionPose(ctx, 0.62), gateTensionPose(ctx, 0.88), easeOutCubic(u));
+  }
+  if (t < COUNT_FIRE_END) {
+    const u = easeOutCubic((t - COUNT_1_END) / (COUNT_FIRE_END - COUNT_1_END));
+    return lerpPose(gateTensionPose(ctx, 0.88), hold, u);
+  }
+  if (t < COUNT_PROOF_END) {
+    const u = easeOutCubic((t - COUNT_FIRE_END) / (COUNT_PROOF_END - COUNT_FIRE_END));
+    return lerpPose(hold, wide, u);
+  }
+  if (t < COUNT_YOU_END) {
+    const u = (t - COUNT_PROOF_END) / (COUNT_YOU_END - COUNT_PROOF_END);
+    return lerpPose(wide, hold, easeOutCubic(u) * 0.55);
+  }
+  const u = easeOutCubic((t - COUNT_YOU_END) / (COUNTDOWN_SECONDS - COUNT_YOU_END));
+  return lerpPose(hold, whole, u);
+}

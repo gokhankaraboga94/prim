@@ -6,6 +6,7 @@ import { DEFAULT_COMMANDER, effectiveCommanders, isCommander } from "../../game"
 import { REEL_HOLD, reelBeats } from "../../recordCanvas";
 import { rosterBeat, rosterSoldierIds, stampRosterSoldier, type PlanBId, type RosterPose } from "../../rosterReel";
 import { discoverBeat, DISCOVER_HOOK_END, DISCOVER3_ID, RAF2_ID, shelfBeat, trailerBeat, type DiscoverId } from "../../discoverReel";
+import { countdownVolley } from "../../countdownReel";
 import { raidCount, sallyHunting, sallyLiveIndex, sallyLocal, sallyRaiderAt, swordArmPose, swordStyleAt, swordSwingU } from "../../siegeEvent";
 import { castleFrame } from "../../castleLayout";
 import { mixTagPass } from "../../mixReel";
@@ -47,6 +48,7 @@ type ArmyProps = {
   skipCommander?: boolean;
   roster?: PlanBId | null;
   discover?: DiscoverId | null;
+  countdown?: boolean;
   mix?: boolean;
   level?: number;
   rosterIds?: number[] | null;
@@ -714,7 +716,7 @@ function makeHandleTexture(name: string, commander = false, crisp = false): Name
   return { map, sx, sy };
 }
 
-export function Army({ count, names = [], commanders = [], cinematic, duration = 8, skipCommander = false, roster = null, discover = null, mix = false, level = 1, rosterIds = null }: ArmyProps) {
+export function Army({ count, names = [], commanders = [], cinematic, duration = 8, skipCommander = false, roster = null, discover = null, countdown = false, mix = false, level = 1, rosterIds = null }: ArmyProps) {
   const bodies = useRef<THREE.InstancedMesh>(null);
   const soldierPlumes = useRef<THREE.InstancedMesh>(null);
   const bowHolds = useRef<THREE.InstancedMesh>(null);
@@ -1114,7 +1116,10 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
       } else if (idx < 0) commanderPos(t, 0, pos);
       else poseSoldier(idx, t);
       let nameScale = 1;
-      if (cinematic && mix) {
+      if (cinematic && countdown) {
+        hideTag(tag);
+        continue;
+      } else if (cinematic && mix) {
         nameScale = 1.28;
       } else if (cinematic && discover) {
         if (discover === DISCOVER3_ID) {
@@ -1250,9 +1255,11 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
     const t = state.clock.elapsedTime;
     const { scale } = form;
     const sally = sallyLocal(t);
-    const hunt = mix ? false : sallyHunting(sally);
+    const hunt = mix || countdown ? false : sallyHunting(sally);
     const enemies = raidCount(visible);
-    const door = mix ? castleFrame(level) : null;
+    const door = mix || countdown ? castleFrame(level) : null;
+    const recT = Math.max(0, t - REEL_HOLD);
+    const volley = countdown ? countdownVolley(recT) : null;
 
     acc.current += dt;
     if (roster || acc.current >= 1 / 40) {
@@ -1269,10 +1276,18 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
 
     shots.current = shots.current.filter((s) => t - s.draw < s.flight + 0.45);
 
-    const cap = hunt ? MAX_ARROWS : IDLE_ARROWS;
+    const cap = volley?.active ? volley.cap : hunt ? MAX_ARROWS : IDLE_ARROWS;
     if (t >= nextShot.current && shots.current.length < cap) {
       const pair = visible > 6 && shots.current.length === 0 && (hunt || Math.random() < 0.38);
-      const burst = hunt ? (pair ? 3 : 2) : pair ? 2 : 1;
+      const burst = volley?.active
+        ? volley.burst
+        : hunt
+          ? pair
+            ? 3
+            : 2
+          : pair
+            ? 2
+            : 1;
       for (let i = 0; i < burst && shots.current.length < cap; i++) {
         if (layout.rest.length <= 0) break;
         const soldier = layout.rest[Math.floor(Math.random() * layout.rest.length)];
@@ -1280,23 +1295,28 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
         const cmdN = skipCommander ? 0 : chiefsList.length;
         const idx = hunt ? sallyLiveIndex(sally, enemies, soldier + i * 11, cmdN) : -1;
         const prey = idx >= 0 ? sallyRaiderAt(sally, idx, enemies, cmdN) : null;
-        const draw = t + i * 0.05;
+        const gateShot = mix || volley?.gate;
+        const draw = t + i * (volley?.active ? volley.pace * 0.42 : 0.05);
         shots.current.push({
           soldier,
           draw,
-          born: draw + 0.36,
+          born: draw + (gateShot ? 0.28 : 0.36),
           sx: pos.x,
           sy: pos.y + 1.25 * scale,
           sz: pos.z,
-          tx: mix ? 0 : prey ? prey.x : GATE.x,
-          ty: mix ? 3.55 : prey ? 1.05 : GATE.y,
-          tz: mix ? door?.front ?? GATE.z : prey ? prey.z : GATE.z,
-          flight: mix ? 2.55 : prey ? 0.46 : ARROW_FLIGHT,
+          tx: gateShot ? 0 : prey ? prey.x : GATE.x,
+          ty: gateShot ? 3.55 : prey ? 1.05 : GATE.y,
+          tz: gateShot ? door?.front ?? GATE.z : prey ? prey.z : GATE.z,
+          flight: gateShot ? 2.45 : prey ? 0.46 : ARROW_FLIGHT,
           thin: Boolean(prey),
         });
       }
-      const pace = hunt ? 0.08 : 0.7 - Math.min(0.35, (visible / 5000) * 0.35);
-      nextShot.current = t + pace + Math.random() * (hunt ? 0.04 : 0.28);
+      const pace = volley?.active
+        ? volley.pace + Math.random() * 0.04
+        : hunt
+          ? 0.08
+          : 0.7 - Math.min(0.35, (visible / 5000) * 0.35);
+      nextShot.current = t + pace + Math.random() * (volley?.active ? 0.02 : hunt ? 0.04 : 0.28);
     }
 
     const live = shots.current.filter((s) => t >= s.born && t - s.born < s.flight);
@@ -1306,12 +1326,13 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
       const fly = Math.max(0, Math.min(1, (t - s.born) / s.flight));
       dummy.position.set(
         s.sx + (s.tx - s.sx) * fly,
-        s.sy + (s.ty - s.sy) * fly + Math.sin(fly * Math.PI) * (mix ? 0.55 : s.thin ? 1.15 : 2.6),
+        s.sy + (s.ty - s.sy) * fly + Math.sin(fly * Math.PI) * (mix || countdown ? 0.55 : s.thin ? 1.15 : 2.6),
         s.sz + (s.tz - s.sz) * fly
       );
       dummy.lookAt(s.tx, s.ty, s.tz);
       dummy.rotateX(Math.PI / 2);
-      dummy.scale.set(s.thin ? 0.34 : 1.15, s.thin ? 1.02 : 1.35, s.thin ? 0.34 : 1.15);
+      const gateArrow = mix || countdown;
+      dummy.scale.set(s.thin ? 0.34 : gateArrow ? 1.15 : 1.15, s.thin ? 1.02 : gateArrow ? 1.35 : 1.35, s.thin ? 0.34 : gateArrow ? 1.15 : 1.15);
       dummy.updateMatrix();
       arrows.current.setMatrixAt(i, dummy.matrix);
     }

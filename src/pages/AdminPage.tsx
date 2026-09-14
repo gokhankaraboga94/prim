@@ -25,6 +25,7 @@ import { HOOK_ID, HOOK_MODE, JOIN_ID, JOIN_MODE, ROSTER_ID, ROSTER_MODE, ensureJ
 import { SAGA_MODES, isSaga, sagaDuration, type SagaId } from "../sagaReel";
 import { DISCOVER_ID, DISCOVER2_ID, DISCOVER3_ID, RAF2_ID, DISCOVER_MODE, DISCOVER2_MODE, DISCOVER3_MODE, RAF2_MODE, DISCOVER_SECONDS, DISCOVER3_SECONDS, RAF2_SECONDS, isDiscover, isDiscoverEngage, isDiscoverShelf, isDiscoverTrailer, type DiscoverId } from "../discoverReel";
 import { MIX_MODES, MIX_SECONDS, isMix, type MixId } from "../mixReel";
+import { COUNTDOWN_ID, COUNTDOWN_MODE, COUNTDOWN_SECONDS, isCountdown, type CountdownId } from "../countdownReel";
 
 export function AdminPage() {
   const { game, recruits, level, power, pressure, target, maxHp } = useGame();
@@ -38,7 +39,7 @@ export function AdminPage() {
   const [reelSeconds, setReelSeconds] = useState<number>(7);
   const [reelText, setReelText] = useState(true);
   const [reelSkipCmd, setReelSkipCmd] = useState(false);
-  const [reelShot, setReelShot] = useState<ReelShot | PlanBId | SagaId | DiscoverId | MixId | null>(null);
+  const [reelShot, setReelShot] = useState<ReelShot | PlanBId | SagaId | DiscoverId | MixId | CountdownId | null>(null);
   const [reelDay, setReelDay] = useState("1");
   const [capturing, setCapturing] = useState(false);
   const [editIndex, setEditIndex] = useState<number | null>(null);
@@ -246,7 +247,7 @@ export function AdminPage() {
         <div>
           <p className="join-kicker">Komuta paneli</p>
           <h1>Kuşatma yönetimi</h1>
-          <p className="join-kicker">sürüm 84 — köşe tarama</p>
+          <p className="join-kicker">sürüm 85 — geri sayım</p>
         </div>
         <button type="button" className="btn-ghost" onClick={() => signOut(auth)}>
           Çıkış
@@ -452,6 +453,8 @@ export function AdminPage() {
                   ? [DISCOVER3_SECONDS]
                   : isDiscoverShelf(reelShot)
                     ? [RAF2_SECONDS]
+                  : isCountdown(reelShot)
+                    ? [COUNTDOWN_SECONDS]
                   : isMix(reelShot)
                     ? [MIX_SECONDS]
                   : isDiscover(reelShot)
@@ -585,6 +588,17 @@ export function AdminPage() {
             >
               {RAF2_MODE.label}
             </button>
+            <button
+              type="button"
+              className={reelShot === COUNTDOWN_ID ? "on" : ""}
+              onClick={() => {
+                setReelShot((cur) => (cur === COUNTDOWN_ID ? null : COUNTDOWN_ID));
+                setReelSeconds(COUNTDOWN_SECONDS);
+                setReelSkipCmd(true);
+              }}
+            >
+              {COUNTDOWN_MODE.label} — {COUNTDOWN_SECONDS}s
+            </button>
           </div>
           {reelShot === DISCOVER_ID && (
             <p className="muted">
@@ -605,6 +619,15 @@ export function AdminPage() {
               kale, ordu, ok, kapı, savaş, sonra takip. Komutan yakın plan yok.
               {" "}Ses: Bugün X. gün. Takipçimiz Y. Kale duruyor. Ok yağmuru. Kapı açıldı. Savaş. Takip et, orduya katıl, kale düşsün.
               {" "}Caption: Adın çıkarsa yoruma SAVAŞTAYIM yaz. Kale düşsün diyorsan beğen. Canlı kuşatma. 1 takip = 1 asker. wargame.lol
+              {" "}Hashtag: #wargame #stratejioyunu #kalekuşatma #ordu #wargame2028
+            </p>
+          )}
+          {isCountdown(reelShot) && (
+            <p className="muted">
+              14 sn. DUR → 3·2·1·ATEŞ (ok dalgaları) → asker sayısı → sensin → beğen + SAVAŞTAYIM.
+              Komutansız, kale canı yok, kapı açılmaz. Kırmızı oklar kale kapısına.
+              {" "}Caption: Adın çıkarsa yoruma SAVAŞTAYIM yaz. Kale düşsün diyorsan beğen. Canlı kuşatma. 1 takip = 1 asker. wargame.lol
+              {" "}İlk yorumu sabitle: SAVAŞTAYIM
               {" "}Hashtag: #wargame #stratejioyunu #kalekuşatma #ordu #wargame2028
             </p>
           )}
@@ -782,12 +805,13 @@ export function AdminPage() {
           maxHp={maxHp}
           seconds={reelSeconds}
           showTitles={reelText}
-          skipCommander={reelSkipCmd || isDiscover(reelShot)}
-          shotMode={reelShot === CINEMA_ID || isPlanB(reelShot) || isSaga(reelShot) || isDiscover(reelShot) || isMix(reelShot) ? null : reelShot}
+          skipCommander={reelSkipCmd || isDiscover(reelShot) || isCountdown(reelShot)}
+          shotMode={reelShot === CINEMA_ID || isPlanB(reelShot) || isSaga(reelShot) || isDiscover(reelShot) || isCountdown(reelShot) || isMix(reelShot) ? null : reelShot}
           cinema={reelShot === CINEMA_ID}
           roster={isPlanB(reelShot) ? reelShot : null}
           saga={isSaga(reelShot) ? reelShot : null}
           discover={isDiscover(reelShot) ? reelShot : null}
+          countdown={isCountdown(reelShot) ? reelShot : null}
           mix={isMix(reelShot) ? reelShot : null}
           rosterIds={isJoin(reelShot) ? pendingJoin : null}
           day={Math.max(0, Math.floor(Number(reelDay)) || 0)}

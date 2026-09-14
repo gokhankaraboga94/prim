@@ -8,6 +8,7 @@ import { cinemaScale } from "../../shotModes";
 import { isJoin, rosterBeat, rosterSoldierIds, rosterTimeline, type PlanBId } from "../../rosterReel";
 import { sagaBeat, type SagaId } from "../../sagaReel";
 import { discoverBeat, DISCOVER_HOOK_END, isDiscoverEngage, isDiscoverShelf, isDiscoverTrailer, shelfBeat, trailerBeat, type DiscoverId } from "../../discoverReel";
+import { countdownBeat, countdownFlash, type CountdownId } from "../../countdownReel";
 
 function roundRect(
   ctx: CanvasRenderingContext2D,
@@ -180,6 +181,50 @@ function strokeFill(
   ctx.fillText(text, x, y);
 }
 
+function strokeFillGold(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  x: number,
+  y: number,
+  size: number,
+  stroke = 22
+) {
+  ctx.font = `800 ${size}px Outfit, system-ui, sans-serif`;
+  ctx.lineJoin = "round";
+  ctx.miterLimit = 2;
+  ctx.lineWidth = stroke;
+  ctx.strokeStyle = "rgba(0,0,0,0.9)";
+  const grad = ctx.createLinearGradient(x, y - size * 0.45, x, y + size * 0.45);
+  grad.addColorStop(0, "#fff4c8");
+  grad.addColorStop(0.45, "#ffd54a");
+  grad.addColorStop(1, "#e87818");
+  ctx.fillStyle = grad;
+  ctx.strokeText(text, x, y);
+  ctx.fillText(text, x, y);
+}
+
+function strokeFillRed(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  x: number,
+  y: number,
+  size: number,
+  stroke = 20
+) {
+  ctx.font = `800 ${size}px Outfit, system-ui, sans-serif`;
+  ctx.lineJoin = "round";
+  ctx.miterLimit = 2;
+  ctx.lineWidth = stroke;
+  ctx.strokeStyle = "rgba(0,0,0,0.9)";
+  const grad = ctx.createLinearGradient(x, y - size * 0.4, x, y + size * 0.4);
+  grad.addColorStop(0, "#ff8a80");
+  grad.addColorStop(0.5, "#ff2a2a");
+  grad.addColorStop(1, "#b80e0e");
+  ctx.fillStyle = grad;
+  ctx.strokeText(text, x, y);
+  ctx.fillText(text, x, y);
+}
+
 function drawTitles(
   canvas: HTMLCanvasElement,
   phase:
@@ -212,7 +257,15 @@ function drawTitles(
     | "shelfHook"
     | "shelfArmy"
     | "shelfShare"
-    | "shelfCta",
+    | "shelfCta"
+    | "cdHook"
+    | "cd3"
+    | "cd2"
+    | "cd1"
+    | "cdFire"
+    | "cdProof"
+    | "cdYou"
+    | "cdCta",
   soldiers: number,
   day: number,
   packLabel = "",
@@ -418,6 +471,45 @@ function drawTitles(
     strokeFill(ctx, "ORDUYA KATIL", w / 2, 188, 13);
     ctx.font = "800 44px Outfit, system-ui, sans-serif";
     strokeFill(ctx, "@wargame2028", w / 2, 268, 14);
+  } else if (phase === "cdHook") {
+    strokeFillRed(ctx, "DUR", w / 2, 118, 128, 28);
+    ctx.font = "800 44px Outfit, system-ui, sans-serif";
+    strokeFill(ctx, "3 SANİYE SONRA ATEŞ", w / 2, 228, 14);
+    ctx.font = "800 34px Outfit, system-ui, sans-serif";
+    strokeFill(ctx, "kaydırma — sonunu gör", w / 2, 292, 11);
+  } else if (phase === "cd3") {
+    strokeFillGold(ctx, "3", w / 2, 148, 220, 30);
+  } else if (phase === "cd2") {
+    strokeFillGold(ctx, "2", w / 2, 148, 220, 30);
+  } else if (phase === "cd1") {
+    strokeFillGold(ctx, "1", w / 2, 148, 220, 30);
+  } else if (phase === "cdFire") {
+    strokeFillRed(ctx, "ATEŞ", w / 2, 138, 132, 28);
+    ctx.font = "800 40px Outfit, system-ui, sans-serif";
+    strokeFill(ctx, "KALEYE SALDIRI", w / 2, 248, 13);
+  } else if (phase === "cdProof") {
+    const count = formatCount(soldiers);
+    ctx.font = "800 150px Outfit, system-ui, sans-serif";
+    strokeFill(ctx, count, w / 2, 124, 26);
+    ctx.font = "800 44px Outfit, system-ui, sans-serif";
+    strokeFill(ctx, "ASKER ATTI", w / 2, 250, 14);
+    ctx.font = "800 36px Outfit, system-ui, sans-serif";
+    strokeFill(ctx, "hepsi gerçek takipçi", w / 2, 302, 11);
+  } else if (phase === "cdYou") {
+    const next = formatCount(soldiers + 1);
+    ctx.font = "800 120px Outfit, system-ui, sans-serif";
+    strokeFill(ctx, next, w / 2, 118, 24);
+    ctx.font = "800 58px Outfit, system-ui, sans-serif";
+    strokeFill(ctx, "SENSİN", w / 2, 218, 18);
+    ctx.font = "800 38px Outfit, system-ui, sans-serif";
+    strokeFill(ctx, "takip et · +1 asker", w / 2, 288, 12);
+  } else if (phase === "cdCta") {
+    ctx.font = "800 52px Outfit, system-ui, sans-serif";
+    strokeFill(ctx, "BEĞEN = BİR DALGA DAHA", w / 2, 98, 16);
+    ctx.font = "800 56px Outfit, system-ui, sans-serif";
+    strokeFill(ctx, "SAVAŞTAYIM YAZ", w / 2, 178, 17);
+    ctx.font = "800 44px Outfit, system-ui, sans-serif";
+    strokeFill(ctx, "@wargame2028", w / 2, 258, 14);
   } else if (phase === "hook") {
     if (day > 0) {
       ctx.font = "800 168px Outfit, system-ui, sans-serif";
@@ -450,11 +542,12 @@ type ReelTitlesProps = {
   roster?: PlanBId | null;
   saga?: SagaId | null;
   discover?: DiscoverId | null;
+  countdown?: CountdownId | null;
   names?: string[];
   rosterIds?: number[] | null;
 };
 
-function TitlesPlate({ soldiers, duration, day = 0, skipCommander = false, cinema = false, roster = null, saga = null, discover = null, names = [], rosterIds = null }: ReelTitlesProps) {
+function TitlesPlate({ soldiers, duration, day = 0, skipCommander = false, cinema = false, roster = null, saga = null, discover = null, countdown = null, names = [], rosterIds = null }: ReelTitlesProps) {
   const size = useThree((s) => s.size);
   const mesh = useRef<THREE.Mesh>(null);
   const canvas = useMemo(() => {
@@ -512,14 +605,58 @@ function TitlesPlate({ soldiers, duration, day = 0, skipCommander = false, cinem
       | "shelfHook"
       | "shelfArmy"
       | "shelfShare"
-      | "shelfCta";
+      | "shelfCta"
+      | "cdHook"
+      | "cd3"
+      | "cd2"
+      | "cd1"
+      | "cdFire"
+      | "cdProof"
+      | "cdYou"
+      | "cdCta";
     let phase: Phase = "none";
     let alpha = 0;
     let packLabel = "";
     let packHead = "";
     const engage = isDiscoverEngage(discover);
     const join = isJoin(roster);
-    if (isDiscoverTrailer(discover)) {
+    if (countdown) {
+      const beat = countdownBeat(recT);
+      if (recT < 0) {
+        phase = "none";
+        alpha = 0;
+      } else {
+        phase =
+          beat === "hook"
+            ? "cdHook"
+            : beat === "count3"
+              ? "cd3"
+              : beat === "count2"
+                ? "cd2"
+                : beat === "count1"
+                  ? "cd1"
+                  : beat === "fire"
+                    ? "cdFire"
+                    : beat === "proof"
+                      ? "cdProof"
+                      : beat === "you"
+                        ? "cdYou"
+                        : "cdCta";
+        alpha = recT < 0.1 ? recT / 0.1 : 1;
+        if (beat === "hook" && recT > 0.95) alpha = Math.max(0.4, (1.2 - recT) / 0.25);
+        if (beat === "count3" || beat === "count2" || beat === "count1") {
+          const into = recT - (beat === "count3" ? 1.2 : beat === "count2" ? 2.4 : 3.6);
+          if (into < 0.08) alpha = into / 0.08;
+          const left = (beat === "count3" ? 2.4 : beat === "count2" ? 3.6 : 4.8) - recT;
+          if (left < 0.1) alpha = Math.max(0, left / 0.1);
+        }
+        if (beat === "fire") {
+          const into = recT - 4.8;
+          if (into < 0.1) alpha = into / 0.1;
+        }
+        if (beat === "cta" && recT > 13.5) alpha = Math.max(0, (14 - recT) / 0.5);
+      }
+    } else if (isDiscoverTrailer(discover)) {
       const beat = trailerBeat(recT);
       if (recT < 0) {
         phase = "none";
@@ -670,7 +807,8 @@ function TitlesPlate({ soldiers, duration, day = 0, skipCommander = false, cinem
         phase.startsWith("saga") ||
         phase.startsWith("disc") ||
         phase.startsWith("trail") ||
-        phase.startsWith("shelf")
+        phase.startsWith("shelf") ||
+        phase.startsWith("cd")
       ) {
         mesh.current.position.y = size.height * 0.3;
       } else if (phase === "army") {
@@ -791,6 +929,36 @@ export function ReelVignette() {
     <Hud renderPriority={1}>
       <OrthographicCamera makeDefault position={[0, 0, 10]} />
       <VignettePlate />
+    </Hud>
+  );
+}
+
+function CountdownFlashPlate() {
+  const size = useThree((s) => s.size);
+  const mat = useRef<THREE.MeshBasicMaterial>(null);
+
+  useFrame(({ clock }) => {
+    const recT = clock.elapsedTime - REEL_HOLD;
+    const a = countdownFlash(recT);
+    if (mat.current) {
+      mat.current.opacity = a;
+      mat.current.color.setRGB(1, 0.92 + a * 0.06, 0.82 + a * 0.12);
+    }
+  });
+
+  return (
+    <mesh position={[0, 0, 3]} renderOrder={90}>
+      <planeGeometry args={[size.width * 2, size.height * 2]} />
+      <meshBasicMaterial ref={mat} color="#fff0d0" transparent opacity={0} depthTest={false} toneMapped={false} />
+    </mesh>
+  );
+}
+
+export function CountdownFlash() {
+  return (
+    <Hud renderPriority={4}>
+      <OrthographicCamera makeDefault position={[0, 0, 10]} />
+      <CountdownFlashPlate />
     </Hud>
   );
 }
