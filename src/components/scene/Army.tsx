@@ -18,7 +18,6 @@ const MAX_COMMANDERS = 24;
 const MAX_ARROWS = 28;
 const IDLE_ARROWS = 8;
 const dummy = new THREE.Object3D();
-const tagWorld = new THREE.Vector3();
 const ARROW_FLIGHT = 3.2;
 const FRONT_Z = 52;
 const FILE = 2.55;
@@ -1123,7 +1122,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
           hideTag(tag);
           continue;
         }
-        nameScale = 1.28;
+        nameScale = 0.92;
         countdownTag = true;
       } else if (cinematic && mix) {
         nameScale = 1.28;
@@ -1188,19 +1187,14 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
         const slot = layout.slotOf[idx];
         ({ row, col } = slotCoord(slot >= 0 ? slot : 0, form.sizes));
         if (countdownTag) {
-          const ranks = Math.max(1, form.sizes.length);
-          const fromBack = Math.max(0, ranks - 1 - row);
-          const rowCols = Math.max(1, form.sizes[row] ?? 1);
-          const colLane = col % 3;
-          lift = 2.28 + row * 0.96 + colLane * 0.44 + Math.floor(col / 3) * 0.26;
-          rowMul = 0.4 + fromBack * 0.055;
-          tag.renderOrder = 16 + row * 5 + col;
-          nx = (col - (rowCols - 1) / 2) * (FILE * 0.52) + pos.x;
+          lift = 2.32 + row * 0.64;
+          tag.renderOrder = 16 + row;
         } else {
           lift = 2.22 + row * 0.5 + (col % 2) * 0.2;
         }
       }
-      const sx = (isolate ? Math.min(1.18, tagData.sx * nameScale) : tagData.sx * nameScale) * rowMul;
+      let sx = (isolate ? Math.min(1.18, tagData.sx * nameScale) : tagData.sx * nameScale) * rowMul;
+      if (countdownTag) sx = Math.min(sx, FILE * 0.78);
       if (isolate) {
         const half = sx * 0.5;
         const lim = 2.12;
@@ -1210,13 +1204,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
       const baseY = pos.y + lift * scale;
       tag.position.set(nx, baseY, pos.z);
       const sy = tagData.sy * nameScale * rowMul;
-      if (countdownTag && cam) {
-        tagWorld.copy(tag.position);
-        const distMul = Math.max(0.88, Math.min(2.15, cam.position.distanceTo(tagWorld) / 14.5));
-        tag.scale.set(sx * distMul, sy * distMul, 1);
-      } else {
-        tag.scale.set(sx, sy, 1);
-      }
+      tag.scale.set(sx, sy, 1);
       if (mix) {
         const ranks = Math.max(1, form.sizes.length);
         const fromBack = cmd ? ranks : Math.max(0, ranks - 1 - row);
