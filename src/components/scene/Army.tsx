@@ -6,7 +6,7 @@ import { DEFAULT_COMMANDER, effectiveCommanders, isCommander } from "../../game"
 import { REEL_HOLD, reelBeats } from "../../recordCanvas";
 import { rosterBeat, rosterSoldierIds, stampRosterSoldier, type PlanBId, type RosterPose } from "../../rosterReel";
 import { discoverBeat, DISCOVER_HOOK_END, DISCOVER3_ID, RAF2_ID, shelfBeat, trailerBeat, type DiscoverId } from "../../discoverReel";
-import { COUNT_HOOK_END, countdownBeat, countdownVolley } from "../../countdownReel";
+import { countdownNamesOn, countdownVolley } from "../../countdownReel";
 import { raidCount, sallyHunting, sallyLiveIndex, sallyLocal, sallyRaiderAt, swordArmPose, swordStyleAt, swordSwingU } from "../../siegeEvent";
 import { castleFrame } from "../../castleLayout";
 import { mixTagPass } from "../../mixReel";
@@ -1120,38 +1120,48 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
       let countdownLift = 2.92;
       let countdownNx = pos.x;
       if (cinematic && countdown) {
-        const cBeat = countdownBeat(recT);
-        if (cBeat !== "hook" || recT >= COUNT_HOOK_END) {
+        if (!countdownNamesOn(recT) || recT < 0) {
           hideTag(tag);
           continue;
         }
-        if (idx < 0 || cmd) {
+        if (idx < 0 || cmd || !names[idx]?.trim()) {
           hideTag(tag);
           continue;
         }
         const slot = layout.slotOf[idx];
         const { row, col } = slotCoord(slot >= 0 ? slot : 0, form.sizes);
         const frontCols = form.sizes[0] ?? 1;
-        if (row > 0) {
+        const maxRow = form.sizes.length > 1 ? 1 : 0;
+        if (row > maxRow) {
           hideTag(tag);
           continue;
         }
-        const maxShow = Math.min(8, frontCols);
-        const shownCols: number[] = [];
-        for (let k = 0; k < maxShow; k++) {
-          shownCols.push(maxShow <= 1 ? 0 : Math.round((k / (maxShow - 1)) * (frontCols - 1)));
+        const maxShow = Math.min(10, frontCols + (maxRow > 0 ? form.sizes[1] ?? 0 : 0));
+        const pickCols: number[] = [];
+        const pickRows: number[] = [];
+        let picks = 0;
+        for (let r = 0; r <= maxRow && picks < maxShow; r++) {
+          const cols = form.sizes[r] ?? 0;
+          const need = Math.min(cols, maxShow - picks);
+          for (let k = 0; k < need; k++) {
+            const c = cols <= 1 ? 0 : Math.round((k / Math.max(1, need - 1)) * (cols - 1));
+            pickCols.push(c);
+            pickRows.push(r);
+            picks += 1;
+          }
         }
-        const showSlot = shownCols.indexOf(col);
+        const showSlot = pickRows.findIndex((r, i) => r === row && pickCols[i] === col);
         if (showSlot < 0) {
           hideTag(tag);
           continue;
         }
         const lane = showSlot % 3;
         const stack = Math.floor(showSlot / 3);
-        nameScale = 0.46;
+        nameScale = row === 0 ? 1.38 : 1.12;
         countdownHookTag = true;
-        countdownLift = 1.72 + lane * 0.62 + stack * 0.28;
-        countdownNx = pos.x + (lane === 0 ? -0.2 : lane === 2 ? 0.2 : 0);
+        countdownLift = (row === 0 ? 2.55 : 2.05) + lane * 0.72 + stack * 0.34;
+        countdownNx = pos.x + (lane === 0 ? -0.28 : lane === 2 ? 0.28 : 0);
+        tag.renderOrder = 24 + showSlot;
       } else if (cinematic && mix) {
         nameScale = 1.28;
       } else if (cinematic && discover) {

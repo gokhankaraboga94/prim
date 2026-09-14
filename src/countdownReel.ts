@@ -1,4 +1,3 @@
-import { frontWalk } from "./castleLayout";
 import { lerpPose, type ShotCtx, type ShotPose } from "./shotModes";
 
 export const COUNTDOWN_ID = "gerisayim" as const;
@@ -8,6 +7,7 @@ export const COUNTDOWN_MODE = { id: COUNTDOWN_ID, label: "Geri Sayım" } as cons
 export const COUNTDOWN_SECONDS = 14;
 
 export const COUNT_HOOK_END = 1.2;
+export const COUNT_NAMES_END = 4.8;
 export const COUNT_3_END = 2.4;
 export const COUNT_2_END = 3.6;
 export const COUNT_1_END = 4.8;
@@ -72,24 +72,6 @@ function hookPushPose(ctx: ShotCtx): ShotPose {
   return pose(camX, camY, camZ, 0, lookY, lookZ, fov);
 }
 
-function gateTensionPose(ctx: ShotCtx, pull = 0): ShotPose {
-  const { form, castle } = ctx;
-  const walk = frontWalk(ctx.level ?? 1);
-  const wx = walk.leftX;
-  const wy = walk.y;
-  const wz = walk.z;
-  const u = clamp01(pull);
-  return pose(
-    wx - 1.6 - u * 1.4,
-    wy + 1.72 + u * 0.35,
-    wz + 1.1 + u * 2.2,
-    wx + 5.8 + u * 1.2,
-    wy + 1.22 + u * 0.18,
-    castle.front + 4.5 - u * 0.8,
-    28 + u * 4
-  );
-}
-
 function armyWidePose(form: ShotCtx["form"]): ShotPose {
   const camX = 5.4;
   const camY = 22.8;
@@ -121,6 +103,12 @@ function castleWidePose(ctx: ShotCtx): ShotPose {
     castle.midZ,
     40
   );
+}
+
+/** İsimler geniş kadrajda (DUR + 3·2·1) görünür. */
+export function countdownNamesOn(recT: number) {
+  const t = Math.max(0, recT);
+  return t < COUNT_NAMES_END;
 }
 
 export function countdownBeat(recT: number): CountdownBeat {
@@ -187,21 +175,14 @@ export function sampleCountdown(recT: number, ctx: ShotCtx): ShotPose {
   if (t < COUNT_HOOK_END) {
     return lerpPose(hookWide, hookPush, easeOutCubic(t / COUNT_HOOK_END));
   }
-  if (t < COUNT_3_END) {
-    const u = easeOutCubic((t - COUNT_HOOK_END) / (COUNT_3_END - COUNT_HOOK_END));
-    return lerpPose(hookPush, gateTensionPose(ctx, 0.35), u * 0.55);
-  }
-  if (t < COUNT_2_END) {
-    const u = (t - COUNT_3_END) / (COUNT_2_END - COUNT_3_END);
-    return lerpPose(gateTensionPose(ctx, 0.35), gateTensionPose(ctx, 0.62), easeOutCubic(u));
-  }
   if (t < COUNT_1_END) {
-    const u = (t - COUNT_2_END) / (COUNT_1_END - COUNT_2_END);
-    return lerpPose(gateTensionPose(ctx, 0.62), gateTensionPose(ctx, 0.88), easeOutCubic(u));
+    const drift = Math.sin((t - COUNT_HOOK_END) * 0.85) * 0.6;
+    const p = hookPushPose(ctx);
+    return pose(p.x + drift, p.y, p.z - drift * 0.35, p.lx, p.ly, p.lz, p.fov);
   }
   if (t < COUNT_FIRE_END) {
     const u = easeOutCubic((t - COUNT_1_END) / (COUNT_FIRE_END - COUNT_1_END));
-    return lerpPose(gateTensionPose(ctx, 0.88), hold, u);
+    return lerpPose(hookPushPose(ctx), hold, u);
   }
   if (t < COUNT_PROOF_END) {
     const u = easeOutCubic((t - COUNT_FIRE_END) / (COUNT_PROOF_END - COUNT_FIRE_END));
