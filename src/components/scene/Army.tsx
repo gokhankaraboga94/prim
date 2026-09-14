@@ -675,8 +675,8 @@ function slotCoord(i: number, sizes: number[]) {
   return { row, col };
 }
 
-function makeHandleTexture(name: string, commander = false, crisp = false): NameTag | null {
-  const label = `@${name}`;
+function makeHandleTexture(name: string, commander = false, crisp = false, plain = false): NameTag | null {
+  const label = plain ? name : `@${name}`;
   const height = crisp ? 220 : 160;
   const maxW = 1024;
   const probe = document.createElement("canvas").getContext("2d");
@@ -792,7 +792,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
   const nameMaps = useMemo(
     () =>
       labeled.map((i) =>
-        makeHandleTexture(i < 0 ? DEFAULT_COMMANDER : names[i], i < 0 || isCommander(names[i], chiefsList), Boolean(discover) || countdown)
+        makeHandleTexture(i < 0 ? DEFAULT_COMMANDER : names[i], i < 0 || isCommander(names[i], chiefsList), Boolean(discover) || countdown, countdown)
       ),
     [labeled, names, chiefsList, discover, countdown]
   );
@@ -1183,24 +1183,24 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
       let row = 0;
       let col = 0;
       let rowMul = 1;
+      let nx = pos.x;
       if (!cmd && !isolate) {
         const slot = layout.slotOf[idx];
         ({ row, col } = slotCoord(slot >= 0 ? slot : 0, form.sizes));
         if (countdownTag) {
           const ranks = Math.max(1, form.sizes.length);
           const fromBack = Math.max(0, ranks - 1 - row);
-          lift = 2.06 + fromBack * 0.78;
-          rowMul = 0.44 + fromBack * 0.09;
-          tag.renderOrder = 14 + fromBack;
+          const rowCols = Math.max(1, form.sizes[row] ?? 1);
+          const colLane = col % 3;
+          lift = 2.28 + row * 0.96 + colLane * 0.44 + Math.floor(col / 3) * 0.26;
+          rowMul = 0.4 + fromBack * 0.055;
+          tag.renderOrder = 16 + row * 5 + col;
+          nx = (col - (rowCols - 1) / 2) * (FILE * 0.52) + pos.x;
         } else {
           lift = 2.22 + row * 0.5 + (col % 2) * 0.2;
         }
       }
       const sx = (isolate ? Math.min(1.18, tagData.sx * nameScale) : tagData.sx * nameScale) * rowMul;
-      let nx = pos.x;
-      if (countdownTag) {
-        nx = pos.x + ((row + col) % 2 ? 0.34 : -0.34);
-      }
       if (isolate) {
         const half = sx * 0.5;
         const lim = 2.12;
@@ -1212,7 +1212,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
       const sy = tagData.sy * nameScale * rowMul;
       if (countdownTag && cam) {
         tagWorld.copy(tag.position);
-        const distMul = Math.max(0.95, Math.min(3.4, cam.position.distanceTo(tagWorld) / 12.5));
+        const distMul = Math.max(0.88, Math.min(2.15, cam.position.distanceTo(tagWorld) / 14.5));
         tag.scale.set(sx * distMul, sy * distMul, 1);
       } else {
         tag.scale.set(sx, sy, 1);

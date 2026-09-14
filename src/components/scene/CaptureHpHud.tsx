@@ -472,11 +472,10 @@ function drawTitles(
     ctx.font = "800 44px Outfit, system-ui, sans-serif";
     strokeFill(ctx, "@wargame2028", w / 2, 268, 14);
   } else if (phase === "cdHook") {
-    strokeFillRed(ctx, "DUR", w / 2, 118, 128, 28);
-    ctx.font = "800 44px Outfit, system-ui, sans-serif";
-    strokeFill(ctx, "3 SANİYE SONRA ATEŞ", w / 2, 228, 14);
-    ctx.font = "800 34px Outfit, system-ui, sans-serif";
-    strokeFill(ctx, "kaydırma — sonunu gör", w / 2, 292, 11);
+    ctx.font = "800 52px Outfit, system-ui, sans-serif";
+    strokeFill(ctx, "3 SANİYE SONRA ATEŞ", w / 2, 148, 16);
+    ctx.font = "800 36px Outfit, system-ui, sans-serif";
+    strokeFill(ctx, "kaydırma — sonunu gör", w / 2, 228, 12);
   } else if (phase === "cd3") {
     strokeFillGold(ctx, "3", w / 2, 148, 220, 30);
   } else if (phase === "cd2") {
@@ -643,7 +642,7 @@ function TitlesPlate({ soldiers, duration, day = 0, skipCommander = false, cinem
                         ? "cdYou"
                         : "cdCta";
         alpha = recT < 0.1 ? recT / 0.1 : 1;
-        if (beat === "hook" && recT > 0.95) alpha = Math.max(0.4, (1.2 - recT) / 0.25);
+        if (beat === "hook" && recT > 0.65) alpha = Math.max(0, (1.15 - recT) / 0.5);
         if (beat === "count3" || beat === "count2" || beat === "count1") {
           const into = recT - (beat === "count3" ? 1.2 : beat === "count2" ? 2.4 : 3.6);
           if (into < 0.08) alpha = into / 0.08;
