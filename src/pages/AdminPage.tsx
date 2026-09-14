@@ -624,7 +624,7 @@ export function AdminPage() {
           )}
           {isCountdown(reelShot) && (
             <p className="muted">
-              14 sn. DUR (kale geniş + ön sıra isimler) → 3·2·1·ATEŞ → asker savaşıyor → sensin → beğen + buradayım.
+              14 sn. DUR (kale geniş) → 3·2·1·ATEŞ (ok + altta isimler) → asker savaşıyor → sensin → beğen + buradayım.
               Komutansız, kale canı yok, kapı açılmaz. Kırmızı oklar kale kapısına.
               {" "}Caption: Adın çıkarsa yoruma BURADAYIM yaz. Kale düşsün diyorsan beğen. Canlı kuşatma. 1 takip = 1 asker. wargame.lol
               {" "}İlk yorumu sabitle: BURADAYIM

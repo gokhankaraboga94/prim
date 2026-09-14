@@ -8,13 +8,13 @@ export const COUNTDOWN_MODE = { id: COUNTDOWN_ID, label: "Geri Sayım" } as cons
 export const COUNTDOWN_SECONDS = 14;
 
 export const COUNT_HOOK_END = 1.2;
-/** İsim şeridi: oklar başladığında (3) açılır, ATEŞ bitince kapanır. */
-export const COUNT_NAMES_START = COUNT_HOOK_END;
-export const COUNT_NAMES_END = COUNT_FIRE_END;
 export const COUNT_3_END = 2.4;
 export const COUNT_2_END = 3.6;
 export const COUNT_1_END = 4.8;
 export const COUNT_FIRE_END = 6.0;
+/** İsim şeridi: oklar başladığında (3) açılır, ATEŞ bitince kapanır. */
+export const COUNT_NAMES_START = COUNT_HOOK_END;
+export const COUNT_NAMES_END = COUNT_FIRE_END;
 export const COUNT_PROOF_END = 9.0;
 export const COUNT_YOU_END = 11.5;
 
