@@ -152,11 +152,13 @@ export function sampleDefend(recT: number, soldiers: number): ShotPose {
   const outer = defendOuterAt(t, armyR);
   const pull = easeOutCubic(clamp01(t / DEFEND_PULL_END));
   const mainU = easeInOut(clamp01((t - DEFEND_PULL_END) / DEFEND_MAIN_SECONDS));
-  const polar = 0.07 + pull * 0.12 + mainU * 0.16;
-  const pad = 1.58 - pull * 0.2 - mainU * 0.08;
-  const fov = 46 - pull * 2 - mainU * 2;
+  const polar = 0.07 + pull * 0.12 + mainU * 0.22;
+  const pad = 1.343 - pull * 0.12 - mainU * 0.04;
+  const fov = 46 - pull * 2 - mainU * 6;
   const az = 0.015 + mainU * 0.08;
-  const dist = distToFitRing(outer, polar, fov, pad);
+  const ringDist = distToFitRing(outer, polar, fov, pad);
+  const nameDist = distToFitRing(armyR + 3.4, polar, fov, 1.18);
+  const dist = ringDist + (nameDist - ringDist) * mainU;
   const x = DEFEND_CX + Math.sin(polar) * Math.sin(az) * dist;
   const y = Math.cos(polar) * dist;
   const z = DEFEND_CZ + Math.sin(polar) * Math.cos(az) * dist;

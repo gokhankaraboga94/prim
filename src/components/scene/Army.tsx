@@ -16,7 +16,7 @@ import { mixTagPass } from "../../mixReel";
 const MAX_SOLDIERS = 5000;
 const MAX_LABELS = 400;
 const MAX_REEL_LABELS = 120;
-const MAX_DEFEND_LABELS = 180;
+const MAX_DEFEND_LABELS = 400;
 const MAX_COMMANDERS = 24;
 const MAX_ARROWS = 28;
 const IDLE_ARROWS = 8;
@@ -1183,7 +1183,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
           hideTag(tag);
           continue;
         }
-        nameScale = 1.32;
+        nameScale = 1.08;
         countdownTag = true;
       } else if (cinematic && mix) {
         nameScale = 1.28;

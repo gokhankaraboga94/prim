@@ -3,7 +3,7 @@ import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { REEL_HOLD } from "../../recordCanvas";
 import { defendEnemyAt, defendRingLayout } from "../../defendReel";
-import { getRaiderGeometry } from "./SallyRaid";
+import { getDefendRaiderGeometry } from "./SallyRaid";
 
 const dummy = new THREE.Object3D();
 const scratch = { x: 0, y: 0, z: 0, yaw: 0 };
@@ -14,7 +14,7 @@ type DefendRingProps = {
 
 export function DefendRing({ soldiers }: DefendRingProps) {
   const bodies = useRef<THREE.InstancedMesh>(null);
-  const geo = useMemo(() => getRaiderGeometry(), []);
+  const geo = useMemo(() => getDefendRaiderGeometry(), []);
   const layout = useMemo(() => defendRingLayout(soldiers), [soldiers]);
   const cap = layout.cap;
 
