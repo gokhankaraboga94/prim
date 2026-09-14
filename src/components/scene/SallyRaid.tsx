@@ -57,7 +57,7 @@ function createRaiderGeometry() {
 
 let raiderGeoCache: THREE.BufferGeometry | null = null;
 
-function getRaiderGeometry() {
+export function getRaiderGeometry() {
   if (!raiderGeoCache) raiderGeoCache = createRaiderGeometry();
   return raiderGeoCache;
 }

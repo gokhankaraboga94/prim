@@ -9,6 +9,7 @@ import { isJoin, rosterBeat, rosterSoldierIds, rosterTimeline, type PlanBId } fr
 import { sagaBeat, type SagaId } from "../../sagaReel";
 import { discoverBeat, DISCOVER_HOOK_END, isDiscoverEngage, isDiscoverShelf, isDiscoverTrailer, shelfBeat, trailerBeat, type DiscoverId } from "../../discoverReel";
 import { countdownBeat, countdownFlash, type CountdownId } from "../../countdownReel";
+import { DEFEND_SECONDS, defendBeat, type DefendId } from "../../defendReel";
 
 function roundRect(
   ctx: CanvasRenderingContext2D,
@@ -265,7 +266,11 @@ function drawTitles(
     | "cdFire"
     | "cdProof"
     | "cdYou"
-    | "cdCta",
+    | "cdCta"
+    | "defHook"
+    | "defProof"
+    | "defHold"
+    | "defCta",
   soldiers: number,
   day: number,
   packLabel = "",
@@ -510,6 +515,30 @@ function drawTitles(
     strokeFill(ctx, "BURADAYIM YAZ", w / 2, 178, 17);
     ctx.font = "800 44px Outfit, system-ui, sans-serif";
     strokeFill(ctx, "@wargame2028", w / 2, 258, 14);
+  } else if (phase === "defHook") {
+    strokeFillRed(ctx, "KUŞATILDIK", w / 2, 118, 88, 22);
+    ctx.font = "800 36px Outfit, system-ui, sans-serif";
+    strokeFill(ctx, "çember daralıyor", w / 2, 208, 12);
+  } else if (phase === "defProof") {
+    const count = formatCount(soldiers);
+    ctx.font = "800 150px Outfit, system-ui, sans-serif";
+    strokeFill(ctx, count, w / 2, 124, 26);
+    ctx.font = "800 44px Outfit, system-ui, sans-serif";
+    strokeFill(ctx, "ASKER SAVUNUYOR", w / 2, 250, 14);
+    ctx.font = "800 36px Outfit, system-ui, sans-serif";
+    strokeFill(ctx, "hepsi gerçek takipçi", w / 2, 302, 11);
+  } else if (phase === "defHold") {
+    ctx.font = "800 64px Outfit, system-ui, sans-serif";
+    strokeFill(ctx, "ETRAFIMIZ KUŞATILDI", w / 2, 118, 18);
+    ctx.font = "800 40px Outfit, system-ui, sans-serif";
+    strokeFill(ctx, "giderek yaklaşıyorlar", w / 2, 198, 13);
+  } else if (phase === "defCta") {
+    ctx.font = "800 52px Outfit, system-ui, sans-serif";
+    strokeFill(ctx, "BEĞEN = ORDUYA DESTEK VER", w / 2, 98, 16);
+    ctx.font = "800 56px Outfit, system-ui, sans-serif";
+    strokeFill(ctx, "BURADAYIM YAZ", w / 2, 178, 17);
+    ctx.font = "800 44px Outfit, system-ui, sans-serif";
+    strokeFill(ctx, "@wargame2028", w / 2, 258, 14);
   } else if (phase === "hook") {
     if (day > 0) {
       ctx.font = "800 168px Outfit, system-ui, sans-serif";
@@ -543,11 +572,12 @@ type ReelTitlesProps = {
   saga?: SagaId | null;
   discover?: DiscoverId | null;
   countdown?: CountdownId | null;
+  defend?: DefendId | null;
   names?: string[];
   rosterIds?: number[] | null;
 };
 
-function TitlesPlate({ soldiers, duration, day = 0, skipCommander = false, cinema = false, roster = null, saga = null, discover = null, countdown = null, names = [], rosterIds = null }: ReelTitlesProps) {
+function TitlesPlate({ soldiers, duration, day = 0, skipCommander = false, cinema = false, roster = null, saga = null, discover = null, countdown = null, defend = null, names = [], rosterIds = null }: ReelTitlesProps) {
   const size = useThree((s) => s.size);
   const mesh = useRef<THREE.Mesh>(null);
   const canvas = useMemo(() => {
@@ -613,14 +643,37 @@ function TitlesPlate({ soldiers, duration, day = 0, skipCommander = false, cinem
       | "cdFire"
       | "cdProof"
       | "cdYou"
-      | "cdCta";
+      | "cdCta"
+      | "defHook"
+      | "defProof"
+      | "defHold"
+      | "defCta";
     let phase: Phase = "none";
     let alpha = 0;
     let packLabel = "";
     let packHead = "";
     const engage = isDiscoverEngage(discover);
     const join = isJoin(roster);
-    if (countdown) {
+    if (defend) {
+      const beat = defendBeat(recT);
+      if (recT < 0) {
+        phase = "none";
+        alpha = 0;
+      } else {
+        phase =
+          beat === "hook" ? "defHook" : beat === "proof" ? "defProof" : beat === "hold" ? "defHold" : "defCta";
+        alpha = recT < 0.12 ? recT / 0.12 : 1;
+        if (beat === "hook") {
+          const left = 2.2 - recT;
+          if (left < 0.14) alpha = Math.max(0, left / 0.14);
+        }
+        if (beat === "proof") {
+          const into = recT - 2.2;
+          if (into < 0.12) alpha = into / 0.12;
+        }
+        if (beat === "cta" && recT > DEFEND_SECONDS - 0.5) alpha = Math.max(0, (DEFEND_SECONDS - recT) / 0.5);
+      }
+    } else if (countdown) {
       const beat = countdownBeat(recT);
       if (recT < 0) {
         phase = "none";
@@ -815,7 +868,8 @@ function TitlesPlate({ soldiers, duration, day = 0, skipCommander = false, cinem
         phase.startsWith("disc") ||
         phase.startsWith("trail") ||
         phase.startsWith("shelf") ||
-        phase.startsWith("cd")
+        phase.startsWith("cd") ||
+        phase.startsWith("def")
       ) {
         mesh.current.position.y = size.height * 0.3;
       } else if (phase === "army") {

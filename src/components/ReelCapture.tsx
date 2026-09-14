@@ -9,6 +9,7 @@ import type { SagaId } from "../sagaReel";
 import type { DiscoverId } from "../discoverReel";
 import type { MixId } from "../mixReel";
 import type { CountdownId } from "../countdownReel";
+import type { DefendId } from "../defendReel";
 
 type ReelCaptureProps = {
   soldiers: number;
@@ -29,13 +30,14 @@ type ReelCaptureProps = {
   saga?: SagaId | null;
   discover?: DiscoverId | null;
   countdown?: CountdownId | null;
+  defend?: DefendId | null;
   mix?: MixId | null;
   rosterIds?: number[] | null;
   onRecorded?: () => void;
   onClose: () => void;
 };
 
-export function ReelCapture({ soldiers, names, commanders = [], level, pressure, hp, maxHp, seconds, showTitles = true, warLook = false, day = 0, skipCommander = false, shotMode = null, cinema = false, roster = null, saga = null, discover = null, countdown = null, mix = null, rosterIds = null, onRecorded, onClose }: ReelCaptureProps) {
+export function ReelCapture({ soldiers, names, commanders = [], level, pressure, hp, maxHp, seconds, showTitles = true, warLook = false, day = 0, skipCommander = false, shotMode = null, cinema = false, roster = null, saga = null, discover = null, countdown = null, defend = null, mix = null, rosterIds = null, onRecorded, onClose }: ReelCaptureProps) {
   const clip = seconds;
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [phase, setPhase] = useState<"boot" | "rec" | "done" | "err">("boot");
@@ -121,13 +123,14 @@ export function ReelCapture({ soldiers, names, commanders = [], level, pressure,
             duration={clip}
             warLook={warLook}
             day={day}
-            skipCommander={skipCommander || Boolean(discover) || Boolean(countdown)}
-            shotMode={cinema || roster || saga || discover || countdown || mix ? null : shotMode}
+            skipCommander={skipCommander || Boolean(discover) || Boolean(countdown) || Boolean(defend)}
+            shotMode={cinema || roster || saga || discover || countdown || defend || mix ? null : shotMode}
             cinema={cinema}
             roster={roster}
             saga={saga}
             discover={discover}
             countdown={countdown}
+            defend={defend}
             mix={mix}
             showTitles={showTitles && !mix}
             rosterIds={rosterIds}

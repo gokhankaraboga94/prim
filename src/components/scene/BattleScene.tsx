@@ -14,7 +14,9 @@ import { rosterSoldierIds, sampleRoster, type PlanBId } from "../../rosterReel";
 import { sagaGateRecT, sampleSaga, type SagaId } from "../../sagaReel";
 import { discoverGateRecT, sampleDiscover, type DiscoverId } from "../../discoverReel";
 import { countdownShake, sampleCountdown, type CountdownId } from "../../countdownReel";
+import { sampleDefend, type DefendId } from "../../defendReel";
 import { MIX8_ID, mixTagPass, sampleMixBottom, sampleMixTop, type MixId } from "../../mixReel";
+import { DefendRing } from "./DefendRing";
 import {
   SALLY_START_DELAY,
   SWORD_START,
@@ -44,6 +46,7 @@ type BattleSceneProps = {
   saga?: SagaId | null;
   discover?: DiscoverId | null;
   countdown?: CountdownId | null;
+  defend?: DefendId | null;
   mix?: MixId | null;
   rosterIds?: number[] | null;
   onReady?: (canvas: HTMLCanvasElement) => void;
@@ -77,6 +80,7 @@ function CinematicCam({
   saga = null,
   discover = null,
   countdown = null,
+  defend = null,
   rosterIds = null,
 }: {
   duration: number;
@@ -91,6 +95,7 @@ function CinematicCam({
   saga?: SagaId | null;
   discover?: DiscoverId | null;
   countdown?: CountdownId | null;
+  defend?: DefendId | null;
   rosterIds?: number[] | null;
 }) {
   const look = useMemo(() => new THREE.Vector3(), []);
@@ -148,11 +153,13 @@ function CinematicCam({
       fov: 38,
     };
 
-    if (cinema || shotMode || roster || saga || discover || countdown) {
+    if (cinema || shotMode || roster || saga || discover || countdown || defend) {
       const warm = clock.elapsedTime;
       const sampleT = warm < REEL_HOLD ? (warm / REEL_HOLD) * duration : recT;
       const ctx = { cmdZ, form, castle, fit, castleFit, level };
-      const pose = countdown
+      const pose = defend
+        ? sampleDefend(sampleT, soldiers)
+        : countdown
         ? sampleCountdown(sampleT, ctx)
         : discover
         ? sampleDiscover(sampleT, ctx, discover)
@@ -383,7 +390,7 @@ function SkyDome() {
   );
 }
 
-function Terrain() {
+function Terrain({ road = true }: { road?: boolean }) {
   const ground = useGroundTexture();
   return (
     <group>
@@ -391,10 +398,12 @@ function Terrain() {
         <planeGeometry args={[720, 720]} />
         <meshStandardMaterial map={ground} color="#68b44a" roughness={0.92} envMapIntensity={0.2} depthWrite={false} />
       </mesh>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.06, 13]} receiveShadow>
-        <planeGeometry args={[9.2, 32]} />
-        <meshStandardMaterial color="#a8824c" roughness={0.88} polygonOffset polygonOffsetFactor={-1} polygonOffsetUnits={-1} />
-      </mesh>
+      {road && (
+        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.06, 13]} receiveShadow>
+          <planeGeometry args={[9.2, 32]} />
+          <meshStandardMaterial color="#a8824c" roughness={0.88} polygonOffset polygonOffsetFactor={-1} polygonOffsetUnits={-1} />
+        </mesh>
+      )}
     </group>
   );
 }
@@ -471,11 +480,12 @@ function SceneContent({
   saga = null,
   discover = null,
   countdown = null,
+  defend = null,
   mix = null,
   rosterIds = null,
 }: BattleSceneProps) {
   const chiefs = effectiveCommanders(commanders, names);
-  const hideCmd = skipCommander || Boolean(discover) || Boolean(countdown);
+  const hideCmd = skipCommander || Boolean(discover) || Boolean(countdown) || Boolean(defend);
   const chiefN = hideCmd ? 0 : chiefs.length;
   const split = Boolean(mix);
   return (
@@ -485,10 +495,14 @@ function SceneContent({
       <SkyDome />
       <SteelSky />
       <DayLights cinematic={cinematic} />
-      <Terrain />
-      <Castle level={level} pressure={pressure} gateClosed={Boolean(countdown) || split} />
-      {!roster && !split && !countdown && <SallyRaid soldiers={soldiers} commanders={chiefN} />}
-      <Army count={soldiers} names={names} commanders={commanders} cinematic={cinematic} duration={duration} skipCommander={hideCmd} roster={roster} discover={discover} countdown={Boolean(countdown)} mix={split} level={level} rosterIds={rosterIds} />
+      <Terrain road={!defend} />
+      {!defend && <Castle level={level} pressure={pressure} gateClosed={Boolean(countdown) || split} />}
+      {defend ? (
+        <DefendRing soldiers={soldiers} />
+      ) : (
+        !roster && !split && !countdown && <SallyRaid soldiers={soldiers} commanders={chiefN} />
+      )}
+      <Army count={soldiers} names={names} commanders={commanders} cinematic={cinematic} duration={duration} skipCommander={hideCmd} roster={roster} discover={discover} countdown={Boolean(countdown)} defend={Boolean(defend)} mix={split} level={level} rosterIds={rosterIds} />
       {cinematic && split ? (
         <MixSplitCam duration={duration ?? 15} soldiers={soldiers} level={level} commanders={chiefN} mix={mix!} />
       ) : cinematic ? (
@@ -505,6 +519,7 @@ function SceneContent({
           saga={saga}
           discover={discover}
           countdown={countdown}
+          defend={defend}
           rosterIds={rosterIds}
         />
       ) : (
@@ -523,15 +538,15 @@ function SceneContent({
           zoomSpeed={1.85}
         />
       )}
-      {cinematic && !split && !countdown && maxHp != null && hp != null && (
+      {cinematic && !split && !countdown && !defend && maxHp != null && hp != null && (
         <CaptureHpHud hp={hp} maxHp={maxHp} soldiers={soldiers} duration={duration ?? 8} skipCommander={hideCmd} cinema={cinema} roster={roster} discover={discover} />
       )}
       {cinematic && showTitles && !split && (
-        <ReelTitles soldiers={soldiers} duration={duration ?? 8} day={day} skipCommander={hideCmd} cinema={cinema} roster={roster} saga={saga} discover={discover} countdown={countdown} names={names} rosterIds={rosterIds} />
+        <ReelTitles soldiers={soldiers} duration={duration ?? 8} day={day} skipCommander={hideCmd} cinema={cinema} roster={roster} saga={saga} discover={discover} countdown={countdown} defend={defend} names={names} rosterIds={rosterIds} />
       )}
       {cinematic && !split && <ReelVignette />}
       {countdown && <CountdownFlash />}
-      {cinematic && !discover && !countdown && !split && <ReelFade duration={duration ?? 8} />}
+      {cinematic && !discover && !countdown && !defend && !split && <ReelFade duration={duration ?? 8} />}
     </>
   );
 }
@@ -573,12 +588,13 @@ function BattleSceneInner({
   saga = null,
   discover = null,
   countdown = null,
+  defend = null,
   mix = null,
   rosterIds = null,
   onReady,
 }: BattleSceneProps) {
   const [active, setActive] = useState(() => typeof document === "undefined" || !document.hidden);
-  const hideCmd = skipCommander || Boolean(discover) || Boolean(countdown);
+  const hideCmd = skipCommander || Boolean(discover) || Boolean(countdown) || Boolean(defend);
 
   useLayoutEffect(() => {
     if (cinematic && mix) {
@@ -587,7 +603,7 @@ function BattleSceneInner({
     } else if (cinematic && roster) {
       setSallyOrigin(80);
       setSwordStart(80);
-    } else if (cinematic && countdown) {
+    } else if (cinematic && (countdown || defend)) {
       setSallyOrigin(SALLY_START_DELAY - 90);
       setSwordStart(80);
     } else if (cinematic && discover) {
@@ -618,7 +634,7 @@ function BattleSceneInner({
       setSallyOrigin(0);
       setSwordStart(SWORD_START);
     };
-  }, [cinematic, cinema, duration, hideCmd, roster, saga, discover, countdown, mix]);
+  }, [cinematic, cinema, duration, hideCmd, roster, saga, discover, countdown, defend, mix]);
 
   useEffect(() => {
     const onVis = () => setActive(!document.hidden);
@@ -678,6 +694,7 @@ function BattleSceneInner({
         saga={saga}
         discover={discover}
         countdown={countdown}
+        defend={defend}
         mix={mix}
         rosterIds={rosterIds}
       />
