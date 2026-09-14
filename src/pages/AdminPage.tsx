@@ -26,6 +26,7 @@ import { SAGA_MODES, isSaga, sagaDuration, type SagaId } from "../sagaReel";
 import { DISCOVER_ID, DISCOVER2_ID, DISCOVER3_ID, RAF2_ID, DISCOVER_MODE, DISCOVER2_MODE, DISCOVER3_MODE, RAF2_MODE, DISCOVER_SECONDS, DISCOVER3_SECONDS, RAF2_SECONDS, isDiscover, isDiscoverEngage, isDiscoverShelf, isDiscoverTrailer, type DiscoverId } from "../discoverReel";
 import { MIX_MODES, MIX_SECONDS, isMix, type MixId } from "../mixReel";
 import { COUNTDOWN_ID, COUNTDOWN_MODE, COUNTDOWN_SECONDS, isCountdown, type CountdownId } from "../countdownReel";
+import { unlockReelSfx } from "../reelSfx";
 
 export function AdminPage() {
   const { game, recruits, level, power, pressure, target, maxHp } = useGame();
@@ -247,7 +248,7 @@ export function AdminPage() {
         <div>
           <p className="join-kicker">Komuta paneli</p>
           <h1>Kuşatma yönetimi</h1>
-          <p className="join-kicker">sürüm 93 — ordu kadrajı</p>
+          <p className="join-kicker">sürüm 94 — yay / ok sesi</p>
         </div>
         <button type="button" className="btn-ghost" onClick={() => signOut(auth)}>
           Çıkış
@@ -625,7 +626,7 @@ export function AdminPage() {
           {isCountdown(reelShot) && (
             <p className="muted">
               14 sn. DUR → 3·2·1·ATEŞ → asker savaşıyor → sensin → beğen + buradayım. Mix gibi: her askerin üstünde ad (isim yoksa etiket yok).
-              Komutansız, kale canı yok, kapı açılmaz. Kırmızı oklar kale kapısına.
+              Yay çekme + ok sesi kayda girer. Komutansız, kale canı yok, kapı açılmaz. Kırmızı oklar kale kapısına.
               {" "}Caption: Adın çıkarsa yoruma BURADAYIM yaz. Kale düşsün diyorsan beğen. Canlı kuşatma. 1 takip = 1 asker. wargame.lol
               {" "}İlk yorumu sabitle: BURADAYIM
               {" "}Hashtag: #wargame #stratejioyunu #kalekuşatma #ordu #wargame2028
@@ -766,6 +767,7 @@ export function AdminPage() {
             type="button"
             className="btn-gold"
             onClick={() => {
+              void unlockReelSfx();
               if (isJoin(reelShot) && pendingJoin.length === 0) {
                 setMsg("Yeni asker yok. Son 10’u da dahil et kutusunu işaretle veya isim ekle.");
                 return;

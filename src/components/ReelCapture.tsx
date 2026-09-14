@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { BattleScene } from "./scene/BattleScene";
 import { SceneErrorBoundary } from "./SceneErrorBoundary";
 import { recordCanvas, saveReelBlob, wait } from "../recordCanvas";
+import { reelSfxStream, unlockReelSfx } from "../reelSfx";
 import type { ShotId } from "../shotModes";
 import type { PlanBId } from "../rosterReel";
 import type { SagaId } from "../sagaReel";
@@ -61,7 +62,8 @@ export function ReelCapture({ soldiers, names, commanders = [], level, pressure,
       if (stop) return;
       setPhase("rec");
       try {
-        const recorded = await recordCanvas(canvas, clip);
+        await unlockReelSfx();
+        const recorded = await recordCanvas(canvas, clip, reelSfxStream());
         if (stop) return;
         setBlob(recorded);
         setPreview(URL.createObjectURL(recorded));
@@ -146,7 +148,7 @@ export function ReelCapture({ soldiers, names, commanders = [], level, pressure,
 
       {phase === "done" && (
         <div className="reel-capture-done">
-          {preview && <video src={preview} playsInline muted controls />}
+          {preview && <video src={preview} playsInline controls />}
           <p>Kayıt hazır. iPhone’da Kaydet ile Fotoğraflar’a at.</p>
           <button type="button" className="btn-gold" onClick={() => void onSave()} disabled={busy}>
             Kaydet / Paylaş

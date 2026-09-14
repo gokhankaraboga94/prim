@@ -35,15 +35,11 @@ export function reelZoomDur(duration: number, skipCommander = false) {
 /** Full-black hold after the fade so the recorder doesn't cut mid-grey. */
 export const REEL_FADE_HOLD = 0.15;
 
-function pickMime() {
+function pickMime(withAudio = false) {
   if (typeof MediaRecorder === "undefined") return "";
-  const types = [
-    "video/mp4",
-    "video/mp4;codecs=avc1.42E01E",
-    "video/webm;codecs=vp9,opus",
-    "video/webm;codecs=vp8",
-    "video/webm",
-  ];
+  const types = withAudio
+    ? ["video/webm;codecs=vp9,opus", "video/webm;codecs=vp8,opus", "video/webm;codecs=vp9", "video/webm", "video/mp4"]
+    : ["video/mp4", "video/mp4;codecs=avc1.42E01E", "video/webm;codecs=vp9,opus", "video/webm;codecs=vp8", "video/webm"];
   return types.find((t) => MediaRecorder.isTypeSupported(t)) || "";
 }
 
@@ -51,10 +47,15 @@ export function wait(ms: number) {
   return new Promise((resolve) => window.setTimeout(resolve, ms));
 }
 
-export async function recordCanvas(canvas: HTMLCanvasElement, seconds: number) {
-  const mime = pickMime();
+export async function recordCanvas(canvas: HTMLCanvasElement, seconds: number, audio?: MediaStream | null) {
+  const mime = pickMime(Boolean(audio));
   if (!mime) throw new Error("Bu tarayıcı video kaydını desteklemiyor. Safari veya Chrome dene.");
-  const stream = canvas.captureStream(60);
+  const video = canvas.captureStream(60);
+  const tracks: MediaStreamTrack[] = [...video.getVideoTracks()];
+  if (audio) {
+    for (const track of audio.getAudioTracks()) tracks.push(track.clone());
+  }
+  const stream = new MediaStream(tracks);
   const rec = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 20_000_000 });
   const chunks: BlobPart[] = [];
   rec.ondataavailable = (e) => {
@@ -68,6 +69,7 @@ export async function recordCanvas(canvas: HTMLCanvasElement, seconds: number) {
   await wait(Math.max(1000, seconds * 1000));
   if (rec.state !== "inactive") rec.stop();
   stream.getTracks().forEach((track) => track.stop());
+  video.getTracks().forEach((track) => track.stop());
   const blob = await done;
   if (!blob.size) throw new Error("Kayıt boş geldi. Sayfayı yenileyip tekrar dene.");
   return blob;

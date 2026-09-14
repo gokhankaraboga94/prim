@@ -6,7 +6,8 @@ import { DEFAULT_COMMANDER, effectiveCommanders, isCommander } from "../../game"
 import { REEL_HOLD, reelBeats } from "../../recordCanvas";
 import { rosterBeat, rosterSoldierIds, stampRosterSoldier, type PlanBId, type RosterPose } from "../../rosterReel";
 import { discoverBeat, DISCOVER_HOOK_END, DISCOVER3_ID, RAF2_ID, shelfBeat, trailerBeat, type DiscoverId } from "../../discoverReel";
-import { countdownVolley } from "../../countdownReel";
+import { COUNT_1_END, countdownVolley } from "../../countdownReel";
+import { sfxArrowLoose, sfxBowDraw, sfxVolleyPeak } from "../../reelSfx";
 import { raidCount, sallyHunting, sallyLiveIndex, sallyLocal, sallyRaiderAt, swordArmPose, swordStyleAt, swordSwingU } from "../../siegeEvent";
 import { castleFrame } from "../../castleLayout";
 import { mixTagPass } from "../../mixReel";
@@ -37,6 +38,8 @@ type Shot = {
   tz: number;
   flight: number;
   thin: boolean;
+  sfxDraw?: boolean;
+  sfxLoose?: boolean;
 };
 
 type ArmyProps = {
@@ -733,6 +736,8 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
   const acc = useRef(0);
   const shots = useRef<Shot[]>([]);
   const nextShot = useRef(0.6);
+  const hookSfx = useRef(false);
+  const fireSfx = useRef(false);
   const pos = useMemo(() => new THREE.Vector3(), []);
   const archerGeo = useMemo(() => getArcherGeometry(), []);
   const commanderGeo = useMemo(() => getCommanderGeometry(), []);
@@ -1271,7 +1276,8 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
     const hunt = mix || countdown ? false : sallyHunting(sally);
     const enemies = raidCount(visible);
     const door = mix || countdown ? castleFrame(level) : null;
-    const recT = Math.max(0, t - REEL_HOLD);
+    const recClock = t - REEL_HOLD;
+    const recT = Math.max(0, recClock);
     const volley = countdown ? countdownVolley(recT) : null;
 
     acc.current += dt;
@@ -1289,7 +1295,28 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
 
     shots.current = shots.current.filter((s) => t - s.draw < s.flight + 0.45);
 
-    const cap = volley?.active ? volley.cap : hunt ? MAX_ARROWS : IDLE_ARROWS;
+    const cap = volley ? (volley.active ? volley.cap : 0) : hunt ? MAX_ARROWS : IDLE_ARROWS;
+
+    if (cinematic && countdown && recClock >= 0 && recClock < 0.25 && !hookSfx.current) {
+      hookSfx.current = true;
+      sfxBowDraw(true);
+    }
+    if (cinematic && countdown && recClock >= COUNT_1_END && recClock < COUNT_1_END + 0.2 && !fireSfx.current) {
+      fireSfx.current = true;
+      sfxVolleyPeak();
+    }
+    if (cinematic) {
+      for (const s of shots.current) {
+        if (!s.sfxDraw && t >= s.draw) {
+          s.sfxDraw = true;
+          sfxBowDraw();
+        }
+        if (!s.sfxLoose && t >= s.born) {
+          s.sfxLoose = true;
+          sfxArrowLoose();
+        }
+      }
+    }
     if (t >= nextShot.current && shots.current.length < cap) {
       const pair = visible > 6 && shots.current.length === 0 && (hunt || Math.random() < 0.38);
       const burst = volley?.active
