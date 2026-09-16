@@ -58,41 +58,22 @@ function createRaiderGeometry() {
 function createDefendRaiderGeometry() {
   const red = "#d31c1c";
   const redDk = "#7a1212";
-  const redMid = "#b01818";
   const helm = "#9a1616";
-  const helmDk = "#5a0c0c";
   const skin = "#d4a57c";
-  const skinDk = "#b88860";
   const boot = "#1a100c";
   const steel = "#c4c8ce";
-  const leather = "#3a2218";
   const pieces = [
-    part(new THREE.BoxGeometry(0.16, 0.12, 0.28), boot, -0.12, 0.06, 0.1),
-    part(new THREE.BoxGeometry(0.16, 0.12, 0.28), boot, 0.12, 0.06, -0.12),
-    part(new THREE.CylinderGeometry(0.055, 0.07, 0.38, 8), redDk, -0.12, 0.28, 0.08),
-    part(new THREE.CylinderGeometry(0.055, 0.07, 0.38, 8), redDk, 0.12, 0.28, -0.1),
-    part(new THREE.CylinderGeometry(0.072, 0.082, 0.36, 8), redMid, -0.12, 0.62, 0.04),
-    part(new THREE.CylinderGeometry(0.072, 0.082, 0.36, 8), redMid, 0.12, 0.62, -0.06),
-    part(new THREE.BoxGeometry(0.36, 0.18, 0.22), leather, 0, 0.82, 0),
-    part(new THREE.BoxGeometry(0.4, 0.48, 0.26), red, 0, 1.12, 0.02),
-    part(new THREE.BoxGeometry(0.36, 0.22, 0.12), redDk, 0, 1.18, 0.12),
-    part(new THREE.SphereGeometry(0.09, 8, 6), redMid, -0.24, 1.32, 0),
-    part(new THREE.SphereGeometry(0.09, 8, 6), redMid, 0.24, 1.32, 0),
-    part(new THREE.CylinderGeometry(0.05, 0.058, 0.32, 8), redDk, -0.3, 1.1, 0.06, 0.35, 0, 0.35),
-    part(new THREE.CylinderGeometry(0.05, 0.058, 0.32, 8), redDk, 0.32, 1.14, 0.08, 0.55, 0, -0.2),
-    part(new THREE.CylinderGeometry(0.042, 0.048, 0.28, 8), skin, -0.36, 0.86, 0.16, 0.5, 0, 0.25),
-    part(new THREE.CylinderGeometry(0.042, 0.048, 0.28, 8), skin, 0.4, 0.94, 0.28, 0.7, 0, -0.15),
-    part(new THREE.SphereGeometry(0.05, 7, 6), skinDk, -0.4, 0.72, 0.26),
-    part(new THREE.SphereGeometry(0.05, 7, 6), skinDk, 0.46, 0.8, 0.42),
-    part(new THREE.CylinderGeometry(0.07, 0.08, 0.1, 8), skin, 0, 1.38, 0.02),
-    part(new THREE.SphereGeometry(0.13, 10, 8), skin, 0, 1.52, 0.04),
-    part(new THREE.SphereGeometry(0.035, 6, 5), skinDk, 0, 1.48, 0.15),
-    part(new THREE.SphereGeometry(0.145, 10, 8), helm, 0, 1.56, 0.02),
-    part(new THREE.CylinderGeometry(0.15, 0.15, 0.08, 10), helmDk, 0, 1.42, 0.04),
-    part(new THREE.BoxGeometry(0.09, 0.028, 0.05), "#080202", -0.045, 1.52, 0.155),
-    part(new THREE.BoxGeometry(0.09, 0.028, 0.05), "#080202", 0.045, 1.52, 0.155),
-    part(new THREE.BoxGeometry(0.035, 0.035, 0.85), steel, 0.48, 0.82, 0.78),
-    part(new THREE.BoxGeometry(0.12, 0.04, 0.04), "#c9a227", 0.48, 0.82, 0.42),
+    part(new THREE.BoxGeometry(0.16, 0.12, 0.26), boot, -0.11, 0.06, 0.08),
+    part(new THREE.BoxGeometry(0.16, 0.12, 0.26), boot, 0.11, 0.06, -0.08),
+    part(new THREE.BoxGeometry(0.13, 0.52, 0.14), redDk, -0.11, 0.38, 0.04),
+    part(new THREE.BoxGeometry(0.13, 0.52, 0.14), redDk, 0.11, 0.38, -0.04),
+    part(new THREE.BoxGeometry(0.38, 0.46, 0.24), red, 0, 0.96, 0.02),
+    part(new THREE.BoxGeometry(0.12, 0.4, 0.12), redDk, -0.28, 0.9, 0.04),
+    part(new THREE.BoxGeometry(0.12, 0.4, 0.12), redDk, 0.28, 0.9, 0.06),
+    part(new THREE.BoxGeometry(0.22, 0.18, 0.2), skin, 0, 1.28, 0.03),
+    part(new THREE.SphereGeometry(0.14, 6, 5), helm, 0, 1.48, 0.02),
+    part(new THREE.BoxGeometry(0.16, 0.03, 0.05), "#080202", 0, 1.46, 0.14),
+    part(new THREE.BoxGeometry(0.04, 0.04, 0.7), steel, 0.34, 0.88, 0.42),
   ];
   const merged = mergeGeometries(pieces, false);
   pieces.forEach((g) => g.dispose());

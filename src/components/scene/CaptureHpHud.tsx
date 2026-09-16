@@ -9,7 +9,7 @@ import { isJoin, rosterBeat, rosterSoldierIds, rosterTimeline, type PlanBId } fr
 import { sagaBeat, type SagaId } from "../../sagaReel";
 import { discoverBeat, DISCOVER_HOOK_END, isDiscoverEngage, isDiscoverShelf, isDiscoverTrailer, shelfBeat, trailerBeat, type DiscoverId } from "../../discoverReel";
 import { countdownBeat, countdownFlash, type CountdownId } from "../../countdownReel";
-import { DEFEND_HOOK_END, DEFEND_SECONDS, defendBeat, type DefendId } from "../../defendReel";
+import { DEFEND_HOOK_END, defendBeat, defendDuration, defendPlayhead, type DefendId } from "../../defendReel";
 
 function roundRect(
   ctx: CanvasRenderingContext2D,
@@ -270,7 +270,10 @@ function drawTitles(
     | "defHook"
     | "defProof"
     | "defHold"
-    | "defCta",
+    | "defCta"
+    | "def2Gate"
+    | "def2Split"
+    | "def2Wrap",
   soldiers: number,
   day: number,
   packLabel = "",
@@ -519,6 +522,20 @@ function drawTitles(
     strokeFillRed(ctx, "KUŞATILDIK", w / 2, 118, 88, 22);
     ctx.font = "800 36px Outfit, system-ui, sans-serif";
     strokeFill(ctx, "çember daralıyor", w / 2, 208, 12);
+  } else if (phase === "def2Gate") {
+    strokeFillRed(ctx, "KAPI AÇILDI", w / 2, 118, 88, 22);
+    ctx.font = "800 36px Outfit, system-ui, sans-serif";
+    strokeFill(ctx, "düşman dışarı akıyor", w / 2, 208, 12);
+  } else if (phase === "def2Split") {
+    ctx.font = "800 56px Outfit, system-ui, sans-serif";
+    strokeFill(ctx, "SAĞA VE SOLA", w / 2, 118, 17);
+    ctx.font = "800 36px Outfit, system-ui, sans-serif";
+    strokeFill(ctx, "kalabalık iki kola ayrıldı", w / 2, 198, 12);
+  } else if (phase === "def2Wrap") {
+    ctx.font = "800 56px Outfit, system-ui, sans-serif";
+    strokeFill(ctx, "ÇEMBER KAPANıyor", w / 2, 118, 17);
+    ctx.font = "800 36px Outfit, system-ui, sans-serif";
+    strokeFill(ctx, "iki uç birleşiyor", w / 2, 198, 12);
   } else if (phase === "defProof") {
     const count = formatCount(soldiers);
     ctx.font = "800 150px Outfit, system-ui, sans-serif";
@@ -647,7 +664,10 @@ function TitlesPlate({ soldiers, duration, day = 0, skipCommander = false, cinem
       | "defHook"
       | "defProof"
       | "defHold"
-      | "defCta";
+      | "defCta"
+      | "def2Gate"
+      | "def2Split"
+      | "def2Wrap";
     let phase: Phase = "none";
     let alpha = 0;
     let packLabel = "";
@@ -655,23 +675,37 @@ function TitlesPlate({ soldiers, duration, day = 0, skipCommander = false, cinem
     const engage = isDiscoverEngage(discover);
     const join = isJoin(roster);
     if (defend) {
-      const beat = defendBeat(recT);
+      const beat = defendBeat(recT, defend);
+      const play = defendPlayhead(recT, defend);
+      const total = defendDuration(defend);
       if (recT < 0) {
         phase = "none";
         alpha = 0;
       } else {
         phase =
-          beat === "hook" ? "defHook" : beat === "proof" ? "defProof" : beat === "hold" ? "defHold" : "defCta";
+          beat === "sortieGate"
+            ? "def2Gate"
+            : beat === "sortieSplit"
+              ? "def2Split"
+              : beat === "sortieWrap"
+                ? "def2Wrap"
+                : beat === "hook"
+                  ? "defHook"
+                  : beat === "proof"
+                    ? "defProof"
+                    : beat === "hold"
+                      ? "defHold"
+                      : "defCta";
         alpha = recT < 0.12 ? recT / 0.12 : 1;
         if (beat === "hook") {
-          const left = DEFEND_HOOK_END - recT;
+          const left = DEFEND_HOOK_END - play;
           if (left < 0.14) alpha = Math.max(0, left / 0.14);
         }
         if (beat === "proof") {
-          const into = recT - DEFEND_HOOK_END;
+          const into = play - DEFEND_HOOK_END;
           if (into < 0.12) alpha = into / 0.12;
         }
-        if (beat === "cta" && recT > DEFEND_SECONDS - 0.5) alpha = Math.max(0, (DEFEND_SECONDS - recT) / 0.5);
+        if (beat === "cta" && recT > total - 0.5) alpha = Math.max(0, (total - recT) / 0.5);
       }
     } else if (countdown) {
       const beat = countdownBeat(recT);

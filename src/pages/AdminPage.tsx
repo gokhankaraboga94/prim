@@ -26,7 +26,7 @@ import { SAGA_MODES, isSaga, sagaDuration, type SagaId } from "../sagaReel";
 import { DISCOVER_ID, DISCOVER2_ID, DISCOVER3_ID, RAF2_ID, DISCOVER_MODE, DISCOVER2_MODE, DISCOVER3_MODE, RAF2_MODE, DISCOVER_SECONDS, DISCOVER3_SECONDS, RAF2_SECONDS, isDiscover, isDiscoverEngage, isDiscoverShelf, isDiscoverTrailer, type DiscoverId } from "../discoverReel";
 import { MIX_MODES, MIX_SECONDS, isMix, type MixId } from "../mixReel";
 import { COUNTDOWN_ID, COUNTDOWN_MODE, COUNTDOWN_SECONDS, isCountdown, type CountdownId } from "../countdownReel";
-import { DEFEND_ID, DEFEND_MODE, DEFEND_SECONDS, isDefend, type DefendId } from "../defendReel";
+import { DEFEND_ID, DEFEND2_ID, DEFEND_MODE, DEFEND2_MODE, DEFEND_SECONDS, DEFEND2_SECONDS, isDefend, isDefend2, type DefendId } from "../defendReel";
 import { unlockReelSfx } from "../reelSfx";
 
 export function AdminPage() {
@@ -249,7 +249,7 @@ export function AdminPage() {
         <div>
           <p className="join-kicker">Komuta paneli</p>
           <h1>Kuşatma yönetimi</h1>
-          <p className="join-kicker">sürüm 105 — savunma oksuz</p>
+          <p className="join-kicker">sürüm 106 — savunma fps + savunma 2</p>
         </div>
         <button type="button" className="btn-ghost" onClick={() => signOut(auth)}>
           Çıkış
@@ -457,6 +457,8 @@ export function AdminPage() {
                     ? [RAF2_SECONDS]
                   : isCountdown(reelShot)
                     ? [COUNTDOWN_SECONDS]
+                  : isDefend2(reelShot)
+                    ? [DEFEND2_SECONDS]
                   : isDefend(reelShot)
                     ? [DEFEND_SECONDS]
                   : isMix(reelShot)
@@ -614,6 +616,17 @@ export function AdminPage() {
             >
               {DEFEND_MODE.label} — {DEFEND_SECONDS}s
             </button>
+            <button
+              type="button"
+              className={reelShot === DEFEND2_ID ? "on" : ""}
+              onClick={() => {
+                setReelShot((cur) => (cur === DEFEND2_ID ? null : DEFEND2_ID));
+                setReelSeconds(DEFEND2_SECONDS);
+                setReelSkipCmd(true);
+              }}
+            >
+              {DEFEND2_MODE.label} — {DEFEND2_SECONDS}s
+            </button>
           </div>
           {reelShot === DISCOVER_ID && (
             <p className="muted">
@@ -646,10 +659,18 @@ export function AdminPage() {
               {" "}Hashtag: #wargame #stratejioyunu #kalekuşatma #ordu #wargame2028
             </p>
           )}
-          {isDefend(reelShot) && (
+          {reelShot === DEFEND_ID && (
             <p className="muted">
               15.2 sn. Tepeden 360° çember kadraja sığar, sonra yaklaşır. Düşman kalabalık, aralarında ince boşluk.
               Kullanıcı adları askerlerin üstünde. Komutansız, kale canı yok.
+              {" "}Caption: Adın çıkarsa yoruma BURADAYIM yaz. Kale düşsün diyorsan beğen. Canlı kuşatma. 1 takip = 1 asker. wargame.lol
+              {" "}İlk yorumu sabitle: BURADAYIM
+              {" "}Hashtag: #wargame #stratejioyunu #kalekuşatma #ordu #wargame2028
+            </p>
+          )}
+          {isDefend2(reelShot) && (
+            <p className="muted">
+              21.4 sn. Kuş bakışı: ordu kalenin gerisinde, kapı açılır, düşman kalabalık çıkar, sağa-sola iki kola ayrılır, uçlar birleşince tam çember. Sonrası Savunma ile aynı daralma.
               {" "}Caption: Adın çıkarsa yoruma BURADAYIM yaz. Kale düşsün diyorsan beğen. Canlı kuşatma. 1 takip = 1 asker. wargame.lol
               {" "}İlk yorumu sabitle: BURADAYIM
               {" "}Hashtag: #wargame #stratejioyunu #kalekuşatma #ordu #wargame2028

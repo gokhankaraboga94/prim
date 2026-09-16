@@ -14,7 +14,7 @@ import { rosterSoldierIds, sampleRoster, type PlanBId } from "../../rosterReel";
 import { sagaGateRecT, sampleSaga, type SagaId } from "../../sagaReel";
 import { discoverGateRecT, sampleDiscover, type DiscoverId } from "../../discoverReel";
 import { countdownShake, sampleCountdown, type CountdownId } from "../../countdownReel";
-import { sampleDefend, type DefendId } from "../../defendReel";
+import { isDefend2, sampleDefendCam, type DefendId } from "../../defendReel";
 import { MIX8_ID, mixTagPass, sampleMixBottom, sampleMixTop, type MixId } from "../../mixReel";
 import { DefendRing } from "./DefendRing";
 import {
@@ -158,7 +158,7 @@ function CinematicCam({
       const sampleT = warm < REEL_HOLD ? (warm / REEL_HOLD) * duration : recT;
       const ctx = { cmdZ, form, castle, fit, castleFit, level };
       const pose = defend
-        ? sampleDefend(sampleT, soldiers)
+        ? sampleDefendCam(sampleT, soldiers, defend, level)
         : countdown
         ? sampleCountdown(sampleT, ctx)
         : discover
@@ -492,21 +492,22 @@ function SceneContent({
   const hideCmd = skipCommander || Boolean(discover) || Boolean(countdown) || Boolean(defend);
   const chiefN = hideCmd ? 0 : chiefs.length;
   const split = Boolean(mix);
+  const sortie = isDefend2(defend);
   return (
     <>
       <color attach="background" args={["#7eb6ee"]} />
-      <fog attach="fog" args={defend ? ["#9ec8ee", 1400, 4200] : ["#9ec8ee", 380, 1500]} />
+      <fog attach="fog" args={defend ? (sortie ? ["#9ec8ee", 900, 3200] : ["#9ec8ee", 1400, 4200]) : ["#9ec8ee", 380, 1500]} />
       <SkyDome />
       <SteelSky />
       <DayLights cinematic={cinematic} />
-      <Terrain road={!defend} />
-      {!defend && <Castle level={level} pressure={pressure} gateClosed={Boolean(countdown) || split} />}
+      <Terrain road={!defend || sortie} />
+      {(!defend || sortie) && <Castle level={level} pressure={pressure} gateClosed={Boolean(countdown) || split} forceGateOpen={sortie} />}
       {defend ? (
-        <DefendRing soldiers={soldiers} />
+        <DefendRing soldiers={soldiers} mode={defend} level={level} />
       ) : (
         !roster && !split && !countdown && <SallyRaid soldiers={soldiers} commanders={chiefN} />
       )}
-      <Army count={soldiers} names={names} commanders={commanders} cinematic={cinematic} duration={duration} skipCommander={hideCmd} roster={roster} discover={discover} countdown={Boolean(countdown)} defend={Boolean(defend)} mix={split} level={level} rosterIds={rosterIds} />
+      <Army count={soldiers} names={names} commanders={commanders} cinematic={cinematic} duration={duration} skipCommander={hideCmd} roster={roster} discover={discover} countdown={Boolean(countdown)} defend={Boolean(defend)} defend2={sortie} mix={split} level={level} rosterIds={rosterIds} />
       {cinematic && split ? (
         <MixSplitCam duration={duration ?? 15} soldiers={soldiers} level={level} commanders={chiefN} mix={mix!} />
       ) : cinematic ? (
@@ -651,7 +652,7 @@ function BattleSceneInner({
       shadows={!cinematic}
       dpr={cinematic ? 1 : [1, 1.5]}
       gl={{
-        antialias: true,
+        antialias: !defend,
         alpha: false,
         powerPreference: "high-performance",
         stencil: false,
