@@ -533,7 +533,7 @@ function drawTitles(
     strokeFill(ctx, "kalabalık iki kola ayrıldı", w / 2, 198, 12);
   } else if (phase === "def2Wrap") {
     ctx.font = "800 56px Outfit, system-ui, sans-serif";
-    strokeFill(ctx, "ÇEMBER KAPANıyor", w / 2, 118, 17);
+    strokeFill(ctx, "ÇEMBER KAPANIYOR", w / 2, 118, 17);
     ctx.font = "800 36px Outfit, system-ui, sans-serif";
     strokeFill(ctx, "iki uç birleşiyor", w / 2, 198, 12);
   } else if (phase === "defProof") {
