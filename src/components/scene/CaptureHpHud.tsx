@@ -9,7 +9,7 @@ import { isJoin, rosterBeat, rosterSoldierIds, rosterTimeline, type PlanBId } fr
 import { sagaBeat, type SagaId } from "../../sagaReel";
 import { discoverBeat, DISCOVER_HOOK_END, isDiscoverEngage, isDiscoverShelf, isDiscoverTrailer, shelfBeat, trailerBeat, type DiscoverId } from "../../discoverReel";
 import { countdownBeat, countdownFlash, type CountdownId } from "../../countdownReel";
-import { DEFEND_HOOK_END, defendBeat, defendDuration, defendPlayhead, type DefendId } from "../../defendReel";
+import { DEFEND_HOOK_END, defendBeat, defendPlayhead, type DefendId } from "../../defendReel";
 
 function roundRect(
   ctx: CanvasRenderingContext2D,
@@ -267,13 +267,7 @@ function drawTitles(
     | "cdProof"
     | "cdYou"
     | "cdCta"
-    | "defHook"
-    | "defProof"
-    | "defHold"
-    | "defCta"
-    | "def2Gate"
-    | "def2Split"
-    | "def2Wrap",
+    | "defHook",
   soldiers: number,
   day: number,
   packLabel = "",
@@ -522,40 +516,6 @@ function drawTitles(
     strokeFillRed(ctx, "KUŞATILDIK", w / 2, 118, 88, 22);
     ctx.font = "800 36px Outfit, system-ui, sans-serif";
     strokeFill(ctx, "çember daralıyor", w / 2, 208, 12);
-  } else if (phase === "def2Gate") {
-    strokeFillRed(ctx, "KAPI AÇILDI", w / 2, 118, 88, 22);
-    ctx.font = "800 36px Outfit, system-ui, sans-serif";
-    strokeFill(ctx, "düşman dışarı akıyor", w / 2, 208, 12);
-  } else if (phase === "def2Split") {
-    ctx.font = "800 56px Outfit, system-ui, sans-serif";
-    strokeFill(ctx, "SAĞA VE SOLA", w / 2, 118, 17);
-    ctx.font = "800 36px Outfit, system-ui, sans-serif";
-    strokeFill(ctx, "kalabalık iki kola ayrıldı", w / 2, 198, 12);
-  } else if (phase === "def2Wrap") {
-    ctx.font = "800 56px Outfit, system-ui, sans-serif";
-    strokeFill(ctx, "ÇEMBER KAPANIYOR", w / 2, 118, 17);
-    ctx.font = "800 36px Outfit, system-ui, sans-serif";
-    strokeFill(ctx, "iki uç birleşiyor", w / 2, 198, 12);
-  } else if (phase === "defProof") {
-    const count = formatCount(soldiers);
-    ctx.font = "800 150px Outfit, system-ui, sans-serif";
-    strokeFill(ctx, count, w / 2, 124, 26);
-    ctx.font = "800 44px Outfit, system-ui, sans-serif";
-    strokeFill(ctx, "ASKER SAVUNUYOR", w / 2, 250, 14);
-    ctx.font = "800 36px Outfit, system-ui, sans-serif";
-    strokeFill(ctx, "hepsi gerçek takipçi", w / 2, 302, 11);
-  } else if (phase === "defHold") {
-    ctx.font = "800 64px Outfit, system-ui, sans-serif";
-    strokeFill(ctx, "ETRAFIMIZ KUŞATILDI", w / 2, 118, 18);
-    ctx.font = "800 40px Outfit, system-ui, sans-serif";
-    strokeFill(ctx, "giderek yaklaşıyorlar", w / 2, 198, 13);
-  } else if (phase === "defCta") {
-    ctx.font = "800 52px Outfit, system-ui, sans-serif";
-    strokeFill(ctx, "BEĞEN = ORDUYA DESTEK VER", w / 2, 98, 16);
-    ctx.font = "800 56px Outfit, system-ui, sans-serif";
-    strokeFill(ctx, "BURADAYIM YAZ", w / 2, 178, 17);
-    ctx.font = "800 44px Outfit, system-ui, sans-serif";
-    strokeFill(ctx, "@wargame2028", w / 2, 258, 14);
   } else if (phase === "hook") {
     if (day > 0) {
       ctx.font = "800 168px Outfit, system-ui, sans-serif";
@@ -661,13 +621,7 @@ function TitlesPlate({ soldiers, duration, day = 0, skipCommander = false, cinem
       | "cdProof"
       | "cdYou"
       | "cdCta"
-      | "defHook"
-      | "defProof"
-      | "defHold"
-      | "defCta"
-      | "def2Gate"
-      | "def2Split"
-      | "def2Wrap";
+      | "defHook";
     let phase: Phase = "none";
     let alpha = 0;
     let packLabel = "";
@@ -677,35 +631,14 @@ function TitlesPlate({ soldiers, duration, day = 0, skipCommander = false, cinem
     if (defend) {
       const beat = defendBeat(recT, defend);
       const play = defendPlayhead(recT, defend);
-      const total = defendDuration(defend);
-      if (recT < 0) {
+      if (recT < 0 || beat !== "hook") {
         phase = "none";
         alpha = 0;
       } else {
-        phase =
-          beat === "sortieGate"
-            ? "def2Gate"
-            : beat === "sortieSplit"
-              ? "def2Split"
-              : beat === "sortieWrap"
-                ? "def2Wrap"
-                : beat === "hook"
-                  ? "defHook"
-                  : beat === "proof"
-                    ? "defProof"
-                    : beat === "hold"
-                      ? "defHold"
-                      : "defCta";
+        phase = "defHook";
         alpha = recT < 0.12 ? recT / 0.12 : 1;
-        if (beat === "hook") {
-          const left = DEFEND_HOOK_END - play;
-          if (left < 0.14) alpha = Math.max(0, left / 0.14);
-        }
-        if (beat === "proof") {
-          const into = play - DEFEND_HOOK_END;
-          if (into < 0.12) alpha = into / 0.12;
-        }
-        if (beat === "cta" && recT > total - 0.5) alpha = Math.max(0, (total - recT) / 0.5);
+        const left = DEFEND_HOOK_END - play;
+        if (left < 0.14) alpha = Math.max(0, left / 0.14);
       }
     } else if (countdown) {
       const beat = countdownBeat(recT);
