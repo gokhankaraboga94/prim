@@ -21,7 +21,7 @@ import { useGame } from "../hooks/useGame";
 import { ReelCapture } from "../components/ReelCapture";
 import { REEL_DURATIONS } from "../recordCanvas";
 import { CINEMA_DURATIONS, CINEMA_ID, CINEMA_MODE, SHOT_MODES, type ReelShot } from "../shotModes";
-import { HOOK_ID, HOOK_MODE, JOIN_ID, JOIN_MODE, ROSTER_ID, ROSTER_MODE, ensureJoinMark, isJoin, isPlanB, joinQueue, rosterDuration, saveJoinMark, setJoinForcePack, type PlanBId } from "../rosterReel";
+import { HOOK_ID, HOOK_MODE, JOIN_ID, JOIN_MODE, ROSTER_ID, ROSTER_MODE, ensureJoinMark, finishJoinBacklogIfCaughtUp, isJoin, isPlanB, joinQueue, rosterDuration, saveJoinMark, setJoinForcePack, type PlanBId } from "../rosterReel";
 import { SAGA_MODES, isSaga, sagaDuration, type SagaId } from "../sagaReel";
 import { DISCOVER_ID, DISCOVER2_ID, DISCOVER3_ID, RAF2_ID, DISCOVER_MODE, DISCOVER2_MODE, DISCOVER3_MODE, RAF2_MODE, DISCOVER_SECONDS, DISCOVER3_SECONDS, RAF2_SECONDS, isDiscover, isDiscoverEngage, isDiscoverShelf, isDiscoverTrailer, type DiscoverId } from "../discoverReel";
 import { MIX_MODES, MIX_SECONDS, isMix, type MixId } from "../mixReel";
@@ -776,15 +776,9 @@ export function AdminPage() {
                 onChange={(e) => setJoinExtras(e.target.value)}
               />
               <p className="muted">
-                Boş bırakırsan akış aynı devam eder. Satır satır veya boşlukla yazarsan bu
-                adlar son katılanlara eklenir; orduda yoksa atlanır. Yeni asker varsa yalnızca
-                onlar (son 10 karışmaz). Yeni yoksa ve kutu seçiliyse son 10 yine çıkar. Yalnız
-                son 10 ise üçer üçer. Bu kayıtta {pendingJoin.ids.length} asker
-                {pendingJoin.fresh > 0 ? ` · ${Math.min(pendingJoin.fresh, pendingJoin.ids.length - pendingJoin.extra)} yeni` : joinLastTen && pendingJoin.extra === 0 ? " · son 10" : ""}
-                {pendingJoin.extra > 0 ? ` · ${pendingJoin.extra} eski takipçi` : ""}
-                {pendingJoin.leftover > 0 ? ` · sonra ${pendingJoin.leftover} kalır` : ""}
-                {joinExtraNames.length > pendingJoin.extra ? ` · ${joinExtraNames.length - pendingJoin.extra} ad orduda yok` : ""}
-                .
+                {pendingJoin.backlog
+                  ? `Tek seferlik: 317’den sonrası. Bu kayıtta ${pendingJoin.ids.length} asker${pendingJoin.leftover > 0 ? ` · sonra ${pendingJoin.leftover} kalır` : " · bu grupla biter, sonraki kayıtlarda yine yalnızca yeni katılanlar"}.`
+                  : `Boş bırakırsan akış aynı devam eder. Satır satır veya boşlukla yazarsan bu adlar son katılanlara eklenir. Yeni asker varsa yalnızca onlar. Bu kayıtta ${pendingJoin.ids.length} asker${pendingJoin.fresh > 0 ? ` · ${Math.min(pendingJoin.fresh, pendingJoin.ids.length - pendingJoin.extra)} yeni` : joinLastTen && pendingJoin.extra === 0 ? " · son 10" : ""}${pendingJoin.extra > 0 ? ` · ${pendingJoin.extra} eski takipçi` : ""}${pendingJoin.leftover > 0 ? ` · sonra ${pendingJoin.leftover} kalır` : ""}${joinExtraNames.length > pendingJoin.extra ? ` · ${joinExtraNames.length - pendingJoin.extra} ad orduda yok` : ""}.`}
                 {" "}Caption: Adın çıkarsa yoruma SAVAŞTAYIM yaz. Kale düşsün diyorsan beğen. Canlı kuşatma. 1 takip = 1 asker. wargame.lol
                 {" "}Hashtag: #wargame #stratejioyunu #kalekuşatma #ordu #wargame2028
               </p>
@@ -856,9 +850,11 @@ export function AdminPage() {
               }
             }}
           >
-            {isJoin(reelShot) && pendingJoin.leftover > 0
-              ? `Kaydı başlat · ${pendingJoin.leftover} kalır`
-              : "Kaydı başlat"}
+            {isJoin(reelShot) && pendingJoin.backlog
+              ? `Kaydı başlat · 317’den sonrası${pendingJoin.leftover > 0 ? ` · ${pendingJoin.leftover} kalır` : ""}`
+              : isJoin(reelShot) && pendingJoin.leftover > 0
+                ? `Kaydı başlat · ${pendingJoin.leftover} kalır`
+                : "Kaydı başlat"}
           </button>
           {isJoin(reelShot) && pendingJoin.ids.length === 0 && (
             <p className="muted">Bu buton şimdi kayıt açmaz: kuyruk boş. Yeni asker yoksa Son 10’u işaretle.</p>
@@ -879,7 +875,7 @@ export function AdminPage() {
       {capturing && (
         <ReelCapture
           key={captureGen}
-          soldiers={isJoin(reelShot) ? Math.min(80, Math.max(1, game.soldiers)) : game.soldiers}
+          soldiers={game.soldiers}
           names={game.names}
           commanders={game.commanders}
           level={level}
@@ -902,6 +898,7 @@ export function AdminPage() {
           onRecorded={() => {
             if (isJoin(reelShot)) {
               saveJoinMark(game.names, captureJoinIds.current);
+              finishJoinBacklogIfCaughtUp(game.names, game.soldiers);
               setJoinTick((n) => n + 1);
             }
           }}

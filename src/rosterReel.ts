@@ -79,24 +79,52 @@ export function loadJoinMark(): string[] {
 
 export const JOIN_BATCH = 320;
 export const JOIN_KEEP = 317;
-const JOIN_RECOVER_KEY = "wars.joinMark.keep317.v1";
+const JOIN_BACKLOG_KEY = "wars.joinBacklog317.v2";
+const JOIN_BACKLOG_SEED = "wars.joinBacklog317.seed.v2";
 
-export function recoverJoinMark(names: string[], soldiers: number) {
+function keyOfName(names: string[], i: number) {
+  return normalizeHandle(names[i] || "").toLowerCase();
+}
+
+export function joinBacklogOpen() {
   try {
-    if (localStorage.getItem(JOIN_RECOVER_KEY)) return;
+    return localStorage.getItem(JOIN_BACKLOG_KEY) !== "done";
+  } catch {
+    return true;
+  }
+}
+
+function seedJoinBacklog(names: string[], soldiers: number) {
+  try {
+    if (localStorage.getItem(JOIN_BACKLOG_KEY) === "done") return;
+    if (localStorage.getItem(JOIN_BACKLOG_SEED)) return;
     const all = rosterSoldierIds(names, soldiers);
-    if (all.length <= JOIN_KEEP) return;
+    if (all.length <= JOIN_KEEP) {
+      localStorage.setItem(JOIN_BACKLOG_KEY, "done");
+      localStorage.setItem(JOIN_BACKLOG_SEED, "1");
+      return;
+    }
+    saveJoinMark(names, all.slice(0, JOIN_KEEP));
+    localStorage.setItem(JOIN_BACKLOG_SEED, "1");
+    localStorage.setItem(JOIN_BACKLOG_KEY, "open");
+  } catch {
+    /* ignore */
+  }
+}
+
+export function finishJoinBacklogIfCaughtUp(names: string[], soldiers: number) {
+  try {
+    if (localStorage.getItem(JOIN_BACKLOG_KEY) === "done") return;
+    const all = rosterSoldierIds(names, soldiers);
     const marked = loadJoinMark();
     const seen = new Set(marked.map((n) => n.toLowerCase()));
-    const keyOf = (i: number) => normalizeHandle(names[i] || "").toLowerCase();
-    const fresh = all.filter((i) => !seen.has(keyOf(i)));
-    if (fresh.length > 0) return;
-    const keep = all
-      .slice(0, JOIN_KEEP)
-      .map((i) => normalizeHandle(names[i] || ""))
-      .filter(Boolean);
-    localStorage.setItem(JOIN_MARK_KEY, JSON.stringify(keep));
-    localStorage.setItem(JOIN_RECOVER_KEY, "1");
+    const pending = all.slice(JOIN_KEEP).filter((i) => !seen.has(keyOfName(names, i)));
+    if (pending.length > 0) {
+      localStorage.setItem(JOIN_BACKLOG_KEY, "open");
+      return;
+    }
+    saveJoinMark(names, all.slice(0, JOIN_KEEP));
+    localStorage.setItem(JOIN_BACKLOG_KEY, "done");
   } catch {
     /* ignore */
   }
@@ -181,28 +209,30 @@ function manualJoinIds(names: string[], _soldiers: number, handles: string[], sk
 }
 
 export function joinQueue(names: string[], soldiers: number, includeLastTen: boolean, extraHandles: string[] = []) {
-  recoverJoinMark(names, soldiers);
+  seedJoinBacklog(names, soldiers);
   const marked = loadJoinMark();
   const all = rosterSoldierIds(names, soldiers);
   const seen = new Set(marked.map((n) => n.toLowerCase()));
-  const keyOf = (i: number) => normalizeHandle(names[i]).toLowerCase();
-  const fresh = all.filter((i) => !seen.has(keyOf(i)));
+  const keyOf = (i: number) => keyOfName(names, i);
+  const backlog = joinBacklogOpen() && all.length > JOIN_KEEP;
+  const pool = backlog ? all.slice(JOIN_KEEP).filter((i) => !seen.has(keyOf(i))) : all.filter((i) => !seen.has(keyOf(i)));
   let ids: number[];
   let leftover = 0;
-  if (fresh.length > 0) {
-    ids = fresh.slice(0, JOIN_BATCH);
-    leftover = Math.max(0, fresh.length - ids.length);
-  } else if (includeLastTen) ids = all.slice(-Math.min(10, all.length));
+  if (pool.length > 0) {
+    ids = pool.slice(0, JOIN_BATCH);
+    leftover = Math.max(0, pool.length - ids.length);
+  } else if (!backlog && includeLastTen) ids = all.slice(-Math.min(10, all.length));
   else ids = [];
   const extraIds = manualJoinIds(names, soldiers, extraHandles, new Set(ids));
   ids = [...ids, ...extraIds];
-  const lastTenOnly = includeLastTen && fresh.length === 0 && extraIds.length === 0 && ids.length > 0;
+  const lastTenOnly = !backlog && includeLastTen && pool.length === 0 && extraIds.length === 0 && ids.length > 0;
   const pack = joinPackSize(ids.length, lastTenOnly);
   return {
     ids,
-    fresh: fresh.length,
+    fresh: pool.length,
     extra: extraIds.length,
     leftover,
+    backlog,
     pack,
     seconds: rosterDuration(JOIN_ID, ids.length, pack),
   };
