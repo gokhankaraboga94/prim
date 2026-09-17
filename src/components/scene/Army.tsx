@@ -7,7 +7,7 @@ import { REEL_HOLD, reelBeats } from "../../recordCanvas";
 import { rosterBeat, rosterSoldierIds, stampRosterSoldier, type PlanBId, type RosterPose } from "../../rosterReel";
 import { discoverBeat, DISCOVER_HOOK_END, DISCOVER3_ID, RAF2_ID, shelfBeat, trailerBeat, type DiscoverId } from "../../discoverReel";
 import { COUNT_1_END, countdownBeat, countdownVolley } from "../../countdownReel";
-import { DEFEND_CZ, DEFEND2_CX, DEFEND2_CZ, defendArmyRadius, defendSoldierPos, defendYawOut } from "../../defendReel";
+import { DEFEND_CZ, DEFEND2_CX, DEFEND2_CZ, defendSoldierPos, defendYawOut } from "../../defendReel";
 import { sfxArrowLoose, sfxBowDraw, sfxVolleyPeak } from "../../reelSfx";
 import { raidCount, sallyHunting, sallyLiveIndex, sallyLocal, sallyRaiderAt, swordArmPose, swordStyleAt, swordSwingU } from "../../siegeEvent";
 import { castleFrame } from "../../castleLayout";
@@ -16,7 +16,6 @@ import { mixTagPass } from "../../mixReel";
 const MAX_SOLDIERS = 5000;
 const MAX_LABELS = 400;
 const MAX_REEL_LABELS = 120;
-const MAX_DEFEND_LABELS = 140;
 const MAX_COMMANDERS = 24;
 const MAX_ARROWS = 28;
 const IDLE_ARROWS = 8;
@@ -520,6 +519,22 @@ function createArcherGeometry() {
   return mergeParts([...plateArmor(false), ...corinthianShell(14)], ARMOR);
 }
 
+function createDefendSoldierGeometry() {
+  return mergeParts(
+    [
+      part(new THREE.BoxGeometry(0.16, 0.12, 0.24), LEATHER, -0.1, 0.06, 0.04),
+      part(new THREE.BoxGeometry(0.16, 0.12, 0.24), LEATHER, 0.1, 0.06, -0.04),
+      part(new THREE.BoxGeometry(0.14, 0.48, 0.14), ARMOR_DK, -0.1, 0.36, 0.02),
+      part(new THREE.BoxGeometry(0.14, 0.48, 0.14), ARMOR_DK, 0.1, 0.36, -0.02),
+      part(new THREE.BoxGeometry(0.36, 0.44, 0.22), ARMOR, 0, 0.92, 0.02),
+      part(new THREE.BoxGeometry(0.2, 0.16, 0.18), SKIN, 0, 1.22, 0.03),
+      part(new THREE.BoxGeometry(0.22, 0.2, 0.22), HELM, 0, 1.42, 0.02),
+      part(new THREE.BoxGeometry(0.14, 0.03, 0.04), SLIT, 0, 1.4, 0.12),
+    ],
+    ARMOR
+  );
+}
+
 function createCommanderGeometry() {
   return mergeParts([...plateArmor("left"), ...commanderHelm(), ...hipScabbard()], ARMOR);
 }
@@ -559,6 +574,7 @@ function createCommanderFaceGeometry() {
 }
 
 let archerGeoV14: THREE.BufferGeometry | null = null;
+let defendSoldierGeo: THREE.BufferGeometry | null = null;
 let commanderGeoV14: THREE.BufferGeometry | null = null;
 let commanderSwordArmV3: THREE.BufferGeometry | null = null;
 let commanderCapeV9: THREE.BufferGeometry | null = null;
@@ -574,6 +590,11 @@ const handOff = new THREE.Vector3();
 function getArcherGeometry() {
   if (!archerGeoV14) archerGeoV14 = createArcherGeometry();
   return archerGeoV14;
+}
+
+function getDefendSoldierGeometry() {
+  if (!defendSoldierGeo) defendSoldierGeo = createDefendSoldierGeometry();
+  return defendSoldierGeo;
 }
 
 function getCommanderGeometry() {
@@ -683,14 +704,15 @@ function slotCoord(i: number, sizes: number[]) {
 
 function makeHandleTexture(name: string, commander = false, crisp = false, plain = false): NameTag | null {
   const label = plain ? name : `@${name}`;
-  const height = crisp ? 220 : 160;
-  const maxW = 1024;
+  const compact = crisp && plain;
+  const height = compact ? 64 : crisp ? 220 : 160;
+  const maxW = compact ? 384 : 1024;
   const probe = document.createElement("canvas").getContext("2d");
   if (!probe) return null;
-  let fontSize = crisp ? 96 : 78;
+  let fontSize = compact ? 28 : crisp ? 96 : 78;
   probe.font = `800 ${fontSize}px Outfit, system-ui, sans-serif`;
   let textW = probe.measureText(label).width;
-  while (textW + 36 > maxW && fontSize > 28) {
+  while (textW + 36 > maxW && fontSize > (compact ? 12 : 28)) {
     fontSize -= 2;
     probe.font = `800 ${fontSize}px Outfit, system-ui, sans-serif`;
     textW = probe.measureText(label).width;
@@ -718,10 +740,11 @@ function makeHandleTexture(name: string, commander = false, crisp = false, plain
   map.minFilter = crisp ? THREE.LinearFilter : THREE.LinearMipmapLinearFilter;
   map.magFilter = THREE.LinearFilter;
   map.anisotropy = crisp ? 1 : 8;
-  const sy = commander ? 1.02 : 0.9;
-  const sx = Math.min(FILE * 0.9, sy * (width / height));
+  const sy = commander ? 1.02 : compact ? 0.74 : 0.9;
+  const sx = Math.min(FILE * (compact ? 1.2 : 0.9), sy * (width / height));
   return { map, sx, sy };
 }
+
 
 export function Army({ count, names = [], commanders = [], cinematic, duration = 8, skipCommander = false, roster = null, discover = null, countdown = false, defend = false, defend2 = false, mix = false, level = 1, rosterIds = null }: ArmyProps) {
   const bodies = useRef<THREE.InstancedMesh>(null);
@@ -744,17 +767,17 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
   const fireSfx = useRef(false);
   const countSfx = useRef("");
   const pos = useMemo(() => new THREE.Vector3(), []);
-  const archerGeo = useMemo(() => getArcherGeometry(), []);
-  const commanderGeo = useMemo(() => getCommanderGeometry(), []);
-  const commanderCapeGeo = useMemo(() => getCommanderCapeGeometry(), []);
-  const soldierPlumeGeo = useMemo(() => getSoldierPlumeGeometry(), []);
-  const commanderPlumeGeo = useMemo(() => getCommanderPlumeGeometry(), []);
-  const commanderFaceGeo = useMemo(() => getCommanderFaceGeometry(), []);
-  const bowHoldGeo = useMemo(() => getBowHoldGeometry(), []);
-  const drawArmGeo = useMemo(() => getDrawArmGeometry(), []);
-  const swordArmGeo = useMemo(() => getSwordArmGeometry(), []);
-  const swordGeo = useMemo(() => getSwordGeometry(), []);
-  const nockGeo = useMemo(() => getNockArrowGeometry(), []);
+  const archerGeo = useMemo(() => (defend ? getDefendSoldierGeometry() : getArcherGeometry()), [defend]);
+  const commanderGeo = useMemo(() => (defend ? archerGeo : getCommanderGeometry()), [defend, archerGeo]);
+  const commanderCapeGeo = useMemo(() => (defend ? archerGeo : getCommanderCapeGeometry()), [defend, archerGeo]);
+  const soldierPlumeGeo = useMemo(() => (defend ? archerGeo : getSoldierPlumeGeometry()), [defend, archerGeo]);
+  const commanderPlumeGeo = useMemo(() => (defend ? archerGeo : getCommanderPlumeGeometry()), [defend, archerGeo]);
+  const commanderFaceGeo = useMemo(() => (defend ? archerGeo : getCommanderFaceGeometry()), [defend, archerGeo]);
+  const bowHoldGeo = useMemo(() => (defend ? archerGeo : getBowHoldGeometry()), [defend, archerGeo]);
+  const drawArmGeo = useMemo(() => (defend ? archerGeo : getDrawArmGeometry()), [defend, archerGeo]);
+  const swordArmGeo = useMemo(() => (defend ? archerGeo : getSwordArmGeometry()), [defend, archerGeo]);
+  const swordGeo = useMemo(() => (defend ? archerGeo : getSwordGeometry()), [defend, archerGeo]);
+  const nockGeo = useMemo(() => (defend ? archerGeo : getNockArrowGeometry()), [defend, archerGeo]);
 
   const visible = Math.min(MAX_SOLDIERS, Math.max(0, Math.floor(count)));
   const instanceCap = Math.min(MAX_SOLDIERS, Math.max(visible, 1));
@@ -802,7 +825,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
   }, [cinematic]);
   const labeled = useMemo(() => {
     const hunt = roster ? (rosterIds?.length ? rosterIds : rosterSoldierIds(names, visible)) : null;
-    const cap = hunt ? MAX_LABELS : defend ? MAX_DEFEND_LABELS : cinematic ? MAX_REEL_LABELS : MAX_LABELS;
+    const cap = hunt ? MAX_LABELS : cinematic ? MAX_REEL_LABELS : MAX_LABELS;
     const ids: number[] = [];
     if (phantom && !defend && !hunt) ids.push(-1);
     if (defend) {
@@ -810,15 +833,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
       for (let i = 0; i < visible; i++) {
         if (names[i]?.trim()) named.push(i);
       }
-      const n = Math.max(1, visible);
-      const golden = Math.PI * (3 - Math.sqrt(5));
-      const rMax = defendArmyRadius(n);
-      const zOf = (i: number) => {
-        const r = n <= 1 ? 0 : rMax * Math.sqrt((i + 0.5) / n);
-        return defendOz + Math.sin(i * golden) * r;
-      };
-      named.sort((a, b) => zOf(b) - zOf(a));
-      return named.slice(0, cap);
+      return named;
     }
     if (hunt) {
       const seen = new Set<number>();
@@ -837,7 +852,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
       if (names[i] && !isCommander(names[i], chiefsList)) ids.push(i);
     }
     return ids;
-  }, [names, visible, chiefsList, cinematic, phantom, defend, defendOz, roster, rosterIds]);
+  }, [names, visible, chiefsList, cinematic, phantom, defend, roster, rosterIds]);
   const nameMaps = useMemo(
     () =>
       labeled.map((i) =>
@@ -1191,11 +1206,11 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
         nameScale = 1.12;
         countdownTag = true;
       } else if (cinematic && defend) {
-        if (recT < 0 || idx < 0 || !names[idx]?.trim()) {
+        if (idx < 0 || !names[idx]?.trim()) {
           hideTag(tag);
           continue;
         }
-        nameScale = 1.15;
+        nameScale = 1.22;
         countdownTag = true;
       } else if (cinematic && mix) {
         nameScale = 1.28;
@@ -1251,6 +1266,12 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
       }
       tag.visible = true;
       tag.userData.mixWantVisible = true;
+      if (defend) {
+        const sm = (tag as THREE.Sprite).material;
+        sm.depthTest = false;
+        sm.depthWrite = false;
+        sm.fog = false;
+      }
       let lift = isolate ? 2.38 : 2.92;
       let row = 0;
       let col = 0;
@@ -1260,8 +1281,8 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
         const slot = layout.slotOf[idx];
         ({ row, col } = slotCoord(slot >= 0 ? slot : 0, form.sizes));
         if (defend && countdownTag) {
-          lift = 2.38 + (idx % 3) * 0.26;
-          tag.renderOrder = 18;
+          lift = 2.7 + (idx % 5) * 0.22;
+          tag.renderOrder = 40;
         } else if (countdownTag) {
           lift = 2.32 + row * 0.64;
           tag.renderOrder = 16 + row;
@@ -1270,7 +1291,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
         }
       }
       let sx = (isolate ? Math.min(1.18, tagData.sx * nameScale) : tagData.sx * nameScale) * rowMul;
-      if (defend && countdownTag) sx = Math.min(sx, FILE * 1.02);
+      if (defend && countdownTag) sx = Math.min(sx, FILE * 1.28);
       else if (countdownTag) sx = Math.min(sx, FILE * 0.78);
       if (isolate) {
         const half = sx * 0.5;
@@ -1279,7 +1300,14 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
         if (nx + half > lim) nx = lim - half;
       }
       const baseY = pos.y + lift * scale;
-      tag.position.set(nx, baseY, pos.z);
+      if (defend && cam) {
+        nockOff.copy(cam.position).sub(pos);
+        const len = nockOff.length() || 1;
+        const pull = Math.min(14, Math.max(7, len * 0.12));
+        tag.position.set(nx + (nockOff.x / len) * pull, baseY + (nockOff.y / len) * pull, pos.z + (nockOff.z / len) * pull);
+      } else {
+        tag.position.set(nx, baseY, pos.z);
+      }
       const sy = tagData.sy * nameScale * rowMul;
       tag.scale.set(sx, sy, 1);
       if (mix) {
@@ -1353,7 +1381,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
     const volley = countdown ? countdownVolley(recT) : null;
 
     acc.current += dt;
-    if (roster || countdown || acc.current >= (defend ? 1 / 24 : 1 / 40)) {
+    if (defend || roster || countdown || acc.current >= 1 / 40) {
       acc.current = 0;
       placeBodies(t, state.camera);
     }
@@ -1460,86 +1488,113 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
 
   return (
     <group>
-      <instancedMesh key={`archer-v14-${instanceCap}`} ref={bodies} args={[archerGeo, undefined, instanceCap]} frustumCulled={false} castShadow={!cinematic}>
-        {cinematic ? (
-          <meshStandardMaterial vertexColors roughness={0.46} metalness={0.72} envMapIntensity={0.9} />
-        ) : (
-          <meshPhysicalMaterial
-            vertexColors
-            roughness={0.42}
-            metalness={0.82}
-            roughnessMap={steelRough ?? undefined}
-            envMapIntensity={1.25}
-            clearcoat={0.28}
-            clearcoatRoughness={0.45}
-          />
-        )}
-      </instancedMesh>
-      <instancedMesh ref={soldierPlumes} args={[soldierPlumeGeo, undefined, instanceCap]} frustumCulled={false}>
-        <meshStandardMaterial vertexColors roughness={0.86} metalness={0} side={THREE.DoubleSide} />
-      </instancedMesh>
-      <instancedMesh key="bow-v13" ref={bowHolds} args={[bowHoldGeo, undefined, instanceCap]} frustumCulled={false}>
-        <meshStandardMaterial vertexColors roughness={0.52} metalness={0.28} envMapIntensity={0.7} />
-      </instancedMesh>
-      <instancedMesh key="draw-v13" ref={drawArms} args={[drawArmGeo, undefined, instanceCap]} frustumCulled={false}>
-        <meshStandardMaterial vertexColors roughness={0.48} metalness={0.32} envMapIntensity={0.75} />
-      </instancedMesh>
-      <instancedMesh key="cmd-body-v14" ref={chiefs} args={[commanderGeo, undefined, MAX_COMMANDERS]} frustumCulled={false} castShadow>
-        <meshPhysicalMaterial
-          vertexColors
-          roughness={0.36}
-          metalness={0.88}
-          roughnessMap={steelRough ?? undefined}
-          envMapIntensity={1.45}
-          clearcoat={0.35}
-          clearcoatRoughness={0.38}
-        />
-      </instancedMesh>
-      <instancedMesh ref={chiefCapes} args={[commanderCapeGeo, undefined, MAX_COMMANDERS]} frustumCulled={false} castShadow>
-        <meshStandardMaterial vertexColors roughness={0.94} metalness={0} envMapIntensity={0.06} side={THREE.DoubleSide} />
-      </instancedMesh>
-      <instancedMesh ref={chiefPlumes} args={[commanderPlumeGeo, undefined, MAX_COMMANDERS]} frustumCulled={false}>
-        <meshStandardMaterial vertexColors roughness={0.88} metalness={0} side={THREE.DoubleSide} />
-      </instancedMesh>
-      <instancedMesh key="face-v10" ref={chiefFaces} args={[commanderFaceGeo, undefined, MAX_COMMANDERS]} frustumCulled={false}>
-        <meshStandardMaterial vertexColors roughness={0.62} metalness={0.04} envMapIntensity={0.35} />
-      </instancedMesh>
-      <instancedMesh key="cmd-arm-v3" ref={swordArms} args={[swordArmGeo, undefined, MAX_COMMANDERS]} frustumCulled={false} castShadow>
-        <meshPhysicalMaterial
-          vertexColors
-          roughness={0.36}
-          metalness={0.88}
-          roughnessMap={steelRough ?? undefined}
-          envMapIntensity={1.45}
-          clearcoat={0.35}
-          clearcoatRoughness={0.38}
-        />
-      </instancedMesh>
-      <instancedMesh ref={swords} args={[swordGeo, undefined, MAX_COMMANDERS]} frustumCulled={false} castShadow>
-        <meshPhysicalMaterial vertexColors roughness={0.2} metalness={0.9} envMapIntensity={1.5} clearcoat={0.4} />
-      </instancedMesh>
-      <instancedMesh ref={nocks} args={[nockGeo, undefined, instanceCap]} frustumCulled={false}>
-        <meshStandardMaterial vertexColors roughness={0.55} metalness={0.28} />
-      </instancedMesh>
-      <instancedMesh ref={arrows} args={[undefined, undefined, MAX_ARROWS]} frustumCulled={false}>
-        <cylinderGeometry args={[0.085, 0.032, 1.45, 6]} />
-        <meshBasicMaterial color="#e81818" />
-      </instancedMesh>
-      {!defend && <SwordFlash />}
-      <group ref={tags}>
-        {nameMaps.map((tag, i) =>
-          tag ? (
-          <sprite key={`${labeled[i]}-${names[labeled[i]]}`} scale={[tag.sx, tag.sy, 1]} visible={false} renderOrder={2}>
-            <spriteMaterial
-              map={tag.map}
-              transparent
-              depthTest={false}
-              toneMapped={false}
+      {defend ? (
+        <>
+          <instancedMesh key={`defend-body-${instanceCap}`} ref={bodies} args={[archerGeo, undefined, instanceCap]} frustumCulled={false}>
+            <meshBasicMaterial vertexColors />
+          </instancedMesh>
+          <group ref={tags}>
+            {nameMaps.map((tag, i) =>
+              tag ? (
+              <sprite key={`${labeled[i]}-${names[labeled[i]]}`} scale={[tag.sx, tag.sy, 1]} visible={false} renderOrder={40} frustumCulled={false}>
+                <spriteMaterial
+                  map={tag.map}
+                  transparent
+                  depthTest={false}
+                  depthWrite={false}
+                  toneMapped={false}
+                  fog={false}
+                />
+              </sprite>
+              ) : null
+            )}
+          </group>
+        </>
+      ) : (
+        <>
+          <instancedMesh key={`archer-v14-${instanceCap}`} ref={bodies} args={[archerGeo, undefined, instanceCap]} frustumCulled={false} castShadow={!cinematic}>
+            {cinematic ? (
+              <meshStandardMaterial vertexColors roughness={0.46} metalness={0.72} envMapIntensity={0.9} />
+            ) : (
+              <meshPhysicalMaterial
+                vertexColors
+                roughness={0.42}
+                metalness={0.82}
+                roughnessMap={steelRough ?? undefined}
+                envMapIntensity={1.25}
+                clearcoat={0.28}
+                clearcoatRoughness={0.45}
+              />
+            )}
+          </instancedMesh>
+          <instancedMesh ref={soldierPlumes} args={[soldierPlumeGeo, undefined, instanceCap]} frustumCulled={false}>
+            <meshStandardMaterial vertexColors roughness={0.86} metalness={0} side={THREE.DoubleSide} />
+          </instancedMesh>
+          <instancedMesh key="bow-v13" ref={bowHolds} args={[bowHoldGeo, undefined, instanceCap]} frustumCulled={false}>
+            <meshStandardMaterial vertexColors roughness={0.52} metalness={0.28} envMapIntensity={0.7} />
+          </instancedMesh>
+          <instancedMesh key="draw-v13" ref={drawArms} args={[drawArmGeo, undefined, instanceCap]} frustumCulled={false}>
+            <meshStandardMaterial vertexColors roughness={0.48} metalness={0.32} envMapIntensity={0.75} />
+          </instancedMesh>
+          <instancedMesh key="cmd-body-v14" ref={chiefs} args={[commanderGeo, undefined, MAX_COMMANDERS]} frustumCulled={false} castShadow>
+            <meshPhysicalMaterial
+              vertexColors
+              roughness={0.36}
+              metalness={0.88}
+              roughnessMap={steelRough ?? undefined}
+              envMapIntensity={1.45}
+              clearcoat={0.35}
+              clearcoatRoughness={0.38}
             />
-          </sprite>
-          ) : null
-        )}
-      </group>
+          </instancedMesh>
+          <instancedMesh ref={chiefCapes} args={[commanderCapeGeo, undefined, MAX_COMMANDERS]} frustumCulled={false} castShadow>
+            <meshStandardMaterial vertexColors roughness={0.94} metalness={0} envMapIntensity={0.06} side={THREE.DoubleSide} />
+          </instancedMesh>
+          <instancedMesh ref={chiefPlumes} args={[commanderPlumeGeo, undefined, MAX_COMMANDERS]} frustumCulled={false}>
+            <meshStandardMaterial vertexColors roughness={0.88} metalness={0} side={THREE.DoubleSide} />
+          </instancedMesh>
+          <instancedMesh key="face-v10" ref={chiefFaces} args={[commanderFaceGeo, undefined, MAX_COMMANDERS]} frustumCulled={false}>
+            <meshStandardMaterial vertexColors roughness={0.62} metalness={0.04} envMapIntensity={0.35} />
+          </instancedMesh>
+          <instancedMesh key="cmd-arm-v3" ref={swordArms} args={[swordArmGeo, undefined, MAX_COMMANDERS]} frustumCulled={false} castShadow>
+            <meshPhysicalMaterial
+              vertexColors
+              roughness={0.36}
+              metalness={0.88}
+              roughnessMap={steelRough ?? undefined}
+              envMapIntensity={1.45}
+              clearcoat={0.35}
+              clearcoatRoughness={0.38}
+            />
+          </instancedMesh>
+          <instancedMesh ref={swords} args={[swordGeo, undefined, MAX_COMMANDERS]} frustumCulled={false} castShadow>
+            <meshPhysicalMaterial vertexColors roughness={0.2} metalness={0.9} envMapIntensity={1.5} clearcoat={0.4} />
+          </instancedMesh>
+          <instancedMesh ref={nocks} args={[nockGeo, undefined, instanceCap]} frustumCulled={false}>
+            <meshStandardMaterial vertexColors roughness={0.55} metalness={0.28} />
+          </instancedMesh>
+          <instancedMesh ref={arrows} args={[undefined, undefined, MAX_ARROWS]} frustumCulled={false}>
+            <cylinderGeometry args={[0.085, 0.032, 1.45, 6]} />
+            <meshBasicMaterial color="#e81818" />
+          </instancedMesh>
+          <SwordFlash />
+          <group ref={tags}>
+            {nameMaps.map((tag, i) =>
+              tag ? (
+              <sprite key={`${labeled[i]}-${names[labeled[i]]}`} scale={[tag.sx, tag.sy, 1]} visible={false} renderOrder={2}>
+                <spriteMaterial
+                  map={tag.map}
+                  transparent
+                  depthTest={false}
+                  depthWrite={false}
+                  toneMapped={false}
+                />
+              </sprite>
+              ) : null
+            )}
+          </group>
+        </>
+      )}
     </group>
   );
 }

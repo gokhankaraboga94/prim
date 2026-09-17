@@ -1,4 +1,4 @@
-import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
 import * as THREE from "three";
@@ -14,7 +14,7 @@ import { rosterSoldierIds, sampleRoster, type PlanBId } from "../../rosterReel";
 import { sagaGateRecT, sampleSaga, type SagaId } from "../../sagaReel";
 import { discoverGateRecT, sampleDiscover, type DiscoverId } from "../../discoverReel";
 import { countdownShake, sampleCountdown, type CountdownId } from "../../countdownReel";
-import { isDefend2, sampleDefendCam, type DefendId } from "../../defendReel";
+import { DEFEND2_SORTIE, isDefend2, sampleDefendCam, type DefendId } from "../../defendReel";
 import { MIX8_ID, mixTagPass, sampleMixBottom, sampleMixTop, type MixId } from "../../mixReel";
 import { DefendRing } from "./DefendRing";
 import {
@@ -348,7 +348,7 @@ function useGroundTexture() {
   }, []);
 }
 
-function SkyDome() {
+function SkyDome({ cheap = false }: { cheap?: boolean }) {
   const mat = useMemo(
     () =>
       new THREE.ShaderMaterial({
@@ -363,7 +363,18 @@ function SkyDome() {
             gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
           }
         `,
-        fragmentShader: `
+        fragmentShader: cheap
+          ? `
+          varying vec3 vPos;
+          void main() {
+            float h = normalize(vPos).y;
+            vec3 zenith = vec3(0.22, 0.48, 0.92);
+            vec3 horizon = vec3(0.62, 0.82, 0.96);
+            vec3 col = mix(horizon, zenith, smoothstep(-0.04, 0.72, h));
+            gl_FragColor = vec4(col, 1.0);
+          }
+        `
+          : `
           varying vec3 vPos;
           void main() {
             float h = normalize(vPos).y;
@@ -385,22 +396,26 @@ function SkyDome() {
           }
         `,
       }),
-    []
+    [cheap]
   );
   return (
     <mesh material={mat} frustumCulled={false}>
-      <sphereGeometry args={[1800, 48, 28]} />
+      <sphereGeometry args={cheap ? [1800, 16, 10] : [1800, 48, 28]} />
     </mesh>
   );
 }
 
-function Terrain({ road = true }: { road?: boolean }) {
+function Terrain({ road = true, cheap = false }: { road?: boolean; cheap?: boolean }) {
   const ground = useGroundTexture();
   return (
     <group>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow>
-        <planeGeometry args={[720, 720]} />
-        <meshStandardMaterial map={ground} color="#68b44a" roughness={0.92} envMapIntensity={0.2} depthWrite={false} />
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow={!cheap}>
+        <planeGeometry args={[cheap ? 480 : 720, cheap ? 480 : 720]} />
+        {cheap ? (
+          <meshBasicMaterial map={ground} color="#68b44a" />
+        ) : (
+          <meshStandardMaterial map={ground} color="#68b44a" roughness={0.92} envMapIntensity={0.2} depthWrite={false} />
+        )}
       </mesh>
       {road && (
         <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.06, 13]} receiveShadow>
@@ -438,7 +453,7 @@ function SteelSky() {
   return null;
 }
 
-function DayLights({ cinematic = false }: { cinematic?: boolean }) {
+function DayLights({ cinematic = false, slim = false }: { cinematic?: boolean; slim?: boolean }) {
   const sun = useRef<THREE.DirectionalLight>(null);
   useLayoutEffect(() => {
     const light = sun.current;
@@ -456,13 +471,21 @@ function DayLights({ cinematic = false }: { cinematic?: boolean }) {
   }, [cinematic]);
   return (
     <>
-      <ambientLight intensity={0.42} color="#dce6f2" />
-      <hemisphereLight args={["#9ec4f0", "#548a3c", 0.78]} />
-      <directionalLight ref={sun} position={[-28, 42, 18]} intensity={2.7} color="#fff4dc" />
-      <directionalLight position={[22, 14, 8]} intensity={0.55} color="#a8c4e8" />
-      <directionalLight position={[6, 8, 56]} intensity={0.85} color="#ffe0b8" />
+      <ambientLight intensity={slim ? 0.72 : 0.42} color="#dce6f2" />
+      <hemisphereLight args={["#9ec4f0", "#548a3c", slim ? 0.55 : 0.78]} />
+      <directionalLight ref={sun} position={[-28, 42, 18]} intensity={slim ? 1.6 : 2.7} color="#fff4dc" />
+      {!slim && <directionalLight position={[22, 14, 8]} intensity={0.55} color="#a8c4e8" />}
+      {!slim && <directionalLight position={[6, 8, 56]} intensity={0.85} color="#ffe0b8" />}
     </>
   );
+}
+
+function TimedVisible({ until, children }: { until: number; children: ReactNode }) {
+  const g = useRef<THREE.Group>(null);
+  useFrame(({ clock }) => {
+    if (g.current) g.current.visible = clock.elapsedTime - REEL_HOLD < until;
+  });
+  return <group ref={g}>{children}</group>;
 }
 
 function SceneContent({
@@ -496,12 +519,17 @@ function SceneContent({
   return (
     <>
       <color attach="background" args={["#7eb6ee"]} />
-      <fog attach="fog" args={defend ? (sortie ? ["#9ec8ee", 900, 3200] : ["#9ec8ee", 1400, 4200]) : ["#9ec8ee", 380, 1500]} />
-      <SkyDome />
-      <SteelSky />
-      <DayLights cinematic={cinematic} />
-      <Terrain road={!defend || sortie} />
-      {(!defend || sortie) && <Castle level={level} pressure={pressure} gateClosed={Boolean(countdown) || split} forceGateOpen={sortie} />}
+      <fog attach="fog" args={defend ? (sortie ? ["#9ec8ee", 600, 2200] : ["#9ec8ee", 1400, 4200]) : ["#9ec8ee", 380, 1500]} />
+      <SkyDome cheap={Boolean(defend)} />
+      {!defend && <SteelSky />}
+      <DayLights cinematic={cinematic} slim={Boolean(defend)} />
+      <Terrain road={!defend} cheap={Boolean(defend)} />
+      {!defend && <Castle level={level} pressure={pressure} gateClosed={Boolean(countdown) || split} />}
+      {sortie && (
+        <TimedVisible until={DEFEND2_SORTIE + 0.85}>
+          <Castle level={level} pressure={pressure} forceGateOpen lite />
+        </TimedVisible>
+      )}
       {defend ? (
         <DefendRing soldiers={soldiers} mode={defend} level={level} />
       ) : (

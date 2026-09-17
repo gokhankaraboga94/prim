@@ -61,19 +61,14 @@ function createDefendRaiderGeometry() {
   const helm = "#9a1616";
   const skin = "#d4a57c";
   const boot = "#1a100c";
-  const steel = "#c4c8ce";
   const pieces = [
-    part(new THREE.BoxGeometry(0.16, 0.12, 0.26), boot, -0.11, 0.06, 0.08),
-    part(new THREE.BoxGeometry(0.16, 0.12, 0.26), boot, 0.11, 0.06, -0.08),
-    part(new THREE.BoxGeometry(0.13, 0.52, 0.14), redDk, -0.11, 0.38, 0.04),
-    part(new THREE.BoxGeometry(0.13, 0.52, 0.14), redDk, 0.11, 0.38, -0.04),
-    part(new THREE.BoxGeometry(0.38, 0.46, 0.24), red, 0, 0.96, 0.02),
-    part(new THREE.BoxGeometry(0.12, 0.4, 0.12), redDk, -0.28, 0.9, 0.04),
-    part(new THREE.BoxGeometry(0.12, 0.4, 0.12), redDk, 0.28, 0.9, 0.06),
-    part(new THREE.BoxGeometry(0.22, 0.18, 0.2), skin, 0, 1.28, 0.03),
-    part(new THREE.SphereGeometry(0.14, 6, 5), helm, 0, 1.48, 0.02),
-    part(new THREE.BoxGeometry(0.16, 0.03, 0.05), "#080202", 0, 1.46, 0.14),
-    part(new THREE.BoxGeometry(0.04, 0.04, 0.7), steel, 0.34, 0.88, 0.42),
+    part(new THREE.BoxGeometry(0.16, 0.12, 0.24), boot, -0.1, 0.06, 0.04),
+    part(new THREE.BoxGeometry(0.16, 0.12, 0.24), boot, 0.1, 0.06, -0.04),
+    part(new THREE.BoxGeometry(0.14, 0.5, 0.14), redDk, -0.1, 0.36, 0.02),
+    part(new THREE.BoxGeometry(0.14, 0.5, 0.14), redDk, 0.1, 0.36, -0.02),
+    part(new THREE.BoxGeometry(0.36, 0.44, 0.22), red, 0, 0.92, 0.02),
+    part(new THREE.BoxGeometry(0.2, 0.16, 0.18), skin, 0, 1.22, 0.03),
+    part(new THREE.BoxGeometry(0.22, 0.2, 0.22), helm, 0, 1.42, 0.02),
   ];
   const merged = mergeGeometries(pieces, false);
   pieces.forEach((g) => g.dispose());
