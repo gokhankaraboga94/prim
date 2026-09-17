@@ -830,28 +830,39 @@ export function AdminPage() {
               if (capturing) return;
               void unlockReelSfx();
               if (isJoin(reelShot) && pendingJoin.ids.length === 0) {
-                setMsg("Yeni asker yok. Son 10’u da dahil et kutusunu işaretle veya isim ekle.");
+                const text = "Kayıt başlamadı: işlenecek yeni asker yok. Son 10 kutusunu aç veya eski takipçi yaz.";
+                setMsg(text);
+                window.alert(text);
                 return;
               }
-              if (isJoin(reelShot)) {
-                captureJoinIds.current = pendingJoin.ids.slice();
-                setJoinForcePack(pendingJoin.pack);
-                setCaptureSec(pendingJoin.seconds);
-                setReelSeconds(pendingJoin.seconds);
-              } else {
-                captureJoinIds.current = [];
-                setJoinForcePack(null);
-                setCaptureSec(reelSeconds);
+              try {
+                if (isJoin(reelShot)) {
+                  captureJoinIds.current = pendingJoin.ids.slice();
+                  setJoinForcePack(pendingJoin.pack);
+                  setCaptureSec(pendingJoin.seconds);
+                  setReelSeconds(pendingJoin.seconds);
+                } else {
+                  captureJoinIds.current = [];
+                  setJoinForcePack(null);
+                  setCaptureSec(reelSeconds);
+                }
+                setMsg("");
+                setCaptureGen((n) => n + 1);
+                setCapturing(true);
+              } catch (e) {
+                const text = e instanceof Error ? e.message : "Kayıt başlamadı.";
+                setMsg(text);
+                window.alert(text);
               }
-              setMsg("");
-              setCaptureGen((n) => n + 1);
-              setCapturing(true);
             }}
           >
             {isJoin(reelShot) && pendingJoin.leftover > 0
               ? `Kaydı başlat · ${pendingJoin.leftover} kalır`
               : "Kaydı başlat"}
           </button>
+          {isJoin(reelShot) && pendingJoin.ids.length === 0 && (
+            <p className="muted">Bu buton şimdi kayıt açmaz: kuyruk boş. Yeni asker yoksa Son 10’u işaretle.</p>
+          )}
         </section>
 
         <section className="admin-card">
@@ -868,7 +879,7 @@ export function AdminPage() {
       {capturing && (
         <ReelCapture
           key={captureGen}
-          soldiers={game.soldiers}
+          soldiers={isJoin(reelShot) ? Math.min(80, Math.max(1, game.soldiers)) : game.soldiers}
           names={game.names}
           commanders={game.commanders}
           level={level}

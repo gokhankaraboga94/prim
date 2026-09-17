@@ -78,6 +78,29 @@ export function loadJoinMark(): string[] {
 }
 
 export const JOIN_BATCH = 320;
+export const JOIN_KEEP = 317;
+const JOIN_RECOVER_KEY = "wars.joinMark.keep317.v1";
+
+export function recoverJoinMark(names: string[], soldiers: number) {
+  try {
+    if (localStorage.getItem(JOIN_RECOVER_KEY)) return;
+    const all = rosterSoldierIds(names, soldiers);
+    if (all.length <= JOIN_KEEP) return;
+    const marked = loadJoinMark();
+    const seen = new Set(marked.map((n) => n.toLowerCase()));
+    const keyOf = (i: number) => normalizeHandle(names[i] || "").toLowerCase();
+    const fresh = all.filter((i) => !seen.has(keyOf(i)));
+    if (fresh.length > 0) return;
+    const keep = all
+      .slice(0, JOIN_KEEP)
+      .map((i) => normalizeHandle(names[i] || ""))
+      .filter(Boolean);
+    localStorage.setItem(JOIN_MARK_KEY, JSON.stringify(keep));
+    localStorage.setItem(JOIN_RECOVER_KEY, "1");
+  } catch {
+    /* ignore */
+  }
+}
 
 export function saveJoinMark(names: string[], recordedIds: number[] = []) {
   const prev = loadJoinMark();
@@ -158,6 +181,7 @@ function manualJoinIds(names: string[], _soldiers: number, handles: string[], sk
 }
 
 export function joinQueue(names: string[], soldiers: number, includeLastTen: boolean, extraHandles: string[] = []) {
+  recoverJoinMark(names, soldiers);
   const marked = loadJoinMark();
   const all = rosterSoldierIds(names, soldiers);
   const seen = new Set(marked.map((n) => n.toLowerCase()));

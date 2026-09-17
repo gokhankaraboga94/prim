@@ -767,7 +767,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
   const swordGeo = useMemo(() => (defend ? archerGeo : getSwordGeometry()), [defend, archerGeo]);
   const nockGeo = useMemo(() => (defend ? archerGeo : getNockArrowGeometry()), [defend, archerGeo]);
 
-  const visible = Math.min(roster ? 360 : MAX_SOLDIERS, Math.max(0, Math.floor(count)));
+  const visible = Math.min(roster ? 80 : MAX_SOLDIERS, Math.max(0, Math.floor(count)));
   const instanceCap = Math.min(MAX_SOLDIERS, Math.max(visible, roster ? 24 : 1, 1));
   const defendOx = defend2 ? DEFEND2_CX : 0;
   const defendOz = defend2 ? DEFEND2_CZ : DEFEND_CZ;
@@ -844,9 +844,14 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
   const nameMaps = useMemo(
     () =>
       labeled.map((i) =>
-        makeHandleTexture(i < 0 ? DEFAULT_COMMANDER : names[i], !defend && (i < 0 || isCommander(names[i], chiefsList)), Boolean(discover) || countdown || defend, countdown || defend)
+        makeHandleTexture(
+          i < 0 ? DEFAULT_COMMANDER : names[i],
+          !defend && (i < 0 || isCommander(names[i], chiefsList)),
+          Boolean(discover) || countdown || defend || Boolean(roster),
+          countdown || defend || Boolean(roster)
+        )
       ),
-    [labeled, names, chiefsList, discover, countdown, defend]
+    [labeled, names, chiefsList, discover, countdown, defend, roster]
   );
 
   const seeds = useMemo(() => {

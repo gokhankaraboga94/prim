@@ -50,21 +50,22 @@ export function ReelCapture({ soldiers, names, commanders = [], level, pressure,
     let stop = false;
     (async () => {
       const start = performance.now();
-      while (!canvasRef.current && performance.now() - start < 20000) {
-        await wait(80);
+      while (!canvasRef.current && performance.now() - start < 12000) {
+        await wait(40);
         if (stop) return;
       }
       const canvas = canvasRef.current;
       if (!canvas) {
-        setErr("Sahne hazır olmadı.");
+        setErr("Sahne hazır olmadı. İptal deyip tekrar dene.");
         setPhase("err");
         return;
       }
-      await wait(2300);
+      await wait(280);
       if (stop) return;
       setPhase("rec");
       try {
-        await unlockReelSfx();
+        await Promise.race([unlockReelSfx(), wait(1200)]);
+        if (stop) return;
         const recorded = await recordCanvas(canvas, clip, reelSfxStream());
         if (stop) return;
         setBlob(recorded);
@@ -110,7 +111,12 @@ export function ReelCapture({ soldiers, names, commanders = [], level, pressure,
       <div className="reel-capture-scene">
         <div className="reel-capture-frame">
         {phase !== "done" && (
-        <SceneErrorBoundary>
+        <SceneErrorBoundary
+          onError={(e) => {
+            setErr(e.message || "Sahne çöktü.");
+            setPhase("err");
+          }}
+        >
           <BattleScene
             soldiers={soldiers}
             names={names}
@@ -143,6 +149,12 @@ export function ReelCapture({ soldiers, names, commanders = [], level, pressure,
         </div>
       </div>
 
+      {(phase === "boot" || phase === "rec") && (
+        <div className="reel-capture-hud">
+          <p>{phase === "boot" ? "Sahne hazırlanıyor…" : "Kayıt alınıyor…"}</p>
+        </div>
+      )}
+
       {phase === "err" && (
         <div className="reel-capture-hud">
           <p>{err}</p>
@@ -162,7 +174,7 @@ export function ReelCapture({ soldiers, names, commanders = [], level, pressure,
         </div>
       )}
 
-      {(phase === "boot" || phase === "err") && (
+      {(phase === "boot" || phase === "err" || phase === "rec") && (
         <button type="button" className="btn-ghost reel-capture-close" onClick={onClose}>
           İptal
         </button>

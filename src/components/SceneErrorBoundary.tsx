@@ -1,6 +1,6 @@
 import { Component, type ReactNode } from "react";
 
-type Props = { children: ReactNode };
+type Props = { children: ReactNode; onError?: (err: Error) => void };
 type State = { failed: boolean };
 
 export class SceneErrorBoundary extends Component<Props, State> {
@@ -8,6 +8,10 @@ export class SceneErrorBoundary extends Component<Props, State> {
 
   static getDerivedStateFromError() {
     return { failed: true };
+  }
+
+  componentDidCatch(err: Error) {
+    this.props.onError?.(err);
   }
 
   render() {
