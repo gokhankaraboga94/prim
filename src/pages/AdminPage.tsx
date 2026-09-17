@@ -21,7 +21,7 @@ import { useGame } from "../hooks/useGame";
 import { ReelCapture } from "../components/ReelCapture";
 import { REEL_DURATIONS } from "../recordCanvas";
 import { CINEMA_DURATIONS, CINEMA_ID, CINEMA_MODE, SHOT_MODES, type ReelShot } from "../shotModes";
-import { HOOK_ID, HOOK_MODE, JOIN_ID, JOIN_MODE, ROSTER_ID, ROSTER_MODE, ensureJoinMark, finishJoinBacklogIfCaughtUp, isJoin, isPlanB, joinQueue, rosterDuration, saveJoinMark, setJoinForcePack, type PlanBId } from "../rosterReel";
+import { HOOK_ID, HOOK_MODE, JOIN_ID, JOIN_MODE, ROSTER_ID, ROSTER_MODE, ensureJoinMark, finishJoinBacklogIfCaughtUp, isJoin, isPlanB, joinQueue, rosterDuration, saveJoinMark, setJoinForcePack, wipeJoinCacheAfter317, type PlanBId } from "../rosterReel";
 import { SAGA_MODES, isSaga, sagaDuration, type SagaId } from "../sagaReel";
 import { DISCOVER_ID, DISCOVER2_ID, DISCOVER3_ID, RAF2_ID, DISCOVER_MODE, DISCOVER2_MODE, DISCOVER3_MODE, RAF2_MODE, DISCOVER_SECONDS, DISCOVER3_SECONDS, RAF2_SECONDS, isDiscover, isDiscoverEngage, isDiscoverShelf, isDiscoverTrailer, type DiscoverId } from "../discoverReel";
 import { MIX_MODES, MIX_SECONDS, isMix, type MixId } from "../mixReel";
@@ -775,6 +775,17 @@ export function AdminPage() {
                 value={joinExtras}
                 onChange={(e) => setJoinExtras(e.target.value)}
               />
+              <button
+                type="button"
+                className="btn-ghost"
+                onClick={() => {
+                  const n = wipeJoinCacheAfter317(game.names, game.soldiers);
+                  setJoinTick((x) => x + 1);
+                  setMsg(`317’den sonrası cache’ten silindi. Kuyrukta ${n} asker. Kaydı başlat.`);
+                }}
+              >
+                317 sonrası cache sil
+              </button>
               <p className="muted">
                 {pendingJoin.backlog
                   ? `Tek seferlik: 317’den sonrası. Bu kayıtta ${pendingJoin.ids.length} asker${pendingJoin.leftover > 0 ? ` · sonra ${pendingJoin.leftover} kalır` : " · bu grupla biter, sonraki kayıtlarda yine yalnızca yeni katılanlar"}.`

@@ -81,9 +81,18 @@ export const JOIN_BATCH = 320;
 export const JOIN_KEEP = 317;
 const JOIN_BACKLOG_KEY = "wars.joinBacklog317.v2";
 const JOIN_BACKLOG_SEED = "wars.joinBacklog317.seed.v2";
+const JOIN_WIPE_KEY = "wars.joinWipeAfter317.v3";
 
 function keyOfName(names: string[], i: number) {
   return normalizeHandle(names[i] || "").toLowerCase();
+}
+
+function writeJoinMark(handles: string[]) {
+  try {
+    localStorage.setItem(JOIN_MARK_KEY, JSON.stringify(handles.filter(Boolean)));
+  } catch {
+    /* ignore */
+  }
 }
 
 export function joinBacklogOpen() {
@@ -94,22 +103,27 @@ export function joinBacklogOpen() {
   }
 }
 
-function seedJoinBacklog(names: string[], soldiers: number) {
+export function wipeJoinCacheAfter317(names: string[], soldiers: number) {
+  const all = rosterSoldierIds(names, soldiers);
+  const keep = all.slice(0, JOIN_KEEP).map((i) => normalizeHandle(names[i] || "")).filter(Boolean);
+  writeJoinMark(keep);
   try {
-    if (localStorage.getItem(JOIN_BACKLOG_KEY) === "done") return;
-    if (localStorage.getItem(JOIN_BACKLOG_SEED)) return;
-    const all = rosterSoldierIds(names, soldiers);
-    if (all.length <= JOIN_KEEP) {
-      localStorage.setItem(JOIN_BACKLOG_KEY, "done");
-      localStorage.setItem(JOIN_BACKLOG_SEED, "1");
-      return;
-    }
-    saveJoinMark(names, all.slice(0, JOIN_KEEP));
     localStorage.setItem(JOIN_BACKLOG_SEED, "1");
-    localStorage.setItem(JOIN_BACKLOG_KEY, "open");
+    localStorage.setItem(JOIN_BACKLOG_KEY, all.length > JOIN_KEEP ? "open" : "done");
+    localStorage.setItem(JOIN_WIPE_KEY, "1");
   } catch {
     /* ignore */
   }
+  return Math.max(0, all.length - keep.length);
+}
+
+function ensureWipeAfter317(names: string[], soldiers: number) {
+  try {
+    if (localStorage.getItem(JOIN_WIPE_KEY)) return;
+  } catch {
+    return;
+  }
+  wipeJoinCacheAfter317(names, soldiers);
 }
 
 export function finishJoinBacklogIfCaughtUp(names: string[], soldiers: number) {
@@ -123,7 +137,7 @@ export function finishJoinBacklogIfCaughtUp(names: string[], soldiers: number) {
       localStorage.setItem(JOIN_BACKLOG_KEY, "open");
       return;
     }
-    saveJoinMark(names, all.slice(0, JOIN_KEEP));
+    writeJoinMark(all.slice(0, JOIN_KEEP).map((i) => normalizeHandle(names[i] || "")).filter(Boolean).concat(marked));
     localStorage.setItem(JOIN_BACKLOG_KEY, "done");
   } catch {
     /* ignore */
@@ -209,7 +223,7 @@ function manualJoinIds(names: string[], _soldiers: number, handles: string[], sk
 }
 
 export function joinQueue(names: string[], soldiers: number, includeLastTen: boolean, extraHandles: string[] = []) {
-  seedJoinBacklog(names, soldiers);
+  ensureWipeAfter317(names, soldiers);
   const marked = loadJoinMark();
   const all = rosterSoldierIds(names, soldiers);
   const seen = new Set(marked.map((n) => n.toLowerCase()));
