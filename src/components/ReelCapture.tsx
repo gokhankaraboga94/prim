@@ -50,7 +50,7 @@ export function ReelCapture({ soldiers, names, commanders = [], level, pressure,
     let stop = false;
     (async () => {
       const start = performance.now();
-      while (!canvasRef.current && performance.now() - start < 8000) {
+      while (!canvasRef.current && performance.now() - start < 20000) {
         await wait(80);
         if (stop) return;
       }

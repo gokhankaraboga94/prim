@@ -77,18 +77,28 @@ export function loadJoinMark(): string[] {
   }
 }
 
-export function saveJoinMark(names: string[], soldiers: number) {
-  const handles = rosterSoldierIds(names, soldiers).map((i) => normalizeHandle(names[i])).filter(Boolean);
+export const JOIN_BATCH = 320;
+
+export function saveJoinMark(names: string[], recordedIds: number[] = []) {
+  const prev = loadJoinMark();
+  const seen = new Set(prev.map((n) => n.toLowerCase()));
+  const out = [...prev];
+  for (const i of recordedIds) {
+    const handle = normalizeHandle(names[i] || "");
+    if (!handle || seen.has(handle.toLowerCase())) continue;
+    seen.add(handle.toLowerCase());
+    out.push(handle);
+  }
   try {
-    localStorage.setItem(JOIN_MARK_KEY, JSON.stringify(handles));
+    localStorage.setItem(JOIN_MARK_KEY, JSON.stringify(out));
   } catch {
     /* ignore */
   }
 }
 
-export function ensureJoinMark(names: string[], soldiers: number) {
+export function ensureJoinMark(_names?: string[], _soldiers?: number) {
   try {
-    if (localStorage.getItem(JOIN_MARK_KEY) == null) saveJoinMark(names, soldiers);
+    if (localStorage.getItem(JOIN_MARK_KEY) == null) localStorage.setItem(JOIN_MARK_KEY, "[]");
   } catch {
     /* ignore */
   }
@@ -154,8 +164,11 @@ export function joinQueue(names: string[], soldiers: number, includeLastTen: boo
   const keyOf = (i: number) => normalizeHandle(names[i]).toLowerCase();
   const fresh = all.filter((i) => !seen.has(keyOf(i)));
   let ids: number[];
-  if (fresh.length > 0) ids = fresh;
-  else if (includeLastTen) ids = all.slice(-Math.min(10, all.length));
+  let leftover = 0;
+  if (fresh.length > 0) {
+    ids = fresh.slice(0, JOIN_BATCH);
+    leftover = Math.max(0, fresh.length - ids.length);
+  } else if (includeLastTen) ids = all.slice(-Math.min(10, all.length));
   else ids = [];
   const extraIds = manualJoinIds(names, soldiers, extraHandles, new Set(ids));
   ids = [...ids, ...extraIds];
@@ -165,6 +178,7 @@ export function joinQueue(names: string[], soldiers: number, includeLastTen: boo
     ids,
     fresh: fresh.length,
     extra: extraIds.length,
+    leftover,
     pack,
     seconds: rosterDuration(JOIN_ID, ids.length, pack),
   };

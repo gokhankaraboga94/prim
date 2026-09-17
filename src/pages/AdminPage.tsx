@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { signOut } from "firebase/auth";
 import { ref, set } from "firebase/database";
 import { auth, db } from "../firebase";
@@ -50,6 +50,9 @@ export function AdminPage() {
   const [joinTick, setJoinTick] = useState(0);
   const [joinLastTen, setJoinLastTen] = useState(true);
   const [joinExtras, setJoinExtras] = useState("");
+  const [captureGen, setCaptureGen] = useState(0);
+  const [captureSec, setCaptureSec] = useState(7);
+  const captureJoinIds = useRef<number[]>([]);
 
   const handle = handleInput || game.instagramHandle;
   const cmdValue = cmdDraft ?? game.commanders.join("\n");
@@ -64,9 +67,9 @@ export function AdminPage() {
   }, [game.names, game.soldiers]);
 
   useEffect(() => {
-    if (!isJoin(reelShot)) return;
+    if (!isJoin(reelShot) || capturing) return;
     setReelSeconds(pendingJoin.seconds);
-  }, [reelShot, pendingJoin.seconds]);
+  }, [reelShot, pendingJoin.seconds, capturing]);
 
   async function saveSoldiers(next: number) {
     const soldiers = Math.max(0, Math.floor(next));
@@ -776,9 +779,10 @@ export function AdminPage() {
                 Boş bırakırsan akış aynı devam eder. Satır satır veya boşlukla yazarsan bu
                 adlar son katılanlara eklenir; orduda yoksa atlanır. Yeni asker varsa yalnızca
                 onlar (son 10 karışmaz). Yeni yoksa ve kutu seçiliyse son 10 yine çıkar. Yalnız
-                son 10 ise üçer üçer. Kuyrukta {pendingJoin.ids.length} asker
-                {pendingJoin.fresh > 0 ? ` · ${pendingJoin.fresh} yeni` : joinLastTen && pendingJoin.extra === 0 ? " · son 10" : ""}
+                son 10 ise üçer üçer. Bu kayıtta {pendingJoin.ids.length} asker
+                {pendingJoin.fresh > 0 ? ` · ${Math.min(pendingJoin.fresh, pendingJoin.ids.length - pendingJoin.extra)} yeni` : joinLastTen && pendingJoin.extra === 0 ? " · son 10" : ""}
                 {pendingJoin.extra > 0 ? ` · ${pendingJoin.extra} eski takipçi` : ""}
+                {pendingJoin.leftover > 0 ? ` · sonra ${pendingJoin.leftover} kalır` : ""}
                 {joinExtraNames.length > pendingJoin.extra ? ` · ${joinExtraNames.length - pendingJoin.extra} ad orduda yok` : ""}
                 .
                 {" "}Caption: Adın çıkarsa yoruma SAVAŞTAYIM yaz. Kale düşsün diyorsan beğen. Canlı kuşatma. 1 takip = 1 asker. wargame.lol
@@ -823,21 +827,30 @@ export function AdminPage() {
             type="button"
             className="btn-gold"
             onClick={() => {
+              if (capturing) return;
               void unlockReelSfx();
               if (isJoin(reelShot) && pendingJoin.ids.length === 0) {
                 setMsg("Yeni asker yok. Son 10’u da dahil et kutusunu işaretle veya isim ekle.");
                 return;
               }
               if (isJoin(reelShot)) {
+                captureJoinIds.current = pendingJoin.ids.slice();
                 setJoinForcePack(pendingJoin.pack);
+                setCaptureSec(pendingJoin.seconds);
                 setReelSeconds(pendingJoin.seconds);
               } else {
+                captureJoinIds.current = [];
                 setJoinForcePack(null);
+                setCaptureSec(reelSeconds);
               }
+              setMsg("");
+              setCaptureGen((n) => n + 1);
               setCapturing(true);
             }}
           >
-            Kaydı başlat
+            {isJoin(reelShot) && pendingJoin.leftover > 0
+              ? `Kaydı başlat · ${pendingJoin.leftover} kalır`
+              : "Kaydı başlat"}
           </button>
         </section>
 
@@ -854,6 +867,7 @@ export function AdminPage() {
 
       {capturing && (
         <ReelCapture
+          key={captureGen}
           soldiers={game.soldiers}
           names={game.names}
           commanders={game.commanders}
@@ -861,7 +875,7 @@ export function AdminPage() {
           pressure={pressure}
           hp={power}
           maxHp={maxHp}
-          seconds={reelSeconds}
+          seconds={captureSec}
           showTitles={reelText}
           skipCommander={reelSkipCmd || isDiscover(reelShot) || isCountdown(reelShot) || isDefend(reelShot)}
           shotMode={reelShot === CINEMA_ID || isPlanB(reelShot) || isSaga(reelShot) || isDiscover(reelShot) || isCountdown(reelShot) || isDefend(reelShot) || isMix(reelShot) ? null : reelShot}
@@ -872,11 +886,11 @@ export function AdminPage() {
           countdown={isCountdown(reelShot) ? reelShot : null}
           defend={isDefend(reelShot) ? reelShot : null}
           mix={isMix(reelShot) ? reelShot : null}
-          rosterIds={isJoin(reelShot) ? pendingJoin.ids : null}
+          rosterIds={isJoin(reelShot) ? captureJoinIds.current : null}
           day={Math.max(0, Math.floor(Number(reelDay)) || 0)}
           onRecorded={() => {
             if (isJoin(reelShot)) {
-              saveJoinMark(game.names, game.soldiers);
+              saveJoinMark(game.names, captureJoinIds.current);
               setJoinTick((n) => n + 1);
             }
           }}
