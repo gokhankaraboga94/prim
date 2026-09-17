@@ -527,7 +527,7 @@ function SceneContent({
       {!defend && <Castle level={level} pressure={pressure} gateClosed={Boolean(countdown) || split} />}
       {sortie && (
         <TimedVisible until={DEFEND2_SORTIE + 0.85}>
-          <Castle level={level} pressure={pressure} forceGateOpen lite />
+          <Castle level={level} pressure={pressure} forceGateOpen />
         </TimedVisible>
       )}
       {defend ? (

@@ -23,10 +23,10 @@ export const DEFEND_RINGS = 8;
 export const DEFEND_RING_GAP = 1.12;
 export const DEFEND_RING_SPACING = 0.98;
 export const DEFEND_MAX_ENEMIES = 1400;
-export const DEFEND2_RINGS = 5;
-export const DEFEND2_RING_GAP = 1.3;
-export const DEFEND2_RING_SPACING = 1.42;
-export const DEFEND2_MAX_ENEMIES = 420;
+export const DEFEND2_RINGS = 8;
+export const DEFEND2_RING_GAP = 1.12;
+export const DEFEND2_RING_SPACING = 0.98;
+export const DEFEND2_MAX_ENEMIES = 1400;
 export const DEFEND_INNER_GAP = 4.2;
 export const DEFEND_APPROACH = 26;
 
@@ -245,23 +245,13 @@ export function sampleDefend(recT: number, soldiers: number, id: DefendId = DEFE
   const outer = defendOuterAt(t, armyR, id);
   const pull = easeOutCubic(clamp01(t / DEFEND_PULL_END));
   const zoomU = easeOutCubic(clamp01((t - DEFEND_PULL_END) / (DEFEND_MAIN_SECONDS * 0.8)));
-  if (isDefend2(id)) {
-    const polar = 0.09 + pull * 0.1 + zoomU * 0.16;
-    const fov = 44 - pull * 1 - zoomU * 3;
-    const dist = distToFitRing(Math.max(outer, armyR + 6), polar, fov, 1.26);
-    const az = 0.02;
-    const x = DEFEND_CX + Math.sin(polar) * Math.sin(az) * dist;
-    const y = Math.cos(polar) * dist;
-    const z = DEFEND_CZ + Math.sin(polar) * Math.cos(az) * dist;
-    return pose(x, y, z, DEFEND_CX, 1.55, DEFEND_CZ, fov);
-  }
-  const polar = 0.07 + pull * 0.2 + zoomU * 0.7;
-  const pad = 1.343 - pull * 0.12 - zoomU * 0.2;
-  const fov = 46 - pull * 2 - zoomU * 12;
+  const polar = 0.07 + pull * 0.2 + zoomU * 0.74;
+  const pad = 1.343 - pull * 0.12 - zoomU * 0.22;
+  const fov = 46 - pull * 2 - zoomU * 13;
   const az = 0.015 + zoomU * 0.12;
   const ringDist = distToFitRing(outer, polar, fov, pad);
-  const closeDist = 15.8 + Math.min(5.5, armyR * 0.08);
-  const dist = (ringDist * (1 - zoomU) + closeDist * zoomU) * 0.9;
+  const closeDist = 13.2 + Math.min(4.5, armyR * 0.07);
+  const dist = (ringDist * (1 - zoomU) + closeDist * zoomU) * 0.86;
   const lookR = zoomU * Math.min(armyR * 0.55, Math.max(0, armyR - 0.9));
   const lx = DEFEND_CX + Math.sin(az) * lookR;
   const lz = DEFEND_CZ + Math.cos(az) * lookR;
