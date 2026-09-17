@@ -768,7 +768,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
   const nockGeo = useMemo(() => (defend ? archerGeo : getNockArrowGeometry()), [defend, archerGeo]);
 
   const visible = Math.min(MAX_SOLDIERS, Math.max(0, Math.floor(count)));
-  const instanceCap = Math.min(MAX_SOLDIERS, Math.max(visible, 1));
+  const instanceCap = Math.min(MAX_SOLDIERS, Math.max(visible, roster ? 24 : 1, 1));
   const defendOx = defend2 ? DEFEND2_CX : 0;
   const defendOz = defend2 ? DEFEND2_CZ : DEFEND_CZ;
   const chiefsList = useMemo(() => effectiveCommanders(commanders, names), [commanders, names]);
@@ -827,7 +827,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
       const seen = new Set<number>();
       for (const i of hunt) {
         if (ids.length >= cap) break;
-        if (i < 0 || i >= visible || seen.has(i) || !names[i]?.trim()) continue;
+        if (i < 0 || seen.has(i) || !String(names[i] || "").trim()) continue;
         seen.add(i);
         ids.push(i);
       }
@@ -954,7 +954,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
   function placeBodies(t: number, cam?: THREE.Camera) {
     const { scale } = form;
     const recT = t - REEL_HOLD;
-    const huntIds = roster ? (rosterIds?.length ? rosterIds : rosterSoldierIds(names, visible)) : [];
+    const huntIds = roster ? (rosterIds?.length ? rosterIds : rosterSoldierIds(names, Math.max(visible, names.length, Math.floor(count)))) : [];
     const beat = roster ? rosterBeat(roster, recT, duration, huntIds) : null;
     const liveIds = beat && beat.id === "pack" ? beat.ids : null;
     const outIds = beat && beat.id === "pack" ? beat.outgoing : null;
@@ -962,68 +962,72 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
     const isolate = Boolean(packSet);
     if (bodies.current) {
       const n = layout.rest.length;
-      bodies.current.count = n;
-      if (soldierPlumes.current) soldierPlumes.current.count = n;
-      if (bowHolds.current) bowHolds.current.count = defend ? 0 : n;
-      if (drawArms.current) drawArms.current.count = defend ? 0 : n;
-      if (nocks.current) nocks.current.count = defend ? 0 : n;
-      for (let i = 0; i < n; i++) {
-        const soldier = layout.rest[i];
-        const onPack = Boolean(packSet && packSet.has(soldier));
-        if (isolate && !onPack) {
+      const packShow = isolate && liveIds ? [...(outIds ?? []), ...liveIds] : [];
+      const bodyN = isolate ? Math.min(instanceCap, Math.max(packShow.length, 1)) : n;
+      bodies.current.count = bodyN;
+      if (soldierPlumes.current) soldierPlumes.current.count = bodyN;
+      if (bowHolds.current) bowHolds.current.count = defend ? 0 : bodyN;
+      if (drawArms.current) drawArms.current.count = defend ? 0 : bodyN;
+      if (nocks.current) nocks.current.count = defend ? 0 : bodyN;
+      const hideSlot = (i: number) => {
+        dummy.scale.setScalar(0);
+        dummy.position.set(0, -40, 0);
+        dummy.updateMatrix();
+        stamp(bodies.current, i);
+        stamp(soldierPlumes.current, i);
+        stamp(bowHolds.current, i);
+        stamp(drawArms.current, i);
+        if (nocks.current) {
           dummy.scale.setScalar(0);
-          dummy.position.set(0, -40, 0);
           dummy.updateMatrix();
-          stamp(bodies.current, i);
-          stamp(soldierPlumes.current, i);
-          stamp(bowHolds.current, i);
-          stamp(drawArms.current, i);
-          if (nocks.current) {
+          nocks.current.setMatrixAt(i, dummy.matrix);
+        }
+      };
+      const stampPackAt = (i: number, soldier: number) => {
+        if (!liveIds || !beat || beat.id !== "pack") return;
+        const liveSlot = liveIds.indexOf(soldier);
+        const outSlot = outIds ? outIds.indexOf(soldier) : -1;
+        if (liveSlot >= 0) stampRosterSoldier(liveSlot, liveIds.length, beat.pack, recT, beat.enter, 0, beat.u, rosterPose);
+        else stampRosterSoldier(Math.max(0, outSlot), outIds?.length ?? 1, Math.max(0, beat.pack - 1), recT, 1, beat.exit, 1, rosterPose);
+        const raise = liveSlot >= 0 ? beat.enter : 1 - beat.exit;
+        const bodyScale = scale * rosterPose.scaleMul;
+        pos.set(rosterPose.x, rosterPose.y, rosterPose.z);
+        dummy.position.copy(pos);
+        dummy.rotation.set(rosterPose.rx, rosterPose.ry, rosterPose.rz);
+        dummy.scale.setScalar(bodyScale);
+        dummy.updateMatrix();
+        stamp(bodies.current, i);
+        stamp(soldierPlumes.current, i);
+        _bodyQ.setFromEuler(_limbEul.set(rosterPose.rx, rosterPose.ry, rosterPose.rz, "XYZ"));
+        const holdRx = (1 - raise) * -1.18 + 0.05 * raise;
+        const drawRx = (1 - raise) * -1.08 - 0.02 * raise;
+        const drawRy = (1 - raise) * 0.42 - 0.06 * raise;
+        const drawRz = (1 - raise) * -0.18 + 0.05 * raise;
+        stampLimb(bowHolds.current, i, L_SHOULDER, holdRx, 0.04 * raise, 0.1 * raise, bodyScale);
+        stampLimb(drawArms.current, i, R_SHOULDER, drawRx, drawRy, drawRz, bodyScale);
+        if (nocks.current) {
+          if (raise > 0.18) {
+            nockOff.set(-0.08, 1.22, 0.36 - raise * 0.16);
+            nockOff.applyQuaternion(_bodyQ);
+            nockOff.multiplyScalar(bodyScale);
+            dummy.position.set(pos.x + nockOff.x, pos.y + nockOff.y, pos.z + nockOff.z);
+            dummy.rotation.set(rosterPose.rx, rosterPose.ry, rosterPose.rz);
+            dummy.scale.setScalar(bodyScale);
+            dummy.updateMatrix();
+            nocks.current.setMatrixAt(i, dummy.matrix);
+          } else {
             dummy.scale.setScalar(0);
             dummy.updateMatrix();
             nocks.current.setMatrixAt(i, dummy.matrix);
           }
-          continue;
         }
-        if (isolate && onPack && liveIds && beat && beat.id === "pack") {
-          const liveSlot = liveIds.indexOf(soldier);
-          const outSlot = outIds ? outIds.indexOf(soldier) : -1;
-          if (liveSlot >= 0) stampRosterSoldier(liveSlot, liveIds.length, beat.pack, recT, beat.enter, 0, beat.u, rosterPose);
-          else stampRosterSoldier(Math.max(0, outSlot), outIds?.length ?? 1, Math.max(0, beat.pack - 1), recT, 1, beat.exit, 1, rosterPose);
-          const raise = liveSlot >= 0 ? beat.enter : 1 - beat.exit;
-          const bodyScale = scale * rosterPose.scaleMul;
-          pos.set(rosterPose.x, rosterPose.y, rosterPose.z);
-          dummy.position.copy(pos);
-          dummy.rotation.set(rosterPose.rx, rosterPose.ry, rosterPose.rz);
-          dummy.scale.setScalar(bodyScale);
-          dummy.updateMatrix();
-          stamp(bodies.current, i);
-          stamp(soldierPlumes.current, i);
-          _bodyQ.setFromEuler(_limbEul.set(rosterPose.rx, rosterPose.ry, rosterPose.rz, "XYZ"));
-          const holdRx = (1 - raise) * -1.18 + 0.05 * raise;
-          const drawRx = (1 - raise) * -1.08 - 0.02 * raise;
-          const drawRy = (1 - raise) * 0.42 - 0.06 * raise;
-          const drawRz = (1 - raise) * -0.18 + 0.05 * raise;
-          stampLimb(bowHolds.current, i, L_SHOULDER, holdRx, 0.04 * raise, 0.1 * raise, bodyScale);
-          stampLimb(drawArms.current, i, R_SHOULDER, drawRx, drawRy, drawRz, bodyScale);
-          if (nocks.current) {
-            if (raise > 0.18) {
-              nockOff.set(-0.08, 1.22, 0.36 - raise * 0.16);
-              nockOff.applyQuaternion(_bodyQ);
-              nockOff.multiplyScalar(bodyScale);
-              dummy.position.set(pos.x + nockOff.x, pos.y + nockOff.y, pos.z + nockOff.z);
-              dummy.rotation.set(rosterPose.rx, rosterPose.ry, rosterPose.rz);
-              dummy.scale.setScalar(bodyScale);
-              dummy.updateMatrix();
-              nocks.current.setMatrixAt(i, dummy.matrix);
-            } else {
-              dummy.scale.setScalar(0);
-              dummy.updateMatrix();
-              nocks.current.setMatrixAt(i, dummy.matrix);
-            }
-          }
-          continue;
-        }
+      };
+      if (isolate && liveIds && beat && beat.id === "pack") {
+        for (let i = 0; i < bodyN; i++) hideSlot(i);
+        for (let k = 0; k < packShow.length && k < bodyN; k++) stampPackAt(k, packShow[k]);
+      } else {
+      for (let i = 0; i < n; i++) {
+        const soldier = layout.rest[i];
         if (defend) {
           defendSoldierPos(i, n, t, pos, defendOx, defendOz);
           dummy.position.copy(pos);
@@ -1070,6 +1074,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
           }
         }
       }
+      }
       bodies.current.instanceMatrix.needsUpdate = true;
       if (soldierPlumes.current) soldierPlumes.current.instanceMatrix.needsUpdate = true;
       if (bowHolds.current) bowHolds.current.instanceMatrix.needsUpdate = true;
@@ -1077,7 +1082,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
       if (nocks.current) nocks.current.instanceMatrix.needsUpdate = true;
     }
     if (chiefs.current) {
-      const n = skipCommander ? 0 : Math.min(MAX_COMMANDERS, Math.max(layout.cmd.length, phantom ? 1 : 0));
+      const n = skipCommander || isolate ? 0 : Math.min(MAX_COMMANDERS, Math.max(layout.cmd.length, phantom ? 1 : 0));
       chiefs.current.count = n;
       if (chiefCapes.current) chiefCapes.current.count = n;
       if (chiefPlumes.current) chiefPlumes.current.count = n;

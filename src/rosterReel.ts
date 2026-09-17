@@ -26,7 +26,8 @@ export function isJoin(id: string | null | undefined): id is typeof JOIN_ID {
 export function rosterSoldierIds(names: string[], soldiers: number): number[] {
   const cap = Math.max(0, Math.floor(soldiers));
   const ids: number[] = [];
-  for (let i = 0; i < cap && i < names.length; i++) {
+  const limit = Math.max(cap, names.length);
+  for (let i = 0; i < names.length && i < limit; i++) {
     if (normalizeHandle(names[i])) ids.push(i);
   }
   return ids;
@@ -127,10 +128,12 @@ export function joinSoldierIds(
   return out;
 }
 
-function manualJoinIds(names: string[], soldiers: number, handles: string[], skip: Set<number>) {
-  const all = rosterSoldierIds(names, soldiers);
+function manualJoinIds(names: string[], _soldiers: number, handles: string[], skip: Set<number>) {
   const byKey = new Map<string, number>();
-  for (const i of all) byKey.set(normalizeHandle(names[i]).toLowerCase(), i);
+  for (let i = 0; i < names.length; i++) {
+    const handle = normalizeHandle(names[i] || "");
+    if (handle) byKey.set(handle.toLowerCase(), i);
+  }
   const out: number[] = [];
   const have = new Set(skip);
   for (const raw of handles) {
