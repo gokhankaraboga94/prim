@@ -520,19 +520,7 @@ function createArcherGeometry() {
 }
 
 function createDefendSoldierGeometry() {
-  return mergeParts(
-    [
-      part(new THREE.BoxGeometry(0.16, 0.12, 0.24), LEATHER, -0.1, 0.06, 0.04),
-      part(new THREE.BoxGeometry(0.16, 0.12, 0.24), LEATHER, 0.1, 0.06, -0.04),
-      part(new THREE.BoxGeometry(0.14, 0.48, 0.14), ARMOR_DK, -0.1, 0.36, 0.02),
-      part(new THREE.BoxGeometry(0.14, 0.48, 0.14), ARMOR_DK, 0.1, 0.36, -0.02),
-      part(new THREE.BoxGeometry(0.36, 0.44, 0.22), ARMOR, 0, 0.92, 0.02),
-      part(new THREE.BoxGeometry(0.2, 0.16, 0.18), SKIN, 0, 1.22, 0.03),
-      part(new THREE.BoxGeometry(0.22, 0.2, 0.22), HELM, 0, 1.42, 0.02),
-      part(new THREE.BoxGeometry(0.14, 0.03, 0.04), SLIT, 0, 1.4, 0.12),
-    ],
-    ARMOR
-  );
+  return mergeParts([...plateArmor(true), ...corinthianShell(14)], ARMOR);
 }
 
 function createCommanderGeometry() {
@@ -574,7 +562,7 @@ function createCommanderFaceGeometry() {
 }
 
 let archerGeoV14: THREE.BufferGeometry | null = null;
-let defendSoldierGeo: THREE.BufferGeometry | null = null;
+let defendSoldierGeoV15: THREE.BufferGeometry | null = null;
 let commanderGeoV14: THREE.BufferGeometry | null = null;
 let commanderSwordArmV3: THREE.BufferGeometry | null = null;
 let commanderCapeV9: THREE.BufferGeometry | null = null;
@@ -593,8 +581,8 @@ function getArcherGeometry() {
 }
 
 function getDefendSoldierGeometry() {
-  if (!defendSoldierGeo) defendSoldierGeo = createDefendSoldierGeometry();
-  return defendSoldierGeo;
+  if (!defendSoldierGeoV15) defendSoldierGeoV15 = createDefendSoldierGeometry();
+  return defendSoldierGeoV15;
 }
 
 function getCommanderGeometry() {
@@ -770,7 +758,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
   const archerGeo = useMemo(() => (defend ? getDefendSoldierGeometry() : getArcherGeometry()), [defend]);
   const commanderGeo = useMemo(() => (defend ? archerGeo : getCommanderGeometry()), [defend, archerGeo]);
   const commanderCapeGeo = useMemo(() => (defend ? archerGeo : getCommanderCapeGeometry()), [defend, archerGeo]);
-  const soldierPlumeGeo = useMemo(() => (defend ? archerGeo : getSoldierPlumeGeometry()), [defend, archerGeo]);
+  const soldierPlumeGeo = useMemo(() => getSoldierPlumeGeometry(), []);
   const commanderPlumeGeo = useMemo(() => (defend ? archerGeo : getCommanderPlumeGeometry()), [defend, archerGeo]);
   const commanderFaceGeo = useMemo(() => (defend ? archerGeo : getCommanderFaceGeometry()), [defend, archerGeo]);
   const bowHoldGeo = useMemo(() => (defend ? archerGeo : getBowHoldGeometry()), [defend, archerGeo]);
@@ -1490,8 +1478,11 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
     <group>
       {defend ? (
         <>
-          <instancedMesh key={`defend-body-${instanceCap}`} ref={bodies} args={[archerGeo, undefined, instanceCap]} frustumCulled={false}>
-            <meshBasicMaterial vertexColors />
+          <instancedMesh key={`archer-v14-defend-${instanceCap}`} ref={bodies} args={[archerGeo, undefined, instanceCap]} frustumCulled={false}>
+            <meshStandardMaterial vertexColors roughness={0.46} metalness={0.72} envMapIntensity={0.9} />
+          </instancedMesh>
+          <instancedMesh ref={soldierPlumes} args={[soldierPlumeGeo, undefined, instanceCap]} frustumCulled={false}>
+            <meshStandardMaterial vertexColors roughness={0.86} metalness={0} side={THREE.DoubleSide} />
           </instancedMesh>
           <group ref={tags}>
             {nameMaps.map((tag, i) =>

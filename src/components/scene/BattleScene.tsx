@@ -521,7 +521,7 @@ function SceneContent({
       <color attach="background" args={["#7eb6ee"]} />
       <fog attach="fog" args={defend ? (sortie ? ["#9ec8ee", 600, 2200] : ["#9ec8ee", 1400, 4200]) : ["#9ec8ee", 380, 1500]} />
       <SkyDome cheap={Boolean(defend)} />
-      {!defend && <SteelSky />}
+      <SteelSky />
       <DayLights cinematic={cinematic} slim={Boolean(defend)} />
       <Terrain road={!defend} cheap={Boolean(defend)} />
       {!defend && <Castle level={level} pressure={pressure} gateClosed={Boolean(countdown) || split} />}

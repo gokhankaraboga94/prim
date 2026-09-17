@@ -75,7 +75,7 @@ function createDefendRaiderGeometry() {
     part(new THREE.BoxGeometry(0.16, 0.03, 0.05), "#080202", 0, 1.46, 0.14),
     part(new THREE.BoxGeometry(0.09, 0.08, 0.1), skin, 0.36, 0.86, 0.16),
     part(new THREE.BoxGeometry(0.036, 0.036, 1.55), steel, 0.4, 0.9, 0.92, 0.18, 0, 0.12),
-    part(new THREE.BoxGeometry(0.08, 0.08, 0.14), "#f4f7fb", 0.48, 1.02, 1.62, 0.18, 0, 0.12),
+    part(new THREE.ConeGeometry(0.028, 0.52, 7), "#f7f4ee", 0.51, 1.07, 1.84, Math.PI / 2 + 0.18, 0, 0.12),
   ];
   const merged = mergeGeometries(pieces, false);
   pieces.forEach((g) => g.dispose());
@@ -83,7 +83,7 @@ function createDefendRaiderGeometry() {
 }
 
 let raiderGeoCache: THREE.BufferGeometry | null = null;
-let defendRaiderSpearGeo: THREE.BufferGeometry | null = null;
+let defendRaiderSpearTipGeo: THREE.BufferGeometry | null = null;
 
 export function getRaiderGeometry() {
   if (!raiderGeoCache) raiderGeoCache = createRaiderGeometry();
@@ -91,8 +91,8 @@ export function getRaiderGeometry() {
 }
 
 export function getDefendRaiderGeometry() {
-  if (!defendRaiderSpearGeo) defendRaiderSpearGeo = createDefendRaiderGeometry();
-  return defendRaiderSpearGeo;
+  if (!defendRaiderSpearTipGeo) defendRaiderSpearTipGeo = createDefendRaiderGeometry();
+  return defendRaiderSpearTipGeo;
 }
 
 type SallyRaidProps = {

@@ -58,7 +58,7 @@ export function DefendRing({ soldiers, mode, level = 1 }: DefendRingProps) {
   });
 
   return (
-    <instancedMesh key={`${cap}-${mode}`} ref={bodies} args={[geo, undefined, cap]} frustumCulled={false}>
+    <instancedMesh key={`${cap}-${mode}-spear-tip`} ref={bodies} args={[geo, undefined, cap]} frustumCulled={false}>
       <meshBasicMaterial vertexColors />
     </instancedMesh>
   );
