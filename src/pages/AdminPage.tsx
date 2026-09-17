@@ -49,17 +49,24 @@ export function AdminPage() {
   const [listOpen, setListOpen] = useState(false);
   const [joinTick, setJoinTick] = useState(0);
   const [joinLastTen, setJoinLastTen] = useState(true);
+  const [joinExtras, setJoinExtras] = useState("");
 
   const handle = handleInput || game.instagramHandle;
   const cmdValue = cmdDraft ?? game.commanders.join("\n");
+  const joinExtraNames = useMemo(() => parseNameList(joinExtras), [joinExtras]);
   const pendingJoin = useMemo(() => {
     ensureJoinMark(game.names, game.soldiers);
-    return joinQueue(game.names, game.soldiers, joinLastTen);
-  }, [game.names, game.soldiers, joinTick, joinLastTen]);
+    return joinQueue(game.names, game.soldiers, joinLastTen, joinExtraNames);
+  }, [game.names, game.soldiers, joinTick, joinLastTen, joinExtraNames]);
 
   useEffect(() => {
     ensureJoinMark(game.names, game.soldiers);
   }, [game.names, game.soldiers]);
+
+  useEffect(() => {
+    if (!isJoin(reelShot)) return;
+    setReelSeconds(pendingJoin.seconds);
+  }, [reelShot, pendingJoin.seconds]);
 
   async function saveSoldiers(next: number) {
     const soldiers = Math.max(0, Math.floor(next));
@@ -754,19 +761,26 @@ export function AdminPage() {
                 <input
                   type="checkbox"
                   checked={joinLastTen}
-                  onChange={(e) => {
-                    const on = e.target.checked;
-                    setJoinLastTen(on);
-                    setReelSeconds(joinQueue(game.names, game.soldiers, on).seconds);
-                  }}
+                  onChange={(e) => setJoinLastTen(e.target.checked)}
                 />
                 Son 10’u da dahil et
               </label>
+              <label>Eski takipçi ekle</label>
+              <textarea
+                rows={5}
+                placeholder={"eski1\neski2"}
+                value={joinExtras}
+                onChange={(e) => setJoinExtras(e.target.value)}
+              />
               <p className="muted">
-                Yeni asker varsa yalnızca onlar (son 10 karışmaz). Yeni yoksa ve kutu seçiliyse
-                ordunun son 10’u yine çıkar — önceki videoda kullanılmış olsa da. Yalnız son
-                10 ise üçer üçer. Kuyrukta {pendingJoin.ids.length} asker
-                {pendingJoin.fresh > 0 ? ` · ${pendingJoin.fresh} yeni` : joinLastTen ? " · son 10" : ""}.
+                Boş bırakırsan akış aynı devam eder. Satır satır veya boşlukla yazarsan bu
+                adlar son katılanlara eklenir; orduda yoksa atlanır. Yeni asker varsa yalnızca
+                onlar (son 10 karışmaz). Yeni yoksa ve kutu seçiliyse son 10 yine çıkar. Yalnız
+                son 10 ise üçer üçer. Kuyrukta {pendingJoin.ids.length} asker
+                {pendingJoin.fresh > 0 ? ` · ${pendingJoin.fresh} yeni` : joinLastTen && pendingJoin.extra === 0 ? " · son 10" : ""}
+                {pendingJoin.extra > 0 ? ` · ${pendingJoin.extra} eski takipçi` : ""}
+                {joinExtraNames.length > pendingJoin.extra ? ` · ${joinExtraNames.length - pendingJoin.extra} ad orduda yok` : ""}
+                .
                 {" "}Caption: Adın çıkarsa yoruma SAVAŞTAYIM yaz. Kale düşsün diyorsan beğen. Canlı kuşatma. 1 takip = 1 asker. wargame.lol
                 {" "}Hashtag: #wargame #stratejioyunu #kalekuşatma #ordu #wargame2028
               </p>

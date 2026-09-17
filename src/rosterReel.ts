@@ -127,7 +127,24 @@ export function joinSoldierIds(
   return out;
 }
 
-export function joinQueue(names: string[], soldiers: number, includeLastTen: boolean) {
+function manualJoinIds(names: string[], soldiers: number, handles: string[], skip: Set<number>) {
+  const all = rosterSoldierIds(names, soldiers);
+  const byKey = new Map<string, number>();
+  for (const i of all) byKey.set(normalizeHandle(names[i]).toLowerCase(), i);
+  const out: number[] = [];
+  const have = new Set(skip);
+  for (const raw of handles) {
+    const key = normalizeHandle(raw).toLowerCase();
+    if (!key) continue;
+    const id = byKey.get(key);
+    if (id == null || have.has(id)) continue;
+    out.push(id);
+    have.add(id);
+  }
+  return out;
+}
+
+export function joinQueue(names: string[], soldiers: number, includeLastTen: boolean, extraHandles: string[] = []) {
   const marked = loadJoinMark();
   const all = rosterSoldierIds(names, soldiers);
   const seen = new Set(marked.map((n) => n.toLowerCase()));
@@ -137,11 +154,14 @@ export function joinQueue(names: string[], soldiers: number, includeLastTen: boo
   if (fresh.length > 0) ids = fresh;
   else if (includeLastTen) ids = all.slice(-Math.min(10, all.length));
   else ids = [];
-  const lastTenOnly = includeLastTen && fresh.length === 0 && ids.length > 0;
+  const extraIds = manualJoinIds(names, soldiers, extraHandles, new Set(ids));
+  ids = [...ids, ...extraIds];
+  const lastTenOnly = includeLastTen && fresh.length === 0 && extraIds.length === 0 && ids.length > 0;
   const pack = joinPackSize(ids.length, lastTenOnly);
   return {
     ids,
     fresh: fresh.length,
+    extra: extraIds.length,
     pack,
     seconds: rosterDuration(JOIN_ID, ids.length, pack),
   };
@@ -253,38 +273,39 @@ function layoutSlot(layout: number, i: number, n: number, out: RosterPose) {
   const idx = Math.max(0, i);
   out.y = 0;
   const kind = ((layout % 4) + 4) % 4;
+  const gap = count >= 5 ? 1.78 : count >= 4 ? 1.52 : 1.38;
   if (count <= 3 || kind === 1) {
-    out.x = (idx - (count - 1) / 2) * (kind === 1 ? 1.22 : 1.38);
+    out.x = (idx - (count - 1) / 2) * (kind === 1 ? Math.max(1.34, gap * 0.86) : gap);
     out.z = ROSTER_STAGE_Z;
     return;
   }
   if (kind === 2) {
     if (idx === 0) {
       out.x = 0;
-      out.z = ROSTER_STAGE_Z - 0.12;
+      out.z = ROSTER_STAGE_Z;
     } else if (idx < 3) {
-      out.x = idx === 1 ? -1.28 : 1.28;
-      out.z = ROSTER_STAGE_Z + 1.15;
+      out.x = idx === 1 ? -1.55 : 1.55;
+      out.z = ROSTER_STAGE_Z + 0.72;
     } else {
-      out.x = idx === 3 ? -1.92 : 1.92;
-      out.z = ROSTER_STAGE_Z + 2.2;
+      out.x = idx === 3 ? -2.35 : 2.35;
+      out.z = ROSTER_STAGE_Z + 1.28;
     }
     return;
   }
   if (kind === 3) {
-    out.x = (idx - (count - 1) / 2) * 1.26;
-    out.z = ROSTER_STAGE_Z + (idx % 2) * 1.5;
+    out.x = (idx - (count - 1) / 2) * gap;
+    out.z = ROSTER_STAGE_Z + (idx % 2) * 0.62;
     return;
   }
   const front = Math.ceil(count / 2);
   const back = count - front;
   if (idx < front) {
-    out.x = (idx - (front - 1) / 2) * 1.42;
+    out.x = (idx - (front - 1) / 2) * gap;
     out.z = ROSTER_STAGE_Z;
   } else {
     const j = idx - front;
-    out.x = (j - (back - 1) / 2) * 1.42;
-    out.z = ROSTER_STAGE_Z + 2.05;
+    out.x = (j - (back - 1) / 2) * gap;
+    out.z = ROSTER_STAGE_Z + 1.15;
   }
 }
 

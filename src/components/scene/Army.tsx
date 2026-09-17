@@ -4,7 +4,7 @@ import * as THREE from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import { DEFAULT_COMMANDER, effectiveCommanders, isCommander } from "../../game";
 import { REEL_HOLD, reelBeats } from "../../recordCanvas";
-import { rosterBeat, rosterSoldierIds, stampRosterSoldier, type PlanBId, type RosterPose } from "../../rosterReel";
+import { ROSTER_STAGE_Z, rosterBeat, rosterSoldierIds, stampRosterSoldier, type PlanBId, type RosterPose } from "../../rosterReel";
 import { discoverBeat, DISCOVER_HOOK_END, DISCOVER3_ID, RAF2_ID, shelfBeat, trailerBeat, type DiscoverId } from "../../discoverReel";
 import { COUNT_1_END, countdownBeat, countdownVolley } from "../../countdownReel";
 import { DEFEND_CZ, DEFEND2_CX, DEFEND2_CZ, defendSoldierPos, defendYawOut } from "../../defendReel";
@@ -1233,8 +1233,8 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
           hideTag(tag);
           continue;
         }
-        nameScale = isolate ? 0.7 * (rosterPose.nameMul || 1) : 1.05;
-        if (isolate && (rosterPose.nameMul < 0.1 || Math.abs(pos.x) > 2.85)) {
+        nameScale = isolate ? 0.58 * (rosterPose.nameMul || 1) : 1.05;
+        if (isolate && rosterPose.nameMul < 0.1) {
           hideTag(tag);
           continue;
         }
@@ -1265,7 +1265,15 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
       let col = 0;
       let rowMul = 1;
       let nx = pos.x;
-      if (!cmd && !isolate) {
+      if (isolate) {
+        const near = Math.max(0, pos.z - ROSTER_STAGE_Z);
+        const liveSlot = liveIds && idx >= 0 ? liveIds.indexOf(idx) : -1;
+        const outSlot = outIds && idx >= 0 ? outIds.indexOf(idx) : -1;
+        const slot = liveSlot >= 0 ? liveSlot : Math.max(0, outSlot);
+        lift = 2.86 - near * 0.72 + (slot % 2) * 0.42 + (slot === 2 ? 0.18 : 0);
+        tag.renderOrder = 24 - Math.round(near * 4);
+        nx = pos.x * 1.06;
+      } else if (!cmd) {
         const slot = layout.slotOf[idx];
         ({ row, col } = slotCoord(slot >= 0 ? slot : 0, form.sizes));
         if (defend && countdownTag) {
@@ -1278,15 +1286,9 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
           lift = 2.22 + row * 0.5 + (col % 2) * 0.2;
         }
       }
-      let sx = (isolate ? Math.min(1.18, tagData.sx * nameScale) : tagData.sx * nameScale) * rowMul;
+      let sx = (isolate ? Math.min(1.05, tagData.sx * nameScale) : tagData.sx * nameScale) * rowMul;
       if (defend && countdownTag) sx = Math.min(sx, FILE * 1.28);
       else if (countdownTag) sx = Math.min(sx, FILE * 0.78);
-      if (isolate) {
-        const half = sx * 0.5;
-        const lim = 2.12;
-        if (nx - half < -lim) nx = -lim + half;
-        if (nx + half > lim) nx = lim - half;
-      }
       const baseY = pos.y + lift * scale;
       if (defend && cam) {
         nockOff.copy(cam.position).sub(pos);
