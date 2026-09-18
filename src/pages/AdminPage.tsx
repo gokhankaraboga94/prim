@@ -701,7 +701,7 @@ export function AdminPage() {
           )}
           {isDefend3(reelShot) && (
             <p className="muted">
-              26 sn. Çıkış ve yakınlaşma 12. saniyede durur; sonra 14 sn askerlerin üstünde aynı mesafede tam daire. Tüm isimler kadraja sığar.
+              27 sn. Çıkış ve yakınlaşma 13. saniyeye kadar sürer; sonra askerlerin üstünde gezinir, sabit daire değil.
               {" "}Caption: Adın çıkarsa yoruma BURADAYIM yaz. Kale düşsün diyorsan beğen. Canlı kuşatma. 1 takip = 1 asker. wargame.lol
               {" "}İlk yorumu sabitle: BURADAYIM
               {" "}Hashtag: #wargame #stratejioyunu #kalekuşatma #ordu #wargame2028

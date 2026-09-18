@@ -15,7 +15,7 @@ export const DEFEND_MAIN_SECONDS = 14;
 export const DEFEND_SECONDS = DEFEND_PULL_END + DEFEND_MAIN_SECONDS;
 export const DEFEND2_SORTIE = 6.4;
 export const DEFEND2_SECONDS = DEFEND2_SORTIE + DEFEND_SECONDS;
-export const DEFEND3_ZOOM_END = 12;
+export const DEFEND3_ZOOM_END = 13;
 export const DEFEND3_ORBIT = 14;
 export const DEFEND3_SECONDS = DEFEND3_ZOOM_END + DEFEND3_ORBIT;
 
@@ -126,16 +126,27 @@ function offsetPose(p: ShotPose, ox: number, oz: number): ShotPose {
   return pose(p.x + ox, p.y, p.z + oz, p.lx + ox, p.ly, p.lz + oz, p.fov);
 }
 
-function orbitPose(p: ShotPose, cx: number, cz: number, angle: number): ShotPose {
-  const c = Math.cos(angle);
-  const s = Math.sin(angle);
-  const rot = (x: number, z: number) => ({
-    x: cx + (x - cx) * c - (z - cz) * s,
-    z: cz + (x - cx) * s + (z - cz) * c,
-  });
-  const cam = rot(p.x, p.z);
-  const look = rot(p.lx, p.lz);
-  return pose(cam.x, p.y, cam.z, look.x, p.ly, look.z, p.fov);
+function roamOverArmy(base: ShotPose, recT: number, soldiers: number, ox: number, oz: number): ShotPose {
+  const t = Math.max(0, recT - DEFEND3_ZOOM_END);
+  const u = clamp01(t / DEFEND3_ORBIT);
+  const fade = easeInOut(clamp01(t / 1.05));
+  const armyR = defendArmyRadius(Math.max(1, soldiers));
+  const rx = armyR * 0.56;
+  const rz = armyR * 0.56;
+  const lookX = ox + Math.sin(u * Math.PI * 2.05 + 0.35) * rx;
+  const lookZ = oz + Math.sin(u * Math.PI * 1.35 + 1.2) * rz;
+  const offX = base.x - base.lx;
+  const offZ = base.z - base.lz;
+  const yaw = u * 0.72 + 0.2 * Math.sin(u * Math.PI * 1.85);
+  const c = Math.cos(yaw);
+  const s = Math.sin(yaw);
+  const camX = lookX + offX * c - offZ * s;
+  const camZ = lookZ + offX * s + offZ * c;
+  const y = base.y + Math.sin(u * Math.PI * 1.55) * 1.15;
+  const roam = pose(camX, y, camZ, lookX, base.ly + 0.12, lookZ, base.fov);
+  if (fade <= 0) return base;
+  if (fade >= 1) return roam;
+  return lerpPose(base, roam, fade);
 }
 
 export function defendArmyRadius(n: number) {
@@ -369,7 +380,6 @@ export function sampleDefendCam(recT: number, soldiers: number, id: DefendId, le
   if (!isDefend3(id)) return sampleDefendPath(recT, soldiers, id, level);
   const frozen = sampleDefendPath(Math.min(recT, DEFEND3_ZOOM_END), soldiers, id, level);
   if (recT <= DEFEND3_ZOOM_END) return frozen;
-  const spin = (clamp01((recT - DEFEND3_ZOOM_END) / DEFEND3_ORBIT) * Math.PI) * 2;
   const { x: ox, z: oz } = defendOrigin(id);
-  return orbitPose(frozen, ox, oz, spin);
+  return roamOverArmy(frozen, recT, soldiers, ox, oz);
 }
