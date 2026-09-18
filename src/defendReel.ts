@@ -32,12 +32,12 @@ export const DEFEND2_RINGS = 8;
 export const DEFEND2_RING_GAP = 1.12;
 export const DEFEND2_RING_SPACING = 0.98;
 export const DEFEND2_MAX_ENEMIES = 1400;
-export const DEFEND3_RINGS = 14;
-export const DEFEND3_RING_GAP = 0.9;
+export const DEFEND3_RINGS = 20;
+export const DEFEND3_RING_GAP = 0.67;
 export const DEFEND3_RING_SPACING = 0.76;
-export const DEFEND3_MAX_ENEMIES = 3200;
+export const DEFEND3_MAX_ENEMIES = 4800;
 export const DEFEND_INNER_GAP = 4.2;
-export const DEFEND3_INNER_GAP = 2.4;
+export const DEFEND3_INNER_GAP = 1.4;
 export const DEFEND_APPROACH = 26;
 
 export const DEFEND_HOOK_END = 2.2;
@@ -190,7 +190,9 @@ export function defendRingLayout(soldiers: number, id: DefendId = DEFEND_ID): De
   for (let ring = 0; ring < ringCount(id); ring++) {
     const r0 = outer0 - ring * gap;
     if (r0 < minR) continue;
-    const n = Math.max(16, Math.round((2 * Math.PI * r0) / spacing));
+    const innerU = ring / Math.max(1, ringCount(id) - 1);
+    const sp = isDefend3(id) ? spacing * (1 - innerU * 0.34) : spacing;
+    const n = Math.max(16, Math.round((2 * Math.PI * r0) / sp));
     if (cap + n > maxE) break;
     rings.push({ ring, n, offset: (ring % 2) * (Math.PI / n) });
     cap += n;
