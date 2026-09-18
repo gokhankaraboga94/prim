@@ -14,7 +14,7 @@ import { rosterSoldierIds, sampleRoster, type PlanBId } from "../../rosterReel";
 import { sagaGateRecT, sampleSaga, type SagaId } from "../../sagaReel";
 import { discoverGateRecT, sampleDiscover, type DiscoverId } from "../../discoverReel";
 import { countdownShake, sampleCountdown, type CountdownId } from "../../countdownReel";
-import { DEFEND2_SORTIE, isDefend2, sampleDefendCam, type DefendId } from "../../defendReel";
+import { DEFEND2_SORTIE, isDefend3, isDefendSortie, sampleDefendCam, type DefendId } from "../../defendReel";
 import { MIX8_ID, mixTagPass, sampleMixBottom, sampleMixTop, type MixId } from "../../mixReel";
 import { DefendRing } from "./DefendRing";
 import {
@@ -515,7 +515,7 @@ function SceneContent({
   const hideCmd = skipCommander || Boolean(discover) || Boolean(countdown) || Boolean(defend);
   const chiefN = hideCmd ? 0 : chiefs.length;
   const split = Boolean(mix);
-  const sortie = isDefend2(defend);
+  const sortie = isDefendSortie(defend);
   return (
     <>
       <color attach="background" args={["#7eb6ee"]} />
@@ -535,7 +535,7 @@ function SceneContent({
       ) : (
         !roster && !split && !countdown && <SallyRaid soldiers={soldiers} commanders={chiefN} />
       )}
-      <Army count={soldiers} names={names} commanders={commanders} cinematic={cinematic} duration={duration} skipCommander={hideCmd} roster={roster} discover={discover} countdown={Boolean(countdown)} defend={Boolean(defend)} defend2={sortie} mix={split} level={level} rosterIds={rosterIds} />
+      <Army count={soldiers} names={names} commanders={commanders} cinematic={cinematic} duration={duration} skipCommander={hideCmd} roster={roster} discover={discover} countdown={Boolean(countdown)} defend={Boolean(defend)} defend2={sortie} defend3={isDefend3(defend)} mix={split} level={level} rosterIds={rosterIds} />
       {cinematic && split ? (
         <MixSplitCam duration={duration ?? 15} soldiers={soldiers} level={level} commanders={chiefN} mix={mix!} />
       ) : cinematic ? (

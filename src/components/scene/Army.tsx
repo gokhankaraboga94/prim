@@ -55,6 +55,7 @@ type ArmyProps = {
   countdown?: boolean;
   defend?: boolean;
   defend2?: boolean;
+  defend3?: boolean;
   mix?: boolean;
   level?: number;
   rosterIds?: number[] | null;
@@ -734,7 +735,7 @@ function makeHandleTexture(name: string, commander = false, crisp = false, plain
 }
 
 
-export function Army({ count, names = [], commanders = [], cinematic, duration = 8, skipCommander = false, roster = null, discover = null, countdown = false, defend = false, defend2 = false, mix = false, level = 1, rosterIds = null }: ArmyProps) {
+export function Army({ count, names = [], commanders = [], cinematic, duration = 8, skipCommander = false, roster = null, discover = null, countdown = false, defend = false, defend2 = false, defend3 = false, mix = false, level = 1, rosterIds = null }: ArmyProps) {
   const bodies = useRef<THREE.InstancedMesh>(null);
   const soldierPlumes = useRef<THREE.InstancedMesh>(null);
   const bowHolds = useRef<THREE.InstancedMesh>(null);
@@ -863,7 +864,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
   function poseSoldier(soldier: number, t: number) {
     if (defend) {
       const slot = layout.slotOf[soldier];
-      defendSoldierPos(slot >= 0 ? slot : soldier, layout.rest.length, t, pos, defendOx, defendOz);
+      defendSoldierPos(slot >= 0 ? slot : soldier, layout.rest.length, t, pos, defendOx, defendOz, defend3);
       return;
     }
     const cmdK = layout.cmdOf[soldier];
@@ -1034,7 +1035,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
       for (let i = 0; i < n; i++) {
         const soldier = layout.rest[i];
         if (defend) {
-          defendSoldierPos(i, n, t, pos, defendOx, defendOz);
+          defendSoldierPos(i, n, t, pos, defendOx, defendOz, defend3);
           dummy.position.copy(pos);
           dummy.rotation.set(0, defendYawOut(pos.x, pos.z, defendOx, defendOz), 0);
           dummy.scale.setScalar(scale);

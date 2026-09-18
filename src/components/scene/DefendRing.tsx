@@ -3,7 +3,7 @@ import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { REEL_HOLD } from "../../recordCanvas";
 import { castleFrame } from "../../castleLayout";
-import { DEFEND2_SORTIE, defendEnemyAt, defendRingLayout, isDefend2, type DefendId } from "../../defendReel";
+import { DEFEND2_SORTIE, defendEnemyAt, defendRingLayout, isDefendSortie, type DefendId } from "../../defendReel";
 import { getDefendRaiderGeometry } from "./SallyRaid";
 
 const dummy = new THREE.Object3D();
@@ -39,7 +39,7 @@ export function DefendRing({ soldiers, mode, level = 1 }: DefendRingProps) {
   useFrame((state) => {
     if (!bodies.current) return;
     const recT = state.clock.elapsedTime - REEL_HOLD;
-    const wrapping = isDefend2(mode) && recT < DEFEND2_SORTIE;
+    const wrapping = isDefendSortie(mode) && recT < DEFEND2_SORTIE;
     skip.current += 1;
     if (!wrapping && skip.current % 2 === 1) return;
     const t = state.clock.elapsedTime;
