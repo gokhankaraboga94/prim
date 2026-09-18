@@ -26,7 +26,7 @@ import { SAGA_MODES, isSaga, sagaDuration, type SagaId } from "../sagaReel";
 import { DISCOVER_ID, DISCOVER2_ID, DISCOVER3_ID, RAF2_ID, DISCOVER_MODE, DISCOVER2_MODE, DISCOVER3_MODE, RAF2_MODE, DISCOVER_SECONDS, DISCOVER3_SECONDS, RAF2_SECONDS, isDiscover, isDiscoverEngage, isDiscoverShelf, isDiscoverTrailer, type DiscoverId } from "../discoverReel";
 import { MIX_MODES, MIX_SECONDS, isMix, type MixId } from "../mixReel";
 import { COUNTDOWN_ID, COUNTDOWN_MODE, COUNTDOWN_SECONDS, isCountdown, type CountdownId } from "../countdownReel";
-import { DEFEND_ID, DEFEND2_ID, DEFEND3_ID, DEFEND_MODE, DEFEND2_MODE, DEFEND3_MODE, DEFEND_SECONDS, DEFEND2_SECONDS, isDefend, isDefend2, isDefend3, isDefendSortie, type DefendId } from "../defendReel";
+import { DEFEND_ID, DEFEND2_ID, DEFEND3_ID, DEFEND_MODE, DEFEND2_MODE, DEFEND3_MODE, DEFEND_SECONDS, DEFEND2_SECONDS, DEFEND3_SECONDS, isDefend, isDefend2, isDefend3, isDefendSortie, type DefendId } from "../defendReel";
 import { unlockReelSfx } from "../reelSfx";
 
 export function AdminPage() {
@@ -467,6 +467,8 @@ export function AdminPage() {
                     ? [RAF2_SECONDS]
                   : isCountdown(reelShot)
                     ? [COUNTDOWN_SECONDS]
+                  : isDefend3(reelShot)
+                    ? [DEFEND3_SECONDS]
                   : isDefendSortie(reelShot)
                     ? [DEFEND2_SECONDS]
                   : isDefend(reelShot)
@@ -642,11 +644,11 @@ export function AdminPage() {
               className={reelShot === DEFEND3_ID ? "on" : ""}
               onClick={() => {
                 setReelShot((cur) => (cur === DEFEND3_ID ? null : DEFEND3_ID));
-                setReelSeconds(DEFEND2_SECONDS);
+                setReelSeconds(DEFEND3_SECONDS);
                 setReelSkipCmd(true);
               }}
             >
-              {DEFEND3_MODE.label} — {DEFEND2_SECONDS}s
+              {DEFEND3_MODE.label} — {DEFEND3_SECONDS}s
             </button>
           </div>
           {reelShot === DISCOVER_ID && (
@@ -699,7 +701,7 @@ export function AdminPage() {
           )}
           {isDefend3(reelShot) && (
             <p className="muted">
-              21.4 sn. Savunma 2 ile aynı çıkış: kapı, iki kol, çember. Kamera daha yakından başlar. Askerler eşmerkezli simetrik halka.
+              25 sn. Çıkış ve yakınlaşma 11. saniyede durur; sonra 14 sn askerlerin üstünde aynı mesafede tam daire. Tüm isimler kadraja sığar.
               {" "}Caption: Adın çıkarsa yoruma BURADAYIM yaz. Kale düşsün diyorsan beğen. Canlı kuşatma. 1 takip = 1 asker. wargame.lol
               {" "}İlk yorumu sabitle: BURADAYIM
               {" "}Hashtag: #wargame #stratejioyunu #kalekuşatma #ordu #wargame2028

@@ -15,6 +15,9 @@ export const DEFEND_MAIN_SECONDS = 14;
 export const DEFEND_SECONDS = DEFEND_PULL_END + DEFEND_MAIN_SECONDS;
 export const DEFEND2_SORTIE = 6.4;
 export const DEFEND2_SECONDS = DEFEND2_SORTIE + DEFEND_SECONDS;
+export const DEFEND3_ZOOM_END = 11;
+export const DEFEND3_ORBIT = 14;
+export const DEFEND3_SECONDS = DEFEND3_ZOOM_END + DEFEND3_ORBIT;
 
 export const DEFEND_CX = 0;
 export const DEFEND_CZ = 0;
@@ -72,6 +75,7 @@ export function isDefendSortie(id: string | null | undefined): id is typeof DEFE
 }
 
 export function defendDuration(id: string | null | undefined) {
+  if (isDefend3(id)) return DEFEND3_SECONDS;
   return isDefendSortie(id) ? DEFEND2_SECONDS : DEFEND_SECONDS;
 }
 
@@ -119,6 +123,18 @@ function pose(x: number, y: number, z: number, lx: number, ly: number, lz: numbe
 function offsetPose(p: ShotPose, ox: number, oz: number): ShotPose {
   if (!ox && !oz) return p;
   return pose(p.x + ox, p.y, p.z + oz, p.lx + ox, p.ly, p.lz + oz, p.fov);
+}
+
+function orbitPose(p: ShotPose, cx: number, cz: number, angle: number): ShotPose {
+  const c = Math.cos(angle);
+  const s = Math.sin(angle);
+  const rot = (x: number, z: number) => ({
+    x: cx + (x - cx) * c - (z - cz) * s,
+    z: cz + (x - cx) * s + (z - cz) * c,
+  });
+  const cam = rot(p.x, p.z);
+  const look = rot(p.lx, p.lz);
+  return pose(cam.x, p.y, cam.z, look.x, p.ly, look.z, p.fov);
 }
 
 export function defendArmyRadius(n: number) {
@@ -329,7 +345,7 @@ function sampleDefendSortie(recT: number, soldiers: number, level: number, close
   return pose(x, y, z, 0, 1.55, lookZ, fov);
 }
 
-export function sampleDefendCam(recT: number, soldiers: number, id: DefendId, level: number): ShotPose {
+function sampleDefendPath(recT: number, soldiers: number, id: DefendId, level: number): ShotPose {
   const { x: ox, z: oz } = defendOrigin(id);
   if (!isDefendSortie(id)) return sampleDefend(recT, soldiers, id);
   const play = recT - DEFEND2_SORTIE;
@@ -339,4 +355,13 @@ export function sampleDefendCam(recT: number, soldiers: number, id: DefendId, le
   const blend = easeOutCubic(clamp01((recT - (DEFEND2_SORTIE - 0.75)) / 0.75));
   if (blend <= 0) return bird;
   return lerpPose(bird, offsetPose(sampleDefend(0, soldiers, id), ox, oz), blend);
+}
+
+export function sampleDefendCam(recT: number, soldiers: number, id: DefendId, level: number): ShotPose {
+  if (!isDefend3(id)) return sampleDefendPath(recT, soldiers, id, level);
+  const frozen = sampleDefendPath(Math.min(recT, DEFEND3_ZOOM_END), soldiers, id, level);
+  if (recT <= DEFEND3_ZOOM_END) return frozen;
+  const spin = (clamp01((recT - DEFEND3_ZOOM_END) / DEFEND3_ORBIT) * Math.PI) * 2;
+  const { x: ox, z: oz } = defendOrigin(id);
+  return orbitPose(frozen, ox, oz, spin);
 }
