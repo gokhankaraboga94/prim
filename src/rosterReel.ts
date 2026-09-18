@@ -462,6 +462,15 @@ function packCamPair(style: number): [ShotPose, ShotPose] {
   }
 }
 
+function joinPackFrame(p: ShotPose): ShotPose {
+  return pose(p.x * 0.9, p.y + 0.7, p.z + 2.05, p.lx * 0.9, p.ly + 0.08, p.lz, Math.min(48, p.fov + 1.4));
+}
+
+function packCams(style: number, join: boolean): [ShotPose, ShotPose] {
+  const [a, b] = packCamPair(style);
+  return join ? [joinPackFrame(a), joinPackFrame(b)] : [a, b];
+}
+
 export function sampleRoster(
   kind: PlanBId,
   recT: number,
@@ -471,9 +480,10 @@ export function sampleRoster(
 ): ShotPose {
   const beat = rosterBeat(kind, recT, duration, ids);
   const { form, castle } = ctx;
+  const join = kind === JOIN_ID;
   const gate = pose(1.4, 7.4, castle.front + 19, 0.1, castle.midY * 0.4, castle.front + 1.5, 40);
   const hookMid = pose(1.2, 48, form.midZ + 8, 0, 0.7, form.midZ, 48);
-  const dive = pose(0.4, 14, ROSTER_STAGE_Z + 18, 0, 1.55, ROSTER_STAGE_Z + 1.2, 46);
+  const dive = pose(0.4, join ? 14.6 : 14, ROSTER_STAGE_Z + (join ? 19.6 : 18), 0, 1.55, ROSTER_STAGE_Z + 1.2, join ? 47 : 46);
   const tl = rosterTimeline(kind, ids.length, duration);
   if (beat.id === "hook") {
     const u = clamp01(recT / Math.max(0.2, tl.hook));
@@ -484,14 +494,14 @@ export function sampleRoster(
     return lerpPose(hookMid, dive, u);
   }
   if (beat.id === "cta") {
-    const last = packCamPair(Math.max(0, tl.packs - 1))[1];
+    const last = packCams(Math.max(0, tl.packs - 1), join)[1];
     const payoff = pose(7.2, 15.5, form.midZ + 6, 0, 4.4, (form.front + castle.front) * 0.52, 42);
     const u = clamp01((recT - tl.ctaAt) / Math.max(0.2, tl.cta));
     return lerpPose(last, payoff, u);
   }
-  const [a, b] = packCamPair(beat.pack);
+  const [a, b] = packCams(beat.pack, join);
   if (beat.outgoing.length) {
-    const from = packCamPair(beat.pack - 1)[1];
+    const from = packCams(beat.pack - 1, join)[1];
     const whip = lerpPoseU(from, a, easeOutCubic(beat.enter));
     return pose(whip.x, whip.y, whip.z, whip.lx, whip.ly, whip.lz, whip.fov + (1 - beat.enter) * 5);
   }
