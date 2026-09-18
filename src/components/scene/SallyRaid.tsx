@@ -55,13 +55,14 @@ function createRaiderGeometry() {
   return merged ?? colorize(new THREE.BoxGeometry(0.4, 1.2, 0.28), "#9a1c1c");
 }
 
-function createDefendRaiderGeometry() {
+function createDefendRaiderGeometry(redTip = false) {
   const red = "#d31c1c";
   const redDk = "#7a1212";
   const helm = "#9a1616";
   const skin = "#d4a57c";
   const boot = "#1a100c";
   const steel = "#e8eef4";
+  const tip = redTip ? "#e20b0b" : "#f7f4ee";
   const pieces = [
     part(new THREE.BoxGeometry(0.16, 0.12, 0.26), boot, -0.11, 0.06, 0.08),
     part(new THREE.BoxGeometry(0.16, 0.12, 0.26), boot, 0.11, 0.06, -0.08),
@@ -75,7 +76,7 @@ function createDefendRaiderGeometry() {
     part(new THREE.BoxGeometry(0.16, 0.03, 0.05), "#080202", 0, 1.46, 0.14),
     part(new THREE.BoxGeometry(0.09, 0.08, 0.1), skin, 0.36, 0.86, 0.16),
     part(new THREE.BoxGeometry(0.036, 0.036, 1.55), steel, 0.4, 0.9, 0.92, 0.18, 0, 0.12),
-    part(new THREE.ConeGeometry(0.028, 0.52, 7), "#f7f4ee", 0.51, 1.07, 1.84, Math.PI / 2 + 0.18, 0, 0.12),
+    part(new THREE.ConeGeometry(0.028, 0.52, 7), tip, 0.51, 1.07, 1.84, Math.PI / 2 + 0.18, 0, 0.12),
   ];
   const merged = mergeGeometries(pieces, false);
   pieces.forEach((g) => g.dispose());
@@ -84,13 +85,18 @@ function createDefendRaiderGeometry() {
 
 let raiderGeoCache: THREE.BufferGeometry | null = null;
 let defendRaiderSpearTipGeo: THREE.BufferGeometry | null = null;
+let defendRaiderRedTipGeo: THREE.BufferGeometry | null = null;
 
 export function getRaiderGeometry() {
   if (!raiderGeoCache) raiderGeoCache = createRaiderGeometry();
   return raiderGeoCache;
 }
 
-export function getDefendRaiderGeometry() {
+export function getDefendRaiderGeometry(redTip = false) {
+  if (redTip) {
+    if (!defendRaiderRedTipGeo) defendRaiderRedTipGeo = createDefendRaiderGeometry(true);
+    return defendRaiderRedTipGeo;
+  }
   if (!defendRaiderSpearTipGeo) defendRaiderSpearTipGeo = createDefendRaiderGeometry();
   return defendRaiderSpearTipGeo;
 }

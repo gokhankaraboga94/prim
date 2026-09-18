@@ -3,7 +3,7 @@ import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { REEL_HOLD } from "../../recordCanvas";
 import { castleFrame } from "../../castleLayout";
-import { DEFEND2_SORTIE, defendEnemyAt, defendRingLayout, isDefendSortie, type DefendId } from "../../defendReel";
+import { DEFEND2_SORTIE, defendEnemyAt, defendRingLayout, isDefend3, isDefendSortie, type DefendId } from "../../defendReel";
 import { getDefendRaiderGeometry } from "./SallyRaid";
 
 const dummy = new THREE.Object3D();
@@ -23,7 +23,8 @@ type BakedEnemy = {
 export function DefendRing({ soldiers, mode, level = 1 }: DefendRingProps) {
   const bodies = useRef<THREE.InstancedMesh>(null);
   const skip = useRef(0);
-  const geo = useMemo(() => getDefendRaiderGeometry(), []);
+  const redTip = isDefend3(mode);
+  const geo = useMemo(() => getDefendRaiderGeometry(redTip), [redTip]);
   const layout = useMemo(() => defendRingLayout(soldiers, mode), [soldiers, mode]);
   const cap = layout.cap;
   const gateZ = useMemo(() => castleFrame(level).front, [level]);
