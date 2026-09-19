@@ -12,6 +12,7 @@ type CastleProps = {
   gateClosed?: boolean;
   forceGateOpen?: boolean;
   lite?: boolean;
+  wallFight?: boolean;
 };
 
 const STONE = "#8a847c";
@@ -345,7 +346,7 @@ function RoundTower({
   );
 }
 
-export function Castle({ level, gateClosed = false, forceGateOpen = false, lite = false }: CastleProps) {
+export function Castle({ level, gateClosed = false, forceGateOpen = false, lite = false, wallFight = false }: CastleProps) {
   const stone = useStoneTexture(!lite);
   const visualTier = ((level - 1) % 5) + 1;
   const grow = castleGrow(level);
@@ -493,7 +494,7 @@ export function Castle({ level, gateClosed = false, forceGateOpen = false, lite 
         </>
       )}
     </group>
-    {!lite && <Defenders grow={grow} wallH={wallH} />}
+    {!lite && <Defenders grow={grow} wallH={wallH} fight={wallFight} />}
     </group>
   );
 }

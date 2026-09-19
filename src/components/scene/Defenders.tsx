@@ -1,5 +1,7 @@
 import { useLayoutEffect, useMemo, useRef } from "react";
+import { useFrame } from "@react-three/fiber";
 import { castleAxes } from "../../castleLayout";
+import { REEL_HOLD } from "../../recordCanvas";
 import * as THREE from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 
@@ -113,9 +115,10 @@ function posts(wallH: number, sx: number, sy: number, sz: number): Post[] {
 type DefendersProps = {
   grow: number;
   wallH: number;
+  fight?: boolean;
 };
 
-export function Defenders({ grow, wallH }: DefendersProps) {
+export function Defenders({ grow, wallH, fight = false }: DefendersProps) {
   const mesh = useRef<THREE.InstancedMesh>(null);
   const geo = useMemo(() => createSwordsmanGeometry(), []);
   const { sx, sy, sz, zShift } = castleAxes(grow);
@@ -129,7 +132,7 @@ export function Defenders({ grow, wallH }: DefendersProps) {
   );
 
   useLayoutEffect(() => {
-    if (!mesh.current) return;
+    if (!mesh.current || fight) return;
     const unit = 1.48 * grow;
     list.forEach((p, i) => {
       dummy.position.set(p.x, p.y, p.z);
@@ -140,7 +143,23 @@ export function Defenders({ grow, wallH }: DefendersProps) {
     });
     mesh.current.count = list.length;
     mesh.current.instanceMatrix.needsUpdate = true;
-  }, [list, grow]);
+  }, [list, grow, fight]);
+
+  useFrame(({ clock }) => {
+    if (!fight || !mesh.current) return;
+    const recT = clock.elapsedTime - REEL_HOLD;
+    const unit = 1.48 * grow;
+    list.forEach((p, i) => {
+      const front = p.rot === 0 && p.z > 0;
+      const strike = front ? Math.max(0, Math.sin(recT * 8.4 + i * 1.7)) : 0;
+      dummy.position.set(p.x, p.y, p.z);
+      dummy.rotation.set(strike * 0.55, p.rot, strike * 0.18);
+      dummy.scale.setScalar(unit);
+      dummy.updateMatrix();
+      mesh.current!.setMatrixAt(i, dummy.matrix);
+    });
+    mesh.current.instanceMatrix.needsUpdate = true;
+  });
 
   return (
     <instancedMesh ref={mesh} args={[geo, undefined, list.length]} frustumCulled={false}>

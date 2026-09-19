@@ -9,13 +9,13 @@ function makeLadderGeo(len: number) {
     return geo;
   };
   const pieces: THREE.BufferGeometry[] = [
-    wood(new THREE.BoxGeometry(0.09, len, 0.09), -0.34, len / 2, 0),
-    wood(new THREE.BoxGeometry(0.09, len, 0.09), 0.34, len / 2, 0),
+    wood(new THREE.BoxGeometry(0.14, len, 0.14), -0.42, len / 2, 0),
+    wood(new THREE.BoxGeometry(0.14, len, 0.14), 0.42, len / 2, 0),
   ];
-  const rungs = Math.max(9, Math.round(len / 0.4));
+  const rungs = Math.max(14, Math.round(len / 0.36));
   for (let i = 0; i < rungs; i++) {
-    const y = 0.2 + (i / Math.max(1, rungs - 1)) * (len - 0.38);
-    pieces.push(wood(new THREE.BoxGeometry(0.78, 0.05, 0.08), 0, y, 0.03));
+    const y = 0.16 + (i / Math.max(1, rungs - 1)) * (len - 0.28);
+    pieces.push(wood(new THREE.BoxGeometry(0.98, 0.07, 0.12), 0, y, 0.05));
   }
   const merged = mergeGeometries(pieces, false);
   pieces.forEach((g) => g.dispose());
@@ -47,7 +47,7 @@ export function VsLadders({ level }: VsLaddersProps) {
           rotation={[item.pitch, 0, 0]}
           castShadow
         >
-          <meshStandardMaterial color="#6b4a28" roughness={0.88} metalness={0.05} />
+          <meshStandardMaterial color="#6b4a28" roughness={0.88} metalness={0.05} polygonOffset polygonOffsetFactor={-2} polygonOffsetUnits={-2} />
         </mesh>
       ))}
     </group>

@@ -30,6 +30,20 @@ export function frontWalk(level: number) {
   };
 }
 
+/** Outer +Z face of the army-facing wall, in world units. */
+export function frontWallFace(level: number) {
+  const grow = castleGrow(level);
+  const { sx, sy, sz, zShift } = castleAxes(grow);
+  const wallH = 3.85 + ((((Math.max(1, level) - 1) % 5) + 1) * 0.18);
+  const localOuterZ = 6.55 + 2.15 / 2;
+  return {
+    z: localOuterZ * sz + zShift,
+    y: (wallH + 0.04) * sy,
+    merlonY: (wallH + 0.36) * sy,
+    sx,
+  };
+}
+
 export function castleFrame(level: number) {
   const grow = castleGrow(level);
   const { sx, sy, sz, zShift } = castleAxes(grow);

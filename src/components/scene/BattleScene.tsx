@@ -535,7 +535,7 @@ function SceneContent({
       <SteelSky />
       <DayLights cinematic={cinematic} slim={Boolean(defend)} />
       <Terrain road={!defend && !field} cheap={Boolean(defend)} />
-      {!defend && !field && <Castle level={level} pressure={pressure} gateClosed={Boolean(countdown) || split || climb} />}
+      {!defend && !field && <Castle level={level} pressure={pressure} gateClosed={Boolean(countdown) || split || climb} wallFight={climb} />}
       {sortie && (
         <TimedVisible until={DEFEND2_SORTIE + 0.85}>
           <Castle level={level} pressure={pressure} forceGateOpen />

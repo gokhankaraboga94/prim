@@ -1,4 +1,4 @@
-import { castleFrame, frontWalk } from "./castleLayout";
+import { frontWalk, frontWallFace } from "./castleLayout";
 import { lerpPose, type ShotPose } from "./shotModes";
 
 export const VS_ID = "vs" as const;
@@ -154,42 +154,44 @@ export type VsLadder = {
 };
 
 export function vs2Ladder(k: number, level: number): VsLadder {
-  const castle = castleFrame(level);
-  const walk = frontWalk(level);
-  const span = Math.abs(walk.leftX) * 0.82;
-  const xs = [-0.78, -0.4, 0.4, 0.78];
-  const x = xs[k % VS2_LADDERS] * span;
+  const face = frontWallFace(level);
+  const localX = [-9.55, -4.35, 4.35, 9.55][k % VS2_LADDERS];
   return {
-    x,
-    baseY: 0.08,
-    baseZ: castle.front + 9.2,
-    topY: walk.y + 0.15,
-    topZ: castle.front + 0.7,
+    x: localX * face.sx,
+    baseY: 0.06,
+    baseZ: face.z + 12.4,
+    topY: face.y + 0.08,
+    topZ: face.z + 0.85,
   };
 }
 
 export function vs2SoldierAt(i: number, n: number, recT: number, level: number, out: VsPose) {
   const t = Math.max(0, recT);
   const ladder = vs2Ladder(i % VS2_LADDERS, level);
+  const walk = frontWalk(level);
+  const face = frontWallFace(level);
   const queue = Math.floor(i / VS2_LADDERS);
   const h = vsHash(i, 9);
-  const delay = queue * 0.26 + h * 0.22;
-  const runEnd = 3.45 + delay;
-  const climbDur = 6.05 + h * 1.7;
-  const fall = h < 0.44;
-  const fallAt = 0.28 + vsHash(i, 4) * 0.52;
+  const delay = queue * 0.22 + h * 0.2;
+  const runEnd = 3.2 + delay;
+  const climbDur = 7.4 + h * 1.6;
+  const crestDur = 0.85;
+  const fall = h < 0.4;
+  const fallAt = 0.22 + vsHash(i, 4) * 0.55;
+  const knockOff = !fall && h > 0.78;
   const cols = vsCols(Math.max(1, n));
   const row = Math.floor(i / cols);
   const col = i % cols;
   const rowN = Math.min(cols, n - row * cols);
   const sx = (col - (rowN - 1) / 2) * VS_FILE;
   const sz = 58 + row * VS_RANK;
+  const stand = 0.42;
 
   if (t < runEnd) {
     const u = ease(t / Math.max(0.2, runEnd));
     out.x = lerp(sx, ladder.x, u);
     out.y = 0;
-    out.z = lerp(sz, ladder.baseZ, u);
+    out.z = lerp(sz, ladder.baseZ + stand, u);
     out.rx = 0;
     out.ry = Math.atan2(ladder.x - sx, ladder.baseZ - sz);
     out.rz = 0;
@@ -198,35 +200,60 @@ export function vs2SoldierAt(i: number, n: number, recT: number, level: number, 
 
   const climbU = clamp01((t - runEnd) / climbDur);
   const along = (u: number) => {
-    out.x = lerp(ladder.x, ladder.x, u);
-    out.y = lerp(0.22, ladder.topY, u);
-    out.z = lerp(ladder.baseZ, ladder.topZ, u);
-    out.rx = -0.18;
+    out.x = ladder.x;
+    out.y = lerp(0.18, ladder.topY, u);
+    out.z = lerp(ladder.baseZ, ladder.topZ, u) + stand;
+    out.rx = -0.22;
     out.ry = Math.PI;
     out.rz = 0;
   };
 
   if (fall && climbU >= fallAt) {
     along(fallAt);
-    const fu = clamp01((climbU - fallAt) / 0.2);
+    const fu = clamp01((climbU - fallAt) / 0.22);
     const g = fu * fu;
-    out.x += (h - 0.5) * 1.1 * fu;
-    out.z += g * 4.4;
+    out.x += (h - 0.5) * 1.25 * fu;
+    out.z += g * 5.2;
     out.y = Math.max(0.12, out.y * (1 - g));
-    out.rx = lerp(-0.18, 1.48, fu);
+    out.rx = lerp(-0.22, 1.5, fu);
     out.rz = (h - 0.5) * fu;
     return;
   }
 
-  along(Math.min(climbU, 1));
-  const topT = runEnd + climbDur * 0.97;
-  if (t >= topT) {
-    const du = clamp01((t - topT) / 0.55);
-    out.y = ladder.topY - du * 0.2;
-    out.z = ladder.topZ + 0.15;
-    out.rx = lerp(-0.18, 1.32, du);
-    out.rz = (h - 0.5) * du * 0.4;
+  if (climbU < 1) {
+    along(climbU);
+    return;
   }
+
+  const crestT = t - runEnd - climbDur;
+  const crestU = clamp01(crestT / crestDur);
+  out.x = ladder.x;
+  out.y = walk.y;
+  out.z = lerp(face.z + 0.55, walk.z + 0.35, ease(crestU));
+  out.rx = -0.08;
+  out.ry = Math.PI;
+  out.rz = 0;
+
+  const hitT = t - runEnd - climbDur - crestDur;
+  if (hitT < 0) return;
+  const struck = clamp01(hitT / 0.28);
+  out.rx = lerp(-0.08, 0.55, struck);
+  out.z += struck * 0.45;
+  if (hitT < 0.28) return;
+
+  const dieU = clamp01((hitT - 0.28) / 0.7);
+  if (knockOff) {
+    const g = dieU * dieU;
+    out.z = walk.z + 0.35 + g * 7.5;
+    out.y = Math.max(0.12, walk.y * (1 - g));
+    out.rx = lerp(0.55, 1.52, dieU);
+    out.rz = (h - 0.5) * dieU;
+    return;
+  }
+  out.y = walk.y;
+  out.z = walk.z + 0.2;
+  out.rx = lerp(0.55, 1.38, dieU);
+  out.rz = (h - 0.5) * dieU * 0.35;
 }
 
 export function vsSoldierAt(i: number, n: number, recT: number, vs2: boolean, level: number, out: VsPose) {
@@ -252,19 +279,18 @@ export function sampleVsCam(recT: number, soldiers: number, level: number, id: V
 }
 
 function sampleVs2Cam(recT: number, soldiers: number, level: number): ShotPose {
-  const castle = castleFrame(level);
-  const walk = frontWalk(level);
+  const face = frontWallFace(level);
   const L = vs2Ladder(2, level);
-  const wallZ = castle.front;
+  const midZ = (L.baseZ + L.topZ) * 0.5;
   void soldiers;
   return sampleKeys(recT, [
-    { t: 0, p: pose(18, 48, 92, 0, 10, wallZ + 18, 40) },
-    { t: 4.2, p: pose(-22, 22, 64, 0, 8, wallZ + 10, 38) },
-    { t: 8.4, p: pose(L.x + 6.5, 8.5, L.baseZ + 14, L.x, 6, wallZ + 4, 34) },
-    { t: 13.2, p: pose(L.x + 4.2, walk.y * 0.55, L.baseZ + 9, L.x, walk.y * 0.62, wallZ + 1, 32) },
-    { t: 17.6, p: pose(-16, walk.y + 6, wallZ + 28, 0, walk.y * 0.7, wallZ + 2, 40) },
-    { t: 21.8, p: pose(vs2Ladder(0, level).x - 3, 14, L.baseZ + 11, vs2Ladder(0, level).x, 8, wallZ + 2, 30) },
-    { t: 25.6, p: pose(12, 36, 78, 0, 12, wallZ + 8, 38) },
-    { t: 30, p: pose(-8, 52, 96, 0, 14, wallZ + 12, 39) },
+    { t: 0, p: pose(26, face.y + 18, L.baseZ + 28, 0, face.y * 0.55, midZ, 40) },
+    { t: 4.4, p: pose(-24, face.y * 0.7, L.baseZ + 22, 0, face.y * 0.45, midZ, 38) },
+    { t: 8.6, p: pose(L.x + 16, face.y * 0.52, L.baseZ + 18, L.x, face.y * 0.48, midZ, 34) },
+    { t: 13.4, p: pose(L.x + 11, face.y * 0.72, L.baseZ + 14, L.x, face.y * 0.7, L.topZ + 2, 32) },
+    { t: 18, p: pose(-14, face.y + 8, face.z + 22, 0, face.y * 0.92, face.z - 2, 38) },
+    { t: 22.2, p: pose(vs2Ladder(0, level).x - 8, face.y * 0.85, L.baseZ + 16, vs2Ladder(0, level).x, face.y * 0.7, midZ, 32) },
+    { t: 26, p: pose(18, face.y + 10, L.baseZ + 24, 0, face.y * 0.6, midZ, 38) },
+    { t: 30, p: pose(-10, face.y + 16, L.baseZ + 30, 0, face.y * 0.55, midZ, 39) },
   ]);
 }
