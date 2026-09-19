@@ -15,8 +15,11 @@ import { sagaGateRecT, sampleSaga, type SagaId } from "../../sagaReel";
 import { discoverGateRecT, sampleDiscover, type DiscoverId } from "../../discoverReel";
 import { countdownShake, sampleCountdown, type CountdownId } from "../../countdownReel";
 import { DEFEND2_SORTIE, isDefend3, isDefendSortie, sampleDefendCam, type DefendId } from "../../defendReel";
+import { isVs, isVs2, sampleVsCam, type VsId } from "../../vsReel";
 import { MIX8_ID, mixTagPass, sampleMixBottom, sampleMixTop, type MixId } from "../../mixReel";
 import { DefendRing } from "./DefendRing";
+import { VsFoes } from "./VsFoes";
+import { VsLadders } from "./VsLadders";
 import {
   SALLY_START_DELAY,
   SWORD_START,
@@ -47,6 +50,7 @@ type BattleSceneProps = {
   discover?: DiscoverId | null;
   countdown?: CountdownId | null;
   defend?: DefendId | null;
+  vs?: VsId | null;
   mix?: MixId | null;
   rosterIds?: number[] | null;
   onReady?: (canvas: HTMLCanvasElement) => void;
@@ -81,6 +85,7 @@ function CinematicCam({
   discover = null,
   countdown = null,
   defend = null,
+  vs = null,
   rosterIds = null,
 }: {
   duration: number;
@@ -96,6 +101,7 @@ function CinematicCam({
   discover?: DiscoverId | null;
   countdown?: CountdownId | null;
   defend?: DefendId | null;
+  vs?: VsId | null;
   rosterIds?: number[] | null;
 }) {
   const look = useMemo(() => new THREE.Vector3(), []);
@@ -153,11 +159,13 @@ function CinematicCam({
       fov: 38,
     };
 
-    if (cinema || shotMode || roster || saga || discover || countdown || defend) {
+    if (cinema || shotMode || roster || saga || discover || countdown || defend || vs) {
       const warm = clock.elapsedTime;
       const sampleT = warm < REEL_HOLD ? (warm / REEL_HOLD) * duration : recT;
       const ctx = { cmdZ, form, castle, fit, castleFit, level };
-      const pose = defend
+      const pose = vs
+        ? sampleVsCam(sampleT, soldiers, level, vs)
+        : defend
         ? sampleDefendCam(sampleT, soldiers, defend, level)
         : countdown
         ? sampleCountdown(sampleT, ctx)
@@ -172,7 +180,7 @@ function CinematicCam({
               : sampleShotMode(shotMode as ShotId, sampleT, duration, skipCommander, ctx);
       const persp = camera as THREE.PerspectiveCamera;
       persp.fov = pose.fov;
-      if (defend) {
+      if (defend || vs) {
         persp.near = 1.2;
         persp.far = 6000;
       }
@@ -508,23 +516,26 @@ function SceneContent({
   discover = null,
   countdown = null,
   defend = null,
+  vs = null,
   mix = null,
   rosterIds = null,
 }: BattleSceneProps) {
   const chiefs = effectiveCommanders(commanders, names);
-  const hideCmd = skipCommander || Boolean(discover) || Boolean(countdown) || Boolean(defend);
+  const hideCmd = skipCommander || Boolean(discover) || Boolean(countdown) || Boolean(defend) || Boolean(vs);
   const chiefN = hideCmd ? 0 : chiefs.length;
   const split = Boolean(mix);
   const sortie = isDefendSortie(defend);
+  const field = isVs(vs);
+  const climb = isVs2(vs);
   return (
     <>
       <color attach="background" args={["#7eb6ee"]} />
-      <fog attach="fog" args={defend ? (sortie ? ["#9ec8ee", 600, 2200] : ["#9ec8ee", 1400, 4200]) : ["#9ec8ee", 380, 1500]} />
+      <fog attach="fog" args={defend ? (sortie ? ["#9ec8ee", 600, 2200] : ["#9ec8ee", 1400, 4200]) : field ? ["#9ec8ee", 140, 720] : ["#9ec8ee", 380, 1500]} />
       <SkyDome cheap={Boolean(defend)} />
       <SteelSky />
       <DayLights cinematic={cinematic} slim={Boolean(defend)} />
-      <Terrain road={!defend} cheap={Boolean(defend)} />
-      {!defend && <Castle level={level} pressure={pressure} gateClosed={Boolean(countdown) || split} />}
+      <Terrain road={!defend && !field} cheap={Boolean(defend)} />
+      {!defend && !field && <Castle level={level} pressure={pressure} gateClosed={Boolean(countdown) || split || climb} />}
       {sortie && (
         <TimedVisible until={DEFEND2_SORTIE + 0.85}>
           <Castle level={level} pressure={pressure} forceGateOpen />
@@ -532,10 +543,13 @@ function SceneContent({
       )}
       {defend ? (
         <DefendRing soldiers={soldiers} mode={defend} level={level} />
+      ) : field ? (
+        <VsFoes soldiers={soldiers} />
       ) : (
-        !roster && !split && !countdown && <SallyRaid soldiers={soldiers} commanders={chiefN} />
+        !roster && !split && !countdown && !vs && <SallyRaid soldiers={soldiers} commanders={chiefN} />
       )}
-      <Army count={soldiers} names={names} commanders={commanders} cinematic={cinematic} duration={duration} skipCommander={hideCmd} roster={roster} discover={discover} countdown={Boolean(countdown)} defend={Boolean(defend)} defend2={sortie} defend3={isDefend3(defend)} mix={split} level={level} rosterIds={rosterIds} />
+      {climb && <VsLadders level={level} />}
+      <Army count={soldiers} names={names} commanders={commanders} cinematic={cinematic} duration={duration} skipCommander={hideCmd} roster={roster} discover={discover} countdown={Boolean(countdown)} defend={Boolean(defend)} defend2={sortie} defend3={isDefend3(defend)} vs={field} vs2={climb} mix={split} level={level} rosterIds={rosterIds} />
       {cinematic && split ? (
         <MixSplitCam duration={duration ?? 15} soldiers={soldiers} level={level} commanders={chiefN} mix={mix!} />
       ) : cinematic ? (
@@ -553,6 +567,7 @@ function SceneContent({
           discover={discover}
           countdown={countdown}
           defend={defend}
+          vs={vs}
           rosterIds={rosterIds}
         />
       ) : (
@@ -571,15 +586,15 @@ function SceneContent({
           zoomSpeed={1.85}
         />
       )}
-      {cinematic && !split && !countdown && !defend && maxHp != null && hp != null && (
+      {cinematic && !split && !countdown && !defend && !vs && maxHp != null && hp != null && (
         <CaptureHpHud hp={hp} maxHp={maxHp} soldiers={soldiers} duration={duration ?? 8} skipCommander={hideCmd} cinema={cinema} roster={roster} discover={discover} />
       )}
-      {cinematic && showTitles && !split && (
+      {cinematic && showTitles && !split && !vs && (
         <ReelTitles soldiers={soldiers} duration={duration ?? 8} day={day} skipCommander={hideCmd} cinema={cinema} roster={roster} saga={saga} discover={discover} countdown={countdown} defend={defend} names={names} rosterIds={rosterIds} />
       )}
       {cinematic && !split && <ReelVignette />}
       {countdown && <CountdownFlash />}
-      {cinematic && !discover && !countdown && !defend && !split && <ReelFade duration={duration ?? 8} />}
+      {cinematic && !discover && !countdown && !defend && !vs && !split && <ReelFade duration={duration ?? 8} />}
     </>
   );
 }
@@ -622,12 +637,13 @@ function BattleSceneInner({
   discover = null,
   countdown = null,
   defend = null,
+  vs = null,
   mix = null,
   rosterIds = null,
   onReady,
 }: BattleSceneProps) {
   const [active, setActive] = useState(() => typeof document === "undefined" || !document.hidden);
-  const hideCmd = skipCommander || Boolean(discover) || Boolean(countdown) || Boolean(defend);
+  const hideCmd = skipCommander || Boolean(discover) || Boolean(countdown) || Boolean(defend) || Boolean(vs);
 
   useLayoutEffect(() => {
     if (cinematic && mix) {
@@ -636,7 +652,7 @@ function BattleSceneInner({
     } else if (cinematic && roster) {
       setSallyOrigin(80);
       setSwordStart(80);
-    } else if (cinematic && (countdown || defend)) {
+    } else if (cinematic && (countdown || defend || vs)) {
       setSallyOrigin(SALLY_START_DELAY - 90);
       setSwordStart(80);
     } else if (cinematic && discover) {
@@ -667,7 +683,7 @@ function BattleSceneInner({
       setSallyOrigin(0);
       setSwordStart(SWORD_START);
     };
-  }, [cinematic, cinema, duration, hideCmd, roster, saga, discover, countdown, defend, mix]);
+  }, [cinematic, cinema, duration, hideCmd, roster, saga, discover, countdown, defend, vs, mix]);
 
   useEffect(() => {
     const onVis = () => setActive(!document.hidden);
@@ -728,6 +744,7 @@ function BattleSceneInner({
         discover={discover}
         countdown={countdown}
         defend={defend}
+        vs={vs}
         mix={mix}
         rosterIds={rosterIds}
       />

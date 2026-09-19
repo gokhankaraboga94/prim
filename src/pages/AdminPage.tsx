@@ -27,6 +27,7 @@ import { DISCOVER_ID, DISCOVER2_ID, DISCOVER3_ID, RAF2_ID, DISCOVER_MODE, DISCOV
 import { MIX_MODES, MIX_SECONDS, isMix, type MixId } from "../mixReel";
 import { COUNTDOWN_ID, COUNTDOWN_MODE, COUNTDOWN_SECONDS, isCountdown, type CountdownId } from "../countdownReel";
 import { DEFEND_ID, DEFEND2_ID, DEFEND3_ID, DEFEND_MODE, DEFEND2_MODE, DEFEND3_MODE, DEFEND_SECONDS, DEFEND2_SECONDS, DEFEND3_SECONDS, isDefend, isDefend2, isDefend3, isDefendSortie, type DefendId } from "../defendReel";
+import { VS_ID, VS2_ID, VS_MODE, VS2_MODE, VS_SECONDS, VS2_SECONDS, isVs, isVs2, isVsMode, type VsId } from "../vsReel";
 import { unlockReelSfx } from "../reelSfx";
 
 export function AdminPage() {
@@ -41,7 +42,7 @@ export function AdminPage() {
   const [reelSeconds, setReelSeconds] = useState<number>(7);
   const [reelText, setReelText] = useState(true);
   const [reelSkipCmd, setReelSkipCmd] = useState(false);
-  const [reelShot, setReelShot] = useState<ReelShot | PlanBId | SagaId | DiscoverId | MixId | CountdownId | DefendId | null>(null);
+  const [reelShot, setReelShot] = useState<ReelShot | PlanBId | SagaId | DiscoverId | MixId | CountdownId | DefendId | VsId | null>(null);
   const [reelDay, setReelDay] = useState("1");
   const [capturing, setCapturing] = useState(false);
   const [editIndex, setEditIndex] = useState<number | null>(null);
@@ -467,6 +468,8 @@ export function AdminPage() {
                     ? [RAF2_SECONDS]
                   : isCountdown(reelShot)
                     ? [COUNTDOWN_SECONDS]
+                  : isVsMode(reelShot)
+                    ? [isVs2(reelShot) ? VS2_SECONDS : VS_SECONDS]
                   : isDefend3(reelShot)
                     ? [DEFEND3_SECONDS]
                   : isDefendSortie(reelShot)
@@ -650,6 +653,28 @@ export function AdminPage() {
             >
               {DEFEND3_MODE.label} — {DEFEND3_SECONDS}s
             </button>
+            <button
+              type="button"
+              className={reelShot === VS_ID ? "on" : ""}
+              onClick={() => {
+                setReelShot((cur) => (cur === VS_ID ? null : VS_ID));
+                setReelSeconds(VS_SECONDS);
+                setReelSkipCmd(true);
+              }}
+            >
+              {VS_MODE.label} — {VS_SECONDS}s
+            </button>
+            <button
+              type="button"
+              className={reelShot === VS2_ID ? "on" : ""}
+              onClick={() => {
+                setReelShot((cur) => (cur === VS2_ID ? null : VS2_ID));
+                setReelSeconds(VS2_SECONDS);
+                setReelSkipCmd(true);
+              }}
+            >
+              {VS2_MODE.label} — {VS2_SECONDS}s
+            </button>
           </div>
           {reelShot === DISCOVER_ID && (
             <p className="muted">
@@ -704,6 +729,20 @@ export function AdminPage() {
               27 sn. Çıkış ve yakınlaşma 13. saniyeye kadar sürer; sonra askerlerin üstünde gezinir, sabit daire değil.
               {" "}Caption: Adın çıkarsa yoruma BURADAYIM yaz. Kale düşsün diyorsan beğen. Canlı kuşatma. 1 takip = 1 asker. wargame.lol
               {" "}İlk yorumu sabitle: BURADAYIM
+              {" "}Hashtag: #wargame #stratejioyunu #kalekuşatma #ordu #wargame2028
+            </p>
+          )}
+          {isVs(reelShot) && (
+            <p className="muted">
+              30 sn. Boş arazide karşılıklı savaş. Düşman 3 kat, bizim 1 asker 3 düşmana bedel; 4 düşman 1 askerimizi düşürür. Kamera havadan, film gibi yakınlaşıp uzaklaşır. Tüm isimler açık.
+              {" "}Caption: Adın çıkarsa yoruma BURADAYIM yaz. Kale düşsün diyorsan beğen. Canlı kuşatma. 1 takip = 1 asker. wargame.lol
+              {" "}Hashtag: #wargame #stratejioyunu #ordu #wargame2028
+            </p>
+          )}
+          {isVs2(reelShot) && (
+            <p className="muted">
+              30 sn. Kapı kapalı. 4 merdiven, başarısız tırmanış: bazıları düşer, bazıları tepede ölür. Tüm isimler açık, üst üste binmez.
+              {" "}Caption: Adın çıkarsa yoruma BURADAYIM yaz. Kale düşsün diyorsan beğen. Canlı kuşatma. 1 takip = 1 asker. wargame.lol
               {" "}Hashtag: #wargame #stratejioyunu #kalekuşatma #ordu #wargame2028
             </p>
           )}
@@ -916,14 +955,15 @@ export function AdminPage() {
           maxHp={maxHp}
           seconds={captureSec}
           showTitles={reelText}
-          skipCommander={reelSkipCmd || isDiscover(reelShot) || isCountdown(reelShot) || isDefend(reelShot)}
-          shotMode={reelShot === CINEMA_ID || isPlanB(reelShot) || isSaga(reelShot) || isDiscover(reelShot) || isCountdown(reelShot) || isDefend(reelShot) || isMix(reelShot) ? null : reelShot}
+          skipCommander={reelSkipCmd || isDiscover(reelShot) || isCountdown(reelShot) || isDefend(reelShot) || isVsMode(reelShot)}
+          shotMode={reelShot === CINEMA_ID || isPlanB(reelShot) || isSaga(reelShot) || isDiscover(reelShot) || isCountdown(reelShot) || isDefend(reelShot) || isVsMode(reelShot) || isMix(reelShot) ? null : reelShot}
           cinema={reelShot === CINEMA_ID}
           roster={isPlanB(reelShot) ? reelShot : null}
           saga={isSaga(reelShot) ? reelShot : null}
           discover={isDiscover(reelShot) ? reelShot : null}
           countdown={isCountdown(reelShot) ? reelShot : null}
           defend={isDefend(reelShot) ? reelShot : null}
+          vs={isVsMode(reelShot) ? reelShot : null}
           mix={isMix(reelShot) ? reelShot : null}
           rosterIds={isJoin(reelShot) ? captureJoinIds.current : null}
           day={Math.max(0, Math.floor(Number(reelDay)) || 0)}
