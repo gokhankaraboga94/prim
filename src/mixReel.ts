@@ -22,8 +22,8 @@ export const MIX_MODES = [
   { id: MIX9_ID, label: "Mix 9 (ağır)" },
 ] as const;
 export const MIX_SECONDS = 15;
-/** Bottom pane plays this fraction of army time vs the 15s clip. */
-export const MIX9_SLOW = 0.28;
+/** Bottom pane army time vs the 15s clip — Mix 6 angle, heavier motion. */
+export const MIX9_SLOW = 0.16;
 
 /** Army fills this so MixSplitCam can restack names before each pane render. */
 export const mixTagPass = {
@@ -89,36 +89,11 @@ function armyCastleFitFov(
   return Math.max(38, Math.min(50, (Math.atan(need) * 360) / Math.PI));
 }
 
-function mix9Top(ctx: ShotCtx): ShotPose {
-  const { form, castle } = ctx;
-  const half = Math.max(8, form.width * 0.5);
-  const lookZ = (castle.front + form.midZ) * 0.5;
-  const s = {
-    x: -Math.max(58, half * 0.7),
-    y: Math.max(22, 16 + half * 0.09),
-    z: form.back + Math.max(8, half * 0.06),
-    lx: 0,
-    ly: 5.2,
-    lz: lookZ,
-  };
-  const dist = Math.hypot(s.x - s.lx, s.y - s.ly, s.z - s.lz);
-  const need = (half + 5.2) / Math.max(16, dist * 0.62);
-  const fov = Math.max(38, Math.min(58, (Math.atan(need) * 360) / Math.PI));
-  return pose(s.x, s.y, s.z, s.lx, s.ly, s.lz, fov);
-}
-
-function mix9Line(form: ShotCtx["form"], x: number): ShotPose {
-  const vis = Math.min(92, Math.max(16, 15 + form.width * 0.055));
-  const dist = vis / (2 * Math.tan((34 * Math.PI) / 360));
-  const cx = x;
-  return pose(cx, 5.35, form.back + dist, cx * 1.012, 2.18, form.midZ, 34);
-}
-
-/** Mix 1 left 3/4, Mix 2 high left, Mix 6 high right, Mix 7 closer 3/4 + castle. Mix 9 wide army + closed gate. */
+/** Mix 1 left 3/4, Mix 2 high left, Mix 6 high right, Mix 7 closer 3/4 + castle. Mix 9 uses Mix 6 cameras. */
 export function sampleMixTop(_recT: number, ctx: ShotCtx, id: MixId = MIX1_ID): ShotPose {
   const { form, castle } = ctx;
   const lookZ = (castle.front + form.midZ) * 0.5;
-  if (id === MIX9_ID) return mix9Top(ctx);
+  if (id === MIX9_ID) return sampleMixTop(_recT, ctx, MIX6_ID);
   if (id === MIX7_ID || id === MIX8_ID) {
     const s = { x: -58, y: 22, z: form.back + 7, lx: 0, ly: 5.15, lz: lookZ };
     return pose(s.x, s.y, s.z, s.lx, s.ly, s.lz, armyCastleFitFov(s.x, s.y, s.z, s.lx, s.ly, s.lz, form, castle));
@@ -144,16 +119,23 @@ function behindLineFar(form: ShotCtx["form"], x: number): ShotPose {
   return pose(cx, 8.6, form.back + 16.2, cx * 1.02, 2.28, form.midZ, 35);
 }
 
-/** Behind the archers: Mix 7 is higher, further, slower. Mix 9 starts far right and crawls to far left. */
+function mix6Bottom(recT: number, form: ShotCtx["form"], duration = MIX_SECONDS): ShotPose {
+  const t = Math.max(0, recT);
+  const half = Math.max(4.2, form.width * 0.42);
+  const center = behindLine(form, 0);
+  const right = behindLine(form, half);
+  const left = behindLine(form, -half);
+  const toRight = duration * (6 / 15);
+  const toLeft = Math.max(0.01, duration - toRight);
+  if (t < toRight) return lerpLinear(center, right, t / toRight);
+  return lerpLinear(right, left, (t - toRight) / toLeft);
+}
+
+/** Behind the archers: Mix 7 is higher, further. Mix 9 is Mix 6's crawl, heavier. */
 export function sampleMixBottom(recT: number, ctx: ShotCtx, id: MixId = MIX1_ID, duration = MIX_SECONDS): ShotPose {
   const { form } = ctx;
   const t = Math.max(0, recT);
-  if (id === MIX9_ID) {
-    const vis = Math.min(92, Math.max(16, 15 + form.width * 0.055));
-    const span = Math.max(5, form.width * 0.5 + vis * 0.42);
-    const u = clamp01(t / Math.max(0.01, duration));
-    return mix9Line(form, span * (1 - 2 * u));
-  }
+  if (id === MIX9_ID) return mix6Bottom(t, form, duration);
   if (id === MIX7_ID || id === MIX8_ID) {
     const half = Math.max(4.2, form.width * 0.5 + 1.6);
     const center = behindLineFar(form, 0);
@@ -162,10 +144,5 @@ export function sampleMixBottom(recT: number, ctx: ShotCtx, id: MixId = MIX1_ID,
     if (t < 7.5) return lerpLinear(center, right, t / 7.5);
     return lerpLinear(right, left, (t - 7.5) / 7.5);
   }
-  const half = Math.max(4.2, form.width * 0.42);
-  const center = behindLine(form, 0);
-  const right = behindLine(form, half);
-  const left = behindLine(form, -half);
-  if (t < 6) return lerpLinear(center, right, t / 6);
-  return lerpLinear(right, left, (t - 6) / 9);
+  return mix6Bottom(t, form, duration);
 }
