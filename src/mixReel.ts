@@ -17,7 +17,7 @@ export const MIX_SECONDS = 15;
 
 /** Army fills this so MixSplitCam can restack names before each pane render. */
 export const mixTagPass = {
-  apply(_pane: "top" | "bottom", _camX?: number) {},
+  apply(_pane: "top" | "bottom", _camX?: number, _cam?: { quaternion: { x: number; y: number; z: number; w: number } }) {},
 };
 
 export function isMix(id: string | null | undefined): id is MixId {

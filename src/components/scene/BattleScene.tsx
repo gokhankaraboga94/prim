@@ -304,13 +304,13 @@ function MixSplitCam({
     gl.setScissorTest(true);
     gl.setViewport(0, 0, w, half - gap);
     gl.setScissor(0, 0, w, half - gap);
-    mixTagPass.apply(lowerTags, lowerCam.position.x);
+    mixTagPass.apply(lowerTags, lowerCam.position.x, lowerCam);
     gl.render(scene, lowerCam);
     gl.autoClear = false;
     gl.clearDepth();
     gl.setViewport(0, half + gap, w, h - half - gap);
     gl.setScissor(0, half + gap, w, h - half - gap);
-    mixTagPass.apply(upperTags, upperCam.position.x);
+    mixTagPass.apply(upperTags, upperCam.position.x, upperCam);
     gl.render(scene, upperCam);
     gl.setScissorTest(false);
     gl.autoClear = true;

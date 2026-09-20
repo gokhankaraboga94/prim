@@ -1,11 +1,12 @@
-import { useLayoutEffect, useMemo, useRef } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
+import { buildNameAtlas, type NameAtlas } from "../../nameAtlas";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import { DEFAULT_COMMANDER, effectiveCommanders, isCommander } from "../../game";
-import { REEL_HOLD, reelBeats } from "../../recordCanvas";
+import { REEL_HOLD } from "../../recordCanvas";
 import { ROSTER_STAGE_Z, rosterBeat, rosterSoldierIds, stampRosterSoldier, type PlanBId, type RosterPose } from "../../rosterReel";
-import { discoverBeat, DISCOVER_HOOK_END, DISCOVER3_ID, RAF2_ID, shelfBeat, trailerBeat, type DiscoverId } from "../../discoverReel";
+import { type DiscoverId } from "../../discoverReel";
 import { COUNT_1_END, countdownBeat, countdownVolley } from "../../countdownReel";
 import { DEFEND_CZ, DEFEND2_CX, DEFEND2_CZ, defendSoldierPos, defendYawOut } from "../../defendReel";
 import { vsSoldierAt, type VsPose } from "../../vsReel";
@@ -14,9 +15,7 @@ import { raidCount, sallyHunting, sallyLiveIndex, sallyLocal, sallyRaiderAt, swo
 import { castleFrame } from "../../castleLayout";
 import { mixTagPass } from "../../mixReel";
 
-const MAX_SOLDIERS = 5000;
-const MAX_LABELS = 400;
-const MAX_REEL_LABELS = 120;
+const MAX_SOLDIERS = 8000;
 const MAX_COMMANDERS = 24;
 const MAX_ARROWS = 28;
 const IDLE_ARROWS = 8;
@@ -679,10 +678,21 @@ function SwordFlash() {
   return <pointLight ref={light} color="#ffe8c8" intensity={0} distance={18} decay={2} />;
 }
 
-type NameTag = {
-  map: THREE.CanvasTexture;
+type MixNameSlot = {
+  sheet: number;
+  local: number;
+  want: boolean;
+  bottomShow: boolean;
+  x: number;
+  y: number;
+  z: number;
   sx: number;
   sy: number;
+  botX: number;
+  botY: number;
+  botZ: number;
+  botSx: number;
+  botSy: number;
 };
 
 function slotCoord(i: number, sizes: number[]) {
@@ -695,47 +705,31 @@ function slotCoord(i: number, sizes: number[]) {
   return { row, col };
 }
 
-function makeHandleTexture(name: string, commander = false, crisp = false, plain = false): NameTag | null {
-  const label = plain ? name : `@${name}`;
-  const compact = crisp && plain;
-  const height = compact ? 64 : crisp ? 220 : 160;
-  const maxW = compact ? 384 : 1024;
-  const probe = document.createElement("canvas").getContext("2d");
-  if (!probe) return null;
-  let fontSize = compact ? 28 : crisp ? 96 : 78;
-  probe.font = `800 ${fontSize}px Outfit, system-ui, sans-serif`;
-  let textW = probe.measureText(label).width;
-  while (textW + 36 > maxW && fontSize > (compact ? 12 : 28)) {
-    fontSize -= 2;
-    probe.font = `800 ${fontSize}px Outfit, system-ui, sans-serif`;
-    textW = probe.measureText(label).width;
-  }
-  const width = Math.min(maxW, Math.max(160, Math.ceil(textW + 36)));
-  const canvas = document.createElement("canvas");
-  canvas.width = width;
-  canvas.height = height;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) return null;
-  ctx.clearRect(0, 0, width, height);
-  ctx.font = `800 ${fontSize}px Outfit, system-ui, sans-serif`;
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  ctx.lineJoin = "round";
-  ctx.miterLimit = 2;
-  ctx.lineWidth = Math.max(10, fontSize * 0.2);
-  ctx.strokeStyle = commander ? "rgba(4, 22, 40, 0.96)" : "rgba(0,0,0,0.94)";
-  ctx.fillStyle = commander ? "#2eb8d4" : "#fff";
-  ctx.strokeText(label, width / 2, height / 2);
-  ctx.fillText(label, width / 2, height / 2);
-  const map = new THREE.CanvasTexture(canvas);
-  map.colorSpace = THREE.SRGBColorSpace;
-  map.generateMipmaps = !crisp;
-  map.minFilter = crisp ? THREE.LinearFilter : THREE.LinearMipmapLinearFilter;
-  map.magFilter = THREE.LinearFilter;
-  map.anisotropy = crisp ? 1 : 8;
-  const sy = commander ? 1.02 : compact ? 0.74 : 0.9;
-  const sx = Math.min(FILE * (compact ? 1.2 : 0.9), sy * (width / height));
-  return { map, sx, sy };
+function NameLayers({
+  atlas,
+  meshRefs,
+}: {
+  atlas: NameAtlas;
+  meshRefs: { current: (THREE.InstancedMesh | null)[] };
+}) {
+  return (
+    <group>
+      {atlas.sheets.map((sheet, i) => (
+        <instancedMesh
+          key={`name-sheet-${i}-${sheet.count}`}
+          ref={(el) => {
+            meshRefs.current[i] = el;
+          }}
+          args={[sheet.geometry, sheet.material, Math.max(1, sheet.count)]}
+          frustumCulled={false}
+          renderOrder={40}
+          onUpdate={(mesh) => {
+            mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+          }}
+        />
+      ))}
+    </group>
+  );
 }
 
 
@@ -752,7 +746,8 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
   const swords = useRef<THREE.InstancedMesh>(null);
   const nocks = useRef<THREE.InstancedMesh>(null);
   const arrows = useRef<THREE.InstancedMesh>(null);
-  const tags = useRef<THREE.Group>(null);
+  const nameMeshRefs = useRef<(THREE.InstancedMesh | null)[]>([]);
+  const mixNamePos = useRef<MixNameSlot[]>([]);
   const acc = useRef(0);
   const shots = useRef<Shot[]>([]);
   const nextShot = useRef(0.6);
@@ -819,46 +814,34 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
   }, [cinematic]);
   const labeled = useMemo(() => {
     const hunt = roster ? (rosterIds?.length ? rosterIds : rosterSoldierIds(names, visible)) : null;
-    const cap = hunt ? MAX_LABELS : cinematic ? MAX_REEL_LABELS : MAX_LABELS;
     const ids: number[] = [];
     if (phantom && !defend && !vs && !vs2 && !hunt) ids.push(-1);
-    if (defend || vs || vs2) {
-      const named: number[] = [];
-      for (let i = 0; i < visible; i++) {
-        if (names[i]?.trim()) named.push(i);
-      }
-      return named;
-    }
     if (hunt) {
       const seen = new Set<number>();
       for (const i of hunt) {
-        if (ids.length >= cap) break;
         if (i < 0 || seen.has(i) || !String(names[i] || "").trim()) continue;
         seen.add(i);
         ids.push(i);
       }
       return ids;
     }
-    for (let i = 0; i < visible && ids.length < cap; i++) {
-      if (names[i] && isCommander(names[i], chiefsList)) ids.push(i);
-    }
-    for (let i = 0; i < visible && ids.length < cap; i++) {
-      if (names[i] && !isCommander(names[i], chiefsList)) ids.push(i);
+    for (let i = 0; i < visible; i++) {
+      if (names[i]?.trim()) ids.push(i);
     }
     return ids;
-  }, [names, visible, chiefsList, cinematic, phantom, defend, vs, vs2, roster, rosterIds]);
-  const nameMaps = useMemo(
+  }, [names, visible, phantom, defend, vs, vs2, roster, rosterIds]);
+  const nameAtlas = useMemo(
     () =>
-      labeled.map((i) =>
-        makeHandleTexture(
-          i < 0 ? DEFAULT_COMMANDER : names[i],
-          !defend && !vs && !vs2 && (i < 0 || isCommander(names[i], chiefsList)),
-          Boolean(discover) || countdown || defend || vs || vs2 || Boolean(roster),
-          countdown || defend || vs || vs2 || Boolean(roster)
-        )
+      buildNameAtlas(
+        labeled.map((i) => ({
+          text: i < 0 ? DEFAULT_COMMANDER : names[i],
+          commander: !defend && !vs && !vs2 && (i < 0 || isCommander(names[i], chiefsList)),
+          plain: Boolean(countdown || defend || vs || vs2 || roster),
+        }))
       ),
-    [labeled, names, chiefsList, discover, countdown, defend, vs, vs2, roster]
+    [labeled, names, chiefsList, countdown, defend, vs, vs2, roster]
   );
+  useEffect(() => () => nameAtlas.dispose(), [nameAtlas]);
 
   const seeds = useMemo(() => {
     const arr = new Float32Array(MAX_SOLDIERS);
@@ -1189,22 +1172,43 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
       if (swordArms.current) swordArms.current.instanceMatrix.needsUpdate = true;
       if (swords.current) swords.current.instanceMatrix.needsUpdate = true;
     }
-    if (!tags.current) return;
-    const hideTag = (tag: THREE.Object3D) => {
-      tag.visible = false;
-      tag.userData.mixWantVisible = false;
+    const crowd = Math.max(0.55, Math.min(1.18, 26 / Math.sqrt(Math.max(16, labeled.length))));
+    const mixSlots = mixNamePos.current;
+    mixSlots.length = labeled.length;
+    const hideName = (k: number, cell: (typeof nameAtlas.cells)[number] | undefined) => {
+      if (!cell) return;
+      dummy.position.set(0, -80, 0);
+      dummy.scale.set(0, 0, 1);
+      dummy.quaternion.identity();
+      dummy.updateMatrix();
+      nameMeshRefs.current[cell.sheet]?.setMatrixAt(cell.local, dummy.matrix);
+      mixSlots[k] = {
+        sheet: cell.sheet,
+        local: cell.local,
+        want: false,
+        bottomShow: false,
+        x: 0,
+        y: 0,
+        z: 0,
+        sx: 0,
+        sy: 0,
+        botX: 0,
+        botY: 0,
+        botZ: 0,
+        botSx: 0,
+        botSy: 0,
+      };
     };
-    for (let k = 0; k < tags.current.children.length; k++) {
+    for (let k = 0; k < labeled.length; k++) {
       const idx = labeled[k];
-      const tag = tags.current.children[k];
-      const tagData = nameMaps[k];
-      if (idx == null || !tagData) {
-        hideTag(tag);
+      const cell = nameAtlas.cells[k];
+      if (idx == null || !cell) {
+        hideName(k, cell);
         continue;
       }
       const cmd = idx < 0 || layout.cmdOf[idx] >= 0;
       if (isolate && (idx < 0 || !packSet?.has(idx))) {
-        hideTag(tag);
+        hideName(k, cell);
         continue;
       }
       if (isolate && liveIds && beat && beat.id === "pack" && idx >= 0) {
@@ -1215,86 +1219,23 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
         pos.set(rosterPose.x, rosterPose.y, rosterPose.z);
       } else if (idx < 0) commanderPos(t, 0, pos);
       else poseSoldier(idx, t);
-      let nameScale = 1;
-      let countdownTag = false;
-      if (cinematic && countdown) {
-        if (recT < 0 || idx < 0 || cmd || !names[idx]?.trim()) {
-          hideTag(tag);
-          continue;
-        }
-        nameScale = 1.12;
-        countdownTag = true;
-      } else if (cinematic && (defend || vs || vs2)) {
-        if (idx < 0 || !names[idx]?.trim()) {
-          hideTag(tag);
-          continue;
-        }
-        nameScale = vs || vs2 ? Math.min(1.08, 8.4 / Math.sqrt(Math.max(16, labeled.length))) : 1.22;
-        countdownTag = true;
-      } else if (cinematic && mix) {
-        nameScale = 1.28;
-      } else if (cinematic && discover) {
-        if (discover === DISCOVER3_ID) {
-          const tBeat = trailerBeat(recT);
-          const namesOn = recT >= 3.4 && (tBeat === "army" || tBeat === "volley");
-          if (!namesOn) {
-            hideTag(tag);
-            continue;
-          }
-          nameScale = 1.45;
-        } else if (discover === RAF2_ID) {
-          const sBeat = shelfBeat(recT);
-          const namesOn = sBeat === "hook" || sBeat === "army";
-          if (!namesOn) {
-            hideTag(tag);
-            continue;
-          }
-          nameScale = 1.72;
-        } else {
-          const dBeat = discoverBeat(recT);
-          const namesOn = (dBeat === "proof" && recT >= DISCOVER_HOOK_END + 0.8) || dBeat === "hold";
-          if (!namesOn) {
-            hideTag(tag);
-            continue;
-          }
-          nameScale = dBeat === "proof" ? 1.78 : 1.22;
-        }
-      } else if (cinematic && roster) {
-        if (recT < 0) {
-          hideTag(tag);
-          continue;
-        }
-        nameScale = isolate ? 0.58 * (rosterPose.nameMul || 1) : 1.05;
+      let nameScale = crowd;
+      const staggered = Boolean(countdown || defend || vs || vs2);
+      if (countdown) nameScale = 1.12 * crowd;
+      else if (defend) nameScale = 1.22 * crowd;
+      else if (vs || vs2) nameScale = crowd;
+      else if (mix) nameScale = 1.12 * crowd;
+      else if (discover) nameScale = 1.28 * crowd;
+      else if (roster) {
+        nameScale = isolate ? 0.58 * (rosterPose.nameMul || 1) : 1.05 * crowd;
         if (isolate && rosterPose.nameMul < 0.1) {
-          hideTag(tag);
+          hideName(k, cell);
           continue;
         }
-      } else if (cinematic) {
-        const beats = reelBeats(duration, skipCommander);
-        if (recT < 0) {
-          hideTag(tag);
-          continue;
-        }
-        if (skipCommander) nameScale = 1;
-        else if (recT < beats.cmd) nameScale = 0.38;
-        else {
-          const u = Math.min(1, (recT - beats.cmd) / Math.max(0.2, beats.turn * 0.58));
-          const e = u * u * (3 - 2 * u);
-          nameScale = 0.38 + 0.62 * e;
-        }
-      }
-      tag.visible = true;
-      tag.userData.mixWantVisible = true;
-      if (defend || vs || vs2) {
-        const sm = (tag as THREE.Sprite).material;
-        sm.depthTest = false;
-        sm.depthWrite = false;
-        sm.fog = false;
-      }
+      } else if (cinematic) nameScale = Math.max(0.85, crowd);
       let lift = isolate ? 2.38 : 2.92;
       let row = 0;
       let col = 0;
-      let rowMul = 1;
       let nx = pos.x;
       if (isolate) {
         const near = Math.max(0, pos.z - ROSTER_STAGE_Z);
@@ -1302,95 +1243,101 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
         const outSlot = outIds && idx >= 0 ? outIds.indexOf(idx) : -1;
         const slot = liveSlot >= 0 ? liveSlot : Math.max(0, outSlot);
         lift = 2.86 - near * 0.72 + (slot % 2) * 0.42 + (slot === 2 ? 0.18 : 0);
-        tag.renderOrder = 24 - Math.round(near * 4);
         nx = pos.x * 1.06;
       } else if (!cmd) {
         const slot = layout.slotOf[idx];
         ({ row, col } = slotCoord(slot >= 0 ? slot : 0, form.sizes));
-        if (defend && countdownTag) {
-          lift = 2.7 + (idx % 5) * 0.22;
-          tag.renderOrder = 40;
-        } else if ((vs || vs2) && countdownTag) {
+        if (defend && staggered) lift = 2.7 + (idx % 5) * 0.22;
+        else if ((vs || vs2) && staggered) {
           const band = idx % 9;
           const lane = idx % 4;
           lift = 2.35 + band * 0.34 + (vs2 ? vsPose.y * 0.02 : 0);
           nx = pos.x + ((lane % 2) * 2 - 1) * (0.34 + (Math.floor(idx / 4) % 3) * 0.16);
           if (vs2) nx = pos.x + ((Math.floor(idx / 4) % 5) - 2) * 0.58;
-          tag.renderOrder = 40 + band;
-        } else if (countdownTag) {
-          lift = 2.32 + row * 0.64;
-          tag.renderOrder = 16 + row;
-        } else {
-          lift = 2.22 + row * 0.5 + (col % 2) * 0.2;
-        }
+        } else if (staggered) lift = 2.32 + row * 0.64;
+        else lift = 2.22 + row * 0.5 + (col % 2) * 0.2 + (Math.abs(idx) % 5) * 0.16;
       }
-      let sx = (isolate ? Math.min(1.05, tagData.sx * nameScale) : tagData.sx * nameScale) * rowMul;
-      if (defend && countdownTag) sx = Math.min(sx, FILE * 1.28);
-      else if ((vs || vs2) && countdownTag) sx = Math.min(sx, FILE * (vs2 ? 0.92 : 1.05));
-      else if (countdownTag) sx = Math.min(sx, FILE * 0.78);
+      let sx = (isolate ? Math.min(1.05, cell.sx * nameScale) : cell.sx * nameScale);
+      if (defend && staggered) sx = Math.min(sx, FILE * 1.28);
+      else if ((vs || vs2) && staggered) sx = Math.min(sx, FILE * (vs2 ? 0.92 : 1.05));
+      else if (staggered) sx = Math.min(sx, FILE * 0.78);
+      const sy = cell.sy * nameScale;
       const baseY = pos.y + lift * scale;
-      if ((defend || vs || vs2) && cam) {
+      let px = nx;
+      let py = baseY;
+      let pz = pos.z;
+      if (cam) {
         nockOff.copy(cam.position).sub(pos);
         const len = nockOff.length() || 1;
-        const pull = Math.min(14, Math.max(7, len * 0.12));
-        tag.position.set(nx + (nockOff.x / len) * pull, baseY + (nockOff.y / len) * pull, pos.z + (nockOff.z / len) * pull);
+        const pull = defend || vs || vs2 ? Math.min(14, Math.max(7, len * 0.12)) : Math.min(4.5, Math.max(1.2, len * 0.04));
+        px = nx + (nockOff.x / len) * pull;
+        py = baseY + (nockOff.y / len) * pull;
+        pz = pos.z + (nockOff.z / len) * pull;
+        dummy.quaternion.copy(cam.quaternion);
       } else {
-        tag.position.set(nx, baseY, pos.z);
+        dummy.quaternion.identity();
       }
-      const sy = tagData.sy * nameScale * rowMul;
-      tag.scale.set(sx, sy, 1);
-      if (mix) {
-        const ranks = Math.max(1, form.sizes.length);
-        const fromBack = cmd ? ranks : Math.max(0, ranks - 1 - row);
-        const botLift = cmd ? 3.42 : 2.06 + fromBack * 0.78;
-        const botNx = nx + ((row + col) % 2 ? 0.34 : -0.34);
-        const nameMul = cmd ? 0.7 : 0.44 + fromBack * 0.09;
-        tag.userData.mixSoldierX = pos.x;
-        tag.userData.mixBaseX = nx;
-        tag.userData.mixBaseY = baseY;
-        tag.userData.mixBaseSx = sx;
-        tag.userData.mixBaseSy = tagData.sy * nameScale;
-        tag.userData.mixBottomShow = true;
-        tag.userData.mixBottomX = botNx;
-        tag.userData.mixBottomY = pos.y + botLift * scale;
-        tag.userData.mixBottomOrder = 10 + fromBack;
-        tag.userData.mixBottomSx = sx * nameMul;
-        tag.userData.mixBottomSy = tagData.sy * nameScale * nameMul;
-      }
+      dummy.position.set(px, py, pz);
+      dummy.scale.set(sx, sy, 1);
+      dummy.updateMatrix();
+      nameMeshRefs.current[cell.sheet]?.setMatrixAt(cell.local, dummy.matrix);
+      const ranks = Math.max(1, form.sizes.length);
+      const fromBack = cmd ? ranks : Math.max(0, ranks - 1 - row);
+      const botLift = cmd ? 3.42 : 2.06 + fromBack * 0.78;
+      const nameMul = cmd ? 0.7 : 0.44 + fromBack * 0.09;
+      mixSlots[k] = {
+        sheet: cell.sheet,
+        local: cell.local,
+        want: true,
+        bottomShow: true,
+        x: px,
+        y: py,
+        z: pz,
+        sx,
+        sy,
+        botX: nx + ((row + col) % 2 ? 0.34 : -0.34),
+        botY: pos.y + botLift * scale,
+        botZ: pz,
+        botSx: sx * nameMul,
+        botSy: sy * nameMul,
+      };
+    }
+    for (let s = 0; s < nameAtlas.sheets.length; s++) {
+      const mesh = nameMeshRefs.current[s];
+      if (!mesh) continue;
+      mesh.count = Math.max(1, nameAtlas.sheets[s].count);
+      mesh.instanceMatrix.needsUpdate = true;
     }
   }
 
   useLayoutEffect(() => {
     placeBodies(0);
-  }, [visible, instanceCap, labeled]);
+  }, [visible, instanceCap, labeled, nameAtlas]);
 
   useLayoutEffect(() => {
     if (!mix) return;
-    mixTagPass.apply = (pane) => {
-      if (!tags.current) return;
-      for (const tag of tags.current.children) {
-        const want = tag.userData.mixWantVisible !== false;
-        if (pane === "bottom") {
-          const show = want && tag.userData.mixBottomShow !== false;
-          tag.visible = show;
-          if (show) {
-            tag.position.x = tag.userData.mixBottomX ?? tag.position.x;
-            tag.position.y = tag.userData.mixBottomY ?? tag.position.y;
-            tag.renderOrder = tag.userData.mixBottomOrder ?? 14;
-            const sx = tag.userData.mixBottomSx;
-            const sy = tag.userData.mixBottomSy;
-            if (sx && sy) tag.scale.set(sx, sy, 1);
-          }
+    mixTagPass.apply = (pane, _camX, cam) => {
+      const dummyObj = dummy;
+      dummyObj.quaternion.set(cam?.quaternion.x ?? 0, cam?.quaternion.y ?? 0, cam?.quaternion.z ?? 0, cam?.quaternion.w ?? 1);
+      for (const slot of mixNamePos.current) {
+        const mesh = nameMeshRefs.current[slot.sheet];
+        if (!mesh) continue;
+        const show = pane === "bottom" ? slot.want && slot.bottomShow : slot.want;
+        if (!show) {
+          dummyObj.position.set(0, -80, 0);
+          dummyObj.scale.set(0, 0, 1);
+        } else if (pane === "bottom") {
+          dummyObj.position.set(slot.botX, slot.botY, slot.botZ);
+          dummyObj.scale.set(slot.botSx, slot.botSy, 1);
         } else {
-          tag.visible = want;
-          tag.position.x = tag.userData.mixBaseX ?? tag.position.x;
-          tag.position.y = tag.userData.mixBaseY ?? tag.position.y;
-          tag.renderOrder = 2;
-          const sx = tag.userData.mixBaseSx;
-          const sy = tag.userData.mixBaseSy;
-          if (sx && sy) tag.scale.set(sx, sy, 1);
+          dummyObj.position.set(slot.x, slot.y, slot.z);
+          dummyObj.scale.set(slot.sx, slot.sy, 1);
         }
-        tag.updateMatrixWorld();
+        dummyObj.updateMatrix();
+        mesh.setMatrixAt(slot.local, dummyObj.matrix);
+      }
+      for (const mesh of nameMeshRefs.current) {
+        if (mesh) mesh.instanceMatrix.needsUpdate = true;
       }
     };
     return () => {
@@ -1525,22 +1472,6 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
           <instancedMesh ref={soldierPlumes} args={[soldierPlumeGeo, undefined, instanceCap]} frustumCulled={false}>
             <meshStandardMaterial vertexColors roughness={0.86} metalness={0} side={THREE.DoubleSide} />
           </instancedMesh>
-          <group ref={tags}>
-            {nameMaps.map((tag, i) =>
-              tag ? (
-              <sprite key={`${labeled[i]}-${names[labeled[i]]}`} scale={[tag.sx, tag.sy, 1]} visible={false} renderOrder={40} frustumCulled={false}>
-                <spriteMaterial
-                  map={tag.map}
-                  transparent
-                  depthTest={false}
-                  depthWrite={false}
-                  toneMapped={false}
-                  fog={false}
-                />
-              </sprite>
-              ) : null
-            )}
-          </group>
         </>
       ) : (
         <>
@@ -1610,23 +1541,9 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
             <meshBasicMaterial color="#e81818" />
           </instancedMesh>
           <SwordFlash />
-          <group ref={tags}>
-            {nameMaps.map((tag, i) =>
-              tag ? (
-              <sprite key={`${labeled[i]}-${names[labeled[i]]}`} scale={[tag.sx, tag.sy, 1]} visible={false} renderOrder={2}>
-                <spriteMaterial
-                  map={tag.map}
-                  transparent
-                  depthTest={false}
-                  depthWrite={false}
-                  toneMapped={false}
-                />
-              </sprite>
-              ) : null
-            )}
-          </group>
         </>
       )}
+      <NameLayers atlas={nameAtlas} meshRefs={nameMeshRefs} />
     </group>
   );
 }
