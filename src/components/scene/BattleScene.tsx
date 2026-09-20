@@ -16,7 +16,7 @@ import { discoverGateRecT, sampleDiscover, type DiscoverId } from "../../discove
 import { countdownShake, sampleCountdown, type CountdownId } from "../../countdownReel";
 import { DEFEND2_SORTIE, isDefend3, isDefendSortie, sampleDefendCam, type DefendId } from "../../defendReel";
 import { isVs, isVs2, sampleVsCam, type VsId } from "../../vsReel";
-import { MIX8_ID, mixTagPass, sampleMixBottom, sampleMixTop, type MixId } from "../../mixReel";
+import { MIX8_ID, MIX9_SLOW, isMix9, mixBodyPass, mixTagPass, sampleMixBottom, sampleMixTop, type MixId } from "../../mixReel";
 import { DefendRing } from "./DefendRing";
 import { VsFoes } from "./VsFoes";
 import { VsLadders } from "./VsLadders";
@@ -288,7 +288,7 @@ function MixSplitCam({
     const castleFit = distToFit(castle.width, castle.height, aspect, 1.18);
     const ctx = { cmdZ: form.front, form, castle, fit, castleFit, level };
     applyMixCam(topCam, sampleMixTop(sampleT, ctx, mix), aspect);
-    applyMixCam(botCam, sampleMixBottom(sampleT, ctx, mix), aspect);
+    applyMixCam(botCam, sampleMixBottom(sampleT, ctx, mix, duration), aspect);
     const swap = mix === MIX8_ID;
     const lowerCam = swap ? topCam : botCam;
     const upperCam = swap ? botCam : topCam;
@@ -298,18 +298,24 @@ function MixSplitCam({
     const h = size.height;
     const gap = 3;
     const half = Math.floor(h / 2);
+    const elapsed = clock.elapsedTime;
+    const rec = Math.max(0, elapsed - REEL_HOLD);
+    const slowT = elapsed < REEL_HOLD ? elapsed : REEL_HOLD + rec * MIX9_SLOW;
+    const slow = isMix9(mix);
     gl.autoClear = true;
     gl.setClearColor("#000000", 1);
     gl.clear();
     gl.setScissorTest(true);
     gl.setViewport(0, 0, w, half - gap);
     gl.setScissor(0, 0, w, half - gap);
+    if (slow) mixBodyPass.apply(lowerTags, slowT, lowerCam);
     mixTagPass.apply(lowerTags, lowerCam.position.x, lowerCam);
     gl.render(scene, lowerCam);
     gl.autoClear = false;
     gl.clearDepth();
     gl.setViewport(0, half + gap, w, h - half - gap);
     gl.setScissor(0, half + gap, w, h - half - gap);
+    if (slow) mixBodyPass.apply(upperTags, elapsed, upperCam);
     mixTagPass.apply(upperTags, upperCam.position.x, upperCam);
     gl.render(scene, upperCam);
     gl.setScissorTest(false);
@@ -549,7 +555,7 @@ function SceneContent({
         !roster && !split && !countdown && !vs && <SallyRaid soldiers={soldiers} commanders={chiefN} />
       )}
       {climb && <VsLadders level={level} />}
-      <Army count={soldiers} names={names} commanders={commanders} cinematic={cinematic} duration={duration} skipCommander={hideCmd} roster={roster} discover={discover} countdown={Boolean(countdown)} defend={Boolean(defend)} defend2={sortie} defend3={isDefend3(defend)} vs={field} vs2={climb} mix={split} level={level} rosterIds={rosterIds} />
+      <Army count={soldiers} names={names} commanders={commanders} cinematic={cinematic} duration={duration} skipCommander={hideCmd} roster={roster} discover={discover} countdown={Boolean(countdown)} defend={Boolean(defend)} defend2={sortie} defend3={isDefend3(defend)} vs={field} vs2={climb} mix={split} mixSlow={isMix9(mix)} level={level} rosterIds={rosterIds} />
       {cinematic && split ? (
         <MixSplitCam duration={duration ?? 15} soldiers={soldiers} level={level} commanders={chiefN} mix={mix!} />
       ) : cinematic ? (

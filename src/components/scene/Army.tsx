@@ -13,7 +13,7 @@ import { vsSoldierAt, type VsPose } from "../../vsReel";
 import { sfxArrowLoose, sfxBowDraw, sfxVolleyPeak } from "../../reelSfx";
 import { raidCount, sallyHunting, sallyLiveIndex, sallyLocal, sallyRaiderAt, swordArmPose, swordStyleAt, swordSwingU } from "../../siegeEvent";
 import { castleFrame } from "../../castleLayout";
-import { mixTagPass } from "../../mixReel";
+import { mixBodyPass, mixTagPass } from "../../mixReel";
 
 const MAX_SOLDIERS = 8000;
 const MAX_COMMANDERS = 24;
@@ -60,6 +60,7 @@ type ArmyProps = {
   vs?: boolean;
   vs2?: boolean;
   mix?: boolean;
+  mixSlow?: boolean;
   level?: number;
   rosterIds?: number[] | null;
 };
@@ -733,7 +734,7 @@ function NameLayers({
 }
 
 
-export function Army({ count, names = [], commanders = [], cinematic, duration = 8, skipCommander = false, roster = null, discover = null, countdown = false, defend = false, defend2 = false, defend3 = false, vs = false, vs2 = false, mix = false, level = 1, rosterIds = null }: ArmyProps) {
+export function Army({ count, names = [], commanders = [], cinematic, duration = 8, skipCommander = false, roster = null, discover = null, countdown = false, defend = false, defend2 = false, defend3 = false, vs = false, vs2 = false, mix = false, mixSlow = false, level = 1, rosterIds = null }: ArmyProps) {
   const bodies = useRef<THREE.InstancedMesh>(null);
   const soldierPlumes = useRef<THREE.InstancedMesh>(null);
   const bowHolds = useRef<THREE.InstancedMesh>(null);
@@ -748,6 +749,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
   const arrows = useRef<THREE.InstancedMesh>(null);
   const nameMeshRefs = useRef<(THREE.InstancedMesh | null)[]>([]);
   const mixNamePos = useRef<MixNameSlot[]>([]);
+  const stampArmy = useRef<(t: number, cam?: THREE.Camera) => void>(() => {});
   const acc = useRef(0);
   const shots = useRef<Shot[]>([]);
   const nextShot = useRef(0.6);
@@ -1309,6 +1311,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
       mesh.instanceMatrix.needsUpdate = true;
     }
   }
+  stampArmy.current = placeBodies;
 
   useLayoutEffect(() => {
     placeBodies(0);
@@ -1340,8 +1343,13 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
         if (mesh) mesh.instanceMatrix.needsUpdate = true;
       }
     };
+    mixBodyPass.apply = (_pane, t, cam) => {
+      if (t == null) return;
+      stampArmy.current(t, cam as THREE.Camera | undefined);
+    };
     return () => {
       mixTagPass.apply = () => {};
+      mixBodyPass.apply = () => {};
     };
   }, [mix]);
 
@@ -1357,13 +1365,13 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
     const volley = countdown ? countdownVolley(recT) : null;
 
     acc.current += dt;
-    if (defend || vs || vs2 || roster || countdown || acc.current >= 1 / 40) {
+    if (!mixSlow && (defend || vs || vs2 || roster || countdown || acc.current >= 1 / 40)) {
       acc.current = 0;
       placeBodies(t, state.camera);
     }
 
     if (!arrows.current) return;
-    if (visible <= 0 || roster || defend || vs || vs2) {
+    if (visible <= 0 || roster || defend || vs || vs2 || mixSlow) {
       shots.current = [];
       arrows.current.count = 0;
       return;

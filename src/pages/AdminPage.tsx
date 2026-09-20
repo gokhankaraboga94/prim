@@ -761,7 +761,8 @@ export function AdminPage() {
             Alt 1/2/6 aynı. Mix 7 alt daha uzak-yüksek, yavaş sağ-sol.
             Üst: Mix 1 sol çapraz, Mix 2 tepe sol, Mix 6 tepe sağ, Mix 7 daha yakın ordu+kale.
             Mix 8 = Mix 7, paneller ters.
-            Yazı ve kale canı yok; sen eklersin. Kapı açılmaz.
+            Mix 9 (ağır): üst normal hız, alt ağır çekim — kamera en sağdan en sola tüm orduyu tarar.
+            Yazı ve kale canı yok; sen eklersin. Kapı kapalı, düşman çıkmaz.
           </p>
           <div className="dur-pills shot-pills">
             {MIX_MODES.map((mode) => (
