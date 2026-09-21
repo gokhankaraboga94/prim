@@ -355,11 +355,13 @@ function harika2Cam(recT: number, ctx: ShotCtx): ShotPose {
   const halfW = Math.max(6, form.width * 0.5);
   const side = Math.min(10, halfW * 0.34);
 
-  const lockA = pose(side * 0.28, 2.88, front - 7.15, side * 0.12, 1.4, front + 1.9, 26);
-  const lockB = pose(side * 0.08, 2.82, front - 6.85, 0.15, 1.38, front + 2.05, 25);
+  // Frame 0 is the cover: one focal plane, names sharp, no wide clutter.
+  // Curiosity/value is the handles themselves + the super already on.
+  const lockA = pose(1.1, 2.72, front - 6.55, 0.35, 1.36, front + 1.65, 24);
+  const lockB = pose(0.15, 2.7, front - 6.35, 0.08, 1.35, front + 1.8, 23);
   if (t < 1.8) return lerpPose(lockA, lockB, clamp01(t / 1.8));
 
-  const huntA = pose(side * 0.08, 2.82, front - 6.85, 0.15, 1.38, front + 2.05, 25);
+  const huntA = pose(0.15, 2.7, front - 6.35, 0.08, 1.35, front + 1.8, 23);
   const huntB = pose(-side * 0.7, 3.05, front - 7.4, -side * 0.2, 1.44, front + 2.4, 28);
   if (t < 11) return lerpPose(huntA, huntB, clamp01((t - 1.8) / 9.2));
 
