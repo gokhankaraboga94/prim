@@ -10,6 +10,7 @@ import { sagaBeat, type SagaId } from "../../sagaReel";
 import { discoverBeat, DISCOVER_HOOK_END, isDiscoverEngage, isDiscoverShelf, isDiscoverTrailer, shelfBeat, trailerBeat, type DiscoverId } from "../../discoverReel";
 import { countdownBeat, countdownFlash, type CountdownId } from "../../countdownReel";
 import { DEFEND_HOOK_END, defendBeat, defendPlayhead, type DefendId } from "../../defendReel";
+import { harika2TextPhase } from "../../xxxReel";
 
 function roundRect(
   ctx: CanvasRenderingContext2D,
@@ -218,8 +219,17 @@ function drawXxxHook(canvas: HTMLCanvasElement) {
   ctx.fillText(line2, w / 2, h / 2 + s1 * 0.5 + 6);
 }
 
-/** TV lower-third: red copy, yellow bang, no plate. */
-function drawAdHook(canvas: HTMLCanvasElement) {
+type AdHookPhase = "static" | "hook" | "cta" | "proof";
+
+const AD_RED = "#e10600";
+const AD_BANG = "#ffd60a";
+const AD_FONT = `Outfit, "Segoe UI", system-ui, sans-serif`;
+
+/** IG Reels chrome on 1080×1920: top username/audio, right like-column. */
+const IG_SAFE = { maxFrac: 0.8, cxFrac: 0.48 };
+
+/** TV / Reels super: red copy, yellow bang, no plate. Mobile-safe line lengths. */
+function drawAdHook(canvas: HTMLCanvasElement, phase: AdHookPhase = "static") {
   const ctx = canvas.getContext("2d");
   if (!ctx) return;
   const w = canvas.width;
@@ -230,53 +240,82 @@ function drawAdHook(canvas: HTMLCanvasElement) {
   ctx.lineJoin = "round";
   ctx.miterLimit = 2;
 
-  const paint = (text: string, y: number, start: number, color: string, maxFrac = 0.92) => {
+  const cx = w * IG_SAFE.cxFrac;
+  const maxW = w * IG_SAFE.maxFrac;
+
+  const setType = (size: number) => {
+    ctx.font = `900 ${size}px ${AD_FONT}`;
+    ctx.letterSpacing = `${Math.round(size * 0.028)}px`;
+  };
+
+  const paint = (text: string, y: number, start: number, color: string) => {
     let size = start;
-    ctx.font = `900 ${size}px Outfit, "Segoe UI", system-ui, sans-serif`;
-    while (ctx.measureText(text).width > w * maxFrac && size > 36) {
+    setType(size);
+    while (ctx.measureText(text).width > maxW && size > 36) {
       size -= 3;
-      ctx.font = `900 ${size}px Outfit, "Segoe UI", system-ui, sans-serif`;
+      setType(size);
     }
-    ctx.lineWidth = Math.max(16, size * 0.16);
+    ctx.lineWidth = Math.max(16, size * 0.17);
     ctx.strokeStyle = "rgba(0,0,0,0.94)";
     ctx.fillStyle = color;
-    ctx.strokeText(text, w / 2, y);
-    ctx.fillText(text, w / 2, y);
+    ctx.textAlign = "center";
+    ctx.strokeText(text, cx, y);
+    ctx.fillText(text, cx, y);
     return size;
   };
 
-  const s1 = paint("TAKİPÇİLERİMLE BİRLİKTE SAVAŞIYORUZ", h * 0.34, Math.round(w * 0.052), "#e10600", 0.94);
+  const paintCta = (y: number, start: number) => {
+    const line = "SEN DE ORDUYA KATIL";
+    let size = start;
+    setType(size);
+    const bangSizeOf = (s: number) => Math.round(s * 1.38);
+    const bangGap = (s: number) => Math.round(s * 0.12);
+    const measure = (s: number) => {
+      setType(s);
+      const lw = ctx.measureText(line).width;
+      setType(bangSizeOf(s));
+      return lw + bangGap(s) + ctx.measureText("!").width;
+    };
+    while (measure(size) > maxW && size > 40) size -= 3;
+    setType(size);
+    const lineW = ctx.measureText(line).width;
+    const bangSize = bangSizeOf(size);
+    const gap = bangGap(size);
+    setType(bangSize);
+    const bangW = ctx.measureText("!").width;
+    const x0 = cx - (lineW + gap + bangW) / 2;
+    ctx.textAlign = "left";
+    setType(size);
+    ctx.lineWidth = Math.max(16, size * 0.17);
+    ctx.strokeStyle = "rgba(0,0,0,0.94)";
+    ctx.fillStyle = AD_RED;
+    ctx.strokeText(line, x0, y);
+    ctx.fillText(line, x0, y);
+    setType(bangSize);
+    ctx.lineWidth = Math.max(18, bangSize * 0.16);
+    ctx.fillStyle = AD_BANG;
+    ctx.strokeText("!", x0 + lineW + gap, y);
+    ctx.fillText("!", x0 + lineW + gap, y);
+    ctx.letterSpacing = "0px";
+    return size;
+  };
 
-  const line2 = "SEN DE ORDUYA KATIL";
-  let size2 = Math.round(w * 0.07);
-  ctx.font = `900 ${size2}px Outfit, "Segoe UI", system-ui, sans-serif`;
-  const bang = " !";
-  ctx.font = `900 ${Math.round(size2 * 1.35)}px Outfit, "Segoe UI", system-ui, sans-serif`;
-  const bangW = ctx.measureText(bang).width;
-  ctx.font = `900 ${size2}px Outfit, "Segoe UI", system-ui, sans-serif`;
-  while (ctx.measureText(line2).width + bangW > w * 0.92 && size2 > 40) {
-    size2 -= 3;
-    ctx.font = `900 ${size2}px Outfit, "Segoe UI", system-ui, sans-serif`;
+  if (phase === "cta") {
+    paintCta(h * 0.38, Math.round(w * 0.09));
+    return;
   }
-  ctx.font = `900 ${Math.round(size2 * 1.35)}px Outfit, "Segoe UI", system-ui, sans-serif`;
-  const bangW2 = ctx.measureText(bang).width;
-  ctx.font = `900 ${size2}px Outfit, "Segoe UI", system-ui, sans-serif`;
-  const lineW = ctx.measureText(line2).width;
-  const total = lineW + bangW2;
-  const y2 = h * 0.34 + s1 * 0.95 + 18;
-  const x0 = (w - total) / 2;
-  ctx.lineWidth = Math.max(16, size2 * 0.16);
-  ctx.strokeStyle = "rgba(0,0,0,0.94)";
-  ctx.fillStyle = "#e10600";
-  ctx.textAlign = "left";
-  ctx.strokeText(line2, x0, y2);
-  ctx.fillText(line2, x0, y2);
-  const bangSize = Math.round(size2 * 1.38);
-  ctx.font = `900 ${bangSize}px Outfit, "Segoe UI", system-ui, sans-serif`;
-  ctx.lineWidth = Math.max(18, bangSize * 0.16);
-  ctx.fillStyle = "#ffd60a";
-  ctx.strokeText("!", x0 + lineW + 8, y2);
-  ctx.fillText("!", x0 + lineW + 8, y2);
+  if (phase === "proof") {
+    const s1 = paint("TAKİPÇİLERİMLE", h * 0.3, Math.round(w * 0.082), AD_RED);
+    paint("BİRLİKTE SAVAŞIYORUZ", h * 0.3 + s1 * 1.05, Math.round(w * 0.07), AD_RED);
+    ctx.letterSpacing = "0px";
+    return;
+  }
+
+  // hook / static: 3 short lines — 14 / 20 / 18 chars, glance-readable on a phone.
+  const y0 = h * 0.22;
+  const s1 = paint("TAKİPÇİLERİMLE", y0, Math.round(w * 0.07), AD_RED);
+  const s2 = paint("BİRLİKTE SAVAŞIYORUZ", y0 + s1 * 1.02, Math.round(w * 0.058), AD_RED);
+  paintCta(y0 + s1 * 1.02 + s2 * 1.1, Math.round(w * 0.062));
 }
 
 /** 2 words, no plate — TikTok caption: black stroke, red fill, transparent. */
@@ -311,8 +350,8 @@ function XxxHookPlate({ variant = "banner", instant = false }: { variant?: "bann
   const tex = useMemo(() => {
     const c = document.createElement("canvas");
     c.width = 2160;
-    c.height = variant === "ad" ? 920 : variant === "clear" ? 560 : 800;
-    if (variant === "ad") drawAdHook(c);
+    c.height = variant === "ad" ? (instant ? 1100 : 920) : variant === "clear" ? 560 : 800;
+    if (variant === "ad") drawAdHook(c, instant ? "hook" : "static");
     else if (variant === "clear") drawClearHook(c);
     else drawXxxHook(c);
     const t = new THREE.CanvasTexture(c);
@@ -320,19 +359,25 @@ function XxxHookPlate({ variant = "banner", instant = false }: { variant?: "bann
     t.minFilter = THREE.LinearFilter;
     t.magFilter = THREE.LinearFilter;
     return t;
-  }, [variant]);
+  }, [variant, instant]);
   const redraws = useRef(0);
+  const lastPhase = useRef<AdHookPhase>(instant ? "hook" : "static");
 
   useFrame(({ clock }) => {
     const recT = clock.elapsedTime - REEL_HOLD;
+    const phase: AdHookPhase = variant === "ad" && instant ? harika2TextPhase(recT) : variant === "ad" ? "static" : lastPhase.current;
     if (redraws.current < 3 && clock.elapsedTime > (redraws.current + 1) * 0.5) {
       redraws.current += 1;
       const c = tex.image as HTMLCanvasElement;
-      if (variant === "ad") drawAdHook(c);
+      if (variant === "ad") drawAdHook(c, phase);
       else if (variant === "clear") drawClearHook(c);
       else drawXxxHook(c);
       tex.needsUpdate = true;
+    } else if (variant === "ad" && lastPhase.current !== phase) {
+      drawAdHook(tex.image as HTMLCanvasElement, phase);
+      tex.needsUpdate = true;
     }
+    lastPhase.current = phase;
     let alpha = 0;
     if (instant) alpha = recT >= -0.05 ? 1 : 0;
     else if (recT >= 0) {
@@ -343,16 +388,21 @@ function XxxHookPlate({ variant = "banner", instant = false }: { variant?: "bann
   });
 
   const img = tex.image as HTMLCanvasElement;
-  const width = size.width * (variant === "ad" ? 0.96 : variant === "clear" ? 0.92 : 0.94);
+  // Instant (harika2): 84% width + slight left shift clears the IG like-column.
+  const width = size.width * (variant === "ad" ? (instant ? 0.84 : 0.96) : variant === "clear" ? 0.92 : 0.94);
   const height = width * (img.height / img.width);
-  // TV lower-third sits under the product; vv2 stays top.
-  const y =
-    variant === "ad"
-      ? size.height / 2 - size.height * 0.16 - height / 2
-      : size.height / 2 - Math.max(48, size.height * (variant === "clear" ? 0.07 : 0.055)) - height / 2;
+  // Top 14.2% = just under username / audio; first-fixation band, not chrome.
+  const topInset =
+    variant === "ad" && instant
+      ? size.height * 0.142
+      : variant === "ad"
+        ? size.height * 0.16
+        : Math.max(48, size.height * (variant === "clear" ? 0.07 : 0.055));
+  const y = size.height / 2 - topInset - height / 2;
+  const x = variant === "ad" && instant ? -size.width * 0.035 : 0;
 
   return (
-    <mesh ref={mesh} position={[0, y, 0]} renderOrder={30}>
+    <mesh ref={mesh} position={[x, y, 0]} renderOrder={30}>
       <planeGeometry args={[width, height]} />
       <meshBasicMaterial ref={mat} map={tex} transparent opacity={0} depthTest={false} toneMapped={false} />
     </mesh>

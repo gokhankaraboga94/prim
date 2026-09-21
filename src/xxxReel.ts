@@ -82,6 +82,19 @@ export function xxxInstantHook(id: XxxId) {
   return id === HARIKA2_ID;
 }
 
+/**
+ * harika2 text-layer interrupts — same 2.5s grid as the camera, but the
+ * first change waits until 4s so the 1.5s typographic hook can land.
+ * hook = 3 short mobile lines; cta / proof = single-layer punches.
+ */
+export function harika2TextPhase(recT: number): "hook" | "cta" | "proof" {
+  const t = Math.max(0, recT);
+  if (t < 4) return "hook";
+  if (t < 9) return "cta";
+  if (t < 14) return "proof";
+  return "cta";
+}
+
 function pose(x: number, y: number, z: number, lx: number, ly: number, lz: number, fov: number): ShotPose {
   return { x, y: Math.max(2.2, y), z, lx, ly: Math.max(1.1, ly), lz, fov };
 }
