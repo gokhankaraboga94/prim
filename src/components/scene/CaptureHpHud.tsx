@@ -10,7 +10,7 @@ import { sagaBeat, type SagaId } from "../../sagaReel";
 import { discoverBeat, DISCOVER_HOOK_END, isDiscoverEngage, isDiscoverShelf, isDiscoverTrailer, shelfBeat, trailerBeat, type DiscoverId } from "../../discoverReel";
 import { countdownBeat, countdownFlash, type CountdownId } from "../../countdownReel";
 import { DEFEND_HOOK_END, defendBeat, defendPlayhead, type DefendId } from "../../defendReel";
-import { harika2TextPhase } from "../../xxxReel";
+import { harika2TextPhase, spinNamePool, spinScramble, SPIN_LOCK, SPIN_SECONDS } from "../../xxxReel";
 
 function roundRect(
   ctx: CanvasRenderingContext2D,
@@ -405,6 +405,109 @@ export function XxxHookHud({ variant = "banner", instant = false }: { variant?: 
     <Hud renderPriority={3}>
       <OrthographicCamera makeDefault position={[0, 0, 10]} />
       <XxxHookPlate variant={variant} instant={instant} />
+    </Hud>
+  );
+}
+
+function drawSpinName(canvas: HTMLCanvasElement, text: string) {
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return;
+  const w = canvas.width;
+  const h = canvas.height;
+  ctx.clearRect(0, 0, w, h);
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.lineJoin = "round";
+  ctx.miterLimit = 2;
+  let size = Math.round(w * 0.11);
+  ctx.font = `900 ${size}px Inter, Montserrat, Helvetica, Arial, sans-serif`;
+  while (ctx.measureText(text).width > w * 0.9 && size > 48) {
+    size -= 4;
+    ctx.font = `900 ${size}px Inter, Montserrat, Helvetica, Arial, sans-serif`;
+  }
+  ctx.lineWidth = Math.max(10, size * 0.08);
+  ctx.strokeStyle = "rgba(0,0,0,0.85)";
+  ctx.fillStyle = "#ffffff";
+  ctx.strokeText(text, w / 2, h / 2);
+  ctx.fillText(text, w / 2, h / 2);
+}
+
+function SpinNamePlate({ names, soldiers }: { names: string[]; soldiers: number }) {
+  const size = useThree((s) => s.size);
+  const mat = useRef<THREE.MeshBasicMaterial>(null);
+  const mesh = useRef<THREE.Mesh>(null);
+  const pool = useMemo(() => spinNamePool(names, soldiers), [names, soldiers]);
+  const winner = useMemo(() => {
+    if (!pool.length) return "SEN";
+    return pool[Math.floor(Math.random() * pool.length)];
+  }, [pool]);
+  const tex = useMemo(() => {
+    const c = document.createElement("canvas");
+    c.width = 2160;
+    c.height = 640;
+    drawSpinName(c, pool[0] || winner);
+    const t = new THREE.CanvasTexture(c);
+    t.colorSpace = THREE.SRGBColorSpace;
+    t.minFilter = THREE.LinearFilter;
+    t.magFilter = THREE.LinearFilter;
+    return t;
+  }, [pool, winner]);
+  const last = useRef("");
+
+  useEffect(() => {
+    let alive = true;
+    void document.fonts.load("900 80px Inter").then(() => {
+      if (!alive) return;
+      drawSpinName(tex.image as HTMLCanvasElement, last.current || pool[0] || winner);
+      tex.needsUpdate = true;
+    });
+    return () => {
+      alive = false;
+    };
+  }, [tex, pool, winner]);
+
+  useFrame(({ clock }) => {
+    const recT = clock.elapsedTime - REEL_HOLD;
+    const shown = spinScramble(recT, pool, winner);
+    if (last.current !== shown) {
+      last.current = shown;
+      drawSpinName(tex.image as HTMLCanvasElement, shown);
+      tex.needsUpdate = true;
+    }
+    if (mat.current) mat.current.opacity = recT >= -0.05 ? 1 : 0;
+    if (mesh.current) {
+      let s = 1;
+      if (recT >= SPIN_LOCK) {
+        const u = Math.max(0, Math.min(1, (recT - SPIN_LOCK) / Math.max(0.4, SPIN_SECONDS - SPIN_LOCK)));
+        const e = u * u * (3 - 2 * u);
+        s = 1 + e * 2.6;
+      }
+      mesh.current.scale.set(s, s, 1);
+    }
+  });
+
+  const width = size.width * 0.9;
+  const height = width * (640 / 2160);
+
+  return (
+    <>
+      <mesh position={[0, 0, -1]} renderOrder={25}>
+        <planeGeometry args={[size.width * 2, size.height * 2]} />
+        <meshBasicMaterial color="#000000" depthTest={false} toneMapped={false} />
+      </mesh>
+      <mesh ref={mesh} position={[0, 0, 0]} renderOrder={30}>
+        <planeGeometry args={[width, height]} />
+        <meshBasicMaterial ref={mat} map={tex} transparent opacity={0} depthTest={false} toneMapped={false} />
+      </mesh>
+    </>
+  );
+}
+
+export function SpinNameHud({ names, soldiers }: { names: string[]; soldiers: number }) {
+  return (
+    <Hud renderPriority={4}>
+      <OrthographicCamera makeDefault position={[0, 0, 10]} />
+      <SpinNamePlate names={names} soldiers={soldiers} />
     </Hud>
   );
 }

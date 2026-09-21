@@ -5,7 +5,7 @@ import * as THREE from "three";
 import { Army, armyFrame } from "./Army";
 import { Castle } from "./Castle";
 import { SallyRaid } from "./SallyRaid";
-import { CaptureHpHud, CountdownFlash, ReelFade, ReelTitles, ReelVignette, XxxHookHud } from "./CaptureHpHud";
+import { CaptureHpHud, CountdownFlash, ReelFade, ReelTitles, ReelVignette, SpinNameHud, XxxHookHud } from "./CaptureHpHud";
 import { effectiveCommanders } from "../../game";
 import { castleFrame } from "../../castleLayout";
 import { REEL_HEIGHT, REEL_HOLD, REEL_WIDTH, reelBeats } from "../../recordCanvas";
@@ -16,7 +16,7 @@ import { discoverGateRecT, sampleDiscover, type DiscoverId } from "../../discove
 import { countdownShake, sampleCountdown, type CountdownId } from "../../countdownReel";
 import { DEFEND2_SORTIE, isDefend3, isDefendSortie, sampleDefendCam, type DefendId } from "../../defendReel";
 import { isVs, isVs2, sampleVsCam, type VsId } from "../../vsReel";
-import { sampleXxxCam, xxxAdHook, xxxClearHook, xxxHasHook, xxxHideCmd, xxxHiRes, xxxInstantHook, xxxQuiet, xxxSquare, type XxxId } from "../../xxxReel";
+import { sampleXxxCam, xxxAdHook, xxxClearHook, xxxHasHook, xxxHideCmd, xxxHiRes, xxxInstantHook, xxxQuiet, xxxSpin, xxxSquare, type XxxId } from "../../xxxReel";
 import { MIX8_ID, MIX9_SLOW, isMix9, mixBodyPass, mixTagPass, sampleMixBottom, sampleMixTop, type MixId } from "../../mixReel";
 import { DefendRing } from "./DefendRing";
 import { VsFoes } from "./VsFoes";
@@ -545,6 +545,26 @@ function SceneContent({
   const sortie = isDefendSortie(defend);
   const field = isVs(vs);
   const climb = isVs2(vs);
+  const spin = Boolean(xxx && xxxSpin(xxx));
+  if (spin) {
+    return (
+      <>
+        <color attach="background" args={["#000000"]} />
+        {cinematic ? (
+          <CinematicCam
+            duration={duration ?? 8}
+            soldiers={soldiers}
+            names={names}
+            level={level}
+            commanders={0}
+            skipCommander
+            xxx={xxx}
+          />
+        ) : null}
+        {cinematic && <SpinNameHud names={names} soldiers={soldiers} />}
+      </>
+    );
+  }
   return (
     <>
       <color attach="background" args={["#7eb6ee"]} />
@@ -740,7 +760,7 @@ function BattleSceneInner({
         gl.outputColorSpace = THREE.SRGBColorSpace;
         gl.shadowMap.enabled = !cinematic;
         gl.shadowMap.type = THREE.PCFSoftShadowMap;
-        gl.setClearColor("#7eb6ee", 1);
+        gl.setClearColor(xxx && xxxSpin(xxx) ? "#000000" : "#7eb6ee", 1);
         if (cinematic) {
           const dpr = xxx && xxxHiRes(xxx) ? 2 : 1;
           gl.setPixelRatio(dpr);

@@ -15,8 +15,16 @@ export const VV2_ID = "vv2" as const;
 
 export const HARIKA_ID = "harika" as const;
 export const HARIKA2_ID = "harika2" as const;
+export const SPIN_ID = "spin" as const;
 
-export type XxxId = typeof XXX_ID | typeof XXX3_ID | typeof VV1_ID | typeof VV2_ID | typeof HARIKA_ID | typeof HARIKA2_ID;
+export type XxxId =
+  | typeof XXX_ID
+  | typeof XXX3_ID
+  | typeof VV1_ID
+  | typeof VV2_ID
+  | typeof HARIKA_ID
+  | typeof HARIKA2_ID
+  | typeof SPIN_ID;
 
 export const XXX_MODES: { id: XxxId; label: string }[] = [
   { id: XXX_ID, label: "xxx" },
@@ -25,6 +33,7 @@ export const XXX_MODES: { id: XxxId; label: string }[] = [
   { id: VV2_ID, label: "vv2" },
   { id: HARIKA_ID, label: "harika" },
   { id: HARIKA2_ID, label: "harika2" },
+  { id: SPIN_ID, label: "spin" },
 ];
 
 export const XXX_SECONDS = 18;
@@ -36,20 +45,49 @@ function isHarikaFamily(id: string | null | undefined) {
 }
 
 export function isXxx(id: string | null | undefined): id is XxxId {
-  return id === XXX_ID || id === XXX3_ID || id === VV1_ID || id === VV2_ID || isHarikaFamily(id);
+  return id === XXX_ID || id === XXX3_ID || id === VV1_ID || id === VV2_ID || isHarikaFamily(id) || id === SPIN_ID;
 }
 
 export const HARIKA2_SECONDS = 18;
+export const SPIN_SECONDS = 8;
+export const SPIN_LOCK = 5;
+
+export function xxxSpin(id: string | null | undefined) {
+  return id === SPIN_ID;
+}
+
+export function spinNamePool(names: string[], soldiers: number) {
+  const cap = Math.max(0, Math.min(names.length, Math.max(1, soldiers)));
+  const out: string[] = [];
+  const seen = new Set<string>();
+  for (let i = 0; i < cap; i++) {
+    const n = String(names[i] || "").trim().replace(/^@+/, "");
+    if (!n || seen.has(n)) continue;
+    seen.add(n);
+    out.push(n);
+  }
+  return out;
+}
+
+export function spinScramble(t: number, pool: string[], winner: string) {
+  if (t >= SPIN_LOCK) return winner;
+  if (!pool.length) return winner;
+  const u = Math.max(0, Math.min(1, t / SPIN_LOCK));
+  const hz = 46 - 22 * u * u;
+  const tick = Math.floor(t * hz);
+  return pool[(tick * 17 + tick * tick * 3) % pool.length];
+}
 
 export function xxxSeconds(id: XxxId) {
   if (id === XXX_ID) return XXX_SECONDS;
   if (id === HARIKA2_ID) return HARIKA2_SECONDS;
+  if (id === SPIN_ID) return SPIN_SECONDS;
   return XXXV_SECONDS;
 }
 
 /** Variants render the hook banner in-video; plain xxx stays clean. */
 export function xxxHasHook(id: XxxId) {
-  return id !== XXX_ID;
+  return id !== XXX_ID && id !== SPIN_ID;
 }
 
 /** Transparent 2-word caption — no white plate. */
@@ -62,7 +100,7 @@ export function xxxAdHook(id: XxxId) {
 }
 
 export function xxxHiRes(id: XxxId) {
-  return id === VV2_ID || isHarikaFamily(id);
+  return id === VV2_ID || isHarikaFamily(id) || id === SPIN_ID;
 }
 
 export function xxxHideCmd(id: XxxId) {
@@ -134,6 +172,7 @@ function mixPose(a: ShotPose, b: ShotPose, e: number): ShotPose {
 }
 
 export function sampleXxxCam(recT: number, ctx: ShotCtx, id: XxxId = XXX_ID): ShotPose {
+  if (id === SPIN_ID) return pose(0, 8, 22, 0, 2, 28, 36);
   if (id === XXX3_ID) return xxx3Cam(recT, ctx);
   if (id === VV1_ID) return vv1Cam(recT, ctx);
   if (id === VV2_ID) return vv2Cam(recT, ctx);
