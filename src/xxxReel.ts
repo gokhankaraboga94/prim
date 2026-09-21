@@ -82,18 +82,12 @@ export function xxxInstantHook(id: XxxId) {
   return id === HARIKA2_ID;
 }
 
-/**
- * 0–1.5s: one 3-word hook — scannable in a single glance.
- * After that the 4-word CTA joins (7 words total, still under the 8-word cap).
- * Later phases only restack weight.
- */
-export function harika2TextPhase(recT: number): "scan" | "hook" | "cta" | "proof" {
+/** 0–1.5s: 3-word hook. 1.5–4s: hook + CTA. Then the super is gone. */
+export function harika2TextPhase(recT: number): "scan" | "hook" | "off" {
   const t = Math.max(0, recT);
   if (t < 1.5) return "scan";
   if (t < 4) return "hook";
-  if (t < 9) return "cta";
-  if (t < 14) return "proof";
-  return "cta";
+  return "off";
 }
 
 function pose(x: number, y: number, z: number, lx: number, ly: number, lz: number, fov: number): ShotPose {

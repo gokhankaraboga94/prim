@@ -219,10 +219,9 @@ function drawXxxHook(canvas: HTMLCanvasElement) {
   ctx.fillText(line2, w / 2, h / 2 + s1 * 0.5 + 6);
 }
 
-type AdHookPhase = "static" | "scan" | "hook" | "cta" | "proof";
+type AdHookPhase = "static" | "scan" | "hook" | "off";
 
 const AD_RED = "#e10600";
-const AD_BANG = "#ffd60a";
 /** Reels-safe stack: sans, black weight. Serif/script/100–300 die in IG compress. */
 const AD_FONT = `Inter, Montserrat, Helvetica, Arial, sans-serif`;
 const AD_WEIGHT = 900;
@@ -266,53 +265,21 @@ function drawAdHook(canvas: HTMLCanvasElement, phase: AdHookPhase = "static") {
     return size;
   };
 
-  const paintCta = (y: number, start: number) => {
-    const line = "SEN DE ORDUYA KATIL";
-    let size = start;
-    setType(size);
-    const bangSizeOf = (s: number) => Math.round(s * 1.38);
-    const bangGap = (s: number) => Math.round(s * 0.12);
-    const measure = (s: number) => {
-      setType(s);
-      const lw = ctx.measureText(line).width;
-      setType(bangSizeOf(s));
-      return lw + bangGap(s) + ctx.measureText("!").width;
-    };
-    while (measure(size) > maxW && size > 40) size -= 3;
-    setType(size);
-    const lineW = ctx.measureText(line).width;
-    const bangSize = bangSizeOf(size);
-    const gap = bangGap(size);
-    setType(bangSize);
-    const bangW = ctx.measureText("!").width;
-    const x0 = cx - (lineW + gap + bangW) / 2;
-    ctx.textAlign = "left";
-    setType(size);
-    ctx.lineWidth = Math.max(16, size * 0.17);
-    ctx.strokeStyle = "rgba(0,0,0,0.94)";
-    ctx.fillStyle = AD_RED;
-    ctx.strokeText(line, x0, y);
-    ctx.fillText(line, x0, y);
-    setType(bangSize);
-    ctx.lineWidth = Math.max(18, bangSize * 0.16);
-    ctx.fillStyle = AD_BANG;
-    ctx.strokeText("!", x0 + lineW + gap, y);
-    ctx.fillText("!", x0 + lineW + gap, y);
-    ctx.letterSpacing = "0px";
-    return size;
-  };
+  if (phase === "off") return;
 
-  // Silent dual-code: every phase keeps proof + CTA on. Weight is the interrupt.
-  const stack =
-    phase === "cta"
-      ? { y0: 0.2, p1: 0.052, p2: 0.046, cta: 0.078 }
-      : phase === "proof"
-        ? { y0: 0.2, p1: 0.08, p2: 0.068, cta: 0.05 }
-        : { y0: 0.22, p1: 0.07, p2: 0.058, cta: 0.062 };
-  const y0 = h * stack.y0;
-  const s1 = paint("TAKİPÇİLERİMLE", y0, Math.round(w * stack.p1), AD_RED);
-  const s2 = paint("BİRLİKTE SAVAŞIYORUZ", y0 + s1 * 1.02, Math.round(w * stack.p2), AD_RED);
-  paintCta(y0 + s1 * 1.02 + s2 * 1.1, Math.round(w * stack.cta));
+  if (phase === "scan") {
+    const y0 = h * 0.28;
+    const s1 = paint("TAKİPÇİLERİMLE", y0, Math.round(w * 0.082), AD_RED);
+    paint("BİRLİKTE SAVAŞIYORUZ", y0 + s1 * 1.05, Math.round(w * 0.07), AD_RED);
+    ctx.letterSpacing = "0px";
+    return;
+  }
+
+  const y0 = h * 0.22;
+  const s1 = paint("TAKİPÇİLERİMLE", y0, Math.round(w * 0.07), AD_RED);
+  const s2 = paint("BİRLİKTE SAVAŞIYORUZ", y0 + s1 * 1.02, Math.round(w * 0.058), AD_RED);
+  paint("SEN DE ORDUYA KATIL", y0 + s1 * 1.02 + s2 * 1.1, Math.round(w * 0.062), AD_RED);
+  ctx.letterSpacing = "0px";
 }
 
 /** 2 words, no plate — TikTok caption: black stroke, red fill, transparent. */
@@ -395,21 +362,18 @@ function XxxHookPlate({ variant = "banner", instant = false }: { variant?: "bann
     }
     lastPhase.current = phase;
     let alpha = 0;
-    if (instant) alpha = recT >= -0.05 ? 1 : 0;
-    else if (recT >= 0) {
+    if (instant) {
+      if (recT < 4) alpha = recT >= -0.05 ? 1 : 0;
+      else if (recT < 4.16) alpha = 1 - (recT - 4) / 0.16;
+      else alpha = 0;
+    } else if (recT >= 0) {
       const into = recT;
       alpha = into < 0.14 ? into / 0.14 : 1;
     }
     if (mat.current) mat.current.opacity = alpha;
     if (instant && mesh.current) {
-      let punch = 1;
-      for (const beat of [1.5, 4, 9, 14]) {
-        const dt = recT - beat;
-        if (dt >= 0 && dt < 0.28) {
-          punch = 1 + 0.07 * (1 - dt / 0.28);
-          break;
-        }
-      }
+      const dt = recT - 1.5;
+      const punch = dt >= 0 && dt < 0.28 ? 1 + 0.07 * (1 - dt / 0.28) : 1;
       mesh.current.scale.set(punch, punch, 1);
     }
   });

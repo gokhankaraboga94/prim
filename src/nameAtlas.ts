@@ -59,10 +59,10 @@ function pickCell(unique: number) {
 }
 
 function labelOf(item: NameItem) {
-  const raw = String(item.text || "").trim();
+  const raw = String(item.text || "").trim().replace(/^@+/, "");
   if (!raw) return "";
   if (item.plain) return raw;
-  return raw.startsWith("@") ? raw : `@${raw}`;
+  return `@${raw}`;
 }
 
 function itemKey(item: NameItem) {

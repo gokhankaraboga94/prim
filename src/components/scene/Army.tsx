@@ -875,10 +875,10 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
         labeled.map((i) => ({
           text: i < 0 ? DEFAULT_COMMANDER : names[i],
           commander: !defend && !vs && !vs2 && (i < 0 || isCommander(names[i], chiefsList)),
-          plain: Boolean(countdown || defend || vs || vs2 || roster),
+          plain: Boolean(countdown || defend || vs || vs2 || roster || square),
         }))
       ),
-    [labeled, names, chiefsList, countdown, defend, vs, vs2, roster]
+    [labeled, names, chiefsList, countdown, defend, vs, vs2, roster, square]
   );
   useEffect(() => () => nameAtlas.dispose(), [nameAtlas]);
 
@@ -1263,6 +1263,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
       if (countdown) nameScale = 1.12 * crowd;
       else if (defend) nameScale = 1.22 * crowd;
       else if (vs || vs2) nameScale = crowd;
+      else if (square) nameScale = Math.max(0.7, crowd * 1.05);
       else if (nameHunt) nameScale = Math.max(1.12, crowd * 1.55);
       else if (mix) nameScale = 1.12 * crowd;
       else if (discover) nameScale = 1.28 * crowd;
