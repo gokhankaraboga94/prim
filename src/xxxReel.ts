@@ -83,12 +83,13 @@ export function xxxInstantHook(id: XxxId) {
 }
 
 /**
- * harika2 overlay emphasis. Mute-autoplay is the default, so the full idea
- * (proof + CTA) stays on for the whole clip and rides with the picture.
- * Phase only restacks weight — never deletes a line.
+ * 0–1.5s: one 3-word hook — scannable in a single glance.
+ * After that the 4-word CTA joins (7 words total, still under the 8-word cap).
+ * Later phases only restack weight.
  */
-export function harika2TextPhase(recT: number): "hook" | "cta" | "proof" {
+export function harika2TextPhase(recT: number): "scan" | "hook" | "cta" | "proof" {
   const t = Math.max(0, recT);
+  if (t < 1.5) return "scan";
   if (t < 4) return "hook";
   if (t < 9) return "cta";
   if (t < 14) return "proof";

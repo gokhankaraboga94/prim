@@ -219,7 +219,7 @@ function drawXxxHook(canvas: HTMLCanvasElement) {
   ctx.fillText(line2, w / 2, h / 2 + s1 * 0.5 + 6);
 }
 
-type AdHookPhase = "static" | "hook" | "cta" | "proof";
+type AdHookPhase = "static" | "scan" | "hook" | "cta" | "proof";
 
 const AD_RED = "#e10600";
 const AD_BANG = "#ffd60a";
@@ -346,7 +346,7 @@ function XxxHookPlate({ variant = "banner", instant = false }: { variant?: "bann
     const c = document.createElement("canvas");
     c.width = 2160;
     c.height = variant === "ad" ? (instant ? 1100 : 920) : variant === "clear" ? 560 : 800;
-    if (variant === "ad") drawAdHook(c, instant ? "hook" : "static");
+    if (variant === "ad") drawAdHook(c, instant ? "scan" : "static");
     else if (variant === "clear") drawClearHook(c);
     else drawXxxHook(c);
     const t = new THREE.CanvasTexture(c);
@@ -356,7 +356,7 @@ function XxxHookPlate({ variant = "banner", instant = false }: { variant?: "bann
     return t;
   }, [variant, instant]);
   const redraws = useRef(0);
-  const lastPhase = useRef<AdHookPhase>(instant ? "hook" : "static");
+  const lastPhase = useRef<AdHookPhase>(instant ? "scan" : "static");
 
   useFrame(({ clock }) => {
     const recT = clock.elapsedTime - REEL_HOLD;
@@ -382,7 +382,7 @@ function XxxHookPlate({ variant = "banner", instant = false }: { variant?: "bann
     if (mat.current) mat.current.opacity = alpha;
     if (instant && mesh.current) {
       let punch = 1;
-      for (const beat of [4, 9, 14]) {
+      for (const beat of [1.5, 4, 9, 14]) {
         const dt = recT - beat;
         if (dt >= 0 && dt < 0.28) {
           punch = 1 + 0.07 * (1 - dt / 0.28);
