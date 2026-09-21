@@ -341,8 +341,8 @@ function harikaCam(recT: number, ctx: ShotCtx): ShotPose {
  * harika2 — skip-rate architecture (decision in 1–2s, not a 3s view count).
  *
  * Frame 0 is already the product: names fill the lens, super is on.
- * 0–1.8s: micro push only (alive, readable, no cut, no wide waste).
- * 1.8–11s: name crawl harvests watch time after they chose to stay.
+ * 0–1.5s: in media res, almost still — no intro-fatigue crane.
+ * 1.5–11s: name crawl harvests watch time after they chose to stay.
  * 11–18s: square + mangonels + castle — completion / total watch time.
  * 18s sits in the 15–30s bucket (45% avg view opens distribution; sub-15s wants 55%).
  */
@@ -355,15 +355,15 @@ function harika2Cam(recT: number, ctx: ShotCtx): ShotPose {
   const halfW = Math.max(6, form.width * 0.5);
   const side = Math.min(10, halfW * 0.34);
 
-  // Frame 0 is the cover: one focal plane, names sharp, no wide clutter.
-  // Curiosity/value is the handles themselves + the super already on.
-  const lockA = pose(1.1, 2.72, front - 6.55, 0.35, 1.36, front + 1.65, 24);
-  const lockB = pose(0.15, 2.7, front - 6.35, 0.08, 1.35, front + 1.8, 23);
-  if (t < 1.8) return lerpPose(lockA, lockB, clamp01(t / 1.8));
+  // In media res: already inside the names. No logo, no crane, no slow "intro"
+  // move — those are intro-fatigue skips. Tiny drift only so it isn't a still.
+  const lockA = pose(0.55, 2.72, front - 6.45, 0.18, 1.36, front + 1.7, 24);
+  const lockB = pose(0.25, 2.7, front - 6.35, 0.08, 1.35, front + 1.75, 24);
+  if (t < 1.5) return lerpPose(lockA, lockB, clamp01(t / 1.5));
 
-  const huntA = pose(0.15, 2.7, front - 6.35, 0.08, 1.35, front + 1.8, 23);
+  const huntA = pose(0.25, 2.7, front - 6.35, 0.08, 1.35, front + 1.75, 24);
   const huntB = pose(-side * 0.7, 3.05, front - 7.4, -side * 0.2, 1.44, front + 2.4, 28);
-  if (t < 11) return lerpPose(huntA, huntB, clamp01((t - 1.8) / 9.2));
+  if (t < 11) return lerpPose(huntA, huntB, clamp01((t - 1.5) / 9.5));
 
   const riseA = pose(-side * 0.5, 4.2, front - 9, 0, 1.65, mid, 31);
   const riseB = pose(-7, 15 + fit * 0.04, back + Math.max(13, fit * 0.2), 2, 2.15, (mid + castle.front) * 0.55, 40);
