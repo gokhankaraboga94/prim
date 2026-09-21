@@ -789,8 +789,8 @@ export function AdminPage() {
           <p className="muted">
             Keşfet sinematikleri. xxx: yazısız. harika2: atlanma oranı mimarisi —
             ilk karede isim + yazı (1–2 sn karar penceresi), kare ordu, mancınık,
-            komutan yok, sessiz, 4K. Kapı kapalı. spin: siyah zemin, isimler 5
-            saniye tek satırda hızla döner, kilitlenir, ekrana büyür.
+            komutan yok, sessiz, 4K. Kapı kapalı. spin: siyah zemin, 13s —
+            isimler karışık ve tekrarsız geçer, 6. saniyede kilit, sonra büyür.
           </p>
           <div className="dur-pills shot-pills">
             {XXX_MODES.map((mode) => (

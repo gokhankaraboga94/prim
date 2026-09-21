@@ -10,7 +10,7 @@ import { sagaBeat, type SagaId } from "../../sagaReel";
 import { discoverBeat, DISCOVER_HOOK_END, isDiscoverEngage, isDiscoverShelf, isDiscoverTrailer, shelfBeat, trailerBeat, type DiscoverId } from "../../discoverReel";
 import { countdownBeat, countdownFlash, type CountdownId } from "../../countdownReel";
 import { DEFEND_HOOK_END, defendBeat, defendPlayhead, type DefendId } from "../../defendReel";
-import { harika2TextPhase, spinNamePool, spinScramble, SPIN_LOCK, SPIN_SECONDS } from "../../xxxReel";
+import { harika2TextPhase, spinNamePool, spinScramble, spinShuffle, SPIN_LOCK, SPIN_SECONDS } from "../../xxxReel";
 
 function roundRect(
   ctx: CanvasRenderingContext2D,
@@ -219,66 +219,53 @@ function drawXxxHook(canvas: HTMLCanvasElement) {
   ctx.fillText(line2, w / 2, h / 2 + s1 * 0.5 + 6);
 }
 
-type AdHookPhase = "static" | "scan" | "hook" | "off";
+type AdHookPhase = "static" | "hook" | "off";
 
 const AD_RED = "#e10600";
 /** Reels-safe stack: sans, black weight. Serif/script/100–300 die in IG compress. */
 const AD_FONT = `Inter, Montserrat, Helvetica, Arial, sans-serif`;
 const AD_WEIGHT = 900;
 
-/** IG Reels chrome on 1080×1920: top username/audio, right like-column. */
-const IG_SAFE = { maxFrac: 0.8, cxFrac: 0.48 };
-
-/** TV / Reels super: red copy, yellow bang, no plate. Mobile-safe line lengths. */
+/** TV / Reels super: thick red, no plate. */
 function drawAdHook(canvas: HTMLCanvasElement, phase: AdHookPhase = "static") {
   const ctx = canvas.getContext("2d");
   if (!ctx) return;
   const w = canvas.width;
   const h = canvas.height;
   ctx.clearRect(0, 0, w, h);
+  if (phase === "off") return;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   ctx.lineJoin = "round";
   ctx.miterLimit = 2;
 
-  const cx = w * IG_SAFE.cxFrac;
-  const maxW = w * IG_SAFE.maxFrac;
+  const cx = w * 0.5;
+  const maxW = w * 0.9;
 
   const setType = (size: number) => {
     ctx.font = `${AD_WEIGHT} ${size}px ${AD_FONT}`;
-    ctx.letterSpacing = `${Math.round(size * 0.028)}px`;
+    ctx.letterSpacing = `${Math.round(size * 0.02)}px`;
   };
 
-  const paint = (text: string, y: number, start: number, color: string) => {
+  const paint = (text: string, y: number, start: number) => {
     let size = start;
     setType(size);
-    while (ctx.measureText(text).width > maxW && size > 36) {
+    while (ctx.measureText(text).width > maxW && size > 40) {
       size -= 3;
       setType(size);
     }
-    ctx.lineWidth = Math.max(16, size * 0.17);
-    ctx.strokeStyle = "rgba(0,0,0,0.94)";
-    ctx.fillStyle = color;
-    ctx.textAlign = "center";
+    ctx.lineWidth = Math.max(22, size * 0.24);
+    ctx.strokeStyle = "rgba(0,0,0,0.95)";
+    ctx.fillStyle = AD_RED;
     ctx.strokeText(text, cx, y);
     ctx.fillText(text, cx, y);
     return size;
   };
 
-  if (phase === "off") return;
-
-  if (phase === "scan") {
-    const y0 = h * 0.28;
-    const s1 = paint("TAKİPÇİLERİMLE", y0, Math.round(w * 0.082), AD_RED);
-    paint("BİRLİKTE SAVAŞIYORUZ", y0 + s1 * 1.05, Math.round(w * 0.07), AD_RED);
-    ctx.letterSpacing = "0px";
-    return;
-  }
-
-  const y0 = h * 0.22;
-  const s1 = paint("TAKİPÇİLERİMLE", y0, Math.round(w * 0.07), AD_RED);
-  const s2 = paint("BİRLİKTE SAVAŞIYORUZ", y0 + s1 * 1.02, Math.round(w * 0.058), AD_RED);
-  paint("SEN DE ORDUYA KATIL", y0 + s1 * 1.02 + s2 * 1.1, Math.round(w * 0.062), AD_RED);
+  const y0 = h * 0.3;
+  const s1 = paint("TAKİPÇİLERİMLE", y0, Math.round(w * 0.084));
+  const s2 = paint("BİRLİKTE SAVAŞIYORUZ", y0 + s1 * 1.08, Math.round(w * 0.07));
+  paint("SEN DE ORDUYA KATIL", y0 + s1 * 1.08 + s2 * 1.12, Math.round(w * 0.074));
   ctx.letterSpacing = "0px";
 }
 
@@ -314,8 +301,8 @@ function XxxHookPlate({ variant = "banner", instant = false }: { variant?: "bann
   const tex = useMemo(() => {
     const c = document.createElement("canvas");
     c.width = 2160;
-    c.height = variant === "ad" ? (instant ? 1100 : 920) : variant === "clear" ? 560 : 800;
-    if (variant === "ad") drawAdHook(c, instant ? "scan" : "static");
+    c.height = variant === "ad" ? 680 : variant === "clear" ? 560 : 800;
+    if (variant === "ad") drawAdHook(c, instant ? "hook" : "static");
     else if (variant === "clear") drawClearHook(c);
     else drawXxxHook(c);
     const t = new THREE.CanvasTexture(c);
@@ -325,7 +312,7 @@ function XxxHookPlate({ variant = "banner", instant = false }: { variant?: "bann
     return t;
   }, [variant, instant]);
   const redraws = useRef(0);
-  const lastPhase = useRef<AdHookPhase>(instant ? "scan" : "static");
+  const lastPhase = useRef<AdHookPhase>(instant ? "hook" : "static");
 
   useEffect(() => {
     let alive = true;
@@ -371,26 +358,18 @@ function XxxHookPlate({ variant = "banner", instant = false }: { variant?: "bann
       alpha = into < 0.14 ? into / 0.14 : 1;
     }
     if (mat.current) mat.current.opacity = alpha;
-    if (instant && mesh.current) {
-      const dt = recT - 1.5;
-      const punch = dt >= 0 && dt < 0.28 ? 1 + 0.07 * (1 - dt / 0.28) : 1;
-      mesh.current.scale.set(punch, punch, 1);
-    }
   });
 
   const img = tex.image as HTMLCanvasElement;
-  // Instant (harika2): 84% width + slight left shift clears the IG like-column.
-  const width = size.width * (variant === "ad" ? (instant ? 0.84 : 0.96) : variant === "clear" ? 0.92 : 0.94);
+  const width = size.width * (variant === "ad" ? 0.9 : variant === "clear" ? 0.92 : 0.94);
   const height = width * (img.height / img.width);
-  // Top 14.2% = just under username / audio; first-fixation band, not chrome.
+  // First fixation: just under IG chrome (~14%), first line ~20% from top.
   const topInset =
-    variant === "ad" && instant
-      ? size.height * 0.142
-      : variant === "ad"
-        ? size.height * 0.16
-        : Math.max(48, size.height * (variant === "clear" ? 0.07 : 0.055));
+    variant === "ad"
+      ? size.height * 0.155
+      : Math.max(48, size.height * (variant === "clear" ? 0.07 : 0.055));
   const y = size.height / 2 - topInset - height / 2;
-  const x = variant === "ad" && instant ? -size.width * 0.035 : 0;
+  const x = 0;
 
   return (
     <mesh ref={mesh} position={[x, y, 0]} renderOrder={30}>
@@ -441,34 +420,35 @@ function SpinNamePlate({ names, soldiers }: { names: string[]; soldiers: number 
     if (!pool.length) return "SEN";
     return pool[Math.floor(Math.random() * pool.length)];
   }, [pool]);
+  const deck = useMemo(() => spinShuffle(pool, winner), [pool, winner]);
   const tex = useMemo(() => {
     const c = document.createElement("canvas");
     c.width = 2160;
     c.height = 640;
-    drawSpinName(c, pool[0] || winner);
+    drawSpinName(c, deck[0] || winner);
     const t = new THREE.CanvasTexture(c);
     t.colorSpace = THREE.SRGBColorSpace;
     t.minFilter = THREE.LinearFilter;
     t.magFilter = THREE.LinearFilter;
     return t;
-  }, [pool, winner]);
+  }, [deck, winner]);
   const last = useRef("");
 
   useEffect(() => {
     let alive = true;
     void document.fonts.load("900 80px Inter").then(() => {
       if (!alive) return;
-      drawSpinName(tex.image as HTMLCanvasElement, last.current || pool[0] || winner);
+      drawSpinName(tex.image as HTMLCanvasElement, last.current || deck[0] || winner);
       tex.needsUpdate = true;
     });
     return () => {
       alive = false;
     };
-  }, [tex, pool, winner]);
+  }, [tex, deck, winner]);
 
   useFrame(({ clock }) => {
     const recT = clock.elapsedTime - REEL_HOLD;
-    const shown = spinScramble(recT, pool, winner);
+    const shown = spinScramble(recT, deck, winner);
     if (last.current !== shown) {
       last.current = shown;
       drawSpinName(tex.image as HTMLCanvasElement, shown);

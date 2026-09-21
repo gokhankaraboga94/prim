@@ -49,8 +49,8 @@ export function isXxx(id: string | null | undefined): id is XxxId {
 }
 
 export const HARIKA2_SECONDS = 18;
-export const SPIN_SECONDS = 8;
-export const SPIN_LOCK = 5;
+export const SPIN_SECONDS = 13;
+export const SPIN_LOCK = 6;
 
 export function xxxSpin(id: string | null | undefined) {
   return id === SPIN_ID;
@@ -69,13 +69,23 @@ export function spinNamePool(names: string[], soldiers: number) {
   return out;
 }
 
-export function spinScramble(t: number, pool: string[], winner: string) {
+/** Winner is held out. Remaining names are shuffled once — no repeats. */
+export function spinShuffle(pool: string[], winner: string) {
+  const deck = pool.filter((n) => n !== winner);
+  for (let i = deck.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    const tmp = deck[i];
+    deck[i] = deck[j];
+    deck[j] = tmp;
+  }
+  return deck;
+}
+
+export function spinScramble(t: number, deck: string[], winner: string) {
   if (t >= SPIN_LOCK) return winner;
-  if (!pool.length) return winner;
-  const u = Math.max(0, Math.min(1, t / SPIN_LOCK));
-  const hz = 46 - 22 * u * u;
-  const tick = Math.floor(t * hz);
-  return pool[(tick * 17 + tick * tick * 3) % pool.length];
+  if (!deck.length) return winner;
+  const i = Math.min(deck.length - 1, Math.floor(Math.max(0, t) * 32));
+  return deck[i];
 }
 
 export function xxxSeconds(id: XxxId) {
@@ -120,12 +130,9 @@ export function xxxInstantHook(id: XxxId) {
   return id === HARIKA2_ID;
 }
 
-/** 0–1.5s: 3-word hook. 1.5–4s: hook + CTA. Then the super is gone. */
-export function harika2TextPhase(recT: number): "scan" | "hook" | "off" {
-  const t = Math.max(0, recT);
-  if (t < 1.5) return "scan";
-  if (t < 4) return "hook";
-  return "off";
+/** Thick red hook on frame 0–4, then off. */
+export function harika2TextPhase(recT: number): "hook" | "off" {
+  return recT < 4 ? "hook" : "off";
 }
 
 function pose(x: number, y: number, z: number, lx: number, ly: number, lz: number, fov: number): ShotPose {
@@ -385,11 +392,8 @@ function harikaCam(recT: number, ctx: ShotCtx): ShotPose {
 }
 
 /**
- * harika2 — skip-rate + pattern-interrupt architecture.
- *
- * 0–1.5s: in media res, almost still, super on (hook window — no cuts).
- * Then a hard visual change every ~2.5s so the mind cannot go passive.
- * 18s sits in the 15–30s bucket (45% avg view).
+ * harika2 — high and far. The square reads as a block; hook sits in the
+ * first-fixation band. Cuts stay elevated so we never bury the eye in a rank.
  */
 function harika2Cam(recT: number, ctx: ShotCtx): ShotPose {
   const { form, castle, fit } = ctx;
@@ -398,39 +402,25 @@ function harika2Cam(recT: number, ctx: ShotCtx): ShotPose {
   const back = form.back;
   const mid = form.midZ;
   const halfW = Math.max(6, form.width * 0.5);
-  const side = Math.min(10, halfW * 0.34);
+  const side = Math.min(18, halfW * 0.55);
 
-  const lockA = pose(0.55, 2.72, front - 6.45, 0.18, 1.36, front + 1.7, 24);
-  const lockB = pose(0.25, 2.7, front - 6.35, 0.08, 1.35, front + 1.75, 24);
-  if (t < 1.5) return lerpPose(lockA, lockB, clamp01(t / 1.5));
+  const a0 = pose(side + 12, 20, front - 34, 0, 2.55, mid, 34);
+  const a1 = pose(side + 9, 18.5, front - 31, 0, 2.4, mid, 33);
+  if (t < 4) return lerpPose(a0, a1, clamp01(t / 4));
 
-  // Interrupt 1 (1.5–4): punch-in zoom on the same rank.
-  const z0 = pose(0.25, 2.7, front - 6.35, 0.08, 1.35, front + 1.75, 24);
-  const z1 = pose(-0.2, 2.62, front - 5.85, -0.05, 1.32, front + 1.55, 22);
-  if (t < 4) return lerpPose(z0, z1, clamp01((t - 1.5) / 2.5));
+  const b0 = pose(side + 9, 18.5, front - 31, 0, 2.4, mid, 33);
+  const b1 = pose(-side * 0.35, 17.2, front - 28, 0, 2.3, mid, 34);
+  if (t < 7) return lerpPose(b0, b1, clamp01((t - 4) / 3));
 
-  // Interrupt 2 (4–6.5): cut — left 3/4 name crawl.
-  const l0 = pose(-side * 0.55, 3.0, front - 7.2, -side * 0.18, 1.42, front + 2.1, 28);
-  const l1 = pose(-side * 0.15, 2.95, front - 6.9, -0.1, 1.4, front + 2.0, 27);
-  if (t < 6.5) return lerpPose(l0, l1, clamp01((t - 4) / 2.5));
+  const c0 = pose(-side - 8, 16.8, front - 27, side * 0.08, 2.25, mid, 35);
+  const c1 = pose(side * 0.25, 17.8, front - 30, 0, 2.35, mid, 34);
+  if (t < 10) return lerpPose(c0, c1, clamp01((t - 7) / 3));
 
-  // Interrupt 3 (6.5–9): cut — right 3/4, one mangonel in frame.
-  const r0 = pose(side + 3.2, 3.6, front - 8.4, side * 0.15, 1.55, front + 3.2, 30);
-  const r1 = pose(side * 0.4, 3.2, front - 7.4, 0.3, 1.45, front + 2.4, 28);
-  if (t < 9) return lerpPose(r0, r1, clamp01((t - 6.5) / 2.5));
+  const d0 = pose(side * 0.55, 22, front - 32, 0, 2.5, mid, 36);
+  const d1 = pose(-side * 0.45, 24, back + 8, 0, 2.7, mid, 38);
+  if (t < 14) return lerpPose(d0, d1, clamp01((t - 10) / 4));
 
-  // Interrupt 4 (9–11.5): cut — opposite front scan.
-  const s0 = pose(side * 0.65, 2.85, front - 7.0, side * 0.22, 1.38, front + 1.9, 26);
-  const s1 = pose(-side * 0.45, 2.9, front - 7.1, -side * 0.16, 1.4, front + 2.0, 27);
-  if (t < 11.5) return lerpPose(s0, s1, clamp01((t - 9) / 2.5));
-
-  // Interrupt 5 (11.5–14): cut — elevated square (B-roll of the block).
-  const q0 = pose(side * 0.8, 7.2, front - 12, 0, 1.7, mid, 34);
-  const q1 = pose(-side * 0.3, 8.4, front - 11, 0, 1.85, mid, 36);
-  if (t < 14) return lerpPose(q0, q1, clamp01((t - 11.5) / 2.5));
-
-  // Interrupt 6 (14–18): rise — army, mangonels, castle (watch-time close).
-  const e0 = pose(-side * 0.4, 6.5, front - 10, 0, 1.75, mid, 33);
-  const e1 = pose(-7, 15 + fit * 0.04, back + Math.max(13, fit * 0.2), 2, 2.15, (mid + castle.front) * 0.55, 40);
+  const e0 = pose(-side * 0.4, 22, back + 6, 0, 2.6, (mid + castle.front) * 0.55, 38);
+  const e1 = pose(-10, 28 + fit * 0.04, back + Math.max(18, fit * 0.28), 2, 3.0, (mid + castle.front) * 0.55, 40);
   return lerpPose(e0, e1, clamp01((t - 14) / 4));
 }
