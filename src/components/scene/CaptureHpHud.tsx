@@ -221,9 +221,9 @@ function drawXxxHook(canvas: HTMLCanvasElement) {
 
 type AdHookPhase = "static" | "hook" | "off";
 
-/** Alarm pair: yellow field + dark red ink. Still dark-on-light (positive polarity). */
-const AD_PAPER = "#ffef9c";
-const AD_INK = "#9b0a0a";
+/** Highest natural pair: gold-yellow field + matte black/brown ink. */
+const AD_PAPER = "#ffd96a";
+const AD_INK = "#1c120c";
 const AD_FONT = `Inter, Montserrat, Helvetica, Arial, sans-serif`;
 const AD_WEIGHT = 900;
 
