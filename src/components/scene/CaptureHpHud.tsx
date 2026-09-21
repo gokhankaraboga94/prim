@@ -268,9 +268,23 @@ function drawAdHook(canvas: HTMLCanvasElement, phase: AdHookPhase = "static") {
   const top = ys[0] - sizes[0] * 0.62;
   const bot = ys[2] + sizes[2] * 0.58;
   const padX = w * 0.04;
-  ctx.fillStyle = "rgba(0,0,0,0.52)";
-  roundRect(ctx, padX, top, w - padX * 2, bot - top, 28);
+  const boxX = padX;
+  const boxY = top;
+  const boxW = w - padX * 2;
+  const boxH = bot - top;
+  // Soft bloom then a dark island — brightness/texture singleton vs sky grain.
+  ctx.save();
+  ctx.shadowColor = "rgba(0,0,0,0.7)";
+  ctx.shadowBlur = 36;
+  ctx.shadowOffsetY = 8;
+  ctx.fillStyle = "rgba(0,0,0,0.68)";
+  roundRect(ctx, boxX, boxY, boxW, boxH, 28);
   ctx.fill();
+  ctx.restore();
+  roundRect(ctx, boxX, boxY, boxW, boxH, 28);
+  ctx.strokeStyle = "rgba(255,18,8,0.35)";
+  ctx.lineWidth = 3;
+  ctx.stroke();
 
   const paint = (text: string, y: number, size: number) => {
     setType(size);
