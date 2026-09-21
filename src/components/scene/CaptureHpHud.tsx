@@ -221,8 +221,9 @@ function drawXxxHook(canvas: HTMLCanvasElement) {
 
 type AdHookPhase = "static" | "hook" | "off";
 
-/** Alert red that still clears 7:1 on near-black (WCAG optimum). #ff1208 is only ~5.3:1. */
-const AD_RED = "#ff6248";
+/** Positive polarity: dark ink on light field — pupil constricts, letters sharpen. */
+const AD_PAPER = "#f2ead8";
+const AD_INK = "#8c0c0c";
 const AD_FONT = `Inter, Montserrat, Helvetica, Arial, sans-serif`;
 const AD_WEIGHT = 900;
 
@@ -272,25 +273,22 @@ function drawAdHook(canvas: HTMLCanvasElement, phase: AdHookPhase = "static") {
   const boxY = top;
   const boxW = w - padX * 2;
   const boxH = bot - top;
-  // Soft bloom then a dark island — brightness/texture singleton vs sky grain.
+  // Light reading patch (positive polarity) + dark bloom so the island still pops on sky.
   ctx.save();
-  ctx.shadowColor = "rgba(0,0,0,0.7)";
-  ctx.shadowBlur = 36;
-  ctx.shadowOffsetY = 8;
-  ctx.fillStyle = "rgba(0,0,0,0.92)";
+  ctx.shadowColor = "rgba(0,0,0,0.55)";
+  ctx.shadowBlur = 28;
+  ctx.shadowOffsetY = 6;
+  ctx.fillStyle = AD_PAPER;
   roundRect(ctx, boxX, boxY, boxW, boxH, 28);
   ctx.fill();
   ctx.restore();
 
   const paint = (text: string, y: number, size: number) => {
     setType(size);
-    ctx.lineWidth = Math.max(26, size * 0.28);
-    ctx.strokeStyle = "rgba(0,0,0,0.96)";
+    ctx.lineWidth = Math.max(4, size * 0.04);
+    ctx.strokeStyle = AD_INK;
+    ctx.fillStyle = AD_INK;
     ctx.strokeText(text, cx, y);
-    ctx.lineWidth = Math.max(8, size * 0.06);
-    ctx.strokeStyle = "rgba(40,0,0,0.7)";
-    ctx.strokeText(text, cx, y);
-    ctx.fillStyle = AD_RED;
     ctx.fillText(text, cx, y);
   };
 
