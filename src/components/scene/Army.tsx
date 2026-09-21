@@ -1410,7 +1410,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
     }
 
     if (!arrows.current) return;
-    if (visible <= 0 || roster || defend || vs || vs2 || mixSlow) {
+    if (visible <= 0 || roster || defend || vs || vs2 || mixSlow || quiet) {
       shots.current = [];
       arrows.current.count = 0;
       return;
@@ -1583,10 +1583,12 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
           <instancedMesh ref={nocks} args={[nockGeo, undefined, instanceCap]} frustumCulled={false}>
             <meshStandardMaterial vertexColors roughness={0.55} metalness={0.28} />
           </instancedMesh>
-          <instancedMesh ref={arrows} args={[undefined, undefined, MAX_ARROWS]} frustumCulled={false}>
-            <cylinderGeometry args={[0.085, 0.032, 1.45, 6]} />
-            <meshBasicMaterial color="#e81818" />
-          </instancedMesh>
+          {!quiet && (
+            <instancedMesh ref={arrows} args={[undefined, undefined, MAX_ARROWS]} frustumCulled={false}>
+              <cylinderGeometry args={[0.085, 0.032, 1.45, 6]} />
+              <meshBasicMaterial color="#e81818" />
+            </instancedMesh>
+          )}
           <SwordFlash />
         </>
       )}

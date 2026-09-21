@@ -742,7 +742,7 @@ function BattleSceneInner({
       shadows={!cinematic}
       dpr={cinematic ? (xxx && xxxHiRes(xxx) ? 2 : 1) : [1, 1.5]}
       gl={{
-        antialias: !defend,
+        antialias: !defend && !(xxx && xxxQuiet(xxx)),
         alpha: false,
         powerPreference: "high-performance",
         stencil: false,

@@ -110,7 +110,7 @@ export function xxxAdHook(id: XxxId) {
 }
 
 export function xxxHiRes(id: XxxId) {
-  return id === VV2_ID || isHarikaFamily(id) || id === SPIN_ID;
+  return id === VV2_ID || id === SPIN_ID;
 }
 
 export function xxxHideCmd(id: XxxId) {
