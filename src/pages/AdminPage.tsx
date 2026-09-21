@@ -26,7 +26,7 @@ import { SAGA_MODES, isSaga, sagaDuration, type SagaId } from "../sagaReel";
 import { DISCOVER_ID, DISCOVER2_ID, DISCOVER3_ID, RAF2_ID, DISCOVER_MODE, DISCOVER2_MODE, DISCOVER3_MODE, RAF2_MODE, DISCOVER_SECONDS, DISCOVER3_SECONDS, RAF2_SECONDS, isDiscover, isDiscoverEngage, isDiscoverShelf, isDiscoverTrailer, type DiscoverId } from "../discoverReel";
 import { MIX_MODES, MIX_SECONDS, MIX9_SECONDS, isMix, isMix9, type MixId } from "../mixReel";
 import { COUNTDOWN_ID, COUNTDOWN_MODE, COUNTDOWN_SECONDS, isCountdown, type CountdownId } from "../countdownReel";
-import { XXX_MODES, XXX_SECONDS, XXXV_SECONDS, isXxx, xxxSeconds, type XxxId } from "../xxxReel";
+import { XXX_MODES, XXX_SECONDS, XXXV_SECONDS, isXxx, xxxHideCmd, xxxSeconds, type XxxId } from "../xxxReel";
 import { DEFEND_ID, DEFEND2_ID, DEFEND3_ID, DEFEND_MODE, DEFEND2_MODE, DEFEND3_MODE, DEFEND_SECONDS, DEFEND2_SECONDS, DEFEND3_SECONDS, isDefend, isDefend2, isDefend3, isDefendSortie, type DefendId } from "../defendReel";
 import { VS_ID, VS2_ID, VS_MODE, VS2_MODE, VS_SECONDS, VS2_SECONDS, isVs, isVs2, isVsMode, type VsId } from "../vsReel";
 import { unlockReelSfx } from "../reelSfx";
@@ -785,11 +785,10 @@ export function AdminPage() {
               </button>
             ))}
           </div>
-          <label>xxx — {XXX_SECONDS}s / xxx3 · vv1 · vv2 — {XXXV_SECONDS}s</label>
+          <label>xxx — {XXX_SECONDS}s / xxx3 · vv1 · vv2 · harika — {XXXV_SECONDS}s</label>
           <p className="muted">
-            Keşfet sinematikleri. xxx: yazısız, PNG’ni sen bindirirsin.
-            xxx3 / vv1: eski kanca (beyaz kart). vv2: şeffaf “ADIN BURADA”, 4K tampon,
-            ilk kareden isim taraması — kesme yok. Kapı kapalı, düşman çıkmaz.
+            Keşfet sinematikleri. xxx: yazısız. harika: TV alt bant, kırmızı yazı + sarı !,
+            komutan yok, ok/yay sessiz, 4K, ilk 4 sn yavaş yaklaşma. Kapı kapalı.
           </p>
           <div className="dur-pills shot-pills">
             {XXX_MODES.map((mode) => (
@@ -801,6 +800,7 @@ export function AdminPage() {
                   setReelShot((cur) => (cur === mode.id ? null : mode.id));
                   setReelSeconds(xxxSeconds(mode.id));
                   setReelText(false);
+                  if (xxxHideCmd(mode.id)) setReelSkipCmd(true);
                 }}
               >
                 {mode.label}
@@ -983,7 +983,7 @@ export function AdminPage() {
           maxHp={maxHp}
           seconds={captureSec}
           showTitles={reelText}
-          skipCommander={reelSkipCmd || isDiscover(reelShot) || isCountdown(reelShot) || isDefend(reelShot) || isVsMode(reelShot)}
+          skipCommander={reelSkipCmd || isDiscover(reelShot) || isCountdown(reelShot) || isDefend(reelShot) || isVsMode(reelShot) || (isXxx(reelShot) && xxxHideCmd(reelShot))}
           shotMode={reelShot === CINEMA_ID || isPlanB(reelShot) || isSaga(reelShot) || isDiscover(reelShot) || isCountdown(reelShot) || isDefend(reelShot) || isVsMode(reelShot) || isMix(reelShot) || isXxx(reelShot) ? null : reelShot}
           cinema={reelShot === CINEMA_ID}
           roster={isPlanB(reelShot) ? reelShot : null}

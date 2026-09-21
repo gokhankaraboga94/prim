@@ -13,13 +13,16 @@ export const XXX3_ID = "xxx3" as const;
 export const VV1_ID = "vv1" as const;
 export const VV2_ID = "vv2" as const;
 
-export type XxxId = typeof XXX_ID | typeof XXX3_ID | typeof VV1_ID | typeof VV2_ID;
+export const HARIKA_ID = "harika" as const;
+
+export type XxxId = typeof XXX_ID | typeof XXX3_ID | typeof VV1_ID | typeof VV2_ID | typeof HARIKA_ID;
 
 export const XXX_MODES: { id: XxxId; label: string }[] = [
   { id: XXX_ID, label: "xxx" },
   { id: XXX3_ID, label: "xxx3" },
   { id: VV1_ID, label: "vv1" },
   { id: VV2_ID, label: "vv2" },
+  { id: HARIKA_ID, label: "harika" },
 ];
 
 export const XXX_SECONDS = 18;
@@ -27,7 +30,7 @@ export const XXX_SECONDS = 18;
 export const XXXV_SECONDS = 15;
 
 export function isXxx(id: string | null | undefined): id is XxxId {
-  return id === XXX_ID || id === XXX3_ID || id === VV1_ID || id === VV2_ID;
+  return id === XXX_ID || id === XXX3_ID || id === VV1_ID || id === VV2_ID || id === HARIKA_ID;
 }
 
 export function xxxSeconds(id: XxxId) {
@@ -41,12 +44,23 @@ export function xxxHasHook(id: XxxId) {
 
 /** Transparent 2-word caption — no white plate. */
 export function xxxClearHook(id: XxxId) {
-  return id === VV2_ID;
+  return id === VV2_ID || id === HARIKA_ID;
 }
 
-/** 4K drawing buffer (dpr 2 on 1080×1920). */
+export function xxxAdHook(id: XxxId) {
+  return id === HARIKA_ID;
+}
+
 export function xxxHiRes(id: XxxId) {
-  return id === VV2_ID;
+  return id === VV2_ID || id === HARIKA_ID;
+}
+
+export function xxxHideCmd(id: XxxId) {
+  return id === HARIKA_ID;
+}
+
+export function xxxQuiet(id: XxxId) {
+  return id === HARIKA_ID;
 }
 
 function pose(x: number, y: number, z: number, lx: number, ly: number, lz: number, fov: number): ShotPose {
@@ -96,6 +110,7 @@ export function sampleXxxCam(recT: number, ctx: ShotCtx, id: XxxId = XXX_ID): Sh
   if (id === XXX3_ID) return xxx3Cam(recT, ctx);
   if (id === VV1_ID) return vv1Cam(recT, ctx);
   if (id === VV2_ID) return vv2Cam(recT, ctx);
+  if (id === HARIKA_ID) return harikaCam(recT, ctx);
   return xxxBaseCam(recT, ctx);
 }
 
@@ -268,4 +283,37 @@ function vv2Cam(recT: number, ctx: ShotCtx): ShotPose {
   const c0 = pose(-crawl * 0.55, 3.2, front - 7.6, 0, 1.55, mid, 30);
   const c1 = pose(0, 14 + fit * 0.06, back + Math.max(12, fit * 0.28), 0, 2.15, (mid + castle.front) * 0.55, 40);
   return lerpPose(c0, c1, clamp01((t - 10.6) / 4.4));
+}
+
+/**
+ * harika — TV-spot freeze.
+ *
+ * First 4s: 3/4 angle, slow push-in on the ranks (the car-ad / perfume-ad lock:
+ * the world comes toward you, no cut). Names sit in the upper-middle so the
+ * lower-third super can live where TV puts it. Commander is out of frame.
+ */
+function harikaCam(recT: number, ctx: ShotCtx): ShotPose {
+  const { form, castle, fit } = ctx;
+  const t = Math.max(0, recT);
+  const front = form.front;
+  const back = form.back;
+  const mid = form.midZ;
+  const halfW = Math.max(6, form.width * 0.5);
+  const side = Math.min(9, halfW * 0.32);
+
+  // 0–4s: freeze-lock. Start wide-enough to read 4–5 names, push straight in.
+  // Offset to the right so you see rank depth, not a flat mugshot wall.
+  const a0 = pose(side + 2.4, 3.35, front - 11.2, side * 0.28, 1.48, front + 3.2, 32);
+  const a1 = pose(side * 0.35, 2.95, front - 7.4, 0.35, 1.42, front + 2.0, 27);
+  if (t < 4) return lerpPose(a0, a1, clamp01(t / 4));
+
+  // 4–10s: after the lock, a new angle — left 3/4 crawl along the names.
+  const b0 = pose(-side * 0.2, 3.0, front - 7.6, 0.1, 1.45, front + 2.2, 28);
+  const b1 = pose(-side - 1.5, 3.15, front - 8.2, -side * 0.22, 1.5, front + 3.0, 30);
+  if (t < 10) return lerpPose(b0, b1, clamp01((t - 4) / 6));
+
+  // 10–15s: pull up the 3/4 to reveal the army + castle, still not a bird's eye.
+  const c0 = pose(-side, 4.2, front - 9, 0, 1.7, mid, 32);
+  const c1 = pose(-6, 12 + fit * 0.05, back + Math.max(11, fit * 0.24), 2, 2.3, (mid + castle.front) * 0.55, 40);
+  return lerpPose(c0, c1, clamp01((t - 10) / 5));
 }

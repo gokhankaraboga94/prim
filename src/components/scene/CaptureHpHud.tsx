@@ -218,6 +218,67 @@ function drawXxxHook(canvas: HTMLCanvasElement) {
   ctx.fillText(line2, w / 2, h / 2 + s1 * 0.5 + 6);
 }
 
+/** TV lower-third: red copy, yellow bang, no plate. */
+function drawAdHook(canvas: HTMLCanvasElement) {
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return;
+  const w = canvas.width;
+  const h = canvas.height;
+  ctx.clearRect(0, 0, w, h);
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.lineJoin = "round";
+  ctx.miterLimit = 2;
+
+  const paint = (text: string, y: number, start: number, color: string, maxFrac = 0.92) => {
+    let size = start;
+    ctx.font = `900 ${size}px Outfit, "Segoe UI", system-ui, sans-serif`;
+    while (ctx.measureText(text).width > w * maxFrac && size > 36) {
+      size -= 3;
+      ctx.font = `900 ${size}px Outfit, "Segoe UI", system-ui, sans-serif`;
+    }
+    ctx.lineWidth = Math.max(16, size * 0.16);
+    ctx.strokeStyle = "rgba(0,0,0,0.94)";
+    ctx.fillStyle = color;
+    ctx.strokeText(text, w / 2, y);
+    ctx.fillText(text, w / 2, y);
+    return size;
+  };
+
+  const s1 = paint("TAKİPÇİLERİMLE BİRLİKTE SAVAŞIYORUZ", h * 0.34, Math.round(w * 0.052), "#e10600", 0.94);
+
+  const line2 = "SEN DE ORDUYA KATIL";
+  let size2 = Math.round(w * 0.07);
+  ctx.font = `900 ${size2}px Outfit, "Segoe UI", system-ui, sans-serif`;
+  const bang = " !";
+  ctx.font = `900 ${Math.round(size2 * 1.35)}px Outfit, "Segoe UI", system-ui, sans-serif`;
+  const bangW = ctx.measureText(bang).width;
+  ctx.font = `900 ${size2}px Outfit, "Segoe UI", system-ui, sans-serif`;
+  while (ctx.measureText(line2).width + bangW > w * 0.92 && size2 > 40) {
+    size2 -= 3;
+    ctx.font = `900 ${size2}px Outfit, "Segoe UI", system-ui, sans-serif`;
+  }
+  ctx.font = `900 ${Math.round(size2 * 1.35)}px Outfit, "Segoe UI", system-ui, sans-serif`;
+  const bangW2 = ctx.measureText(bang).width;
+  ctx.font = `900 ${size2}px Outfit, "Segoe UI", system-ui, sans-serif`;
+  const lineW = ctx.measureText(line2).width;
+  const total = lineW + bangW2;
+  const y2 = h * 0.34 + s1 * 0.95 + 18;
+  const x0 = (w - total) / 2;
+  ctx.lineWidth = Math.max(16, size2 * 0.16);
+  ctx.strokeStyle = "rgba(0,0,0,0.94)";
+  ctx.fillStyle = "#e10600";
+  ctx.textAlign = "left";
+  ctx.strokeText(line2, x0, y2);
+  ctx.fillText(line2, x0, y2);
+  const bangSize = Math.round(size2 * 1.38);
+  ctx.font = `900 ${bangSize}px Outfit, "Segoe UI", system-ui, sans-serif`;
+  ctx.lineWidth = Math.max(18, bangSize * 0.16);
+  ctx.fillStyle = "#ffd60a";
+  ctx.strokeText("!", x0 + lineW + 8, y2);
+  ctx.fillText("!", x0 + lineW + 8, y2);
+}
+
 /** 2 words, no plate — TikTok caption: black stroke, red fill, transparent. */
 function drawClearHook(canvas: HTMLCanvasElement) {
   const ctx = canvas.getContext("2d");
@@ -243,22 +304,23 @@ function drawClearHook(canvas: HTMLCanvasElement) {
   ctx.fillText(text, w / 2, h * 0.55);
 }
 
-function XxxHookPlate({ clear = false }: { clear?: boolean }) {
+function XxxHookPlate({ variant = "banner" }: { variant?: "banner" | "clear" | "ad" }) {
   const size = useThree((s) => s.size);
   const mat = useRef<THREE.MeshBasicMaterial>(null);
   const mesh = useRef<THREE.Mesh>(null);
   const tex = useMemo(() => {
     const c = document.createElement("canvas");
     c.width = 2160;
-    c.height = clear ? 560 : 800;
-    if (clear) drawClearHook(c);
+    c.height = variant === "ad" ? 920 : variant === "clear" ? 560 : 800;
+    if (variant === "ad") drawAdHook(c);
+    else if (variant === "clear") drawClearHook(c);
     else drawXxxHook(c);
     const t = new THREE.CanvasTexture(c);
     t.colorSpace = THREE.SRGBColorSpace;
     t.minFilter = THREE.LinearFilter;
     t.magFilter = THREE.LinearFilter;
     return t;
-  }, [clear]);
+  }, [variant]);
   const redraws = useRef(0);
 
   useFrame(({ clock }) => {
@@ -266,32 +328,27 @@ function XxxHookPlate({ clear = false }: { clear?: boolean }) {
     if (redraws.current < 3 && clock.elapsedTime > (redraws.current + 1) * 0.5) {
       redraws.current += 1;
       const c = tex.image as HTMLCanvasElement;
-      if (clear) drawClearHook(c);
+      if (variant === "ad") drawAdHook(c);
+      else if (variant === "clear") drawClearHook(c);
       else drawXxxHook(c);
       tex.needsUpdate = true;
     }
     let alpha = 0;
-    let scl = 1;
     if (recT >= 0) {
       const into = recT;
-      alpha = into < 0.12 ? into / 0.12 : 1;
-      if (!clear && into < 0.38) {
-        const u = into / 0.38;
-        scl = 1.12 - 0.12 * (1 - (1 - u) * (1 - u));
-      } else if (!clear) {
-        scl = 1 + 0.006 * Math.sin(recT * 2.2);
-        if (into > 1.35 && into < 1.72) {
-          scl += 0.045 * Math.sin(((into - 1.35) / 0.37) * Math.PI);
-        }
-      }
+      alpha = into < 0.14 ? into / 0.14 : 1;
     }
     if (mat.current) mat.current.opacity = alpha;
-    if (mesh.current) mesh.current.scale.set(scl, scl, 1);
   });
 
-  const width = size.width * (clear ? 0.92 : 0.94);
-  const height = width * ((tex.image as HTMLCanvasElement).height / (tex.image as HTMLCanvasElement).width);
-  const y = size.height / 2 - Math.max(48, size.height * (clear ? 0.07 : 0.055)) - height / 2;
+  const img = tex.image as HTMLCanvasElement;
+  const width = size.width * (variant === "ad" ? 0.96 : variant === "clear" ? 0.92 : 0.94);
+  const height = width * (img.height / img.width);
+  // TV lower-third sits under the product; vv2 stays top.
+  const y =
+    variant === "ad"
+      ? -size.height * 0.26
+      : size.height / 2 - Math.max(48, size.height * (variant === "clear" ? 0.07 : 0.055)) - height / 2;
 
   return (
     <mesh ref={mesh} position={[0, y, 0]} renderOrder={30}>
@@ -301,11 +358,11 @@ function XxxHookPlate({ clear = false }: { clear?: boolean }) {
   );
 }
 
-export function XxxHookHud({ clear = false }: { clear?: boolean }) {
+export function XxxHookHud({ variant = "banner" }: { variant?: "banner" | "clear" | "ad" }) {
   return (
     <Hud renderPriority={3}>
       <OrthographicCamera makeDefault position={[0, 0, 10]} />
-      <XxxHookPlate clear={clear} />
+      <XxxHookPlate variant={variant} />
     </Hud>
   );
 }

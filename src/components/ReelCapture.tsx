@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { BattleScene } from "./scene/BattleScene";
 import { SceneErrorBoundary } from "./SceneErrorBoundary";
 import { recordCanvas, saveReelBlob, wait, REEL_HOLD } from "../recordCanvas";
-import { xxxHiRes, type XxxId } from "../xxxReel";
+import { xxxHideCmd, xxxHiRes, type XxxId } from "../xxxReel";
 import { reelSfxStream, unlockReelSfx } from "../reelSfx";
 import type { ShotId } from "../shotModes";
 import type { PlanBId } from "../rosterReel";
@@ -134,7 +134,7 @@ export function ReelCapture({ soldiers, names, commanders = [], level, pressure,
             duration={clip}
             warLook={warLook}
             day={day}
-            skipCommander={skipCommander || Boolean(discover) || Boolean(countdown) || Boolean(defend) || Boolean(vs)}
+            skipCommander={skipCommander || Boolean(discover) || Boolean(countdown) || Boolean(defend) || Boolean(vs) || Boolean(xxx && xxxHideCmd(xxx))}
             shotMode={cinema || roster || saga || discover || countdown || defend || vs || mix || xxx ? null : shotMode}
             cinema={cinema}
             roster={roster}

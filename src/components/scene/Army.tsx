@@ -62,6 +62,7 @@ type ArmyProps = {
   mix?: boolean;
   mixSlow?: boolean;
   nameHunt?: boolean;
+  quiet?: boolean;
   level?: number;
   rosterIds?: number[] | null;
 };
@@ -735,7 +736,7 @@ function NameLayers({
 }
 
 
-export function Army({ count, names = [], commanders = [], cinematic, duration = 8, skipCommander = false, roster = null, discover = null, countdown = false, defend = false, defend2 = false, defend3 = false, vs = false, vs2 = false, mix = false, mixSlow = false, nameHunt = false, level = 1, rosterIds = null }: ArmyProps) {
+export function Army({ count, names = [], commanders = [], cinematic, duration = 8, skipCommander = false, roster = null, discover = null, countdown = false, defend = false, defend2 = false, defend3 = false, vs = false, vs2 = false, mix = false, mixSlow = false, nameHunt = false, quiet = false, level = 1, rosterIds = null }: ArmyProps) {
   const bodies = useRef<THREE.InstancedMesh>(null);
   const soldierPlumes = useRef<THREE.InstancedMesh>(null);
   const bowHolds = useRef<THREE.InstancedMesh>(null);
@@ -1383,7 +1384,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
 
     const cap = volley ? (volley.active ? volley.cap : 0) : hunt ? MAX_ARROWS : IDLE_ARROWS;
 
-    if (cinematic && countdown && recClock >= 0) {
+    if (cinematic && countdown && recClock >= 0 && !quiet) {
       const beat = countdownBeat(recClock);
       if (beat === "hook" && !hookSfx.current) {
         hookSfx.current = true;
@@ -1398,7 +1399,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
         sfxVolleyPeak();
       }
     }
-    if (cinematic) {
+    if (cinematic && !quiet) {
       for (const s of shots.current) {
         if (!s.sfxDraw && t >= s.draw) {
           s.sfxDraw = true;
