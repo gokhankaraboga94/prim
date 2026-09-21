@@ -300,22 +300,17 @@ function drawAdHook(canvas: HTMLCanvasElement, phase: AdHookPhase = "static") {
     return size;
   };
 
-  if (phase === "cta") {
-    paintCta(h * 0.38, Math.round(w * 0.09));
-    return;
-  }
-  if (phase === "proof") {
-    const s1 = paint("TAKİPÇİLERİMLE", h * 0.3, Math.round(w * 0.082), AD_RED);
-    paint("BİRLİKTE SAVAŞIYORUZ", h * 0.3 + s1 * 1.05, Math.round(w * 0.07), AD_RED);
-    ctx.letterSpacing = "0px";
-    return;
-  }
-
-  // hook / static: 3 short lines — 14 / 20 / 18 chars, glance-readable on a phone.
-  const y0 = h * 0.22;
-  const s1 = paint("TAKİPÇİLERİMLE", y0, Math.round(w * 0.07), AD_RED);
-  const s2 = paint("BİRLİKTE SAVAŞIYORUZ", y0 + s1 * 1.02, Math.round(w * 0.058), AD_RED);
-  paintCta(y0 + s1 * 1.02 + s2 * 1.1, Math.round(w * 0.062));
+  // Silent dual-code: every phase keeps proof + CTA on. Weight is the interrupt.
+  const stack =
+    phase === "cta"
+      ? { y0: 0.2, p1: 0.052, p2: 0.046, cta: 0.078 }
+      : phase === "proof"
+        ? { y0: 0.2, p1: 0.08, p2: 0.068, cta: 0.05 }
+        : { y0: 0.22, p1: 0.07, p2: 0.058, cta: 0.062 };
+  const y0 = h * stack.y0;
+  const s1 = paint("TAKİPÇİLERİMLE", y0, Math.round(w * stack.p1), AD_RED);
+  const s2 = paint("BİRLİKTE SAVAŞIYORUZ", y0 + s1 * 1.02, Math.round(w * stack.p2), AD_RED);
+  paintCta(y0 + s1 * 1.02 + s2 * 1.1, Math.round(w * stack.cta));
 }
 
 /** 2 words, no plate — TikTok caption: black stroke, red fill, transparent. */
@@ -385,6 +380,17 @@ function XxxHookPlate({ variant = "banner", instant = false }: { variant?: "bann
       alpha = into < 0.14 ? into / 0.14 : 1;
     }
     if (mat.current) mat.current.opacity = alpha;
+    if (instant && mesh.current) {
+      let punch = 1;
+      for (const beat of [4, 9, 14]) {
+        const dt = recT - beat;
+        if (dt >= 0 && dt < 0.28) {
+          punch = 1 + 0.07 * (1 - dt / 0.28);
+          break;
+        }
+      }
+      mesh.current.scale.set(punch, punch, 1);
+    }
   });
 
   const img = tex.image as HTMLCanvasElement;

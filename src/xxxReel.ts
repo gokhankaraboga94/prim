@@ -83,9 +83,9 @@ export function xxxInstantHook(id: XxxId) {
 }
 
 /**
- * harika2 text-layer interrupts — same 2.5s grid as the camera, but the
- * first change waits until 4s so the 1.5s typographic hook can land.
- * hook = 3 short mobile lines; cta / proof = single-layer punches.
+ * harika2 overlay emphasis. Mute-autoplay is the default, so the full idea
+ * (proof + CTA) stays on for the whole clip and rides with the picture.
+ * Phase only restacks weight — never deletes a line.
  */
 export function harika2TextPhase(recT: number): "hook" | "cta" | "proof" {
   const t = Math.max(0, recT);
