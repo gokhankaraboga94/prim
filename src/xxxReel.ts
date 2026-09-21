@@ -63,6 +63,10 @@ export function xxxQuiet(id: XxxId) {
   return id === HARIKA_ID;
 }
 
+export function xxxSquare(id: XxxId) {
+  return id === HARIKA_ID;
+}
+
 function pose(x: number, y: number, z: number, lx: number, ly: number, lz: number, fov: number): ShotPose {
   return { x, y: Math.max(2.2, y), z, lx, ly: Math.max(1.1, ly), lz, fov };
 }
@@ -286,11 +290,11 @@ function vv2Cam(recT: number, ctx: ShotCtx): ShotPose {
 }
 
 /**
- * harika — TV-spot freeze.
+ * harika — square army, mangonels on the flanks.
  *
- * First 4s: 3/4 angle, slow push-in on the ranks (the car-ad / perfume-ad lock:
- * the world comes toward you, no cut). Names sit in the upper-middle so the
- * lower-third super can live where TV puts it. Commander is out of frame.
+ * First 4s: elevated 3/4 so the square block reads, then a slow push into the
+ * names (TV product lock). Hook sits in the upper third — first fixation,
+ * just under Instagram chrome.
  */
 function harikaCam(recT: number, ctx: ShotCtx): ShotPose {
   const { form, castle, fit } = ctx;
@@ -299,21 +303,20 @@ function harikaCam(recT: number, ctx: ShotCtx): ShotPose {
   const back = form.back;
   const mid = form.midZ;
   const halfW = Math.max(6, form.width * 0.5);
-  const side = Math.min(9, halfW * 0.32);
+  const side = Math.min(14, halfW * 0.42);
 
-  // 0–4s: freeze-lock. Start wide-enough to read 4–5 names, push straight in.
-  // Offset to the right so you see rank depth, not a flat mugshot wall.
-  const a0 = pose(side + 2.4, 3.35, front - 11.2, side * 0.28, 1.48, front + 3.2, 32);
-  const a1 = pose(side * 0.35, 2.95, front - 7.4, 0.35, 1.42, front + 2.0, 27);
+  // 0–4s: see the ordered square + a mangonel, then lock onto names.
+  const a0 = pose(side + 6, 8.2, front - 16, 0, 1.7, mid, 34);
+  const a1 = pose(side * 0.22, 3.05, front - 7.5, 0.4, 1.42, front + 2.1, 27);
   if (t < 4) return lerpPose(a0, a1, clamp01(t / 4));
 
-  // 4–10s: after the lock, a new angle — left 3/4 crawl along the names.
-  const b0 = pose(-side * 0.2, 3.0, front - 7.6, 0.1, 1.45, front + 2.2, 28);
-  const b1 = pose(-side - 1.5, 3.15, front - 8.2, -side * 0.22, 1.5, front + 3.0, 30);
+  // 4–10s: crawl along the front of the block, names readable.
+  const b0 = pose(side * 0.22, 3.05, front - 7.5, 0.4, 1.42, front + 2.1, 27);
+  const b1 = pose(-side * 0.55, 3.2, front - 8.0, -side * 0.18, 1.48, front + 2.6, 29);
   if (t < 10) return lerpPose(b0, b1, clamp01((t - 4) / 6));
 
-  // 10–15s: pull up the 3/4 to reveal the army + castle, still not a bird's eye.
-  const c0 = pose(-side, 4.2, front - 9, 0, 1.7, mid, 32);
-  const c1 = pose(-6, 12 + fit * 0.05, back + Math.max(11, fit * 0.24), 2, 2.3, (mid + castle.front) * 0.55, 40);
+  // 10–15s: rise along the 3/4 to show the whole square, mangonels, castle.
+  const c0 = pose(-side * 0.4, 5.5, front - 10, 0, 1.8, mid, 32);
+  const c1 = pose(-8, 16 + fit * 0.04, back + Math.max(14, fit * 0.22), 2, 2.2, (mid + castle.front) * 0.55, 40);
   return lerpPose(c0, c1, clamp01((t - 10) / 5));
 }

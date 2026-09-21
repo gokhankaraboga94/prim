@@ -347,7 +347,7 @@ function XxxHookPlate({ variant = "banner" }: { variant?: "banner" | "clear" | "
   // TV lower-third sits under the product; vv2 stays top.
   const y =
     variant === "ad"
-      ? -size.height * 0.26
+      ? size.height / 2 - size.height * 0.16 - height / 2
       : size.height / 2 - Math.max(48, size.height * (variant === "clear" ? 0.07 : 0.055)) - height / 2;
 
   return (

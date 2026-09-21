@@ -63,11 +63,13 @@ type ArmyProps = {
   mixSlow?: boolean;
   nameHunt?: boolean;
   quiet?: boolean;
+  square?: boolean;
   level?: number;
   rosterIds?: number[] | null;
 };
 
 const MAX_RANKS = 4;
+const GRID = 2.55;
 
 function pickCols(n: number) {
   const count = Math.max(1, n);
@@ -86,19 +88,36 @@ function rankSizes(n: number) {
   return sizes;
 }
 
-export function armyFrame(count: number, commanderCount = 0) {
+/** Regular block: columns ≈ rows so the army reads as a square. */
+export function squareRankSizes(n: number) {
+  const count = Math.max(0, n);
+  if (count <= 0) return [];
+  const cols = Math.max(1, Math.round(Math.sqrt(count)));
+  const rows = Math.max(1, Math.ceil(count / cols));
+  const sizes: number[] = [];
+  let left = count;
+  for (let r = 0; r < rows; r++) {
+    sizes.push(Math.min(cols, left));
+    left -= cols;
+  }
+  return sizes;
+}
+
+export function armyFrame(count: number, commanderCount = 0, square = false) {
   const n = Math.max(1, Math.min(MAX_SOLDIERS, Math.floor(count)));
-  const chiefs = Math.max(0, Math.min(MAX_COMMANDERS, Math.floor(commanderCount)));
-  const sizes = rankSizes(Math.max(1, n - chiefs));
+  const chiefs = square ? 0 : Math.max(0, Math.min(MAX_COMMANDERS, Math.floor(commanderCount)));
+  const sizes = square ? squareRankSizes(Math.max(1, n - chiefs)) : rankSizes(Math.max(1, n - chiefs));
   const cols = sizes.length ? Math.max(...sizes) : 1;
   const rows = Math.max(1, sizes.length);
-  const width = Math.max(FILE, (cols - 1) * FILE + FILE * 0.55);
-  const front = chiefs > 0 ? FRONT_Z - CMD_STEP : FRONT_Z;
-  const back = FRONT_Z + (rows - 1) * RANK;
+  const step = square ? GRID : FILE;
+  const rowStep = square ? GRID : RANK;
+  const width = Math.max(step, (cols - 1) * step + step * 0.55);
+  const front = !square && chiefs > 0 ? FRONT_Z - CMD_STEP : FRONT_Z;
+  const back = FRONT_Z + (rows - 1) * rowStep;
   return { width, front, back, midZ: (front + back) / 2, height: 4.2 };
 }
 
-function unitPos(i: number, t: number, sizes: number[], out: THREE.Vector3) {
+function unitPos(i: number, t: number, sizes: number[], out: THREE.Vector3, square = false) {
   let row = 0;
   let col = i;
   while (row < sizes.length - 1 && col >= sizes[row]) {
@@ -106,8 +125,14 @@ function unitPos(i: number, t: number, sizes: number[], out: THREE.Vector3) {
     row += 1;
   }
   const rowCols = Math.max(1, sizes[row] ?? 1);
-  const x = (col - (rowCols - 1) / 2) * FILE;
-  const z = FRONT_Z + row * RANK;
+  const step = square ? GRID : FILE;
+  const rowStep = square ? GRID : RANK;
+  const x = (col - (rowCols - 1) / 2) * step;
+  const z = FRONT_Z + row * rowStep;
+  if (square) {
+    out.set(x, 0, z);
+    return;
+  }
   const front = row < 2;
   const strike = front ? Math.abs(Math.sin(t * 7 + i)) * 0.07 : 0;
   const march = front ? 0 : Math.min(1, ((t * 0.13) % 4) / 2.4) * 0.32;
@@ -736,7 +761,7 @@ function NameLayers({
 }
 
 
-export function Army({ count, names = [], commanders = [], cinematic, duration = 8, skipCommander = false, roster = null, discover = null, countdown = false, defend = false, defend2 = false, defend3 = false, vs = false, vs2 = false, mix = false, mixSlow = false, nameHunt = false, quiet = false, level = 1, rosterIds = null }: ArmyProps) {
+export function Army({ count, names = [], commanders = [], cinematic, duration = 8, skipCommander = false, roster = null, discover = null, countdown = false, defend = false, defend2 = false, defend3 = false, vs = false, vs2 = false, mix = false, mixSlow = false, nameHunt = false, quiet = false, square = false, level = 1, rosterIds = null }: ArmyProps) {
   const bodies = useRef<THREE.InstancedMesh>(null);
   const soldierPlumes = useRef<THREE.InstancedMesh>(null);
   const bowHolds = useRef<THREE.InstancedMesh>(null);
@@ -788,10 +813,20 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
       });
       return { cmd: [] as number[], rest, slotOf, cmdOf, sizes: rankSizes(rest.length) };
     }
+    if (square) {
+      const rest: number[] = [];
+      for (let i = 0; i < visible; i++) rest.push(i);
+      const slotOf = new Array<number>(visible).fill(-1);
+      const cmdOf = new Array<number>(visible).fill(-1);
+      rest.forEach((soldier, i) => {
+        slotOf[soldier] = i;
+      });
+      return { cmd: [] as number[], rest, slotOf, cmdOf, sizes: squareRankSizes(rest.length) };
+    }
     return buildLayout(names, chiefsList, visible);
-  }, [names, chiefsList, visible, defend, vs, vs2]);
+  }, [names, chiefsList, visible, defend, vs, vs2, square]);
   const phantom = !skipCommander && layout.cmd.length === 0 && chiefsList.length > 0;
-  const form = useMemo(() => ({ sizes: layout.sizes, scale: 1.28 }), [layout.sizes]);
+  const form = useMemo(() => ({ sizes: layout.sizes, scale: 1.28, square }), [layout.sizes, square]);
   const steelRough = useMemo(() => {
     if (cinematic) return null;
     const c = document.createElement("canvas");
@@ -870,7 +905,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
       return;
     }
     const slot = layout.slotOf[soldier];
-    unitPos(slot >= 0 ? slot : soldier, t + seeds[soldier], form.sizes, pos);
+    unitPos(slot >= 0 ? slot : soldier, t + seeds[soldier], form.sizes, pos, form.square);
   }
 
   function bowCycle(soldier: number, t: number) {

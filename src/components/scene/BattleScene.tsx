@@ -16,11 +16,12 @@ import { discoverGateRecT, sampleDiscover, type DiscoverId } from "../../discove
 import { countdownShake, sampleCountdown, type CountdownId } from "../../countdownReel";
 import { DEFEND2_SORTIE, isDefend3, isDefendSortie, sampleDefendCam, type DefendId } from "../../defendReel";
 import { isVs, isVs2, sampleVsCam, type VsId } from "../../vsReel";
-import { sampleXxxCam, xxxAdHook, xxxClearHook, xxxHasHook, xxxHideCmd, xxxHiRes, xxxQuiet, type XxxId } from "../../xxxReel";
+import { sampleXxxCam, xxxAdHook, xxxClearHook, xxxHasHook, xxxHideCmd, xxxHiRes, xxxQuiet, xxxSquare, type XxxId } from "../../xxxReel";
 import { MIX8_ID, MIX9_SLOW, isMix9, mixBodyPass, mixTagPass, sampleMixBottom, sampleMixTop, type MixId } from "../../mixReel";
 import { DefendRing } from "./DefendRing";
 import { VsFoes } from "./VsFoes";
 import { VsLadders } from "./VsLadders";
+import { Catapults } from "./Catapults";
 import {
   SALLY_START_DELAY,
   SWORD_START,
@@ -120,7 +121,7 @@ function CinematicCam({
     const recT = Math.max(0, clock.elapsedTime - REEL_HOLD);
     const { cmd, turn, pullStart } = reelBeats(duration, skipCommander);
 
-    const form = armyFrame(soldiers, commanders);
+    const form = armyFrame(soldiers, commanders, Boolean(xxx && xxxSquare(xxx)));
     const castle = castleFrame(level);
     const swing = swordSwingU(sallyLocal(clock.elapsedTime), Math.max(1, commanders));
     const smash = swing > 0.22 ? Math.sin(((swing - 0.22) / 0.78) * Math.PI) : 0;
@@ -566,7 +567,8 @@ function SceneContent({
         !roster && !split && !countdown && !vs && !xxx && <SallyRaid soldiers={soldiers} commanders={chiefN} />
       )}
       {climb && <VsLadders level={level} />}
-      <Army count={soldiers} names={names} commanders={commanders} cinematic={cinematic} duration={duration} skipCommander={hideCmd} roster={roster} discover={discover} countdown={Boolean(countdown)} defend={Boolean(defend)} defend2={sortie} defend3={isDefend3(defend)} vs={field} vs2={climb} mix={split} mixSlow={isMix9(mix)} nameHunt={Boolean(xxx)} quiet={Boolean(xxx && xxxQuiet(xxx))} level={level} rosterIds={rosterIds} />
+      <Army count={soldiers} names={names} commanders={commanders} cinematic={cinematic} duration={duration} skipCommander={hideCmd} roster={roster} discover={discover} countdown={Boolean(countdown)} defend={Boolean(defend)} defend2={sortie} defend3={isDefend3(defend)} vs={field} vs2={climb} mix={split} mixSlow={isMix9(mix)} nameHunt={Boolean(xxx)} quiet={Boolean(xxx && xxxQuiet(xxx))} square={Boolean(xxx && xxxSquare(xxx))} level={level} rosterIds={rosterIds} />
+      {Boolean(xxx && xxxSquare(xxx)) && <Catapults soldiers={soldiers} square />}
       {cinematic && split ? (
         <MixSplitCam duration={duration ?? 15} soldiers={soldiers} level={level} commanders={chiefN} mix={mix!} />
       ) : cinematic ? (
