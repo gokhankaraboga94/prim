@@ -24,7 +24,7 @@ import { CINEMA_DURATIONS, CINEMA_ID, CINEMA_MODE, SHOT_MODES, type ReelShot } f
 import { HOOK_ID, HOOK_MODE, JOIN_ID, JOIN_MODE, ROSTER_ID, ROSTER_MODE, ensureJoinMark, finishJoinBacklogIfCaughtUp, isJoin, isPlanB, joinQueue, rosterDuration, saveJoinMark, setJoinForcePack, wipeJoinCacheAfter317, type PlanBId } from "../rosterReel";
 import { SAGA_MODES, isSaga, sagaDuration, type SagaId } from "../sagaReel";
 import { DISCOVER_ID, DISCOVER2_ID, DISCOVER3_ID, RAF2_ID, DISCOVER_MODE, DISCOVER2_MODE, DISCOVER3_MODE, RAF2_MODE, DISCOVER_SECONDS, DISCOVER3_SECONDS, RAF2_SECONDS, isDiscover, isDiscoverEngage, isDiscoverShelf, isDiscoverTrailer, type DiscoverId } from "../discoverReel";
-import { MIX_MODES, MIX_SECONDS, isMix, type MixId } from "../mixReel";
+import { MIX_MODES, MIX_SECONDS, MIX9_SECONDS, isMix, isMix9, type MixId } from "../mixReel";
 import { COUNTDOWN_ID, COUNTDOWN_MODE, COUNTDOWN_SECONDS, isCountdown, type CountdownId } from "../countdownReel";
 import { DEFEND_ID, DEFEND2_ID, DEFEND3_ID, DEFEND_MODE, DEFEND2_MODE, DEFEND3_MODE, DEFEND_SECONDS, DEFEND2_SECONDS, DEFEND3_SECONDS, isDefend, isDefend2, isDefend3, isDefendSortie, type DefendId } from "../defendReel";
 import { VS_ID, VS2_ID, VS_MODE, VS2_MODE, VS_SECONDS, VS2_SECONDS, isVs, isVs2, isVsMode, type VsId } from "../vsReel";
@@ -476,6 +476,8 @@ export function AdminPage() {
                     ? [DEFEND2_SECONDS]
                   : isDefend(reelShot)
                     ? [DEFEND_SECONDS]
+                  : isMix9(reelShot)
+                    ? [MIX9_SECONDS]
                   : isMix(reelShot)
                     ? [MIX_SECONDS]
                   : isDiscover(reelShot)
@@ -756,12 +758,12 @@ export function AdminPage() {
               {" "}Pin yok. İlk saat gelen yoruma hemen cevap.
             </p>
           )}
-          <label>Mix — 15s</label>
+          <label>Mix — 15s / Mix 9 — 60s</label>
           <p className="muted">
             Alt 1/2/6 aynı. Mix 7 alt daha uzak-yüksek, yavaş sağ-sol.
             Üst: Mix 1 sol çapraz, Mix 2 tepe sol, Mix 6 tepe sağ, Mix 7 daha yakın ordu+kale.
             Mix 8 = Mix 7, paneller ters.
-            Mix 9 (ağır): Mix 6 kameraları — üst normal hız, alt aynı tarama ağır çekim.
+            Mix 9 (ağır): Mix 6 kameraları — üst normal hız, alt aynı tarama 60 sn çok yavaş.
             Yazı ve kale canı yok; sen eklersin. Kapı kapalı, düşman çıkmaz.
           </p>
           <div className="dur-pills shot-pills">
@@ -772,7 +774,7 @@ export function AdminPage() {
                 className={reelShot === mode.id ? "on" : ""}
                 onClick={() => {
                   setReelShot((cur) => (cur === mode.id ? null : mode.id));
-                  setReelSeconds(MIX_SECONDS);
+                  setReelSeconds(isMix9(mode.id) ? MIX9_SECONDS : MIX_SECONDS);
                   setReelText(false);
                 }}
               >

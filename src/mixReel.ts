@@ -22,8 +22,9 @@ export const MIX_MODES = [
   { id: MIX9_ID, label: "Mix 9 (ağır)" },
 ] as const;
 export const MIX_SECONDS = 15;
-/** Bottom pane army time vs the 15s clip — Mix 6 angle, heavier motion. */
-export const MIX9_SLOW = 0.16;
+export const MIX9_SECONDS = 60;
+/** Bottom pane army time vs the clip — Mix 6 angle, very slow crawl. */
+export const MIX9_SLOW = 0.08;
 
 /** Army fills this so MixSplitCam can restack names before each pane render. */
 export const mixTagPass = {
@@ -131,11 +132,18 @@ function mix6Bottom(recT: number, form: ShotCtx["form"], duration = MIX_SECONDS)
   return lerpLinear(right, left, (t - toRight) / toLeft);
 }
 
-/** Behind the archers: Mix 7 is higher, further. Mix 9 is Mix 6's crawl, heavier. */
+/** Mix 6 behind-the-line angle: start on the right, crawl to the left over the full clip. */
+function mix9Bottom(recT: number, form: ShotCtx["form"], duration = MIX9_SECONDS): ShotPose {
+  const half = Math.max(4.2, form.width * 0.42);
+  const u = clamp01(Math.max(0, recT) / Math.max(0.01, duration));
+  return lerpLinear(behindLine(form, half), behindLine(form, -half), u);
+}
+
+/** Behind the archers: Mix 7 is higher, further. Mix 9 is Mix 6's crawl, stretched slow. */
 export function sampleMixBottom(recT: number, ctx: ShotCtx, id: MixId = MIX1_ID, duration = MIX_SECONDS): ShotPose {
   const { form } = ctx;
   const t = Math.max(0, recT);
-  if (id === MIX9_ID) return mix6Bottom(t, form, duration);
+  if (id === MIX9_ID) return mix9Bottom(t, form, duration);
   if (id === MIX7_ID || id === MIX8_ID) {
     const half = Math.max(4.2, form.width * 0.5 + 1.6);
     const center = behindLineFar(form, 0);
