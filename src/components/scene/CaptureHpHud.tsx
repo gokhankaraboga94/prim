@@ -166,7 +166,7 @@ export function CaptureHpHud({ overlay, ...props }: CaptureHpHudProps) {
   );
 }
 
-/** "kanca-hook-siyah" PNG'sinin birebir video içi çizimi: siyah bant, sarı ADIN, beyaz devamı. */
+/** Video içi kanca bandı: beyaz zemin, dev kırmızı "ADINI BUL", altına siyah merak satırı. */
 function drawXxxHook(canvas: HTMLCanvasElement) {
   const ctx = canvas.getContext("2d");
   if (!ctx) return;
@@ -174,51 +174,48 @@ function drawXxxHook(canvas: HTMLCanvasElement) {
   const h = canvas.height;
   ctx.clearRect(0, 0, w, h);
 
-  // Solid black band — recompression-proof, maximum contrast.
+  // Solid white band — recompression-proof, pops against sky and army alike.
   ctx.save();
-  ctx.shadowColor = "rgba(0,0,0,0.55)";
-  ctx.shadowBlur = 26;
+  ctx.shadowColor = "rgba(0,0,0,0.5)";
+  ctx.shadowBlur = 24;
   ctx.shadowOffsetY = 10;
   roundRect(ctx, 26, 30, w - 52, h - 76, 34);
-  ctx.fillStyle = "#000";
+  ctx.fillStyle = "#ffffff";
   ctx.fill();
   ctx.restore();
 
-  ctx.textBaseline = "middle";
-  ctx.textAlign = "left";
-  const maxW = w - 180;
+  // Thin red keyline makes the band read as a deliberate alert card.
+  roundRect(ctx, 26, 30, w - 52, h - 76, 34);
+  ctx.lineWidth = 6;
+  ctx.strokeStyle = "#d40000";
+  ctx.stroke();
 
-  const fitFont = (parts: { text: string }[], start: number) => {
+  ctx.textBaseline = "middle";
+  ctx.textAlign = "center";
+  const maxW = w - 200;
+
+  const fitFont = (text: string, start: number, weight = 900) => {
     let size = start;
     for (; size > 40; size -= 2) {
-      ctx.font = `900 ${size}px Outfit, "Segoe UI", system-ui, sans-serif`;
-      const total = parts.reduce((acc, p) => acc + ctx.measureText(p.text).width, 0);
-      if (total <= maxW) break;
+      ctx.font = `${weight} ${size}px Outfit, "Segoe UI", system-ui, sans-serif`;
+      if (ctx.measureText(text).width <= maxW) break;
     }
     return size;
   };
 
-  const drawLine = (parts: { text: string; color: string }[], size: number, y: number) => {
-    ctx.font = `900 ${size}px Outfit, "Segoe UI", system-ui, sans-serif`;
-    const total = parts.reduce((acc, p) => acc + ctx.measureText(p.text).width, 0);
-    let x = (w - total) / 2;
-    for (const p of parts) {
-      ctx.fillStyle = p.color;
-      ctx.fillText(p.text, x, y);
-      x += ctx.measureText(p.text).width;
-    }
-  };
+  // Line 1: the command — huge, pure red, impossible to skip.
+  const line1 = "ADINI BUL";
+  const s1 = fitFont(line1, 168);
+  ctx.font = `900 ${s1}px Outfit, "Segoe UI", system-ui, sans-serif`;
+  ctx.fillStyle = "#d40000";
+  ctx.fillText(line1, w / 2, h / 2 - 42);
 
-  const line1 = [
-    { text: "ADIN", color: "#ffd60a" },
-    { text: " BU ORDUDA", color: "#ffffff" },
-  ];
-  const line2 = [{ text: "OLABİLİR", color: "#ffffff" }];
-  const s1 = fitFont(line1, 116);
-  const s2 = Math.min(fitFont(line2, 116), s1);
-  const cy = h / 2 - 22;
-  drawLine(line1, s1, cy - s1 * 0.62);
-  drawLine(line2, s2, cy + s2 * 0.66);
+  // Line 2: the curiosity gap — smaller, near-black, one glance to read.
+  const line2 = "bulamazsan sebebi var";
+  const s2 = Math.min(fitFont(line2, 62, 800), 62);
+  ctx.font = `800 ${s2}px Outfit, "Segoe UI", system-ui, sans-serif`;
+  ctx.fillStyle = "#141414";
+  ctx.fillText(line2, w / 2, h / 2 + s1 * 0.5 + 6);
 }
 
 function XxxHookPlate() {

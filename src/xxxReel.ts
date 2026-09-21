@@ -1,35 +1,31 @@
 import { lerpPose, type ShotCtx, type ShotPose } from "./shotModes";
 
 /**
- * XXX — discovery reels.
+ * XXX / VV — discovery reels.
  *
  * "xxx" (18s, unchanged): no text at all, the user overlays their own hook PNG.
- * "xxx1".."xxx4" (15s): same quality, different camera choreography, and the
- * hook banner (ADIN BU ORDUDA OLABİLİR, black band, yellow ADIN) is rendered
- * into the video on the top band — no manual PNG needed.
+ * "xxx3" (15s): falcon dive opener, hook banner rendered in-video.
+ * "vv1" (15s): retention build — 4 hard cuts in the first 3 seconds (flash montage),
+ * then the "ADINI BUL" name-scan game, then the hero reveal. Hook banner in-video.
  */
 export const XXX_ID = "xxx" as const;
-export const XXX1_ID = "xxx1" as const;
-export const XXX2_ID = "xxx2" as const;
 export const XXX3_ID = "xxx3" as const;
-export const XXX4_ID = "xxx4" as const;
+export const VV1_ID = "vv1" as const;
 
-export type XxxId = typeof XXX_ID | typeof XXX1_ID | typeof XXX2_ID | typeof XXX3_ID | typeof XXX4_ID;
+export type XxxId = typeof XXX_ID | typeof XXX3_ID | typeof VV1_ID;
 
 export const XXX_MODES: { id: XxxId; label: string }[] = [
   { id: XXX_ID, label: "xxx" },
-  { id: XXX1_ID, label: "xxx1" },
-  { id: XXX2_ID, label: "xxx2" },
   { id: XXX3_ID, label: "xxx3" },
-  { id: XXX4_ID, label: "xxx4" },
+  { id: VV1_ID, label: "vv1" },
 ];
 
 export const XXX_SECONDS = 18;
-/** xxx1..xxx4 clip length. */
+/** xxx3 / vv1 clip length. */
 export const XXXV_SECONDS = 15;
 
 export function isXxx(id: string | null | undefined): id is XxxId {
-  return id === XXX_ID || id === XXX1_ID || id === XXX2_ID || id === XXX3_ID || id === XXX4_ID;
+  return id === XXX_ID || id === XXX3_ID || id === VV1_ID;
 }
 
 export function xxxSeconds(id: XxxId) {
@@ -71,7 +67,7 @@ function lerpN(a: number, b: number, e: number) {
   return a + (b - a) * e;
 }
 
-/** Linear pose mix — caller supplies its own easing (lerpPose smoothstep'i hızlı açılışı yumuşatırdı). */
+/** Linear pose mix — caller supplies its own easing. */
 function mixPose(a: ShotPose, b: ShotPose, e: number): ShotPose {
   return {
     x: lerpN(a.x, b.x, e),
@@ -85,10 +81,8 @@ function mixPose(a: ShotPose, b: ShotPose, e: number): ShotPose {
 }
 
 export function sampleXxxCam(recT: number, ctx: ShotCtx, id: XxxId = XXX_ID): ShotPose {
-  if (id === XXX1_ID) return xxx1Cam(recT, ctx);
-  if (id === XXX2_ID) return xxx2Cam(recT, ctx);
   if (id === XXX3_ID) return xxx3Cam(recT, ctx);
-  if (id === XXX4_ID) return xxx4Cam(recT, ctx);
+  if (id === VV1_ID) return vv1Cam(recT, ctx);
   return xxxBaseCam(recT, ctx);
 }
 
@@ -127,77 +121,6 @@ function xxxBaseCam(recT: number, ctx: ShotCtx): ShotPose {
   return lerpPose(b4a, b4b, clamp01((t - 14) / Math.max(0.5, XXX_SECONDS - 14)));
 }
 
-/** xxx1 — kamçı geçiş: cephe boyunca hızlı süpürme + sert fren → yakın isimler → vinç → kale fonlu kayma. */
-function xxx1Cam(recT: number, ctx: ShotCtx): ShotPose {
-  const { form, castle, fit } = ctx;
-  const t = Math.max(0, recT);
-  const front = form.front;
-  const back = form.back;
-  const mid = form.midZ;
-  const halfW = Math.max(6, form.width * 0.5);
-
-  // Beat 1 (0–2.4s): warp strafe along the front ranks — faces and names whip past
-  // the lens at full speed, then the camera slams to a stop dead center.
-  const whipA = pose(halfW + 10, 3.4, front - 10.5, halfW * 0.4, 1.4, front + 2, 34);
-  const whipB = pose(-0.4, 2.8, front - 7.8, 0, 1.3, front + 1.5, 30);
-  if (t < 2.4) return withJitter(mixPose(whipA, whipB, easeOutQuart(t / 2.4)), settleJitter(t, 2.15));
-
-  // Beat 2 (2.4–5s): intimate slow push at the center — the name payoff, dead readable.
-  const b2a = pose(-0.4, 2.8, front - 7.8, 0, 1.3, front + 1.5, 30);
-  const b2b = pose(0.5, 2.7, front - 7.2, 0.2, 1.28, front + 1.5, 29);
-  if (t < 5) return withJitter(lerpPose(b2a, b2b, clamp01((t - 2.4) / 2.6)), settleJitter(t, 2.15));
-
-  // Beat 3 (5–10s): vertical crane straight up to a bird's eye over the whole army.
-  const b3a = pose(0, 7, front - 7, 0, 1.6, mid, 36);
-  const b3b = pose(0, Math.max(44, fit * 0.7), mid - 2, 0, 1.2, mid + 4, 48);
-  if (t < 10) return lerpPose(b3a, b3b, clamp01((t - 5) / 5));
-
-  // Beat 4 (10–15s): wide lateral glide behind the army, castle looming in the background.
-  const glide = halfW * 0.7 + Math.max(8, fit * 0.12);
-  const b4a = pose(glide, 16 + fit * 0.08, back + Math.max(14, fit * 0.34), 0, castle.midY * 0.3, castle.front + 4, 44);
-  const b4b = pose(-glide, 14 + fit * 0.07, back + Math.max(12, fit * 0.3), 0, castle.midY * 0.32, castle.front + 2, 42);
-  return lerpPose(b4a, b4b, clamp01((t - 10) / 5));
-}
-
-/** xxx2 — fırıldak yörünge: ilk 3 sn hızlı dönüş + fren → ağır destansı yörünge → yakın isim finali. */
-function xxx2Cam(recT: number, ctx: ShotCtx): ShotPose {
-  const { form, fit } = ctx;
-  const t = Math.max(0, recT);
-  const front = form.front;
-  const mid = form.midZ;
-  const halfW = Math.max(6, form.width * 0.5);
-
-  if (t < 11) {
-    // Angle timeline: +150° → +38° in the first 3s (whip spin, close and low),
-    // then +38° → -58° over the remaining 8s (slow, majestic).
-    let deg: number;
-    let y: number;
-    let radius = Math.max(halfW + 16, fit * 0.5);
-    if (t < 3) {
-      const e = easeOutQuart(t / 3);
-      deg = 150 - 112 * e;
-      y = 5.5 + 3.5 * e;
-      radius *= 0.82 + 0.18 * e; // starts tighter — pixels move faster
-    } else {
-      const u = clamp01((t - 3) / 8);
-      const e = u * u * (3 - 2 * u);
-      deg = 38 - 96 * e;
-      y = 9 + 11 * Math.sin(e * Math.PI);
-    }
-    const ang = (Math.PI / 180) * deg;
-    const x = Math.sin(ang) * radius;
-    const z = front - Math.cos(ang) * radius;
-    const j = settleJitter(t, 2.75, 0.2);
-    return withJitter(pose(x, y, z, 0, 1.8, mid, t < 3 ? 38 : 40 + 4 * clamp01((t - 3) / 8)), j);
-  }
-
-  // Final: close dolly across the front line — the name payoff.
-  const dollyX = Math.min(12, halfW * 0.38);
-  const fa = pose(-dollyX, 2.9, front - 8.2, -dollyX * 0.5, 1.35, front + 2, 32);
-  const fb = pose(dollyX * 0.6, 2.8, front - 7.8, dollyX * 0.3, 1.3, front + 2, 31);
-  return lerpPose(fa, fb, clamp01((t - 11) / 4));
-}
-
 /** xxx3 — şahin dalışı: gökten isimlere 2.8 sn'de çakılma + fren → isimler → tarama → yükseliş finali. */
 function xxx3Cam(recT: number, ctx: ShotCtx): ShotPose {
   const { form, castle, fit, castleFit } = ctx;
@@ -208,7 +131,6 @@ function xxx3Cam(recT: number, ctx: ShotCtx): ShotPose {
   const halfW = Math.max(6, form.width * 0.5);
 
   // Beat 1 (0–2.8s): plunge from the epic map view straight into the front line.
-  // The ground rushes up, names snap into focus, camera brakes hard.
   const diveA = pose(6, Math.max(85, castleFit * 0.65), mid + 26, 0, castle.midY * 0.4, (castle.midZ + mid) * 0.5, 50);
   const diveB = pose(3.2, 3, front - 9, 1.4, 1.35, front + 2, 31);
   if (t < 2.8) return withJitter(mixPose(diveA, diveB, easeOutQuart(t / 2.8)), settleJitter(t, 2.55, 0.2));
@@ -230,35 +152,68 @@ function xxx3Cam(recT: number, ctx: ShotCtx): ShotPose {
   return lerpPose(b4a, b4b, clamp01((t - 11) / 4));
 }
 
-/** xxx4 — surlardan atlayış: kale tepesinden orduya 2.6 sn'de pike + fren → isimler → alçak tarama → kahraman final. */
-function xxx4Cam(recT: number, ctx: ShotCtx): ShotPose {
+/**
+ * vv1 — flaş montaj + isim avı.
+ *
+ * 0–3s: dört sert kesme, her karede hızlı iç hareket. Beyin sahneyi çözemeden
+ * kare değişir; her kesme dikkati sıfırlar (pattern interrupt üstüne pattern
+ * interrupt). Banner aynı anda "ADINI BUL" görevini verir.
+ * 3–11s: isim avı — ön saflarda net okunur çift tarama; izleyici adını arar.
+ * 11–15s: geri çekilip yükselen kahraman final — ordu + kale.
+ */
+function vv1Cam(recT: number, ctx: ShotCtx): ShotPose {
   const { form, castle, fit, castleFit } = ctx;
   const t = Math.max(0, recT);
   const front = form.front;
+  const back = form.back;
   const mid = form.midZ;
   const gate = castle.front;
   const halfW = Math.max(6, form.width * 0.5);
 
-  // Beat 1 (0–2.6s): leap off the battlements — full-speed swoop from the wall top
-  // down to the front line, ground and army rushing at the lens, hard brake.
-  const swoopA = pose(3, castle.midY + 22, gate - 10, 0, 2.2, mid, 46);
-  const swoopB = pose(0.8, 3.1, front - 9.5, 0, 1.35, front + 2, 31);
-  if (t < 2.6) return withJitter(mixPose(swoopA, swoopB, easeOutQuart(t / 2.6)), settleJitter(t, 2.35, 0.2));
+  // ---- 0–3s: flash montage, hard cuts every 0.75s, fast motion inside each shot ----
+  if (t < 0.75) {
+    // Cut 1: extreme close, low angle at the front line — faces and names fill the frame.
+    const a = pose(0.6, 2.6, front - 6.8, 0.1, 1.45, front + 1.2, 30);
+    const b = pose(-0.5, 2.75, front - 7.6, -0.1, 1.35, front + 1.5, 29);
+    return mixPose(a, b, t / 0.75);
+  }
+  if (t < 1.5) {
+    // Cut 2: straight-down bird's eye, fast lateral slide over the ranks.
+    const a = pose(-7, Math.max(46, fit * 0.72), mid - 2, -1, 1.2, mid + 3, 46);
+    const b = pose(7, Math.max(42, fit * 0.66), mid + 2, 1, 1.2, mid + 3, 44);
+    return mixPose(a, b, (t - 0.75) / 0.75);
+  }
+  if (t < 2.25) {
+    // Cut 3: from the castle walls, swooping toward the army.
+    const a = pose(3, castle.midY + 20, gate - 9, 0, 2.2, mid, 46);
+    const b = pose(-1, castle.midY + 9, gate + 2, 0, 2, front, 42);
+    return mixPose(a, b, (t - 1.5) / 0.75);
+  }
+  if (t < 3) {
+    // Cut 4: massive wide — army and castle in one frame, fast push-in, then brake.
+    const heroDist = Math.max(castleFit * 0.55, fit * 0.5);
+    const a = pose(4, castle.midY + 52 + castleFit * 0.2, castle.midZ + heroDist + 30, 0, castle.midY * 0.55, (castle.midZ + mid) * 0.5, 44);
+    const b = pose(1, castle.midY + 40 + castleFit * 0.16, castle.midZ + heroDist + 8, 0, castle.midY * 0.5, (castle.midZ + mid) * 0.5, 41);
+    return withJitter(mixPose(a, b, easeOutQuart((t - 2.25) / 0.75)), settleJitter(t, 2.85, 0.18));
+  }
 
-  // Beat 2 (2.6–6s): settle close on the front ranks — names readable, slow drift in.
-  const b2a = pose(0.8, 3.1, front - 9.5, 0, 1.35, front + 2, 31);
-  const b2b = pose(-0.6, 2.9, front - 8.2, -0.2, 1.3, front + 1.8, 30);
-  if (t < 6) return withJitter(lerpPose(b2a, b2b, clamp01((t - 2.6) / 3.4)), settleJitter(t, 2.35, 0.2));
+  // ---- 3–11s: the name hunt — steady, crisp double scan across the front ranks ----
+  const scanX = Math.min(14, halfW * 0.42);
+  if (t < 7.2) {
+    // Pass 1: right to left, tight on the first rows.
+    const a = pose(scanX, 2.85, front - 8, scanX * 0.55, 1.35, front + 2.2, 32);
+    const b = pose(-scanX, 2.85, front - 8, -scanX * 0.55, 1.35, front + 2.2, 32);
+    return withJitter(mixPose(a, b, clamp01((t - 3) / 4.2)), settleJitter(t, 2.85, 0.18));
+  }
+  if (t < 11) {
+    // Pass 2: left to right, a touch higher and deeper — the next rows of names.
+    const a = pose(-scanX * 0.9, 3.6, front - 6.6, -scanX * 0.45, 1.6, front + 4, 33);
+    const b = pose(scanX * 0.9, 3.6, front - 6.6, scanX * 0.45, 1.6, front + 4, 33);
+    return mixPose(a, b, clamp01((t - 7.2) / 3.8));
+  }
 
-  // Beat 3 (6–10s): low lateral track along the front ranks, right to left — more names.
-  const dollyX = Math.min(12, halfW * 0.38);
-  const b3a = pose(dollyX, 2.9, front - 8.4, dollyX * 0.5, 1.35, front + 2.2, 32);
-  const b3b = pose(-dollyX, 2.9, front - 8.4, -dollyX * 0.5, 1.35, front + 2.2, 32);
-  if (t < 10) return lerpPose(b3a, b3b, clamp01((t - 6) / 4));
-
-  // Beat 4 (10–15s): hero wide from the flank — army and castle in one frame, slow drift.
-  const heroDist = Math.max(castleFit * 0.5, fit * 0.48);
-  const b4a = pose(heroDist * 0.4, castle.midY + 40 + castleFit * 0.16, castle.midZ + heroDist + 18, 0, castle.midY * 0.55, (castle.midZ + mid) * 0.5, 42);
-  const b4b = pose(-heroDist * 0.2, castle.midY + 34 + castleFit * 0.14, castle.midZ + heroDist + 2, 0, castle.midY * 0.5, (castle.midZ + mid) * 0.5, 40);
-  return lerpPose(b4a, b4b, clamp01((t - 10) / 5));
+  // ---- 11–15s: hero exit — rise and reveal the whole army with the castle ----
+  const b4a = pose(scanX * 0.5, 4.2, front - 8, 0, 1.6, mid, 34);
+  const b4b = pose(0, 26 + fit * 0.16, back + Math.max(16, fit * 0.4), 0, castle.midY * 0.3, (mid + gate) * 0.5, 46);
+  return lerpPose(b4a, b4b, clamp01((t - 11) / 4));
 }

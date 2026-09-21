@@ -785,12 +785,13 @@ export function AdminPage() {
               </button>
             ))}
           </div>
-          <label>xxx — {XXX_SECONDS}s / xxx1-4 — {XXXV_SECONDS}s</label>
+          <label>xxx — {XXX_SECONDS}s / xxx3 · vv1 — {XXXV_SECONDS}s</label>
           <p className="muted">
             Keşfet sinematikleri. xxx: yazısız, hook PNG’ni sen bindirirsin.
-            xxx1-4: “ADIN BU ORDUDA OLABİLİR” bandı videoya gömülü, üst bantta —
-            PNG gerekmez. xxx1 yaklaşma+vinç, xxx2 yörünge, xxx3 gökten dalış,
-            xxx4 kale gözünden. Hepsinde kapı kapalı, düşman çıkmaz, isimler okunaklı.
+            xxx3 ve vv1: beyaz bant + kırmızı “ADINI BUL / bulamazsan sebebi var”
+            videoya gömülü — PNG gerekmez. xxx3 gökten dalış. vv1: ilk 3 sn’de
+            4 sert kesme (flaş montaj), sonra isim avı taraması, kahraman final.
+            Hepsinde kapı kapalı, düşman çıkmaz, isimler okunaklı.
           </p>
           <div className="dur-pills shot-pills">
             {XXX_MODES.map((mode) => (
