@@ -257,6 +257,10 @@ function XxxHookPlate() {
       } else {
         scl = 1 + 0.006 * Math.sin(recT * 2.2); // barely-visible breathing keeps it alive
       }
+      // Re-grab pulse at 1.5s — a second hook inside the critical 3s window.
+      if (into > 1.35 && into < 1.72) {
+        scl += 0.045 * Math.sin(((into - 1.35) / 0.37) * Math.PI);
+      }
     }
     if (mat.current) mat.current.opacity = alpha;
     if (mesh.current) mesh.current.scale.set(scl, scl, 1);
