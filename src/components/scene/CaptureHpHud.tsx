@@ -221,8 +221,8 @@ function drawXxxHook(canvas: HTMLCanvasElement) {
 
 type AdHookPhase = "static" | "hook" | "off";
 
-/** Positive polarity typical config: light yellow/white + black/dark green. */
-const AD_PAPER = "#fff6d4";
+/** Warm yellow field (sympathetic arousal) + dark green ink (positive polarity). */
+const AD_PAPER = "#ffef9c";
 const AD_INK = "#0a3320";
 const AD_FONT = `Inter, Montserrat, Helvetica, Arial, sans-serif`;
 const AD_WEIGHT = 900;
