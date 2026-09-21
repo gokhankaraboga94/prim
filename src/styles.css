@@ -875,15 +875,18 @@ select:focus {
 }
 
 .reel-capture-frame {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: 1080px;
-  height: 1920px;
+  position: relative;
+  width: min(100vw, calc(100vh * 9 / 16));
   aspect-ratio: 9 / 16;
+  max-height: 100vh;
   background: #000;
-  transform-origin: center center;
-  transform: translate(-50%, -50%) scale(min(1, 100vw / 1080, 100vh / 1920));
+  overflow: hidden;
+}
+
+/* Kayıt tamponu 1080x1920 kalır; ekranda her zaman kutuya sığdır. */
+.reel-capture-frame canvas {
+  width: 100% !important;
+  height: 100% !important;
 }
 
 .reel-capture-hud,
