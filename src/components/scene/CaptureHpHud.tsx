@@ -221,9 +221,9 @@ function drawXxxHook(canvas: HTMLCanvasElement) {
 
 type AdHookPhase = "static" | "hook" | "off";
 
-/** Bright field → pupil stop-down. Warm, not chrome-white ad card. */
-const AD_PAPER = "#faf7f0";
-const AD_INK = "#7a0a0a";
+/** Positive polarity typical config: light yellow/white + black/dark green. */
+const AD_PAPER = "#fff6d4";
+const AD_INK = "#0a3320";
 const AD_FONT = `Inter, Montserrat, Helvetica, Arial, sans-serif`;
 const AD_WEIGHT = 900;
 
