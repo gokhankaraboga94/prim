@@ -221,8 +221,8 @@ function drawXxxHook(canvas: HTMLCanvasElement) {
 
 type AdHookPhase = "static" | "hook" | "off";
 
-/** High-arousal unique hue — pop-out against sky/grass, not an ad-card white. */
-const AD_RED = "#ff1208";
+/** Alert red that still clears 7:1 on near-black (WCAG optimum). #ff1208 is only ~5.3:1. */
+const AD_RED = "#ff6248";
 const AD_FONT = `Inter, Montserrat, Helvetica, Arial, sans-serif`;
 const AD_WEIGHT = 900;
 
@@ -277,14 +277,10 @@ function drawAdHook(canvas: HTMLCanvasElement, phase: AdHookPhase = "static") {
   ctx.shadowColor = "rgba(0,0,0,0.7)";
   ctx.shadowBlur = 36;
   ctx.shadowOffsetY = 8;
-  ctx.fillStyle = "rgba(0,0,0,0.68)";
+  ctx.fillStyle = "rgba(0,0,0,0.92)";
   roundRect(ctx, boxX, boxY, boxW, boxH, 28);
   ctx.fill();
   ctx.restore();
-  roundRect(ctx, boxX, boxY, boxW, boxH, 28);
-  ctx.strokeStyle = "rgba(255,18,8,0.35)";
-  ctx.lineWidth = 3;
-  ctx.stroke();
 
   const paint = (text: string, y: number, size: number) => {
     setType(size);
