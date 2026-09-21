@@ -130,9 +130,11 @@ export function xxxInstantHook(id: XxxId) {
   return id === HARIKA2_ID;
 }
 
-/** Thick red hook on frame 0–4, then off. */
-export function harika2TextPhase(recT: number): "hook" | "off" {
-  return recT < 4 ? "hook" : "off";
+/** 0–1.5s: 3-word glance. 1.5–4s: 7-word idea. Then off. */
+export function harika2TextPhase(recT: number): "scan" | "hook" | "off" {
+  if (recT < 1.5) return "scan";
+  if (recT < 4) return "hook";
+  return "off";
 }
 
 function pose(x: number, y: number, z: number, lx: number, ly: number, lz: number, fov: number): ShotPose {
