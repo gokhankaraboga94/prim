@@ -26,6 +26,7 @@ import { SAGA_MODES, isSaga, sagaDuration, type SagaId } from "../sagaReel";
 import { DISCOVER_ID, DISCOVER2_ID, DISCOVER3_ID, RAF2_ID, DISCOVER_MODE, DISCOVER2_MODE, DISCOVER3_MODE, RAF2_MODE, DISCOVER_SECONDS, DISCOVER3_SECONDS, RAF2_SECONDS, isDiscover, isDiscoverEngage, isDiscoverShelf, isDiscoverTrailer, type DiscoverId } from "../discoverReel";
 import { MIX_MODES, MIX_SECONDS, MIX9_SECONDS, isMix, isMix9, type MixId } from "../mixReel";
 import { COUNTDOWN_ID, COUNTDOWN_MODE, COUNTDOWN_SECONDS, isCountdown, type CountdownId } from "../countdownReel";
+import { XXX_ID, XXX_SECONDS, isXxx, type XxxId } from "../xxxReel";
 import { DEFEND_ID, DEFEND2_ID, DEFEND3_ID, DEFEND_MODE, DEFEND2_MODE, DEFEND3_MODE, DEFEND_SECONDS, DEFEND2_SECONDS, DEFEND3_SECONDS, isDefend, isDefend2, isDefend3, isDefendSortie, type DefendId } from "../defendReel";
 import { VS_ID, VS2_ID, VS_MODE, VS2_MODE, VS_SECONDS, VS2_SECONDS, isVs, isVs2, isVsMode, type VsId } from "../vsReel";
 import { unlockReelSfx } from "../reelSfx";
@@ -42,7 +43,7 @@ export function AdminPage() {
   const [reelSeconds, setReelSeconds] = useState<number>(7);
   const [reelText, setReelText] = useState(true);
   const [reelSkipCmd, setReelSkipCmd] = useState(false);
-  const [reelShot, setReelShot] = useState<ReelShot | PlanBId | SagaId | DiscoverId | MixId | CountdownId | DefendId | VsId | null>(null);
+  const [reelShot, setReelShot] = useState<ReelShot | PlanBId | SagaId | DiscoverId | MixId | CountdownId | DefendId | VsId | XxxId | null>(null);
   const [reelDay, setReelDay] = useState("1");
   const [capturing, setCapturing] = useState(false);
   const [editIndex, setEditIndex] = useState<number | null>(null);
@@ -476,6 +477,8 @@ export function AdminPage() {
                     ? [DEFEND2_SECONDS]
                   : isDefend(reelShot)
                     ? [DEFEND_SECONDS]
+                  : isXxx(reelShot)
+                    ? [XXX_SECONDS]
                   : isMix9(reelShot)
                     ? [MIX9_SECONDS]
                   : isMix(reelShot)
@@ -782,6 +785,25 @@ export function AdminPage() {
               </button>
             ))}
           </div>
+          <label>xxx — {XXX_SECONDS}s</label>
+          <p className="muted">
+            Keşfet için tam ekran sinematik: yakın isim geçişi → ordunun üstünden uçuş →
+            kale fonlu süpürme → kahraman final. Yazı ve kale canı yok; hook PNG’ni üst
+            banda sen bindirirsin. Kapı kapalı, düşman çıkmaz, isimler okunaklı.
+          </p>
+          <div className="dur-pills shot-pills">
+            <button
+              type="button"
+              className={reelShot === XXX_ID ? "on" : ""}
+              onClick={() => {
+                setReelShot((cur) => (cur === XXX_ID ? null : XXX_ID));
+                setReelSeconds(XXX_SECONDS);
+                setReelText(false);
+              }}
+            >
+              xxx
+            </button>
+          </div>
           <label>B planı — İsim avı</label>
           <p className="muted">
             Keşif izleyicisi kendi adını aramaz. İlk kare kale, yazı “bu isimler kaleyi
@@ -959,7 +981,7 @@ export function AdminPage() {
           seconds={captureSec}
           showTitles={reelText}
           skipCommander={reelSkipCmd || isDiscover(reelShot) || isCountdown(reelShot) || isDefend(reelShot) || isVsMode(reelShot)}
-          shotMode={reelShot === CINEMA_ID || isPlanB(reelShot) || isSaga(reelShot) || isDiscover(reelShot) || isCountdown(reelShot) || isDefend(reelShot) || isVsMode(reelShot) || isMix(reelShot) ? null : reelShot}
+          shotMode={reelShot === CINEMA_ID || isPlanB(reelShot) || isSaga(reelShot) || isDiscover(reelShot) || isCountdown(reelShot) || isDefend(reelShot) || isVsMode(reelShot) || isMix(reelShot) || isXxx(reelShot) ? null : reelShot}
           cinema={reelShot === CINEMA_ID}
           roster={isPlanB(reelShot) ? reelShot : null}
           saga={isSaga(reelShot) ? reelShot : null}
@@ -968,6 +990,7 @@ export function AdminPage() {
           defend={isDefend(reelShot) ? reelShot : null}
           vs={isVsMode(reelShot) ? reelShot : null}
           mix={isMix(reelShot) ? reelShot : null}
+          xxx={isXxx(reelShot)}
           rosterIds={isJoin(reelShot) ? captureJoinIds.current : null}
           day={Math.max(0, Math.floor(Number(reelDay)) || 0)}
           onRecorded={() => {

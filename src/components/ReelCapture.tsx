@@ -34,12 +34,13 @@ type ReelCaptureProps = {
   defend?: DefendId | null;
   vs?: VsId | null;
   mix?: MixId | null;
+  xxx?: boolean;
   rosterIds?: number[] | null;
   onRecorded?: () => void;
   onClose: () => void;
 };
 
-export function ReelCapture({ soldiers, names, commanders = [], level, pressure, hp, maxHp, seconds, showTitles = true, warLook = false, day = 0, skipCommander = false, shotMode = null, cinema = false, roster = null, saga = null, discover = null, countdown = null, defend = null, vs = null, mix = null, rosterIds = null, onRecorded, onClose }: ReelCaptureProps) {
+export function ReelCapture({ soldiers, names, commanders = [], level, pressure, hp, maxHp, seconds, showTitles = true, warLook = false, day = 0, skipCommander = false, shotMode = null, cinema = false, roster = null, saga = null, discover = null, countdown = null, defend = null, vs = null, mix = null, xxx = false, rosterIds = null, onRecorded, onClose }: ReelCaptureProps) {
   const clip = seconds;
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [phase, setPhase] = useState<"boot" | "rec" | "done" | "err">("boot");
@@ -132,7 +133,7 @@ export function ReelCapture({ soldiers, names, commanders = [], level, pressure,
             warLook={warLook}
             day={day}
             skipCommander={skipCommander || Boolean(discover) || Boolean(countdown) || Boolean(defend) || Boolean(vs)}
-            shotMode={cinema || roster || saga || discover || countdown || defend || vs || mix ? null : shotMode}
+            shotMode={cinema || roster || saga || discover || countdown || defend || vs || mix || xxx ? null : shotMode}
             cinema={cinema}
             roster={roster}
             saga={saga}
@@ -141,7 +142,8 @@ export function ReelCapture({ soldiers, names, commanders = [], level, pressure,
             defend={defend}
             vs={vs}
             mix={mix}
-            showTitles={showTitles && !mix}
+            xxx={xxx}
+            showTitles={showTitles && !mix && !xxx}
             rosterIds={rosterIds}
             onReady={(canvas) => {
               canvasRef.current = canvas;

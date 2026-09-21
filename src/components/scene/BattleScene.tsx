@@ -16,6 +16,7 @@ import { discoverGateRecT, sampleDiscover, type DiscoverId } from "../../discove
 import { countdownShake, sampleCountdown, type CountdownId } from "../../countdownReel";
 import { DEFEND2_SORTIE, isDefend3, isDefendSortie, sampleDefendCam, type DefendId } from "../../defendReel";
 import { isVs, isVs2, sampleVsCam, type VsId } from "../../vsReel";
+import { sampleXxxCam } from "../../xxxReel";
 import { MIX8_ID, MIX9_SLOW, isMix9, mixBodyPass, mixTagPass, sampleMixBottom, sampleMixTop, type MixId } from "../../mixReel";
 import { DefendRing } from "./DefendRing";
 import { VsFoes } from "./VsFoes";
@@ -52,6 +53,7 @@ type BattleSceneProps = {
   defend?: DefendId | null;
   vs?: VsId | null;
   mix?: MixId | null;
+  xxx?: boolean;
   rosterIds?: number[] | null;
   onReady?: (canvas: HTMLCanvasElement) => void;
 };
@@ -86,6 +88,7 @@ function CinematicCam({
   countdown = null,
   defend = null,
   vs = null,
+  xxx = false,
   rosterIds = null,
 }: {
   duration: number;
@@ -102,6 +105,7 @@ function CinematicCam({
   countdown?: CountdownId | null;
   defend?: DefendId | null;
   vs?: VsId | null;
+  xxx?: boolean;
   rosterIds?: number[] | null;
 }) {
   const look = useMemo(() => new THREE.Vector3(), []);
@@ -159,11 +163,13 @@ function CinematicCam({
       fov: 38,
     };
 
-    if (cinema || shotMode || roster || saga || discover || countdown || defend || vs) {
+    if (cinema || shotMode || roster || saga || discover || countdown || defend || vs || xxx) {
       const warm = clock.elapsedTime;
       const sampleT = warm < REEL_HOLD ? (warm / REEL_HOLD) * duration : recT;
       const ctx = { cmdZ, form, castle, fit, castleFit, level };
-      const pose = vs
+      const pose = xxx
+        ? sampleXxxCam(sampleT, ctx)
+        : vs
         ? sampleVsCam(sampleT, soldiers, level, vs)
         : defend
         ? sampleDefendCam(sampleT, soldiers, defend, level)
@@ -524,6 +530,7 @@ function SceneContent({
   defend = null,
   vs = null,
   mix = null,
+  xxx = false,
   rosterIds = null,
 }: BattleSceneProps) {
   const chiefs = effectiveCommanders(commanders, names);
@@ -541,7 +548,7 @@ function SceneContent({
       <SteelSky />
       <DayLights cinematic={cinematic} slim={Boolean(defend)} />
       <Terrain road={!defend && !field} cheap={Boolean(defend)} />
-      {!defend && !field && <Castle level={level} pressure={pressure} gateClosed={Boolean(countdown) || split || climb} wallFight={climb} />}
+      {!defend && !field && <Castle level={level} pressure={pressure} gateClosed={Boolean(countdown) || split || climb || xxx} wallFight={climb} />}
       {sortie && (
         <TimedVisible until={DEFEND2_SORTIE + 0.85}>
           <Castle level={level} pressure={pressure} forceGateOpen />
@@ -552,7 +559,7 @@ function SceneContent({
       ) : field ? (
         <VsFoes soldiers={soldiers} />
       ) : (
-        !roster && !split && !countdown && !vs && <SallyRaid soldiers={soldiers} commanders={chiefN} />
+        !roster && !split && !countdown && !vs && !xxx && <SallyRaid soldiers={soldiers} commanders={chiefN} />
       )}
       {climb && <VsLadders level={level} />}
       <Army count={soldiers} names={names} commanders={commanders} cinematic={cinematic} duration={duration} skipCommander={hideCmd} roster={roster} discover={discover} countdown={Boolean(countdown)} defend={Boolean(defend)} defend2={sortie} defend3={isDefend3(defend)} vs={field} vs2={climb} mix={split} mixSlow={isMix9(mix)} level={level} rosterIds={rosterIds} />
@@ -574,6 +581,7 @@ function SceneContent({
           countdown={countdown}
           defend={defend}
           vs={vs}
+          xxx={xxx}
           rosterIds={rosterIds}
         />
       ) : (
@@ -592,10 +600,10 @@ function SceneContent({
           zoomSpeed={1.85}
         />
       )}
-      {cinematic && !split && !countdown && !defend && !vs && maxHp != null && hp != null && (
+      {cinematic && !split && !countdown && !defend && !vs && !xxx && maxHp != null && hp != null && (
         <CaptureHpHud hp={hp} maxHp={maxHp} soldiers={soldiers} duration={duration ?? 8} skipCommander={hideCmd} cinema={cinema} roster={roster} discover={discover} />
       )}
-      {cinematic && showTitles && !split && !vs && (
+      {cinematic && showTitles && !split && !vs && !xxx && (
         <ReelTitles soldiers={soldiers} duration={duration ?? 8} day={day} skipCommander={hideCmd} cinema={cinema} roster={roster} saga={saga} discover={discover} countdown={countdown} defend={defend} names={names} rosterIds={rosterIds} />
       )}
       {cinematic && !split && <ReelVignette />}
@@ -645,6 +653,7 @@ function BattleSceneInner({
   defend = null,
   vs = null,
   mix = null,
+  xxx = false,
   rosterIds = null,
   onReady,
 }: BattleSceneProps) {
@@ -652,7 +661,7 @@ function BattleSceneInner({
   const hideCmd = skipCommander || Boolean(discover) || Boolean(countdown) || Boolean(defend) || Boolean(vs);
 
   useLayoutEffect(() => {
-    if (cinematic && mix) {
+    if (cinematic && (mix || xxx)) {
       setSallyOrigin(SALLY_START_DELAY - 90);
       setSwordStart(80);
     } else if (cinematic && roster) {
@@ -689,7 +698,7 @@ function BattleSceneInner({
       setSallyOrigin(0);
       setSwordStart(SWORD_START);
     };
-  }, [cinematic, cinema, duration, hideCmd, roster, saga, discover, countdown, defend, vs, mix]);
+  }, [cinematic, cinema, duration, hideCmd, roster, saga, discover, countdown, defend, vs, mix, xxx]);
 
   useEffect(() => {
     const onVis = () => setActive(!document.hidden);
@@ -752,6 +761,7 @@ function BattleSceneInner({
         defend={defend}
         vs={vs}
         mix={mix}
+        xxx={xxx}
         rosterIds={rosterIds}
       />
     </Canvas>
