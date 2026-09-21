@@ -221,9 +221,9 @@ function drawXxxHook(canvas: HTMLCanvasElement) {
 
 type AdHookPhase = "static" | "hook" | "off";
 
-/** Positive polarity: dark ink on light field — pupil constricts, letters sharpen. */
-const AD_PAPER = "#f2ead8";
-const AD_INK = "#8c0c0c";
+/** Bright field → pupil stop-down. Warm, not chrome-white ad card. */
+const AD_PAPER = "#faf7f0";
+const AD_INK = "#7a0a0a";
 const AD_FONT = `Inter, Montserrat, Helvetica, Arial, sans-serif`;
 const AD_WEIGHT = 900;
 
@@ -266,9 +266,9 @@ function drawAdHook(canvas: HTMLCanvasElement, phase: AdHookPhase = "static") {
   const sizes = lines.map((l) => fit(l.t, l.start));
   const y0 = h * 0.28;
   const ys = [y0, y0 + sizes[0] * 1.02, y0 + sizes[0] * 1.02 + sizes[1] * 1.04];
-  const top = ys[0] - sizes[0] * 0.62;
-  const bot = ys[2] + sizes[2] * 0.58;
-  const padX = w * 0.04;
+  const top = ys[0] - sizes[0] * 0.78;
+  const bot = ys[2] + sizes[2] * 0.72;
+  const padX = w * 0.03;
   const boxX = padX;
   const boxY = top;
   const boxW = w - padX * 2;
