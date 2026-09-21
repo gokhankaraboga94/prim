@@ -162,58 +162,59 @@ function xxx3Cam(recT: number, ctx: ShotCtx): ShotPose {
  * 11–15s: geri çekilip yükselen kahraman final — ordu + kale.
  */
 function vv1Cam(recT: number, ctx: ShotCtx): ShotPose {
-  const { form, castle, fit, castleFit } = ctx;
+  const { form, castle, fit } = ctx;
   const t = Math.max(0, recT);
   const front = form.front;
   const back = form.back;
   const mid = form.midZ;
   const gate = castle.front;
   const halfW = Math.max(6, form.width * 0.5);
+  const scanX = Math.min(13, halfW * 0.4);
+  // Keep every look target well off world-up so lookAt never degenerates
+  // (straight-down bird's eye crashed WebGL on iPhone → empty recording).
+  const lookY = 1.45;
 
-  // ---- 0–3s: flash montage, hard cuts every 0.75s, fast motion inside each shot ----
+  // ---- 0–3s: flash montage. Hard cuts, but only proven-safe side/front poses. ----
   if (t < 0.75) {
-    // Cut 1: extreme close, low angle at the front line — faces and names fill the frame.
-    const a = pose(0.6, 2.6, front - 6.8, 0.1, 1.45, front + 1.2, 30);
-    const b = pose(-0.5, 2.75, front - 7.6, -0.1, 1.35, front + 1.5, 29);
+    // Cut 1: extreme close names, slight lateral push.
+    const a = pose(scanX * 0.35, 2.9, front - 8.2, scanX * 0.18, lookY, front + 2, 32);
+    const b = pose(-scanX * 0.2, 2.85, front - 7.6, -0.15, lookY, front + 2.2, 31);
     return mixPose(a, b, t / 0.75);
   }
   if (t < 1.5) {
-    // Cut 2: straight-down bird's eye, fast lateral slide over the ranks.
-    const a = pose(-7, Math.max(46, fit * 0.72), mid - 2, -1, 1.2, mid + 3, 46);
-    const b = pose(7, Math.max(42, fit * 0.66), mid + 2, 1, 1.2, mid + 3, 44);
+    // Cut 2: opposite flank, still at name height — not a top-down.
+    const a = pose(-scanX - 4, 4.2, front - 5, -scanX * 0.3, 1.7, mid, 36);
+    const b = pose(scanX + 4, 5.4, front - 3, scanX * 0.2, 1.8, mid, 38);
     return mixPose(a, b, (t - 0.75) / 0.75);
   }
   if (t < 2.25) {
-    // Cut 3: from the castle walls, swooping toward the army.
-    const a = pose(3, castle.midY + 20, gate - 9, 0, 2.2, mid, 46);
-    const b = pose(-1, castle.midY + 9, gate + 2, 0, 2, front, 42);
+    // Cut 3: behind the army, castle in frame, fast lateral (xxx beat 3 family).
+    const sweep = halfW + Math.max(8, fit * 0.14);
+    const a = pose(sweep, 12, back + 14, -sweep * 0.12, 2.4, gate + 6, 40);
+    const b = pose(-sweep * 0.4, 13, back + 16, sweep * 0.06, 2.5, gate + 4, 41);
     return mixPose(a, b, (t - 1.5) / 0.75);
   }
   if (t < 3) {
-    // Cut 4: massive wide — army and castle in one frame, fast push-in, then brake.
-    const heroDist = Math.max(castleFit * 0.55, fit * 0.5);
-    const a = pose(4, castle.midY + 52 + castleFit * 0.2, castle.midZ + heroDist + 30, 0, castle.midY * 0.55, (castle.midZ + mid) * 0.5, 44);
-    const b = pose(1, castle.midY + 40 + castleFit * 0.16, castle.midZ + heroDist + 8, 0, castle.midY * 0.5, (castle.midZ + mid) * 0.5, 41);
-    return withJitter(mixPose(a, b, easeOutQuart((t - 2.25) / 0.75)), settleJitter(t, 2.85, 0.18));
+    // Cut 4: slam back to the front line and brake — name hunt starts here.
+    const a = pose(scanX, 3.1, front - 9, scanX * 0.45, lookY, front + 2.2, 33);
+    const b = pose(scanX * 0.15, 2.85, front - 8, 0.2, lookY, front + 2.2, 32);
+    return withJitter(mixPose(a, b, easeOutQuart((t - 2.25) / 0.75)), settleJitter(t, 2.85, 0.14));
   }
 
   // ---- 3–11s: the name hunt — steady, crisp double scan across the front ranks ----
-  const scanX = Math.min(14, halfW * 0.42);
   if (t < 7.2) {
-    // Pass 1: right to left, tight on the first rows.
-    const a = pose(scanX, 2.85, front - 8, scanX * 0.55, 1.35, front + 2.2, 32);
-    const b = pose(-scanX, 2.85, front - 8, -scanX * 0.55, 1.35, front + 2.2, 32);
-    return withJitter(mixPose(a, b, clamp01((t - 3) / 4.2)), settleJitter(t, 2.85, 0.18));
+    const a = pose(scanX, 2.85, front - 8, scanX * 0.5, lookY, front + 2.2, 32);
+    const b = pose(-scanX, 2.85, front - 8, -scanX * 0.5, lookY, front + 2.2, 32);
+    return withJitter(mixPose(a, b, clamp01((t - 3) / 4.2)), settleJitter(t, 2.85, 0.14));
   }
   if (t < 11) {
-    // Pass 2: left to right, a touch higher and deeper — the next rows of names.
-    const a = pose(-scanX * 0.9, 3.6, front - 6.6, -scanX * 0.45, 1.6, front + 4, 33);
-    const b = pose(scanX * 0.9, 3.6, front - 6.6, scanX * 0.45, 1.6, front + 4, 33);
+    const a = pose(-scanX * 0.9, 3.5, front - 7, -scanX * 0.4, 1.6, front + 4, 33);
+    const b = pose(scanX * 0.9, 3.5, front - 7, scanX * 0.4, 1.6, front + 4, 33);
     return mixPose(a, b, clamp01((t - 7.2) / 3.8));
   }
 
-  // ---- 11–15s: hero exit — rise and reveal the whole army with the castle ----
-  const b4a = pose(scanX * 0.5, 4.2, front - 8, 0, 1.6, mid, 34);
-  const b4b = pose(0, 26 + fit * 0.16, back + Math.max(16, fit * 0.4), 0, castle.midY * 0.3, (mid + gate) * 0.5, 46);
+  // ---- 11–15s: rise and reveal the whole army with the castle ----
+  const b4a = pose(scanX * 0.45, 4.4, front - 8.5, 0, 1.6, mid, 34);
+  const b4b = pose(0, 22 + fit * 0.12, back + Math.max(16, fit * 0.36), 0, 2.4, (mid + gate) * 0.5, 44);
   return lerpPose(b4a, b4b, clamp01((t - 11) / 4));
 }

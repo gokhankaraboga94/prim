@@ -277,7 +277,7 @@ function XxxHookPlate() {
 
 export function XxxHookHud() {
   return (
-    <Hud renderPriority={2}>
+    <Hud renderPriority={3}>
       <OrthographicCamera makeDefault position={[0, 0, 10]} />
       <XxxHookPlate />
     </Hud>

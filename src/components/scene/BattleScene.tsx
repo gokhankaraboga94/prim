@@ -109,7 +109,13 @@ function CinematicCam({
   rosterIds?: number[] | null;
 }) {
   const look = useMemo(() => new THREE.Vector3(), []);
+  const perspCam = useRef<THREE.PerspectiveCamera | null>(null);
   useFrame(({ camera, clock, size }) => {
+    if ((camera as THREE.PerspectiveCamera).isPerspectiveCamera) {
+      perspCam.current = camera as THREE.PerspectiveCamera;
+    }
+    const persp = perspCam.current;
+    if (!persp) return;
     const aspect = size.width / Math.max(1, size.height);
     const recT = Math.max(0, clock.elapsedTime - REEL_HOLD);
     const { cmd, turn, pullStart } = reelBeats(duration, skipCommander);
@@ -184,16 +190,16 @@ function CinematicCam({
             : cinema
               ? sampleCinema(sampleT, duration, ctx)
               : sampleShotMode(shotMode as ShotId, sampleT, duration, skipCommander, ctx);
-      const persp = camera as THREE.PerspectiveCamera;
       persp.fov = pose.fov;
-      if (defend || vs) {
-        persp.near = 1.2;
+      if (defend || vs || xxx) {
+        persp.near = 0.8;
         persp.far = 6000;
       }
       persp.updateProjectionMatrix();
-      camera.position.set(pose.x + shake, pose.y, pose.z);
+      persp.position.set(pose.x + shake, pose.y, pose.z);
       look.set(pose.lx + shake * 0.25, pose.ly, pose.lz);
-      camera.lookAt(look);
+      persp.up.set(0, 1, 0);
+      persp.lookAt(look);
       return;
     }
 
@@ -238,10 +244,9 @@ function CinematicCam({
       t = ease((recT - pullStart) / Math.max(0.5, duration - pullStart - 0.35));
     }
 
-    const persp = camera as THREE.PerspectiveCamera;
     persp.fov = from.fov + (to.fov - from.fov) * t;
     persp.updateProjectionMatrix();
-    camera.position.set(
+    persp.position.set(
       from.x + (to.x - from.x) * t + shake,
       from.y + (to.y - from.y) * t,
       from.z + (to.z - from.z) * t
@@ -251,7 +256,7 @@ function CinematicCam({
       from.ly + (to.ly - from.ly) * t,
       from.lz + (to.lz - from.lz) * t
     );
-    camera.lookAt(look);
+    persp.lookAt(look);
   });
   return null;
 }
