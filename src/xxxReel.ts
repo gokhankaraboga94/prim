@@ -11,13 +11,15 @@ import { lerpPose, type ShotCtx, type ShotPose } from "./shotModes";
 export const XXX_ID = "xxx" as const;
 export const XXX3_ID = "xxx3" as const;
 export const VV1_ID = "vv1" as const;
+export const VV2_ID = "vv2" as const;
 
-export type XxxId = typeof XXX_ID | typeof XXX3_ID | typeof VV1_ID;
+export type XxxId = typeof XXX_ID | typeof XXX3_ID | typeof VV1_ID | typeof VV2_ID;
 
 export const XXX_MODES: { id: XxxId; label: string }[] = [
   { id: XXX_ID, label: "xxx" },
   { id: XXX3_ID, label: "xxx3" },
   { id: VV1_ID, label: "vv1" },
+  { id: VV2_ID, label: "vv2" },
 ];
 
 export const XXX_SECONDS = 18;
@@ -25,7 +27,7 @@ export const XXX_SECONDS = 18;
 export const XXXV_SECONDS = 15;
 
 export function isXxx(id: string | null | undefined): id is XxxId {
-  return id === XXX_ID || id === XXX3_ID || id === VV1_ID;
+  return id === XXX_ID || id === XXX3_ID || id === VV1_ID || id === VV2_ID;
 }
 
 export function xxxSeconds(id: XxxId) {
@@ -35,6 +37,16 @@ export function xxxSeconds(id: XxxId) {
 /** Variants render the hook banner in-video; plain xxx stays clean. */
 export function xxxHasHook(id: XxxId) {
   return id !== XXX_ID;
+}
+
+/** Transparent 2-word caption — no white plate. */
+export function xxxClearHook(id: XxxId) {
+  return id === VV2_ID;
+}
+
+/** 4K drawing buffer (dpr 2 on 1080×1920). */
+export function xxxHiRes(id: XxxId) {
+  return id === VV2_ID;
 }
 
 function pose(x: number, y: number, z: number, lx: number, ly: number, lz: number, fov: number): ShotPose {
@@ -83,6 +95,7 @@ function mixPose(a: ShotPose, b: ShotPose, e: number): ShotPose {
 export function sampleXxxCam(recT: number, ctx: ShotCtx, id: XxxId = XXX_ID): ShotPose {
   if (id === XXX3_ID) return xxx3Cam(recT, ctx);
   if (id === VV1_ID) return vv1Cam(recT, ctx);
+  if (id === VV2_ID) return vv2Cam(recT, ctx);
   return xxxBaseCam(recT, ctx);
 }
 
@@ -217,4 +230,42 @@ function vv1Cam(recT: number, ctx: ShotCtx): ShotPose {
   const b4a = pose(scanX * 0.45, 4.4, front - 8.5, 0, 1.6, mid, 34);
   const b4b = pose(0, 22 + fit * 0.12, back + Math.max(16, fit * 0.36), 0, 2.4, (mid + gate) * 0.5, 44);
   return lerpPose(b4a, b4b, clamp01((t - 11) / 4));
+}
+
+/**
+ * vv2 — cocktail-party opener.
+ *
+ * Data: slow spectacle 56% skip, flash-cuts 65% skip. Both failed because the
+ * first 2s of the file were a warmup scrub of the whole clip, and the overlay
+ * was a white ad-card plus a 5-word command.
+ *
+ * This shot starts already inside the names (the only asset that is personally
+ * relevant on mute) and stays there for 3.4s with a crawl slow enough to read.
+ * Two words, no plate. Then the hunt continues, then a gentle scale reveal.
+ */
+function vv2Cam(recT: number, ctx: ShotCtx): ShotPose {
+  const { form, castle, fit } = ctx;
+  const t = Math.max(0, recT);
+  const front = form.front;
+  const back = form.back;
+  const mid = form.midZ;
+  const halfW = Math.max(6, form.width * 0.5);
+  const crawl = Math.min(7.2, halfW * 0.24);
+  const lookY = 1.4;
+
+  // 0–3.4s: already in the names. Tight FOV, eye-level, no cut.
+  // Lateral speed ~2 m/s so a handle stays on screen ~1s — long enough to read.
+  const a0 = pose(crawl, 2.7, front - 6.9, crawl * 0.38, lookY, front + 1.7, 26);
+  const a1 = pose(crawl * 0.12, 2.66, front - 6.7, 0.15, lookY, front + 1.85, 25);
+  if (t < 3.4) return lerpPose(a0, a1, clamp01(t / 3.4));
+
+  // 3.4–10.6s: keep hunting along the front rank — Zeigarnik, the search is on.
+  const b0 = pose(crawl * 0.12, 2.66, front - 6.7, 0.15, lookY, front + 1.85, 25);
+  const b1 = pose(-crawl, 2.74, front - 7.0, -crawl * 0.36, lookY, front + 2.0, 27);
+  if (t < 10.6) return lerpPose(b0, b1, clamp01((t - 3.4) / 7.2));
+
+  // 10.6–15s: rise just enough to prove it's an army, names still readable.
+  const c0 = pose(-crawl * 0.55, 3.2, front - 7.6, 0, 1.55, mid, 30);
+  const c1 = pose(0, 14 + fit * 0.06, back + Math.max(12, fit * 0.28), 0, 2.15, (mid + castle.front) * 0.55, 40);
+  return lerpPose(c0, c1, clamp01((t - 10.6) / 4.4));
 }

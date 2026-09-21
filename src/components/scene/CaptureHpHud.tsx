@@ -218,54 +218,80 @@ function drawXxxHook(canvas: HTMLCanvasElement) {
   ctx.fillText(line2, w / 2, h / 2 + s1 * 0.5 + 6);
 }
 
-function XxxHookPlate() {
+/** 2 words, no plate — TikTok caption: black stroke, red fill, transparent. */
+function drawClearHook(canvas: HTMLCanvasElement) {
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return;
+  const w = canvas.width;
+  const h = canvas.height;
+  ctx.clearRect(0, 0, w, h);
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  const text = "ADIN BURADA";
+  let size = Math.round(w * 0.125);
+  ctx.font = `900 ${size}px Outfit, "Segoe UI", system-ui, sans-serif`;
+  while (ctx.measureText(text).width > w * 0.9 && size > 52) {
+    size -= 4;
+    ctx.font = `900 ${size}px Outfit, "Segoe UI", system-ui, sans-serif`;
+  }
+  ctx.lineJoin = "round";
+  ctx.miterLimit = 2;
+  ctx.lineWidth = Math.max(22, size * 0.18);
+  ctx.strokeStyle = "rgba(0,0,0,0.94)";
+  ctx.fillStyle = "#e10600";
+  ctx.strokeText(text, w / 2, h * 0.55);
+  ctx.fillText(text, w / 2, h * 0.55);
+}
+
+function XxxHookPlate({ clear = false }: { clear?: boolean }) {
   const size = useThree((s) => s.size);
   const mat = useRef<THREE.MeshBasicMaterial>(null);
   const mesh = useRef<THREE.Mesh>(null);
   const tex = useMemo(() => {
     const c = document.createElement("canvas");
-    c.width = 1080;
-    c.height = 400;
-    drawXxxHook(c);
+    c.width = 2160;
+    c.height = clear ? 560 : 800;
+    if (clear) drawClearHook(c);
+    else drawXxxHook(c);
     const t = new THREE.CanvasTexture(c);
     t.colorSpace = THREE.SRGBColorSpace;
     t.minFilter = THREE.LinearFilter;
     t.magFilter = THREE.LinearFilter;
     return t;
-  }, []);
-  // Font geç yüklenirse ilk kare fallback ile çizilmiş olabilir; kısa süre yeniden çiz.
+  }, [clear]);
   const redraws = useRef(0);
 
   useFrame(({ clock }) => {
     const recT = clock.elapsedTime - REEL_HOLD;
     if (redraws.current < 3 && clock.elapsedTime > (redraws.current + 1) * 0.5) {
       redraws.current += 1;
-      drawXxxHook(tex.image as HTMLCanvasElement);
+      const c = tex.image as HTMLCanvasElement;
+      if (clear) drawClearHook(c);
+      else drawXxxHook(c);
       tex.needsUpdate = true;
     }
     let alpha = 0;
     let scl = 1;
     if (recT >= 0) {
       const into = recT;
-      alpha = into < 0.24 ? into / 0.24 : 1;
-      if (into < 0.38) {
+      alpha = into < 0.12 ? into / 0.12 : 1;
+      if (!clear && into < 0.38) {
         const u = into / 0.38;
         scl = 1.12 - 0.12 * (1 - (1 - u) * (1 - u));
-      } else {
-        scl = 1 + 0.006 * Math.sin(recT * 2.2); // barely-visible breathing keeps it alive
-      }
-      // Re-grab pulse at 1.5s — a second hook inside the critical 3s window.
-      if (into > 1.35 && into < 1.72) {
-        scl += 0.045 * Math.sin(((into - 1.35) / 0.37) * Math.PI);
+      } else if (!clear) {
+        scl = 1 + 0.006 * Math.sin(recT * 2.2);
+        if (into > 1.35 && into < 1.72) {
+          scl += 0.045 * Math.sin(((into - 1.35) / 0.37) * Math.PI);
+        }
       }
     }
     if (mat.current) mat.current.opacity = alpha;
     if (mesh.current) mesh.current.scale.set(scl, scl, 1);
   });
 
-  const width = size.width * 0.94;
-  const height = width * (400 / 1080);
-  const y = size.height / 2 - Math.max(64, size.height * 0.055) - height / 2;
+  const width = size.width * (clear ? 0.92 : 0.94);
+  const height = width * ((tex.image as HTMLCanvasElement).height / (tex.image as HTMLCanvasElement).width);
+  const y = size.height / 2 - Math.max(48, size.height * (clear ? 0.07 : 0.055)) - height / 2;
 
   return (
     <mesh ref={mesh} position={[0, y, 0]} renderOrder={30}>
@@ -275,11 +301,11 @@ function XxxHookPlate() {
   );
 }
 
-export function XxxHookHud() {
+export function XxxHookHud({ clear = false }: { clear?: boolean }) {
   return (
     <Hud renderPriority={3}>
       <OrthographicCamera makeDefault position={[0, 0, 10]} />
-      <XxxHookPlate />
+      <XxxHookPlate clear={clear} />
     </Hud>
   );
 }

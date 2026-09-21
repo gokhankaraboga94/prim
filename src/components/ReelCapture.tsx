@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { BattleScene } from "./scene/BattleScene";
 import { SceneErrorBoundary } from "./SceneErrorBoundary";
-import { recordCanvas, saveReelBlob, wait } from "../recordCanvas";
+import { recordCanvas, saveReelBlob, wait, REEL_HOLD } from "../recordCanvas";
+import { xxxHiRes, type XxxId } from "../xxxReel";
 import { reelSfxStream, unlockReelSfx } from "../reelSfx";
 import type { ShotId } from "../shotModes";
 import type { PlanBId } from "../rosterReel";
@@ -11,7 +12,6 @@ import type { MixId } from "../mixReel";
 import type { CountdownId } from "../countdownReel";
 import type { DefendId } from "../defendReel";
 import type { VsId } from "../vsReel";
-import type { XxxId } from "../xxxReel";
 
 type ReelCaptureProps = {
   soldiers: number;
@@ -64,13 +64,14 @@ export function ReelCapture({ soldiers, names, commanders = [], level, pressure,
         setPhase("err");
         return;
       }
-      await wait(280);
+      await wait(Math.round(REEL_HOLD * 1000) + 80);
       if (stop) return;
       setPhase("rec");
       try {
         await Promise.race([unlockReelSfx(), wait(1200)]);
         if (stop) return;
-        const recorded = await recordCanvas(canvas, clip, reelSfxStream());
+        const bits = xxx && xxxHiRes(xxx) ? 24_000_000 : 8_000_000;
+        const recorded = await recordCanvas(canvas, clip, reelSfxStream(), bits);
         if (stop) return;
         setBlob(recorded);
         setPreview(URL.createObjectURL(recorded));

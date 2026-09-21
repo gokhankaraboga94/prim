@@ -16,7 +16,7 @@ import { discoverGateRecT, sampleDiscover, type DiscoverId } from "../../discove
 import { countdownShake, sampleCountdown, type CountdownId } from "../../countdownReel";
 import { DEFEND2_SORTIE, isDefend3, isDefendSortie, sampleDefendCam, type DefendId } from "../../defendReel";
 import { isVs, isVs2, sampleVsCam, type VsId } from "../../vsReel";
-import { sampleXxxCam, xxxHasHook, type XxxId } from "../../xxxReel";
+import { sampleXxxCam, xxxClearHook, xxxHasHook, xxxHiRes, type XxxId } from "../../xxxReel";
 import { MIX8_ID, MIX9_SLOW, isMix9, mixBodyPass, mixTagPass, sampleMixBottom, sampleMixTop, type MixId } from "../../mixReel";
 import { DefendRing } from "./DefendRing";
 import { VsFoes } from "./VsFoes";
@@ -170,8 +170,7 @@ function CinematicCam({
     };
 
     if (cinema || shotMode || roster || saga || discover || countdown || defend || vs || xxx) {
-      const warm = clock.elapsedTime;
-      const sampleT = warm < REEL_HOLD ? (warm / REEL_HOLD) * duration : recT;
+      const sampleT = recT;
       const ctx = { cmdZ, form, castle, fit, castleFit, level };
       const pose = xxx
         ? sampleXxxCam(sampleT, ctx, xxx)
@@ -290,7 +289,7 @@ function MixSplitCam({
   useFrame(({ gl, scene, size, clock }) => {
     const aspect = size.width / Math.max(1, size.height * 0.5);
     const recT = Math.max(0, clock.elapsedTime - REEL_HOLD);
-    const sampleT = clock.elapsedTime < REEL_HOLD ? (clock.elapsedTime / REEL_HOLD) * duration : recT;
+    const sampleT = recT;
     const form = armyFrame(soldiers, commanders);
     const castle = castleFrame(level);
     const spanX = Math.max(form.width, 12);
@@ -567,7 +566,7 @@ function SceneContent({
         !roster && !split && !countdown && !vs && !xxx && <SallyRaid soldiers={soldiers} commanders={chiefN} />
       )}
       {climb && <VsLadders level={level} />}
-      <Army count={soldiers} names={names} commanders={commanders} cinematic={cinematic} duration={duration} skipCommander={hideCmd} roster={roster} discover={discover} countdown={Boolean(countdown)} defend={Boolean(defend)} defend2={sortie} defend3={isDefend3(defend)} vs={field} vs2={climb} mix={split} mixSlow={isMix9(mix)} level={level} rosterIds={rosterIds} />
+      <Army count={soldiers} names={names} commanders={commanders} cinematic={cinematic} duration={duration} skipCommander={hideCmd} roster={roster} discover={discover} countdown={Boolean(countdown)} defend={Boolean(defend)} defend2={sortie} defend3={isDefend3(defend)} vs={field} vs2={climb} mix={split} mixSlow={isMix9(mix)} nameHunt={Boolean(xxx)} level={level} rosterIds={rosterIds} />
       {cinematic && split ? (
         <MixSplitCam duration={duration ?? 15} soldiers={soldiers} level={level} commanders={chiefN} mix={mix!} />
       ) : cinematic ? (
@@ -611,7 +610,7 @@ function SceneContent({
       {cinematic && showTitles && !split && !vs && !xxx && (
         <ReelTitles soldiers={soldiers} duration={duration ?? 8} day={day} skipCommander={hideCmd} cinema={cinema} roster={roster} saga={saga} discover={discover} countdown={countdown} defend={defend} names={names} rosterIds={rosterIds} />
       )}
-      {cinematic && xxx && xxxHasHook(xxx) && <XxxHookHud />}
+      {cinematic && xxx && xxxHasHook(xxx) && <XxxHookHud clear={xxxClearHook(xxx)} />}
       {cinematic && !split && <ReelVignette />}
       {countdown && <CountdownFlash />}
       {cinematic && !discover && !countdown && !defend && !vs && !split && <ReelFade duration={duration ?? 8} />}
@@ -619,17 +618,19 @@ function SceneContent({
   );
 }
 
-function LockReelBuffer() {
+function LockReelBuffer({ dpr = 1 }: { dpr?: number }) {
   const gl = useThree((s) => s.gl);
   const set = useThree((s) => s.set);
   useLayoutEffect(() => {
-    gl.setPixelRatio(1);
+    gl.setPixelRatio(dpr);
     gl.setSize(REEL_WIDTH, REEL_HEIGHT, false);
     set({ size: { width: REEL_WIDTH, height: REEL_HEIGHT, top: 0, left: 0 } });
-  }, [gl, set]);
+  }, [gl, set, dpr]);
   useFrame(() => {
-    if (gl.domElement.width !== REEL_WIDTH || gl.domElement.height !== REEL_HEIGHT) {
-      gl.setPixelRatio(1);
+    const w = Math.floor(REEL_WIDTH * dpr);
+    const h = Math.floor(REEL_HEIGHT * dpr);
+    if (gl.domElement.width !== w || gl.domElement.height !== h) {
+      gl.setPixelRatio(dpr);
       gl.setSize(REEL_WIDTH, REEL_HEIGHT, false);
     }
   });
@@ -715,7 +716,7 @@ function BattleSceneInner({
   return (
     <Canvas
       shadows={!cinematic}
-      dpr={cinematic ? 1 : [1, 1.5]}
+      dpr={cinematic ? (xxx && xxxHiRes(xxx) ? 2 : 1) : [1, 1.5]}
       gl={{
         antialias: !defend,
         alpha: false,
@@ -737,13 +738,14 @@ function BattleSceneInner({
         gl.shadowMap.type = THREE.PCFSoftShadowMap;
         gl.setClearColor("#7eb6ee", 1);
         if (cinematic) {
-          gl.setPixelRatio(1);
+          const dpr = xxx && xxxHiRes(xxx) ? 2 : 1;
+          gl.setPixelRatio(dpr);
           gl.setSize(REEL_WIDTH, REEL_HEIGHT, false);
         }
         onReady?.(gl.domElement);
       }}
     >
-      {cinematic && <LockReelBuffer />}
+      {cinematic && <LockReelBuffer dpr={xxx && xxxHiRes(xxx) ? 2 : 1} />}
       <SceneContent
         soldiers={soldiers}
         names={names}

@@ -53,9 +53,9 @@ void main() {
 `;
 
 function pickCell(unique: number) {
-  if (unique <= 500) return { w: 192, h: 48, font: 24, cmd: 28 };
-  if (unique <= 1600) return { w: 160, h: 40, font: 20, cmd: 24 };
-  return { w: 128, h: 32, font: 16, cmd: 18 };
+  if (unique <= 400) return { w: 256, h: 64, font: 36, cmd: 42 };
+  if (unique <= 1200) return { w: 192, h: 48, font: 26, cmd: 32 };
+  return { w: 160, h: 40, font: 22, cmd: 26 };
 }
 
 function labelOf(item: NameItem) {
