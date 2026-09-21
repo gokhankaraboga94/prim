@@ -221,12 +221,12 @@ function drawXxxHook(canvas: HTMLCanvasElement) {
 
 type AdHookPhase = "static" | "hook" | "off";
 
-const AD_RED = "#e10600";
-/** Reels-safe stack: sans, black weight. Serif/script/100–300 die in IG compress. */
+/** High-arousal unique hue — pop-out against sky/grass, not an ad-card white. */
+const AD_RED = "#ff1208";
 const AD_FONT = `Inter, Montserrat, Helvetica, Arial, sans-serif`;
 const AD_WEIGHT = 900;
 
-/** TV / Reels super: thick red, no plate. */
+/** Salient red super: dark luminance island + thick stroke so fovea locks. */
 function drawAdHook(canvas: HTMLCanvasElement, phase: AdHookPhase = "static") {
   const ctx = canvas.getContext("2d");
   if (!ctx) return;
@@ -240,32 +240,53 @@ function drawAdHook(canvas: HTMLCanvasElement, phase: AdHookPhase = "static") {
   ctx.miterLimit = 2;
 
   const cx = w * 0.5;
-  const maxW = w * 0.9;
+  const maxW = w * 0.88;
+  const lines = [
+    { t: "TAKİPÇİLERİMLE", start: Math.round(w * 0.09) },
+    { t: "BİRLİKTE SAVAŞIYORUZ", start: Math.round(w * 0.072) },
+    { t: "SEN DE ORDUYA KATIL", start: Math.round(w * 0.078) },
+  ];
 
   const setType = (size: number) => {
     ctx.font = `${AD_WEIGHT} ${size}px ${AD_FONT}`;
-    ctx.letterSpacing = `${Math.round(size * 0.02)}px`;
+    ctx.letterSpacing = `${Math.round(size * 0.018)}px`;
   };
 
-  const paint = (text: string, y: number, start: number) => {
+  const fit = (text: string, start: number) => {
     let size = start;
     setType(size);
     while (ctx.measureText(text).width > maxW && size > 40) {
       size -= 3;
       setType(size);
     }
-    ctx.lineWidth = Math.max(22, size * 0.24);
-    ctx.strokeStyle = "rgba(0,0,0,0.95)";
-    ctx.fillStyle = AD_RED;
-    ctx.strokeText(text, cx, y);
-    ctx.fillText(text, cx, y);
     return size;
   };
 
-  const y0 = h * 0.3;
-  const s1 = paint("TAKİPÇİLERİMLE", y0, Math.round(w * 0.084));
-  const s2 = paint("BİRLİKTE SAVAŞIYORUZ", y0 + s1 * 1.08, Math.round(w * 0.07));
-  paint("SEN DE ORDUYA KATIL", y0 + s1 * 1.08 + s2 * 1.12, Math.round(w * 0.074));
+  const sizes = lines.map((l) => fit(l.t, l.start));
+  const y0 = h * 0.28;
+  const ys = [y0, y0 + sizes[0] * 1.02, y0 + sizes[0] * 1.02 + sizes[1] * 1.04];
+  const top = ys[0] - sizes[0] * 0.62;
+  const bot = ys[2] + sizes[2] * 0.58;
+  const padX = w * 0.04;
+  ctx.fillStyle = "rgba(0,0,0,0.52)";
+  roundRect(ctx, padX, top, w - padX * 2, bot - top, 28);
+  ctx.fill();
+
+  const paint = (text: string, y: number, size: number) => {
+    setType(size);
+    ctx.lineWidth = Math.max(26, size * 0.28);
+    ctx.strokeStyle = "rgba(0,0,0,0.96)";
+    ctx.strokeText(text, cx, y);
+    ctx.lineWidth = Math.max(8, size * 0.06);
+    ctx.strokeStyle = "rgba(40,0,0,0.7)";
+    ctx.strokeText(text, cx, y);
+    ctx.fillStyle = AD_RED;
+    ctx.fillText(text, cx, y);
+  };
+
+  paint(lines[0].t, ys[0], sizes[0]);
+  paint(lines[1].t, ys[1], sizes[1]);
+  paint(lines[2].t, ys[2], sizes[2]);
   ctx.letterSpacing = "0px";
 }
 
@@ -358,6 +379,12 @@ function XxxHookPlate({ variant = "banner", instant = false }: { variant?: "bann
       alpha = into < 0.14 ? into / 0.14 : 1;
     }
     if (mat.current) mat.current.opacity = alpha;
+    if (instant && mesh.current) {
+      // Sudden onset + size transient — bottom-up orienting, then hold.
+      let s = 1;
+      if (recT >= 0 && recT < 0.22) s = 1.12 - (recT / 0.22) * 0.12;
+      mesh.current.scale.set(s, s, 1);
+    }
   });
 
   const img = tex.image as HTMLCanvasElement;
