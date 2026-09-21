@@ -39,8 +39,12 @@ export function isXxx(id: string | null | undefined): id is XxxId {
   return id === XXX_ID || id === XXX3_ID || id === VV1_ID || id === VV2_ID || isHarikaFamily(id);
 }
 
+export const HARIKA2_SECONDS = 18;
+
 export function xxxSeconds(id: XxxId) {
-  return id === XXX_ID ? XXX_SECONDS : XXXV_SECONDS;
+  if (id === XXX_ID) return XXX_SECONDS;
+  if (id === HARIKA2_ID) return HARIKA2_SECONDS;
+  return XXXV_SECONDS;
 }
 
 /** Variants render the hook banner in-video; plain xxx stays clean. */
@@ -338,8 +342,9 @@ function harikaCam(recT: number, ctx: ShotCtx): ShotPose {
  *
  * Frame 0 is already the product: names fill the lens, super is on.
  * 0–1.8s: micro push only (alive, readable, no cut, no wide waste).
- * 1.8–9s: name crawl harvests watch time after they chose to stay.
- * 9–15s: square + mangonels + castle — completion / total watch time.
+ * 1.8–11s: name crawl harvests watch time after they chose to stay.
+ * 11–18s: square + mangonels + castle — completion / total watch time.
+ * 18s sits in the 15–30s bucket (45% avg view opens distribution; sub-15s wants 55%).
  */
 function harika2Cam(recT: number, ctx: ShotCtx): ShotPose {
   const { form, castle, fit } = ctx;
@@ -356,9 +361,9 @@ function harika2Cam(recT: number, ctx: ShotCtx): ShotPose {
 
   const huntA = pose(side * 0.08, 2.82, front - 6.85, 0.15, 1.38, front + 2.05, 25);
   const huntB = pose(-side * 0.7, 3.05, front - 7.4, -side * 0.2, 1.44, front + 2.4, 28);
-  if (t < 9) return lerpPose(huntA, huntB, clamp01((t - 1.8) / 7.2));
+  if (t < 11) return lerpPose(huntA, huntB, clamp01((t - 1.8) / 9.2));
 
   const riseA = pose(-side * 0.5, 4.2, front - 9, 0, 1.65, mid, 31);
   const riseB = pose(-7, 15 + fit * 0.04, back + Math.max(13, fit * 0.2), 2, 2.15, (mid + castle.front) * 0.55, 40);
-  return lerpPose(riseA, riseB, clamp01((t - 9) / 6));
+  return lerpPose(riseA, riseB, clamp01((t - 11) / 7));
 }

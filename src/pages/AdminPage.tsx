@@ -26,7 +26,7 @@ import { SAGA_MODES, isSaga, sagaDuration, type SagaId } from "../sagaReel";
 import { DISCOVER_ID, DISCOVER2_ID, DISCOVER3_ID, RAF2_ID, DISCOVER_MODE, DISCOVER2_MODE, DISCOVER3_MODE, RAF2_MODE, DISCOVER_SECONDS, DISCOVER3_SECONDS, RAF2_SECONDS, isDiscover, isDiscoverEngage, isDiscoverShelf, isDiscoverTrailer, type DiscoverId } from "../discoverReel";
 import { MIX_MODES, MIX_SECONDS, MIX9_SECONDS, isMix, isMix9, type MixId } from "../mixReel";
 import { COUNTDOWN_ID, COUNTDOWN_MODE, COUNTDOWN_SECONDS, isCountdown, type CountdownId } from "../countdownReel";
-import { XXX_MODES, XXX_SECONDS, XXXV_SECONDS, isXxx, xxxHideCmd, xxxSeconds, type XxxId } from "../xxxReel";
+import { HARIKA2_SECONDS, XXX_MODES, XXX_SECONDS, XXXV_SECONDS, isXxx, xxxHideCmd, xxxSeconds, type XxxId } from "../xxxReel";
 import { DEFEND_ID, DEFEND2_ID, DEFEND3_ID, DEFEND_MODE, DEFEND2_MODE, DEFEND3_MODE, DEFEND_SECONDS, DEFEND2_SECONDS, DEFEND3_SECONDS, isDefend, isDefend2, isDefend3, isDefendSortie, type DefendId } from "../defendReel";
 import { VS_ID, VS2_ID, VS_MODE, VS2_MODE, VS_SECONDS, VS2_SECONDS, isVs, isVs2, isVsMode, type VsId } from "../vsReel";
 import { unlockReelSfx } from "../reelSfx";
@@ -785,7 +785,7 @@ export function AdminPage() {
               </button>
             ))}
           </div>
-          <label>xxx — {XXX_SECONDS}s / xxx3 · vv1 · vv2 · harika · harika2 — {XXXV_SECONDS}s</label>
+          <label>xxx — {XXX_SECONDS}s / xxx3 · vv1 · vv2 · harika — {XXXV_SECONDS}s / harika2 — {HARIKA2_SECONDS}s</label>
           <p className="muted">
             Keşfet sinematikleri. xxx: yazısız. harika2: atlanma oranı mimarisi —
             ilk karede isim + yazı (1–2 sn karar penceresi), kare ordu, mancınık,
