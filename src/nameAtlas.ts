@@ -83,11 +83,11 @@ function paintCell(
   ctx.clearRect(x, y, w, h);
   if (!text) return 0;
   let size = commander ? cmdFont : font;
-  ctx.font = `800 ${size}px Outfit, system-ui, sans-serif`;
+  ctx.font = `800 ${size}px Inter, Montserrat, Helvetica, Arial, sans-serif`;
   let tw = ctx.measureText(text).width;
   while (tw + 14 > w && size > 10) {
     size -= 1;
-    ctx.font = `800 ${size}px Outfit, system-ui, sans-serif`;
+    ctx.font = `800 ${size}px Inter, Montserrat, Helvetica, Arial, sans-serif`;
     tw = ctx.measureText(text).width;
   }
   ctx.textAlign = "center";

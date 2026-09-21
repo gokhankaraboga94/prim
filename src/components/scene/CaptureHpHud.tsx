@@ -1,4 +1,4 @@
-import { useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import { Hud, OrthographicCamera } from "@react-three/drei";
 import * as THREE from "three";
@@ -223,7 +223,9 @@ type AdHookPhase = "static" | "scan" | "hook" | "cta" | "proof";
 
 const AD_RED = "#e10600";
 const AD_BANG = "#ffd60a";
-const AD_FONT = `Outfit, "Segoe UI", system-ui, sans-serif`;
+/** Reels-safe stack: sans, black weight. Serif/script/100–300 die in IG compress. */
+const AD_FONT = `Inter, Montserrat, Helvetica, Arial, sans-serif`;
+const AD_WEIGHT = 900;
 
 /** IG Reels chrome on 1080×1920: top username/audio, right like-column. */
 const IG_SAFE = { maxFrac: 0.8, cxFrac: 0.48 };
@@ -244,7 +246,7 @@ function drawAdHook(canvas: HTMLCanvasElement, phase: AdHookPhase = "static") {
   const maxW = w * IG_SAFE.maxFrac;
 
   const setType = (size: number) => {
-    ctx.font = `900 ${size}px ${AD_FONT}`;
+    ctx.font = `${AD_WEIGHT} ${size}px ${AD_FONT}`;
     ctx.letterSpacing = `${Math.round(size * 0.028)}px`;
   };
 
@@ -357,6 +359,25 @@ function XxxHookPlate({ variant = "banner", instant = false }: { variant?: "bann
   }, [variant, instant]);
   const redraws = useRef(0);
   const lastPhase = useRef<AdHookPhase>(instant ? "scan" : "static");
+
+  useEffect(() => {
+    let alive = true;
+    const paint = () => {
+      if (!alive) return;
+      const c = tex.image as HTMLCanvasElement;
+      if (variant === "ad") drawAdHook(c, lastPhase.current);
+      else if (variant === "clear") drawClearHook(c);
+      else drawXxxHook(c);
+      tex.needsUpdate = true;
+    };
+    void Promise.all([
+      document.fonts.load(`${AD_WEIGHT} 80px Inter`),
+      document.fonts.load("800 80px Montserrat"),
+    ]).then(paint, paint);
+    return () => {
+      alive = false;
+    };
+  }, [tex, variant]);
 
   useFrame(({ clock }) => {
     const recT = clock.elapsedTime - REEL_HOLD;
