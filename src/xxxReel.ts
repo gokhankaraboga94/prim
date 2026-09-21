@@ -14,8 +14,9 @@ export const VV1_ID = "vv1" as const;
 export const VV2_ID = "vv2" as const;
 
 export const HARIKA_ID = "harika" as const;
+export const HARIKA2_ID = "harika2" as const;
 
-export type XxxId = typeof XXX_ID | typeof XXX3_ID | typeof VV1_ID | typeof VV2_ID | typeof HARIKA_ID;
+export type XxxId = typeof XXX_ID | typeof XXX3_ID | typeof VV1_ID | typeof VV2_ID | typeof HARIKA_ID | typeof HARIKA2_ID;
 
 export const XXX_MODES: { id: XxxId; label: string }[] = [
   { id: XXX_ID, label: "xxx" },
@@ -23,14 +24,19 @@ export const XXX_MODES: { id: XxxId; label: string }[] = [
   { id: VV1_ID, label: "vv1" },
   { id: VV2_ID, label: "vv2" },
   { id: HARIKA_ID, label: "harika" },
+  { id: HARIKA2_ID, label: "harika2" },
 ];
 
 export const XXX_SECONDS = 18;
 /** xxx3 / vv1 clip length. */
 export const XXXV_SECONDS = 15;
 
+function isHarikaFamily(id: string | null | undefined) {
+  return id === HARIKA_ID || id === HARIKA2_ID;
+}
+
 export function isXxx(id: string | null | undefined): id is XxxId {
-  return id === XXX_ID || id === XXX3_ID || id === VV1_ID || id === VV2_ID || id === HARIKA_ID;
+  return id === XXX_ID || id === XXX3_ID || id === VV1_ID || id === VV2_ID || isHarikaFamily(id);
 }
 
 export function xxxSeconds(id: XxxId) {
@@ -44,27 +50,32 @@ export function xxxHasHook(id: XxxId) {
 
 /** Transparent 2-word caption — no white plate. */
 export function xxxClearHook(id: XxxId) {
-  return id === VV2_ID || id === HARIKA_ID;
+  return id === VV2_ID || isHarikaFamily(id);
 }
 
 export function xxxAdHook(id: XxxId) {
-  return id === HARIKA_ID;
+  return isHarikaFamily(id);
 }
 
 export function xxxHiRes(id: XxxId) {
-  return id === VV2_ID || id === HARIKA_ID;
+  return id === VV2_ID || isHarikaFamily(id);
 }
 
 export function xxxHideCmd(id: XxxId) {
-  return id === HARIKA_ID;
+  return isHarikaFamily(id);
 }
 
 export function xxxQuiet(id: XxxId) {
-  return id === HARIKA_ID;
+  return isHarikaFamily(id);
 }
 
 export function xxxSquare(id: XxxId) {
-  return id === HARIKA_ID;
+  return isHarikaFamily(id);
+}
+
+/** No fade-in: skip-rate window is 1–2s, the super must be on frame 0. */
+export function xxxInstantHook(id: XxxId) {
+  return id === HARIKA2_ID;
 }
 
 function pose(x: number, y: number, z: number, lx: number, ly: number, lz: number, fov: number): ShotPose {
@@ -115,6 +126,7 @@ export function sampleXxxCam(recT: number, ctx: ShotCtx, id: XxxId = XXX_ID): Sh
   if (id === VV1_ID) return vv1Cam(recT, ctx);
   if (id === VV2_ID) return vv2Cam(recT, ctx);
   if (id === HARIKA_ID) return harikaCam(recT, ctx);
+  if (id === HARIKA2_ID) return harika2Cam(recT, ctx);
   return xxxBaseCam(recT, ctx);
 }
 
@@ -319,4 +331,34 @@ function harikaCam(recT: number, ctx: ShotCtx): ShotPose {
   const c0 = pose(-side * 0.4, 5.5, front - 10, 0, 1.8, mid, 32);
   const c1 = pose(-8, 16 + fit * 0.04, back + Math.max(14, fit * 0.22), 2, 2.2, (mid + castle.front) * 0.55, 40);
   return lerpPose(c0, c1, clamp01((t - 10) / 5));
+}
+
+/**
+ * harika2 — skip-rate architecture (decision in 1–2s, not a 3s view count).
+ *
+ * Frame 0 is already the product: names fill the lens, super is on.
+ * 0–1.8s: micro push only (alive, readable, no cut, no wide waste).
+ * 1.8–9s: name crawl harvests watch time after they chose to stay.
+ * 9–15s: square + mangonels + castle — completion / total watch time.
+ */
+function harika2Cam(recT: number, ctx: ShotCtx): ShotPose {
+  const { form, castle, fit } = ctx;
+  const t = Math.max(0, recT);
+  const front = form.front;
+  const back = form.back;
+  const mid = form.midZ;
+  const halfW = Math.max(6, form.width * 0.5);
+  const side = Math.min(10, halfW * 0.34);
+
+  const lockA = pose(side * 0.28, 2.88, front - 7.15, side * 0.12, 1.4, front + 1.9, 26);
+  const lockB = pose(side * 0.08, 2.82, front - 6.85, 0.15, 1.38, front + 2.05, 25);
+  if (t < 1.8) return lerpPose(lockA, lockB, clamp01(t / 1.8));
+
+  const huntA = pose(side * 0.08, 2.82, front - 6.85, 0.15, 1.38, front + 2.05, 25);
+  const huntB = pose(-side * 0.7, 3.05, front - 7.4, -side * 0.2, 1.44, front + 2.4, 28);
+  if (t < 9) return lerpPose(huntA, huntB, clamp01((t - 1.8) / 7.2));
+
+  const riseA = pose(-side * 0.5, 4.2, front - 9, 0, 1.65, mid, 31);
+  const riseB = pose(-7, 15 + fit * 0.04, back + Math.max(13, fit * 0.2), 2, 2.15, (mid + castle.front) * 0.55, 40);
+  return lerpPose(riseA, riseB, clamp01((t - 9) / 6));
 }

@@ -304,7 +304,7 @@ function drawClearHook(canvas: HTMLCanvasElement) {
   ctx.fillText(text, w / 2, h * 0.55);
 }
 
-function XxxHookPlate({ variant = "banner" }: { variant?: "banner" | "clear" | "ad" }) {
+function XxxHookPlate({ variant = "banner", instant = false }: { variant?: "banner" | "clear" | "ad"; instant?: boolean }) {
   const size = useThree((s) => s.size);
   const mat = useRef<THREE.MeshBasicMaterial>(null);
   const mesh = useRef<THREE.Mesh>(null);
@@ -334,7 +334,8 @@ function XxxHookPlate({ variant = "banner" }: { variant?: "banner" | "clear" | "
       tex.needsUpdate = true;
     }
     let alpha = 0;
-    if (recT >= 0) {
+    if (instant) alpha = recT >= -0.05 ? 1 : 0;
+    else if (recT >= 0) {
       const into = recT;
       alpha = into < 0.14 ? into / 0.14 : 1;
     }
@@ -358,11 +359,11 @@ function XxxHookPlate({ variant = "banner" }: { variant?: "banner" | "clear" | "
   );
 }
 
-export function XxxHookHud({ variant = "banner" }: { variant?: "banner" | "clear" | "ad" }) {
+export function XxxHookHud({ variant = "banner", instant = false }: { variant?: "banner" | "clear" | "ad"; instant?: boolean }) {
   return (
     <Hud renderPriority={3}>
       <OrthographicCamera makeDefault position={[0, 0, 10]} />
-      <XxxHookPlate variant={variant} />
+      <XxxHookPlate variant={variant} instant={instant} />
     </Hud>
   );
 }

@@ -785,10 +785,11 @@ export function AdminPage() {
               </button>
             ))}
           </div>
-          <label>xxx — {XXX_SECONDS}s / xxx3 · vv1 · vv2 · harika — {XXXV_SECONDS}s</label>
+          <label>xxx — {XXX_SECONDS}s / xxx3 · vv1 · vv2 · harika · harika2 — {XXXV_SECONDS}s</label>
           <p className="muted">
-            Keşfet sinematikleri. xxx: yazısız. harika: TV alt bant, kırmızı yazı + sarı !,
-            komutan yok, ok/yay sessiz, 4K, ilk 4 sn yavaş yaklaşma. Kapı kapalı.
+            Keşfet sinematikleri. xxx: yazısız. harika2: atlanma oranı mimarisi —
+            ilk karede isim + yazı (1–2 sn karar penceresi), kare ordu, mancınık,
+            komutan yok, sessiz, 4K. Kapı kapalı.
           </p>
           <div className="dur-pills shot-pills">
             {XXX_MODES.map((mode) => (
