@@ -221,9 +221,9 @@ function drawXxxHook(canvas: HTMLCanvasElement) {
 
 type AdHookPhase = "static" | "hook" | "off";
 
-/** Highest natural pair: gold-yellow field + matte black/brown ink. */
+/** Short promo: chromatic field + achromatic ink. Light green is long-read only. */
 const AD_PAPER = "#ffd96a";
-const AD_INK = "#1c120c";
+const AD_INK = "#141414";
 const AD_FONT = `Inter, Montserrat, Helvetica, Arial, sans-serif`;
 const AD_WEIGHT = 900;
 
