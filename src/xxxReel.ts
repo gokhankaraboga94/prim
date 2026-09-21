@@ -338,13 +338,11 @@ function harikaCam(recT: number, ctx: ShotCtx): ShotPose {
 }
 
 /**
- * harika2 — skip-rate architecture (decision in 1–2s, not a 3s view count).
+ * harika2 — skip-rate + pattern-interrupt architecture.
  *
- * Frame 0 is already the product: names fill the lens, super is on.
- * 0–1.5s: in media res, almost still — no intro-fatigue crane.
- * 1.5–11s: name crawl harvests watch time after they chose to stay.
- * 11–18s: square + mangonels + castle — completion / total watch time.
- * 18s sits in the 15–30s bucket (45% avg view opens distribution; sub-15s wants 55%).
+ * 0–1.5s: in media res, almost still, super on (hook window — no cuts).
+ * Then a hard visual change every ~2.5s so the mind cannot go passive.
+ * 18s sits in the 15–30s bucket (45% avg view).
  */
 function harika2Cam(recT: number, ctx: ShotCtx): ShotPose {
   const { form, castle, fit } = ctx;
@@ -355,17 +353,37 @@ function harika2Cam(recT: number, ctx: ShotCtx): ShotPose {
   const halfW = Math.max(6, form.width * 0.5);
   const side = Math.min(10, halfW * 0.34);
 
-  // In media res: already inside the names. No logo, no crane, no slow "intro"
-  // move — those are intro-fatigue skips. Tiny drift only so it isn't a still.
   const lockA = pose(0.55, 2.72, front - 6.45, 0.18, 1.36, front + 1.7, 24);
   const lockB = pose(0.25, 2.7, front - 6.35, 0.08, 1.35, front + 1.75, 24);
   if (t < 1.5) return lerpPose(lockA, lockB, clamp01(t / 1.5));
 
-  const huntA = pose(0.25, 2.7, front - 6.35, 0.08, 1.35, front + 1.75, 24);
-  const huntB = pose(-side * 0.7, 3.05, front - 7.4, -side * 0.2, 1.44, front + 2.4, 28);
-  if (t < 11) return lerpPose(huntA, huntB, clamp01((t - 1.5) / 9.5));
+  // Interrupt 1 (1.5–4): punch-in zoom on the same rank.
+  const z0 = pose(0.25, 2.7, front - 6.35, 0.08, 1.35, front + 1.75, 24);
+  const z1 = pose(-0.2, 2.62, front - 5.85, -0.05, 1.32, front + 1.55, 22);
+  if (t < 4) return lerpPose(z0, z1, clamp01((t - 1.5) / 2.5));
 
-  const riseA = pose(-side * 0.5, 4.2, front - 9, 0, 1.65, mid, 31);
-  const riseB = pose(-7, 15 + fit * 0.04, back + Math.max(13, fit * 0.2), 2, 2.15, (mid + castle.front) * 0.55, 40);
-  return lerpPose(riseA, riseB, clamp01((t - 11) / 7));
+  // Interrupt 2 (4–6.5): cut — left 3/4 name crawl.
+  const l0 = pose(-side * 0.55, 3.0, front - 7.2, -side * 0.18, 1.42, front + 2.1, 28);
+  const l1 = pose(-side * 0.15, 2.95, front - 6.9, -0.1, 1.4, front + 2.0, 27);
+  if (t < 6.5) return lerpPose(l0, l1, clamp01((t - 4) / 2.5));
+
+  // Interrupt 3 (6.5–9): cut — right 3/4, one mangonel in frame.
+  const r0 = pose(side + 3.2, 3.6, front - 8.4, side * 0.15, 1.55, front + 3.2, 30);
+  const r1 = pose(side * 0.4, 3.2, front - 7.4, 0.3, 1.45, front + 2.4, 28);
+  if (t < 9) return lerpPose(r0, r1, clamp01((t - 6.5) / 2.5));
+
+  // Interrupt 4 (9–11.5): cut — opposite front scan.
+  const s0 = pose(side * 0.65, 2.85, front - 7.0, side * 0.22, 1.38, front + 1.9, 26);
+  const s1 = pose(-side * 0.45, 2.9, front - 7.1, -side * 0.16, 1.4, front + 2.0, 27);
+  if (t < 11.5) return lerpPose(s0, s1, clamp01((t - 9) / 2.5));
+
+  // Interrupt 5 (11.5–14): cut — elevated square (B-roll of the block).
+  const q0 = pose(side * 0.8, 7.2, front - 12, 0, 1.7, mid, 34);
+  const q1 = pose(-side * 0.3, 8.4, front - 11, 0, 1.85, mid, 36);
+  if (t < 14) return lerpPose(q0, q1, clamp01((t - 11.5) / 2.5));
+
+  // Interrupt 6 (14–18): rise — army, mangonels, castle (watch-time close).
+  const e0 = pose(-side * 0.4, 6.5, front - 10, 0, 1.75, mid, 33);
+  const e1 = pose(-7, 15 + fit * 0.04, back + Math.max(13, fit * 0.2), 2, 2.15, (mid + castle.front) * 0.55, 40);
+  return lerpPose(e0, e1, clamp01((t - 14) / 4));
 }
