@@ -11,6 +11,7 @@ import type { MixId } from "../mixReel";
 import type { CountdownId } from "../countdownReel";
 import type { DefendId } from "../defendReel";
 import type { VsId } from "../vsReel";
+import type { XxxId } from "../xxxReel";
 
 type ReelCaptureProps = {
   soldiers: number;
@@ -34,13 +35,13 @@ type ReelCaptureProps = {
   defend?: DefendId | null;
   vs?: VsId | null;
   mix?: MixId | null;
-  xxx?: boolean;
+  xxx?: XxxId | null;
   rosterIds?: number[] | null;
   onRecorded?: () => void;
   onClose: () => void;
 };
 
-export function ReelCapture({ soldiers, names, commanders = [], level, pressure, hp, maxHp, seconds, showTitles = true, warLook = false, day = 0, skipCommander = false, shotMode = null, cinema = false, roster = null, saga = null, discover = null, countdown = null, defend = null, vs = null, mix = null, xxx = false, rosterIds = null, onRecorded, onClose }: ReelCaptureProps) {
+export function ReelCapture({ soldiers, names, commanders = [], level, pressure, hp, maxHp, seconds, showTitles = true, warLook = false, day = 0, skipCommander = false, shotMode = null, cinema = false, roster = null, saga = null, discover = null, countdown = null, defend = null, vs = null, mix = null, xxx = null, rosterIds = null, onRecorded, onClose }: ReelCaptureProps) {
   const clip = seconds;
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [phase, setPhase] = useState<"boot" | "rec" | "done" | "err">("boot");

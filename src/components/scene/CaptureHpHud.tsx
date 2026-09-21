@@ -166,6 +166,123 @@ export function CaptureHpHud({ overlay, ...props }: CaptureHpHudProps) {
   );
 }
 
+/** "kanca-hook-siyah" PNG'sinin birebir video içi çizimi: siyah bant, sarı ADIN, beyaz devamı. */
+function drawXxxHook(canvas: HTMLCanvasElement) {
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return;
+  const w = canvas.width;
+  const h = canvas.height;
+  ctx.clearRect(0, 0, w, h);
+
+  // Solid black band — recompression-proof, maximum contrast.
+  ctx.save();
+  ctx.shadowColor = "rgba(0,0,0,0.55)";
+  ctx.shadowBlur = 26;
+  ctx.shadowOffsetY = 10;
+  roundRect(ctx, 26, 30, w - 52, h - 76, 34);
+  ctx.fillStyle = "#000";
+  ctx.fill();
+  ctx.restore();
+
+  ctx.textBaseline = "middle";
+  ctx.textAlign = "left";
+  const maxW = w - 180;
+
+  const fitFont = (parts: { text: string }[], start: number) => {
+    let size = start;
+    for (; size > 40; size -= 2) {
+      ctx.font = `900 ${size}px Outfit, "Segoe UI", system-ui, sans-serif`;
+      const total = parts.reduce((acc, p) => acc + ctx.measureText(p.text).width, 0);
+      if (total <= maxW) break;
+    }
+    return size;
+  };
+
+  const drawLine = (parts: { text: string; color: string }[], size: number, y: number) => {
+    ctx.font = `900 ${size}px Outfit, "Segoe UI", system-ui, sans-serif`;
+    const total = parts.reduce((acc, p) => acc + ctx.measureText(p.text).width, 0);
+    let x = (w - total) / 2;
+    for (const p of parts) {
+      ctx.fillStyle = p.color;
+      ctx.fillText(p.text, x, y);
+      x += ctx.measureText(p.text).width;
+    }
+  };
+
+  const line1 = [
+    { text: "ADIN", color: "#ffd60a" },
+    { text: " BU ORDUDA", color: "#ffffff" },
+  ];
+  const line2 = [{ text: "OLABİLİR", color: "#ffffff" }];
+  const s1 = fitFont(line1, 116);
+  const s2 = Math.min(fitFont(line2, 116), s1);
+  const cy = h / 2 - 22;
+  drawLine(line1, s1, cy - s1 * 0.62);
+  drawLine(line2, s2, cy + s2 * 0.66);
+}
+
+function XxxHookPlate() {
+  const size = useThree((s) => s.size);
+  const mat = useRef<THREE.MeshBasicMaterial>(null);
+  const mesh = useRef<THREE.Mesh>(null);
+  const tex = useMemo(() => {
+    const c = document.createElement("canvas");
+    c.width = 1080;
+    c.height = 400;
+    drawXxxHook(c);
+    const t = new THREE.CanvasTexture(c);
+    t.colorSpace = THREE.SRGBColorSpace;
+    t.minFilter = THREE.LinearFilter;
+    t.magFilter = THREE.LinearFilter;
+    return t;
+  }, []);
+  // Font geç yüklenirse ilk kare fallback ile çizilmiş olabilir; kısa süre yeniden çiz.
+  const redraws = useRef(0);
+
+  useFrame(({ clock }) => {
+    const recT = clock.elapsedTime - REEL_HOLD;
+    if (redraws.current < 3 && clock.elapsedTime > (redraws.current + 1) * 0.5) {
+      redraws.current += 1;
+      drawXxxHook(tex.image as HTMLCanvasElement);
+      tex.needsUpdate = true;
+    }
+    let alpha = 0;
+    let scl = 1;
+    if (recT >= 0) {
+      const into = recT;
+      alpha = into < 0.24 ? into / 0.24 : 1;
+      if (into < 0.38) {
+        const u = into / 0.38;
+        scl = 1.12 - 0.12 * (1 - (1 - u) * (1 - u));
+      } else {
+        scl = 1 + 0.006 * Math.sin(recT * 2.2); // barely-visible breathing keeps it alive
+      }
+    }
+    if (mat.current) mat.current.opacity = alpha;
+    if (mesh.current) mesh.current.scale.set(scl, scl, 1);
+  });
+
+  const width = size.width * 0.94;
+  const height = width * (400 / 1080);
+  const y = size.height / 2 - Math.max(64, size.height * 0.055) - height / 2;
+
+  return (
+    <mesh ref={mesh} position={[0, y, 0]} renderOrder={30}>
+      <planeGeometry args={[width, height]} />
+      <meshBasicMaterial ref={mat} map={tex} transparent opacity={0} depthTest={false} toneMapped={false} />
+    </mesh>
+  );
+}
+
+export function XxxHookHud() {
+  return (
+    <Hud renderPriority={2}>
+      <OrthographicCamera makeDefault position={[0, 0, 10]} />
+      <XxxHookPlate />
+    </Hud>
+  );
+}
+
 function strokeFill(
   ctx: CanvasRenderingContext2D,
   text: string,

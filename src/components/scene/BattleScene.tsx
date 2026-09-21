@@ -5,7 +5,7 @@ import * as THREE from "three";
 import { Army, armyFrame } from "./Army";
 import { Castle } from "./Castle";
 import { SallyRaid } from "./SallyRaid";
-import { CaptureHpHud, CountdownFlash, ReelFade, ReelTitles, ReelVignette } from "./CaptureHpHud";
+import { CaptureHpHud, CountdownFlash, ReelFade, ReelTitles, ReelVignette, XxxHookHud } from "./CaptureHpHud";
 import { effectiveCommanders } from "../../game";
 import { castleFrame } from "../../castleLayout";
 import { REEL_HEIGHT, REEL_HOLD, REEL_WIDTH, reelBeats } from "../../recordCanvas";
@@ -16,7 +16,7 @@ import { discoverGateRecT, sampleDiscover, type DiscoverId } from "../../discove
 import { countdownShake, sampleCountdown, type CountdownId } from "../../countdownReel";
 import { DEFEND2_SORTIE, isDefend3, isDefendSortie, sampleDefendCam, type DefendId } from "../../defendReel";
 import { isVs, isVs2, sampleVsCam, type VsId } from "../../vsReel";
-import { sampleXxxCam } from "../../xxxReel";
+import { sampleXxxCam, xxxHasHook, type XxxId } from "../../xxxReel";
 import { MIX8_ID, MIX9_SLOW, isMix9, mixBodyPass, mixTagPass, sampleMixBottom, sampleMixTop, type MixId } from "../../mixReel";
 import { DefendRing } from "./DefendRing";
 import { VsFoes } from "./VsFoes";
@@ -53,7 +53,7 @@ type BattleSceneProps = {
   defend?: DefendId | null;
   vs?: VsId | null;
   mix?: MixId | null;
-  xxx?: boolean;
+  xxx?: XxxId | null;
   rosterIds?: number[] | null;
   onReady?: (canvas: HTMLCanvasElement) => void;
 };
@@ -88,7 +88,7 @@ function CinematicCam({
   countdown = null,
   defend = null,
   vs = null,
-  xxx = false,
+  xxx = null,
   rosterIds = null,
 }: {
   duration: number;
@@ -105,7 +105,7 @@ function CinematicCam({
   countdown?: CountdownId | null;
   defend?: DefendId | null;
   vs?: VsId | null;
-  xxx?: boolean;
+  xxx?: XxxId | null;
   rosterIds?: number[] | null;
 }) {
   const look = useMemo(() => new THREE.Vector3(), []);
@@ -168,7 +168,7 @@ function CinematicCam({
       const sampleT = warm < REEL_HOLD ? (warm / REEL_HOLD) * duration : recT;
       const ctx = { cmdZ, form, castle, fit, castleFit, level };
       const pose = xxx
-        ? sampleXxxCam(sampleT, ctx)
+        ? sampleXxxCam(sampleT, ctx, xxx)
         : vs
         ? sampleVsCam(sampleT, soldiers, level, vs)
         : defend
@@ -530,7 +530,7 @@ function SceneContent({
   defend = null,
   vs = null,
   mix = null,
-  xxx = false,
+  xxx = null,
   rosterIds = null,
 }: BattleSceneProps) {
   const chiefs = effectiveCommanders(commanders, names);
@@ -548,7 +548,7 @@ function SceneContent({
       <SteelSky />
       <DayLights cinematic={cinematic} slim={Boolean(defend)} />
       <Terrain road={!defend && !field} cheap={Boolean(defend)} />
-      {!defend && !field && <Castle level={level} pressure={pressure} gateClosed={Boolean(countdown) || split || climb || xxx} wallFight={climb} />}
+      {!defend && !field && <Castle level={level} pressure={pressure} gateClosed={Boolean(countdown) || split || climb || Boolean(xxx)} wallFight={climb} />}
       {sortie && (
         <TimedVisible until={DEFEND2_SORTIE + 0.85}>
           <Castle level={level} pressure={pressure} forceGateOpen />
@@ -606,6 +606,7 @@ function SceneContent({
       {cinematic && showTitles && !split && !vs && !xxx && (
         <ReelTitles soldiers={soldiers} duration={duration ?? 8} day={day} skipCommander={hideCmd} cinema={cinema} roster={roster} saga={saga} discover={discover} countdown={countdown} defend={defend} names={names} rosterIds={rosterIds} />
       )}
+      {cinematic && xxx && xxxHasHook(xxx) && <XxxHookHud />}
       {cinematic && !split && <ReelVignette />}
       {countdown && <CountdownFlash />}
       {cinematic && !discover && !countdown && !defend && !vs && !split && <ReelFade duration={duration ?? 8} />}
@@ -653,7 +654,7 @@ function BattleSceneInner({
   defend = null,
   vs = null,
   mix = null,
-  xxx = false,
+  xxx = null,
   rosterIds = null,
   onReady,
 }: BattleSceneProps) {
