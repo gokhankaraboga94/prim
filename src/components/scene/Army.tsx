@@ -5,6 +5,7 @@ import { buildNameAtlas, type NameAtlas } from "../../nameAtlas";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import { DEFAULT_COMMANDER, effectiveCommanders, isCommander } from "../../game";
 import { REEL_HOLD } from "../../recordCanvas";
+import { HARIKA4_LOCK, harika4ScanX } from "../../xxxReel";
 import { ROSTER_STAGE_Z, rosterBeat, rosterSoldierIds, stampRosterSoldier, type PlanBId, type RosterPose } from "../../rosterReel";
 import { type DiscoverId } from "../../discoverReel";
 import { COUNT_1_END, countdownBeat, countdownVolley } from "../../countdownReel";
@@ -65,6 +66,7 @@ type ArmyProps = {
   quiet?: boolean;
   square?: boolean;
   readNames?: boolean;
+  scanHunt?: boolean;
   level?: number;
   rosterIds?: number[] | null;
 };
@@ -762,7 +764,7 @@ function NameLayers({
 }
 
 
-export function Army({ count, names = [], commanders = [], cinematic, duration = 8, skipCommander = false, roster = null, discover = null, countdown = false, defend = false, defend2 = false, defend3 = false, vs = false, vs2 = false, mix = false, mixSlow = false, nameHunt = false, quiet = false, square = false, readNames = false, level = 1, rosterIds = null }: ArmyProps) {
+export function Army({ count, names = [], commanders = [], cinematic, duration = 8, skipCommander = false, roster = null, discover = null, countdown = false, defend = false, defend2 = false, defend3 = false, vs = false, vs2 = false, mix = false, mixSlow = false, nameHunt = false, quiet = false, square = false, readNames = false, scanHunt = false, level = 1, rosterIds = null }: ArmyProps) {
   const bodies = useRef<THREE.InstancedMesh>(null);
   const soldierPlumes = useRef<THREE.InstancedMesh>(null);
   const bowHolds = useRef<THREE.InstancedMesh>(null);
@@ -1264,6 +1266,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
       if (countdown) nameScale = 1.12 * crowd;
       else if (defend) nameScale = 1.22 * crowd;
       else if (vs || vs2) nameScale = crowd;
+      else if (scanHunt) nameScale = Math.max(1.35, crowd * 1.68);
       else if (readNames) nameScale = Math.max(1.18, crowd * 1.42);
       else if (square) nameScale = Math.max(0.7, crowd * 1.05);
       else if (nameHunt) nameScale = Math.max(1.12, crowd * 1.55);
@@ -1299,6 +1302,18 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
           if (vs2) nx = pos.x + ((Math.floor(idx / 4) % 5) - 2) * 0.58;
         } else if (staggered) lift = 2.32 + row * 0.64;
         else lift = 2.22 + row * 0.5 + (col % 2) * 0.2 + (Math.abs(idx) % 5) * 0.16;
+      }
+      if (scanHunt && !cmd) {
+        const cols = form.sizes.length ? Math.max(...form.sizes) : 1;
+        const halfW = Math.max(4.8, (cols - 1) * GRID * 0.5);
+        const dx = Math.abs(pos.x - harika4ScanX(recT, halfW));
+        if (row === 0) {
+          const inBeam = dx < 2.6;
+          const lock = recT >= HARIKA4_LOCK - 0.15 && recT < HARIKA4_LOCK + 0.5 && dx < 1.45;
+          nameScale *= lock ? 1.78 : inBeam ? 1.4 : 0.56;
+        } else {
+          nameScale *= 0.48;
+        }
       }
       let sx = (isolate ? Math.min(1.05, cell.sx * nameScale) : cell.sx * nameScale);
       if (defend && staggered) sx = Math.min(sx, FILE * 1.28);

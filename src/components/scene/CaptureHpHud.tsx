@@ -10,7 +10,7 @@ import { sagaBeat, type SagaId } from "../../sagaReel";
 import { discoverBeat, DISCOVER_HOOK_END, isDiscoverEngage, isDiscoverShelf, isDiscoverTrailer, shelfBeat, trailerBeat, type DiscoverId } from "../../discoverReel";
 import { countdownBeat, countdownFlash, type CountdownId } from "../../countdownReel";
 import { DEFEND_HOOK_END, defendBeat, defendPlayhead, type DefendId } from "../../defendReel";
-import { harika2TextPhase, harika3TextPhase, spinNamePool, spinScramble, spinShuffle, SPIN_LOCK, SPIN_SECONDS } from "../../xxxReel";
+import { harika2TextPhase, harika3TextPhase, harika4TextPhase, spinNamePool, spinScramble, spinShuffle, SPIN_LOCK, SPIN_SECONDS } from "../../xxxReel";
 
 function roundRect(
   ctx: CanvasRenderingContext2D,
@@ -307,7 +307,7 @@ const DOC_PAPER = "#ffd54f";
 const DOC_INK = "#111111";
 const DOC_EDGE = "#1a1a1a";
 const DOC_FONT = `Inter, Helvetica, Arial, sans-serif`;
-const DOC_GLYPHS = "ADINI BUL SAVAŞA GİR İSMİNİ ARA İıĞğŞşÖöÜüÇç";
+const DOC_GLYPHS = "ADINI BUL SAVAŞA GİR İSMİNİ ARA İSMİN NERDE SATIRDA ARA ORDUN HAZIR İıĞğŞşÖöÜüÇç";
 
 type DocHookPhase = "scan" | "hook" | "off";
 
@@ -328,6 +328,75 @@ function drawHarika3Hook(canvas: HTMLCanvasElement, phase: DocHookPhase = "scan"
 
   const glance = phase === "scan";
   const lines = glance ? ["ADINI", "BUL"] : ["ADINI BUL", "SAVAŞA GİR", "İSMİNİ ARA"];
+  const start = glance ? Math.round(w * 0.142) : Math.round(w * 0.118);
+
+  const setType = (size: number) => {
+    ctx.font = `900 ${size}px ${DOC_FONT}`;
+    ctx.letterSpacing = `${Math.round(size * -0.018)}px`;
+  };
+
+  const fit = (text: string, cap: number) => {
+    let size = cap;
+    setType(size);
+    const maxW = w * 0.72;
+    while (ctx.measureText(text).width > maxW && size > 48) {
+      size -= 2;
+      setType(size);
+    }
+    return size;
+  };
+
+  const sizes = lines.map((t) => fit(t, start));
+  const lead = 1.04;
+  const padX = Math.max(36, sizes[0] * 0.42);
+  const padY = Math.max(22, sizes[0] * 0.28);
+  const y0 = padY + sizes[0] * 0.55;
+  const ys = [y0];
+  for (let i = 0; i < sizes.length - 1; i++) ys.push(ys[i] + (sizes[i] + sizes[i + 1]) * 0.5 * lead);
+  let blockW = 0;
+  for (let i = 0; i < lines.length; i++) {
+    setType(sizes[i]);
+    blockW = Math.max(blockW, ctx.measureText(lines[i]).width);
+  }
+  const boxW = Math.min(w * 0.78, blockW + padX * 2);
+  const boxH = ys[ys.length - 1] + sizes[sizes.length - 1] * 0.55 + padY - (y0 - sizes[0] * 0.55);
+  const boxX = (w - boxW) * 0.5;
+  const boxY = Math.max(8, y0 - sizes[0] * 0.55 - padY);
+
+  ctx.save();
+  ctx.shadowColor = "rgba(0,0,0,0.28)";
+  ctx.shadowBlur = 8;
+  ctx.shadowOffsetY = 2;
+  ctx.fillStyle = DOC_PAPER;
+  roundRect(ctx, boxX, boxY, boxW, boxH, 14);
+  ctx.fill();
+  ctx.restore();
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = DOC_EDGE;
+  roundRect(ctx, boxX, boxY, boxW, boxH, 14);
+  ctx.stroke();
+
+  for (let i = 0; i < lines.length; i++) {
+    setType(sizes[i]);
+    ctx.fillStyle = DOC_INK;
+    ctx.fillText(lines[i], w * 0.5, ys[i]);
+  }
+  ctx.letterSpacing = "0px";
+}
+
+function drawHarika4Hook(canvas: HTMLCanvasElement, phase: DocHookPhase = "scan") {
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return;
+  const w = canvas.width;
+  const h = canvas.height;
+  ctx.clearRect(0, 0, w, h);
+  if (phase === "off") return;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.letterSpacing = "0px";
+
+  const glance = phase === "scan";
+  const lines = glance ? ["İSMİN", "NERDE"] : ["İSMİN NERDE", "SATIRDA ARA", "ORDUN HAZIR"];
   const start = glance ? Math.round(w * 0.142) : Math.round(w * 0.118);
 
   const setType = (size: number) => {
@@ -409,10 +478,11 @@ function drawClearHook(canvas: HTMLCanvasElement) {
   ctx.fillText(text, w / 2, h * 0.55);
 }
 
-type HookVariant = "banner" | "clear" | "ad" | "doc";
+type HookVariant = "banner" | "clear" | "ad" | "doc" | "hunt";
 
 function paintHook(canvas: HTMLCanvasElement, variant: HookVariant, phase: AdHookPhase | DocHookPhase) {
-  if (variant === "doc") drawHarika3Hook(canvas, phase as DocHookPhase);
+  if (variant === "hunt") drawHarika4Hook(canvas, phase as DocHookPhase);
+  else if (variant === "doc") drawHarika3Hook(canvas, phase as DocHookPhase);
   else if (variant === "ad") drawAdHook(canvas, phase as AdHookPhase);
   else if (variant === "clear") drawClearHook(canvas);
   else drawXxxHook(canvas);
@@ -424,9 +494,10 @@ function XxxHookPlate({ variant = "banner", instant = false }: { variant?: HookV
   const mesh = useRef<THREE.Mesh>(null);
   const tex = useMemo(() => {
     const c = document.createElement("canvas");
-    c.width = variant === "doc" ? 1080 : 2160;
-    c.height = variant === "doc" ? 520 : variant === "ad" ? 680 : variant === "clear" ? 560 : 800;
-    if (variant === "doc") drawHarika3Hook(c, "scan");
+    c.width = variant === "doc" || variant === "hunt" ? 1080 : 2160;
+    c.height = variant === "doc" || variant === "hunt" ? 520 : variant === "ad" ? 680 : variant === "clear" ? 560 : 800;
+    if (variant === "hunt") drawHarika4Hook(c, "scan");
+    else if (variant === "doc") drawHarika3Hook(c, "scan");
     else if (variant === "ad") drawAdHook(c, instant ? "scan" : "static");
     else if (variant === "clear") drawClearHook(c);
     else drawXxxHook(c);
@@ -437,7 +508,7 @@ function XxxHookPlate({ variant = "banner", instant = false }: { variant?: HookV
     return t;
   }, [variant, instant]);
   const redraws = useRef(0);
-  const lastPhase = useRef<AdHookPhase | DocHookPhase>(variant === "doc" || instant ? "scan" : "static");
+  const lastPhase = useRef<AdHookPhase | DocHookPhase>(variant === "doc" || variant === "hunt" || instant ? "scan" : "static");
 
   useEffect(() => {
     let alive = true;
@@ -447,7 +518,7 @@ function XxxHookPlate({ variant = "banner", instant = false }: { variant?: HookV
       tex.needsUpdate = true;
     };
     const loads =
-      variant === "doc"
+      variant === "doc" || variant === "hunt"
         ? [document.fonts.load("900 80px Inter", DOC_GLYPHS)]
         : [document.fonts.load(`${AD_WEIGHT} 80px Inter`), document.fonts.load("800 80px Montserrat")];
     void Promise.all(loads).then(paint, paint);
@@ -459,24 +530,26 @@ function XxxHookPlate({ variant = "banner", instant = false }: { variant?: HookV
   useFrame(({ clock, size: frameSize }) => {
     const recT = clock.elapsedTime - REEL_HOLD;
     const phase: AdHookPhase | DocHookPhase =
-      variant === "doc"
-        ? harika3TextPhase(recT)
-        : variant === "ad" && instant
-          ? harika2TextPhase(recT)
-          : variant === "ad"
-            ? "static"
-            : lastPhase.current;
+      variant === "hunt"
+        ? harika4TextPhase(recT)
+        : variant === "doc"
+          ? harika3TextPhase(recT)
+          : variant === "ad" && instant
+            ? harika2TextPhase(recT)
+            : variant === "ad"
+              ? "static"
+              : lastPhase.current;
     if (redraws.current < 3 && clock.elapsedTime > (redraws.current + 1) * 0.5) {
       redraws.current += 1;
       paintHook(tex.image as HTMLCanvasElement, variant, phase);
       tex.needsUpdate = true;
-    } else if ((variant === "ad" || variant === "doc") && lastPhase.current !== phase) {
+    } else if ((variant === "ad" || variant === "doc" || variant === "hunt") && lastPhase.current !== phase) {
       paintHook(tex.image as HTMLCanvasElement, variant, phase);
       tex.needsUpdate = true;
     }
     lastPhase.current = phase;
     let alpha = 0;
-    if (variant === "doc") {
+    if (variant === "doc" || variant === "hunt") {
       if (phase === "off") alpha = 0;
       else if (recT >= -0.05) alpha = 1;
     } else if (instant) {
@@ -488,7 +561,7 @@ function XxxHookPlate({ variant = "banner", instant = false }: { variant?: HookV
       alpha = into < 0.14 ? into / 0.14 : 1;
     }
     if (mat.current) mat.current.opacity = alpha;
-    if (mesh.current && variant === "doc") {
+    if (mesh.current && (variant === "doc" || variant === "hunt")) {
       const img = tex.image as HTMLCanvasElement;
       const width = frameSize.width * 0.62;
       const height = width * (img.height / img.width);
@@ -503,10 +576,10 @@ function XxxHookPlate({ variant = "banner", instant = false }: { variant?: HookV
   });
 
   const img = tex.image as HTMLCanvasElement;
-  const width = size.width * (variant === "doc" ? 0.62 : variant === "ad" ? 0.86 : variant === "clear" ? 0.92 : 0.94);
+  const width = size.width * (variant === "doc" || variant === "hunt" ? 0.62 : variant === "ad" ? 0.86 : variant === "clear" ? 0.92 : 0.94);
   const height = width * (img.height / img.width);
   const topInset =
-    variant === "doc"
+    variant === "doc" || variant === "hunt"
       ? size.height * (260 / 1920)
       : variant === "ad"
         ? size.height * 0.16

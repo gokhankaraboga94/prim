@@ -16,6 +16,7 @@ export const VV2_ID = "vv2" as const;
 export const HARIKA_ID = "harika" as const;
 export const HARIKA2_ID = "harika2" as const;
 export const HARIKA3_ID = "harika3" as const;
+export const HARIKA4_ID = "harika4" as const;
 export const SPIN_ID = "spin" as const;
 
 export type XxxId =
@@ -26,6 +27,7 @@ export type XxxId =
   | typeof HARIKA_ID
   | typeof HARIKA2_ID
   | typeof HARIKA3_ID
+  | typeof HARIKA4_ID
   | typeof SPIN_ID;
 
 export const XXX_MODES: { id: XxxId; label: string }[] = [
@@ -36,6 +38,7 @@ export const XXX_MODES: { id: XxxId; label: string }[] = [
   { id: HARIKA_ID, label: "harika" },
   { id: HARIKA2_ID, label: "harika2" },
   { id: HARIKA3_ID, label: "harika3" },
+  { id: HARIKA4_ID, label: "harika4" },
   { id: SPIN_ID, label: "spin" },
 ];
 
@@ -44,7 +47,7 @@ export const XXX_SECONDS = 18;
 export const XXXV_SECONDS = 15;
 
 function isHarikaFamily(id: string | null | undefined) {
-  return id === HARIKA_ID || id === HARIKA2_ID || id === HARIKA3_ID;
+  return id === HARIKA_ID || id === HARIKA2_ID || id === HARIKA3_ID || id === HARIKA4_ID;
 }
 
 export function isXxx(id: string | null | undefined): id is XxxId {
@@ -53,6 +56,9 @@ export function isXxx(id: string | null | undefined): id is XxxId {
 
 export const HARIKA2_SECONDS = 18;
 export const HARIKA3_SECONDS = 18;
+export const HARIKA4_SECONDS = 18;
+/** Name under the beam pulses — pattern interrupt inside the skip window. */
+export const HARIKA4_LOCK = 2.7;
 export const SPIN_SECONDS = 13;
 export const SPIN_LOCK = 6;
 
@@ -96,6 +102,7 @@ export function xxxSeconds(id: XxxId) {
   if (id === XXX_ID) return XXX_SECONDS;
   if (id === HARIKA2_ID) return HARIKA2_SECONDS;
   if (id === HARIKA3_ID) return HARIKA3_SECONDS;
+  if (id === HARIKA4_ID) return HARIKA4_SECONDS;
   if (id === SPIN_ID) return SPIN_SECONDS;
   return XXXV_SECONDS;
 }
@@ -111,12 +118,17 @@ export function xxxClearHook(id: XxxId) {
 }
 
 export function xxxAdHook(id: XxxId) {
-  return isHarikaFamily(id) && id !== HARIKA3_ID;
+  return isHarikaFamily(id) && id !== HARIKA3_ID && id !== HARIKA4_ID;
 }
 
 /** harika3 — önemli.md locked skeleton (compact gold island, ADINI BUL). */
 export function xxxDocHook(id: XxxId) {
   return id === HARIKA3_ID;
+}
+
+/** harika4 — skip-window hunt: scan beam + İSMİN NERDE. */
+export function xxxHuntHook(id: XxxId) {
+  return id === HARIKA4_ID;
 }
 
 export function xxxHiRes(id: XxxId) {
@@ -137,7 +149,7 @@ export function xxxSquare(id: XxxId) {
 
 /** No fade-in: skip-rate window is 1–2s, the super must be on frame 0. */
 export function xxxInstantHook(id: XxxId) {
-  return id === HARIKA2_ID || id === HARIKA3_ID;
+  return id === HARIKA2_ID || id === HARIKA3_ID || id === HARIKA4_ID;
 }
 
 /** 0–1.5s: 3-word glance. 1.5–4s: 7-word idea. Then off. */
@@ -156,7 +168,24 @@ export function harika3TextPhase(recT: number): "scan" | "hook" | "off" {
 
 /** First 3s name-hunt: labels must read (önemli.md §6, §21). */
 export function xxxCloseNames(id: XxxId) {
-  return id === HARIKA3_ID;
+  return id === HARIKA3_ID || id === HARIKA4_ID;
+}
+
+export function xxxScanHunt(id: string | null | undefined) {
+  return id === HARIKA4_ID;
+}
+
+export function harika4TextPhase(recT: number): "scan" | "hook" | "off" {
+  if (recT < 1.5) return "scan";
+  if (recT < 4) return "hook";
+  return "off";
+}
+
+/** Slow one-way front-rank scan. Starts already mid-row (In Media Res). */
+export function harika4ScanX(recT: number, halfW: number) {
+  const span = Math.min(9.2, Math.max(4.8, halfW * 0.4));
+  const u = clamp01(Math.max(0, recT) / 4);
+  return -span + (0.16 + u * 0.84) * span * 2;
 }
 
 function pose(x: number, y: number, z: number, lx: number, ly: number, lz: number, fov: number): ShotPose {
@@ -210,6 +239,7 @@ export function sampleXxxCam(recT: number, ctx: ShotCtx, id: XxxId = XXX_ID): Sh
   if (id === HARIKA_ID) return harikaCam(recT, ctx);
   if (id === HARIKA2_ID) return harika2Cam(recT, ctx);
   if (id === HARIKA3_ID) return harika3Cam(recT, ctx);
+  if (id === HARIKA4_ID) return harika4Cam(recT, ctx);
   return xxxBaseCam(recT, ctx);
 }
 
@@ -486,5 +516,38 @@ function harika3Cam(recT: number, ctx: ShotCtx): ShotPose {
 
   // 14–18s: army + castle, still the same 3/4 family.
   const e1 = pose(-8, 18 + fit * 0.03, back + Math.max(12, fit * 0.18), 1.2, 2.5, (mid + castle.front) * 0.55, 38);
+  return lerpPose(d1, e1, clamp01((t - 14) / 4));
+}
+
+/**
+ * harika4 — skip window is 0–4s. Camera lives inside the names and
+ * rides the scan beam. No cuts. After 4s the square is allowed to appear.
+ */
+function harika4Cam(recT: number, ctx: ShotCtx): ShotPose {
+  const { form, castle, fit } = ctx;
+  const t = Math.max(0, recT);
+  const front = form.front;
+  const back = form.back;
+  const mid = form.midZ;
+  const halfW = Math.max(6, form.width * 0.5);
+  const x = harika4ScanX(t, halfW);
+  const lookY = 1.42;
+  const side = Math.min(16, halfW * 0.5);
+
+  if (t < 4) {
+    return pose(x + 1.2, 2.78, front - 6.85, x * 0.4, lookY, front + 1.85, 25);
+  }
+
+  const a1 = pose(harika4ScanX(4, halfW) + 1.2, 2.78, front - 6.85, harika4ScanX(4, halfW) * 0.4, lookY, front + 1.85, 25);
+  const b1 = pose(x * 0.25, 6.8, front - 14.5, 0, 1.65, mid, 31);
+  if (t < 7) return lerpPose(a1, b1, clamp01((t - 4) / 3));
+
+  const c1 = pose(-side - 1.5, 8.4, front - 13, side * 0.05, 1.8, mid, 33);
+  if (t < 10) return lerpPose(b1, c1, clamp01((t - 7) / 3));
+
+  const d1 = pose(-side * 0.2, 14.2, back + 5, 0, 2.15, mid, 36);
+  if (t < 14) return lerpPose(c1, d1, clamp01((t - 10) / 4));
+
+  const e1 = pose(-7.5, 17.5 + fit * 0.03, back + Math.max(12, fit * 0.16), 1.1, 2.45, (mid + castle.front) * 0.55, 38);
   return lerpPose(d1, e1, clamp01((t - 14) / 4));
 }
