@@ -15,6 +15,7 @@ export const VV2_ID = "vv2" as const;
 
 export const HARIKA_ID = "harika" as const;
 export const HARIKA2_ID = "harika2" as const;
+export const HARIKA3_ID = "harika3" as const;
 export const SPIN_ID = "spin" as const;
 
 export type XxxId =
@@ -24,6 +25,7 @@ export type XxxId =
   | typeof VV2_ID
   | typeof HARIKA_ID
   | typeof HARIKA2_ID
+  | typeof HARIKA3_ID
   | typeof SPIN_ID;
 
 export const XXX_MODES: { id: XxxId; label: string }[] = [
@@ -33,6 +35,7 @@ export const XXX_MODES: { id: XxxId; label: string }[] = [
   { id: VV2_ID, label: "vv2" },
   { id: HARIKA_ID, label: "harika" },
   { id: HARIKA2_ID, label: "harika2" },
+  { id: HARIKA3_ID, label: "harika3" },
   { id: SPIN_ID, label: "spin" },
 ];
 
@@ -41,7 +44,7 @@ export const XXX_SECONDS = 18;
 export const XXXV_SECONDS = 15;
 
 function isHarikaFamily(id: string | null | undefined) {
-  return id === HARIKA_ID || id === HARIKA2_ID;
+  return id === HARIKA_ID || id === HARIKA2_ID || id === HARIKA3_ID;
 }
 
 export function isXxx(id: string | null | undefined): id is XxxId {
@@ -49,6 +52,7 @@ export function isXxx(id: string | null | undefined): id is XxxId {
 }
 
 export const HARIKA2_SECONDS = 18;
+export const HARIKA3_SECONDS = 18;
 export const SPIN_SECONDS = 13;
 export const SPIN_LOCK = 6;
 
@@ -91,6 +95,7 @@ export function spinScramble(t: number, deck: string[], winner: string) {
 export function xxxSeconds(id: XxxId) {
   if (id === XXX_ID) return XXX_SECONDS;
   if (id === HARIKA2_ID) return HARIKA2_SECONDS;
+  if (id === HARIKA3_ID) return HARIKA3_SECONDS;
   if (id === SPIN_ID) return SPIN_SECONDS;
   return XXXV_SECONDS;
 }
@@ -106,7 +111,12 @@ export function xxxClearHook(id: XxxId) {
 }
 
 export function xxxAdHook(id: XxxId) {
-  return isHarikaFamily(id);
+  return isHarikaFamily(id) && id !== HARIKA3_ID;
+}
+
+/** harika3 — önemli.md locked skeleton (compact gold island, ADINI BUL). */
+export function xxxDocHook(id: XxxId) {
+  return id === HARIKA3_ID;
 }
 
 export function xxxHiRes(id: XxxId) {
@@ -127,7 +137,7 @@ export function xxxSquare(id: XxxId) {
 
 /** No fade-in: skip-rate window is 1–2s, the super must be on frame 0. */
 export function xxxInstantHook(id: XxxId) {
-  return id === HARIKA2_ID;
+  return id === HARIKA2_ID || id === HARIKA3_ID;
 }
 
 /** 0–1.5s: 3-word glance. 1.5–4s: 7-word idea. Then off. */
@@ -135,6 +145,14 @@ export function harika2TextPhase(recT: number): "scan" | "hook" | "off" {
   if (recT < 1.5) return "scan";
   if (recT < 4) return "hook";
   return "off";
+}
+
+/** önemli.md §8 / §34: scan 0–1.5, hook 1.5–4, off, optional site CTA from 14s. */
+export function harika3TextPhase(recT: number): "scan" | "hook" | "off" | "cta" {
+  if (recT < 1.5) return "scan";
+  if (recT < 4) return "hook";
+  if (recT < 14) return "off";
+  return "cta";
 }
 
 function pose(x: number, y: number, z: number, lx: number, ly: number, lz: number, fov: number): ShotPose {
@@ -187,6 +205,7 @@ export function sampleXxxCam(recT: number, ctx: ShotCtx, id: XxxId = XXX_ID): Sh
   if (id === VV2_ID) return vv2Cam(recT, ctx);
   if (id === HARIKA_ID) return harikaCam(recT, ctx);
   if (id === HARIKA2_ID) return harika2Cam(recT, ctx);
+  if (id === HARIKA3_ID) return harika3Cam(recT, ctx);
   return xxxBaseCam(recT, ctx);
 }
 
@@ -425,4 +444,33 @@ function harika2Cam(recT: number, ctx: ShotCtx): ShotPose {
   const e0 = pose(-side * 0.4, 22, back + 6, 0, 2.6, (mid + castle.front) * 0.55, 38);
   const e1 = pose(-10, 28 + fit * 0.04, back + Math.max(18, fit * 0.28), 2, 3.0, (mid + castle.front) * 0.55, 40);
   return lerpPose(e0, e1, clamp01((t - 14) / 4));
+}
+
+/**
+ * harika3 — önemli.md locked camera.
+ * 0–4s locked high-far 3/4 (text is the only change).
+ * After 4s: slow drifts every 2–3s, same family, no cuts, no shake.
+ */
+function harika3Cam(recT: number, ctx: ShotCtx): ShotPose {
+  const { form, castle, fit } = ctx;
+  const t = Math.max(0, recT);
+  const front = form.front;
+  const back = form.back;
+  const mid = form.midZ;
+  const halfW = Math.max(6, form.width * 0.5);
+  const side = Math.min(18, halfW * 0.55);
+  const lock = pose(side + 12, 20, front - 34, 0, 2.55, mid, 34);
+  if (t < 4) return lock;
+
+  const b1 = pose(side + 9.2, 19.5, front - 32, 0.2, 2.48, mid, 34);
+  if (t < 7) return lerpPose(lock, b1, clamp01((t - 4) / 3));
+
+  const c1 = pose(side + 3.5, 18.9, front - 30, -side * 0.05, 2.4, mid, 35);
+  if (t < 10) return lerpPose(b1, c1, clamp01((t - 7) / 3));
+
+  const d1 = pose(-side * 0.18, 21.6, front - 29, 0, 2.52, mid, 36);
+  if (t < 14) return lerpPose(c1, d1, clamp01((t - 10) / 4));
+
+  const e1 = pose(-side * 0.32, 23.4 + fit * 0.02, back + 3, 0.35, 2.68, (mid + castle.front) * 0.55, 37);
+  return lerpPose(d1, e1, clamp01((t - 14) / 4));
 }

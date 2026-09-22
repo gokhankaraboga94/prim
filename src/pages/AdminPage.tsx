@@ -785,12 +785,12 @@ export function AdminPage() {
               </button>
             ))}
           </div>
-          <label>xxx — {XXX_SECONDS}s / xxx3 · vv1 · vv2 · harika — {XXXV_SECONDS}s / harika2 — {HARIKA2_SECONDS}s / spin — {SPIN_SECONDS}s</label>
+          <label>xxx — {XXX_SECONDS}s / xxx3 · vv1 · vv2 · harika — {XXXV_SECONDS}s / harika2 · harika3 — {HARIKA2_SECONDS}s / spin — {SPIN_SECONDS}s</label>
           <p className="muted">
-            Keşfet sinematikleri. xxx: yazısız. harika2: atlanma oranı mimarisi —
-            ilk karede isim + yazı (1–2 sn karar penceresi), kare ordu, mancınık,
-            komutan yok, sessiz, 4K. Kapı kapalı. spin: siyah zemin, 13s —
-            isimler karışık ve tekrarsız geçer, 6. saniyede kilit, sonra büyür.
+            Keşfet sinematikleri. xxx: yazısız. harika3: önemli.md kilit iskeleti —
+            0–1.5 ADINI BUL, 1.5–4 SAVAŞA GİR + wargame.lol, 4’te yazı yok,
+            kompakt altın ada, kilit kamera, 18s, 1080p, ok yok. Kapı kapalı.
+            spin: siyah zemin, 13s — isimler karışık ve tekrarsız geçer, 6. saniyede kilit, sonra büyür.
           </p>
           <div className="dur-pills shot-pills">
             {XXX_MODES.map((mode) => (

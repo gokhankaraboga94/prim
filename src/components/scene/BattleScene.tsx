@@ -16,7 +16,7 @@ import { discoverGateRecT, sampleDiscover, type DiscoverId } from "../../discove
 import { countdownShake, sampleCountdown, type CountdownId } from "../../countdownReel";
 import { DEFEND2_SORTIE, isDefend3, isDefendSortie, sampleDefendCam, type DefendId } from "../../defendReel";
 import { isVs, isVs2, sampleVsCam, type VsId } from "../../vsReel";
-import { sampleXxxCam, xxxAdHook, xxxClearHook, xxxHasHook, xxxHideCmd, xxxHiRes, xxxInstantHook, xxxQuiet, xxxSpin, xxxSquare, type XxxId } from "../../xxxReel";
+import { sampleXxxCam, xxxAdHook, xxxClearHook, xxxDocHook, xxxHasHook, xxxHideCmd, xxxHiRes, xxxInstantHook, xxxQuiet, xxxSpin, xxxSquare, type XxxId } from "../../xxxReel";
 import { MIX8_ID, MIX9_SLOW, isMix9, mixBodyPass, mixTagPass, sampleMixBottom, sampleMixTop, type MixId } from "../../mixReel";
 import { DefendRing } from "./DefendRing";
 import { VsFoes } from "./VsFoes";
@@ -633,7 +633,7 @@ function SceneContent({
         <ReelTitles soldiers={soldiers} duration={duration ?? 8} day={day} skipCommander={hideCmd} cinema={cinema} roster={roster} saga={saga} discover={discover} countdown={countdown} defend={defend} names={names} rosterIds={rosterIds} />
       )}
       {cinematic && xxx && xxxHasHook(xxx) && (
-        <XxxHookHud variant={xxxAdHook(xxx) ? "ad" : xxxClearHook(xxx) ? "clear" : "banner"} instant={xxxInstantHook(xxx)} />
+        <XxxHookHud variant={xxxDocHook(xxx) ? "doc" : xxxAdHook(xxx) ? "ad" : xxxClearHook(xxx) ? "clear" : "banner"} instant={xxxInstantHook(xxx)} />
       )}
       {cinematic && !split && <ReelVignette />}
       {countdown && <CountdownFlash />}
