@@ -13,6 +13,7 @@ import {
   normalizeHandle,
   parseNameList,
   removeSoldier,
+  removeSoldiersByNames,
   renameSoldier,
   targetForLevel,
   toGameRecord,
@@ -36,6 +37,7 @@ export function AdminPage() {
   const [soldiersInput, setSoldiersInput] = useState("");
   const [addInput, setAddInput] = useState("");
   const [namesInput, setNamesInput] = useState("");
+  const [dropInput, setDropInput] = useState("");
   const [cmdDraft, setCmdDraft] = useState<string | null>(null);
   const [handleInput, setHandleInput] = useState("");
   const [msg, setMsg] = useState("");
@@ -221,6 +223,39 @@ export function AdminPage() {
     }
   }
 
+  async function onDropNames(e: FormEvent) {
+    e.preventDefault();
+    const incoming = parseNameList(dropInput);
+    if (!incoming.length) {
+      setMsg("Silinecek kullanıcı adlarını alt alta veya virgülle yaz.");
+      return;
+    }
+    const next = removeSoldiersByNames(game.names, game.soldiers, incoming);
+    if (!next.removed.length) {
+      setMsg("Bu adlardan hiçbiri orduda yok.");
+      return;
+    }
+    setBusy(true);
+    try {
+      const commanders = compactCommanders(game.commanders, next.names);
+      await set(ref(db, "game"), toGameRecord(game, Date.now(), {
+        soldiers: next.soldiers,
+        names: next.names,
+        commanders,
+      }));
+      setDropInput("");
+      const gone = next.removed.map((n) => `@${n}`).join(", ");
+      const miss = next.missing.length
+        ? ` Orduda yok: ${next.missing.map((n) => `@${n}`).join(", ")}.`
+        : "";
+      setMsg(`${next.removed.length} asker silindi (${gone}). Ordu ${formatCount(next.soldiers)}.${miss}`);
+    } catch {
+      setMsg("Askerler silinemedi.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function onDeleteName(index: number, name: string) {
     const next = removeSoldier(game.names, game.soldiers, index);
     setBusy(true);
@@ -261,7 +296,7 @@ export function AdminPage() {
         <div>
           <p className="join-kicker">Komuta paneli</p>
           <h1>Kuşatma yönetimi</h1>
-          <p className="join-kicker">sürüm 108 — savunma tek yazı</p>
+          <p className="join-kicker">sürüm 109 — toplu isim sil</p>
         </div>
         <button type="button" className="btn-ghost" onClick={() => signOut(auth)}>
           Çıkış
@@ -349,6 +384,22 @@ export function AdminPage() {
             />
             <button className="btn-gold" disabled={busy}>
               Asker oluştur
+            </button>
+          </form>
+          <form onSubmit={onDropNames}>
+            <label>İsim kaldır</label>
+            <p className="muted">
+              Yapıştırılan her ad ordudan çıkar, asker sayısı o kadar düşer.
+              Listede yoksa dokunulmaz.
+            </p>
+            <textarea
+              rows={8}
+              placeholder={"babapiro5552\ndefne34529\neemirsmsk_"}
+              value={dropInput}
+              onChange={(e) => setDropInput(e.target.value)}
+            />
+            <button className="btn-gold" disabled={busy}>
+              Bu isimleri sil
             </button>
           </form>
           <form onSubmit={onSaveCommanders}>

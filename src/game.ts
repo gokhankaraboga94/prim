@@ -204,6 +204,41 @@ export function removeSoldier(
   return { names: compactNames(next, count), soldiers: count };
 }
 
+export function removeSoldiersByNames(
+  names: string[],
+  soldiers: number,
+  incoming: string[]
+): { names: string[]; soldiers: number; removed: string[]; missing: string[] } {
+  const want = new Set<string>();
+  const order: string[] = [];
+  for (const raw of incoming) {
+    const name = normalizeHandle(raw);
+    const key = name.toLowerCase();
+    if (!name || want.has(key)) continue;
+    want.add(key);
+    order.push(name);
+  }
+  const cap = Math.max(0, Math.floor(soldiers));
+  const kept: string[] = [];
+  const hit = new Set<string>();
+  for (let i = 0; i < cap; i++) {
+    const name = normalizeHandle(names[i] || "");
+    const key = name.toLowerCase();
+    if (name && want.has(key)) {
+      hit.add(key);
+      continue;
+    }
+    kept.push(name);
+  }
+  const count = kept.length;
+  return {
+    names: compactNames(kept, count),
+    soldiers: count,
+    removed: order.filter((n) => hit.has(n.toLowerCase())),
+    missing: order.filter((n) => !hit.has(n.toLowerCase())),
+  };
+}
+
 export function namedCount(names: string[], soldiers: number): number {
   let n = 0;
   const cap = Math.max(0, soldiers);
