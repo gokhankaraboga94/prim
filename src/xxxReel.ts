@@ -147,12 +147,16 @@ export function harika2TextPhase(recT: number): "scan" | "hook" | "off" {
   return "off";
 }
 
-/** önemli.md §8 / §34: scan 0–1.5, hook 1.5–4, off, optional site CTA from 14s. */
-export function harika3TextPhase(recT: number): "scan" | "hook" | "off" | "cta" {
+/** önemli.md §8: scan 0–1.5, hook 1.5–4, then off. No brand/CTA in the hook. */
+export function harika3TextPhase(recT: number): "scan" | "hook" | "off" {
   if (recT < 1.5) return "scan";
   if (recT < 4) return "hook";
-  if (recT < 14) return "off";
-  return "cta";
+  return "off";
+}
+
+/** First 3s name-hunt: labels must read (önemli.md §6, §21). */
+export function xxxCloseNames(id: XxxId) {
+  return id === HARIKA3_ID;
 }
 
 function pose(x: number, y: number, z: number, lx: number, ly: number, lz: number, fov: number): ShotPose {
@@ -447,9 +451,10 @@ function harika2Cam(recT: number, ctx: ShotCtx): ShotPose {
 }
 
 /**
- * harika3 — önemli.md locked camera.
- * 0–4s locked high-far 3/4 (text is the only change).
- * After 4s: slow drifts every 2–3s, same family, no cuts, no shake.
+ * harika3 — isim avı (önemli.md §6, §7, §21).
+ * High-far lock made names ants → skip in 3s.
+ * First frame is already inside readable names; slow crawl = the game.
+ * No cuts. After the hook leaves at 4s, scale-reveal the square.
  */
 function harika3Cam(recT: number, ctx: ShotCtx): ShotPose {
   const { form, castle, fit } = ctx;
@@ -458,19 +463,28 @@ function harika3Cam(recT: number, ctx: ShotCtx): ShotPose {
   const back = form.back;
   const mid = form.midZ;
   const halfW = Math.max(6, form.width * 0.5);
-  const side = Math.min(18, halfW * 0.55);
-  const lock = pose(side + 12, 20, front - 34, 0, 2.55, mid, 34);
-  if (t < 4) return lock;
+  const crawl = Math.min(8.2, halfW * 0.34);
+  const lookY = 1.48;
+  const side = Math.min(16, halfW * 0.5);
 
-  const b1 = pose(side + 9.2, 19.5, front - 32, 0.2, 2.48, mid, 34);
-  if (t < 7) return lerpPose(lock, b1, clamp01((t - 4) / 3));
+  // 0–4s: already in the names. 3/4, 2 ranks visible, crawl ~2 m/s.
+  const a0 = pose(crawl, 5.4, front - 12.4, crawl * 0.32, lookY, front + 2.8, 28);
+  const a1 = pose(-crawl * 0.2, 5.25, front - 12.0, 0.12, lookY, front + 3.0, 27);
+  if (t < 4) return lerpPose(a0, a1, clamp01(t / 4));
 
-  const c1 = pose(side + 3.5, 18.9, front - 30, -side * 0.05, 2.4, mid, 35);
+  // 4–7s: text gone — pull back so the square starts to read.
+  const b1 = pose(-crawl * 0.55, 7.4, front - 16, -0.2, 1.7, mid, 32);
+  if (t < 7) return lerpPose(a1, b1, clamp01((t - 4) / 3));
+
+  // 7–10s: flank, a mangonel enters frame.
+  const c1 = pose(-side - 2, 8.6, front - 14, side * 0.06, 1.85, mid, 34);
   if (t < 10) return lerpPose(b1, c1, clamp01((t - 7) / 3));
 
-  const d1 = pose(-side * 0.18, 21.6, front - 29, 0, 2.52, mid, 36);
+  // 10–14s: rise, full block.
+  const d1 = pose(-side * 0.25, 14.5, back + 4, 0, 2.2, mid, 36);
   if (t < 14) return lerpPose(c1, d1, clamp01((t - 10) / 4));
 
-  const e1 = pose(-side * 0.32, 23.4 + fit * 0.02, back + 3, 0.35, 2.68, (mid + castle.front) * 0.55, 37);
+  // 14–18s: army + castle, still the same 3/4 family.
+  const e1 = pose(-8, 18 + fit * 0.03, back + Math.max(12, fit * 0.18), 1.2, 2.5, (mid + castle.front) * 0.55, 38);
   return lerpPose(d1, e1, clamp01((t - 14) / 4));
 }

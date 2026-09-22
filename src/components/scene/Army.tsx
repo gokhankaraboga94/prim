@@ -64,6 +64,7 @@ type ArmyProps = {
   nameHunt?: boolean;
   quiet?: boolean;
   square?: boolean;
+  readNames?: boolean;
   level?: number;
   rosterIds?: number[] | null;
 };
@@ -761,7 +762,7 @@ function NameLayers({
 }
 
 
-export function Army({ count, names = [], commanders = [], cinematic, duration = 8, skipCommander = false, roster = null, discover = null, countdown = false, defend = false, defend2 = false, defend3 = false, vs = false, vs2 = false, mix = false, mixSlow = false, nameHunt = false, quiet = false, square = false, level = 1, rosterIds = null }: ArmyProps) {
+export function Army({ count, names = [], commanders = [], cinematic, duration = 8, skipCommander = false, roster = null, discover = null, countdown = false, defend = false, defend2 = false, defend3 = false, vs = false, vs2 = false, mix = false, mixSlow = false, nameHunt = false, quiet = false, square = false, readNames = false, level = 1, rosterIds = null }: ArmyProps) {
   const bodies = useRef<THREE.InstancedMesh>(null);
   const soldierPlumes = useRef<THREE.InstancedMesh>(null);
   const bowHolds = useRef<THREE.InstancedMesh>(null);
@@ -1263,6 +1264,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
       if (countdown) nameScale = 1.12 * crowd;
       else if (defend) nameScale = 1.22 * crowd;
       else if (vs || vs2) nameScale = crowd;
+      else if (readNames) nameScale = Math.max(1.18, crowd * 1.42);
       else if (square) nameScale = Math.max(0.7, crowd * 1.05);
       else if (nameHunt) nameScale = Math.max(1.12, crowd * 1.55);
       else if (mix) nameScale = 1.12 * crowd;

@@ -307,14 +307,13 @@ const DOC_PAPER = "#ffd54f";
 const DOC_INK = "#111111";
 const DOC_EDGE = "#1a1a1a";
 const DOC_FONT = `Inter, Helvetica, Arial, sans-serif`;
-const DOC_GLYPHS = "ADINI BUL SAVAŞA GİR wargame.lol İıĞğŞşÖöÜüÇç";
+const DOC_GLYPHS = "ADINI BUL SAVAŞA GİR İSMİNİ ARA İıĞğŞşÖöÜüÇç";
 
-type DocHookPhase = "scan" | "hook" | "off" | "cta";
+type DocHookPhase = "scan" | "hook" | "off";
 
 /**
- * harika3 hook — önemli.md §10–15 / §34.
- * Compact opaque gold island, matte black Inter 900, no fake-bold stroke,
- * no exclamation, scan 2 lines then hook 3 lines, gone at 4s, site CTA at 14s.
+ * harika3 hook — önemli.md: the game is the name hunt, not the brand.
+ * Compact gold island, Inter 900, no site URL, no exclamation, gone at 4s.
  */
 function drawHarika3Hook(canvas: HTMLCanvasElement, phase: DocHookPhase = "scan") {
   const ctx = canvas.getContext("2d");
@@ -327,18 +326,8 @@ function drawHarika3Hook(canvas: HTMLCanvasElement, phase: DocHookPhase = "scan"
   ctx.textBaseline = "middle";
   ctx.letterSpacing = "0px";
 
-  if (phase === "cta") {
-    const size = Math.round(w * 0.072);
-    ctx.font = `900 ${size}px ${DOC_FONT}`;
-    ctx.letterSpacing = `${Math.round(size * -0.018)}px`;
-    ctx.fillStyle = DOC_INK;
-    ctx.fillText("wargame.lol", w * 0.5, h * 0.5);
-    ctx.letterSpacing = "0px";
-    return;
-  }
-
   const glance = phase === "scan";
-  const lines = glance ? ["ADINI", "BUL"] : ["ADINI BUL", "SAVAŞA GİR", "wargame.lol"];
+  const lines = glance ? ["ADINI", "BUL"] : ["ADINI BUL", "SAVAŞA GİR", "İSMİNİ ARA"];
   const start = glance ? Math.round(w * 0.142) : Math.round(w * 0.118);
 
   const setType = (size: number) => {
@@ -503,10 +492,7 @@ function XxxHookPlate({ variant = "banner", instant = false }: { variant?: HookV
       const img = tex.image as HTMLCanvasElement;
       const width = frameSize.width * 0.62;
       const height = width * (img.height / img.width);
-      const fromTop =
-        phase === "cta"
-          ? frameSize.height * (1100 / 1920) - height / 2
-          : frameSize.height * (260 / 1920);
+      const fromTop = frameSize.height * (260 / 1920);
       mesh.current.position.y = frameSize.height / 2 - fromTop - height / 2;
       mesh.current.scale.set(1, 1, 1);
     } else if (instant && mesh.current) {
