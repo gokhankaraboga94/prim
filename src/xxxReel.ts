@@ -17,6 +17,7 @@ export const HARIKA_ID = "harika" as const;
 export const HARIKA2_ID = "harika2" as const;
 export const HARIKA3_ID = "harika3" as const;
 export const HARIKA4_ID = "harika4" as const;
+export const HARIKA5_ID = "harika5" as const;
 export const SPIN_ID = "spin" as const;
 
 export type XxxId =
@@ -28,6 +29,7 @@ export type XxxId =
   | typeof HARIKA2_ID
   | typeof HARIKA3_ID
   | typeof HARIKA4_ID
+  | typeof HARIKA5_ID
   | typeof SPIN_ID;
 
 export const XXX_MODES: { id: XxxId; label: string }[] = [
@@ -39,6 +41,7 @@ export const XXX_MODES: { id: XxxId; label: string }[] = [
   { id: HARIKA2_ID, label: "harika2" },
   { id: HARIKA3_ID, label: "harika3" },
   { id: HARIKA4_ID, label: "harika4" },
+  { id: HARIKA5_ID, label: "harika5" },
   { id: SPIN_ID, label: "spin" },
 ];
 
@@ -47,7 +50,7 @@ export const XXX_SECONDS = 18;
 export const XXXV_SECONDS = 15;
 
 function isHarikaFamily(id: string | null | undefined) {
-  return id === HARIKA_ID || id === HARIKA2_ID || id === HARIKA3_ID || id === HARIKA4_ID;
+  return id === HARIKA_ID || id === HARIKA2_ID || id === HARIKA3_ID || id === HARIKA4_ID || id === HARIKA5_ID;
 }
 
 export function isXxx(id: string | null | undefined): id is XxxId {
@@ -57,6 +60,7 @@ export function isXxx(id: string | null | undefined): id is XxxId {
 export const HARIKA2_SECONDS = 18;
 export const HARIKA3_SECONDS = 18;
 export const HARIKA4_SECONDS = 18;
+export const HARIKA5_SECONDS = 18;
 /** Name under the beam pulses — pattern interrupt inside the skip window. */
 export const HARIKA4_LOCK = 2.7;
 export const SPIN_SECONDS = 13;
@@ -103,6 +107,7 @@ export function xxxSeconds(id: XxxId) {
   if (id === HARIKA2_ID) return HARIKA2_SECONDS;
   if (id === HARIKA3_ID) return HARIKA3_SECONDS;
   if (id === HARIKA4_ID) return HARIKA4_SECONDS;
+  if (id === HARIKA5_ID) return HARIKA5_SECONDS;
   if (id === SPIN_ID) return SPIN_SECONDS;
   return XXXV_SECONDS;
 }
@@ -118,7 +123,7 @@ export function xxxClearHook(id: XxxId) {
 }
 
 export function xxxAdHook(id: XxxId) {
-  return isHarikaFamily(id) && id !== HARIKA3_ID && id !== HARIKA4_ID;
+  return isHarikaFamily(id) && id !== HARIKA3_ID && id !== HARIKA4_ID && id !== HARIKA5_ID;
 }
 
 /** harika3 — önemli.md locked skeleton (compact gold island, ADINI BUL). */
@@ -128,7 +133,12 @@ export function xxxDocHook(id: XxxId) {
 
 /** harika4 — skip-window hunt: scan beam + İSMİN NERDE. */
 export function xxxHuntHook(id: XxxId) {
-  return id === HARIKA4_ID;
+  return id === HARIKA4_ID || id === HARIKA5_ID;
+}
+
+/** harika5 only — targeting brackets in the skip window. */
+export function xxxHuntSight(id: string | null | undefined) {
+  return id === HARIKA5_ID;
 }
 
 export function xxxHiRes(id: XxxId) {
@@ -149,7 +159,7 @@ export function xxxSquare(id: XxxId) {
 
 /** No fade-in: skip-rate window is 1–2s, the super must be on frame 0. */
 export function xxxInstantHook(id: XxxId) {
-  return id === HARIKA2_ID || id === HARIKA3_ID || id === HARIKA4_ID;
+  return id === HARIKA2_ID || id === HARIKA3_ID || id === HARIKA4_ID || id === HARIKA5_ID;
 }
 
 /** 0–1.5s: 3-word glance. 1.5–4s: 7-word idea. Then off. */
@@ -168,11 +178,11 @@ export function harika3TextPhase(recT: number): "scan" | "hook" | "off" {
 
 /** First 3s name-hunt: labels must read (önemli.md §6, §21). */
 export function xxxCloseNames(id: XxxId) {
-  return id === HARIKA3_ID || id === HARIKA4_ID;
+  return id === HARIKA3_ID || id === HARIKA4_ID || id === HARIKA5_ID;
 }
 
 export function xxxScanHunt(id: string | null | undefined) {
-  return id === HARIKA4_ID;
+  return id === HARIKA4_ID || id === HARIKA5_ID;
 }
 
 export function harika4TextPhase(recT: number): "scan" | "hook" | "off" {
@@ -239,7 +249,7 @@ export function sampleXxxCam(recT: number, ctx: ShotCtx, id: XxxId = XXX_ID): Sh
   if (id === HARIKA_ID) return harikaCam(recT, ctx);
   if (id === HARIKA2_ID) return harika2Cam(recT, ctx);
   if (id === HARIKA3_ID) return harika3Cam(recT, ctx);
-  if (id === HARIKA4_ID) return harika4Cam(recT, ctx);
+  if (id === HARIKA4_ID || id === HARIKA5_ID) return harika4Cam(recT, ctx);
   return xxxBaseCam(recT, ctx);
 }
 

@@ -5,7 +5,7 @@ import * as THREE from "three";
 import { Army, armyFrame } from "./Army";
 import { Castle } from "./Castle";
 import { SallyRaid } from "./SallyRaid";
-import { CaptureHpHud, CountdownFlash, ReelFade, ReelTitles, ReelVignette, SpinNameHud, XxxHookHud } from "./CaptureHpHud";
+import { CaptureHpHud, CountdownFlash, HuntSightHud, ReelFade, ReelTitles, ReelVignette, SpinNameHud, XxxHookHud } from "./CaptureHpHud";
 import { effectiveCommanders } from "../../game";
 import { castleFrame } from "../../castleLayout";
 import { REEL_HEIGHT, REEL_HOLD, REEL_WIDTH, reelBeats } from "../../recordCanvas";
@@ -16,7 +16,7 @@ import { discoverGateRecT, sampleDiscover, type DiscoverId } from "../../discove
 import { countdownShake, sampleCountdown, type CountdownId } from "../../countdownReel";
 import { DEFEND2_SORTIE, isDefend3, isDefendSortie, sampleDefendCam, type DefendId } from "../../defendReel";
 import { isVs, isVs2, sampleVsCam, type VsId } from "../../vsReel";
-import { sampleXxxCam, xxxAdHook, xxxClearHook, xxxCloseNames, xxxDocHook, xxxHasHook, xxxHideCmd, xxxHiRes, xxxHuntHook, xxxInstantHook, xxxQuiet, xxxScanHunt, xxxSpin, xxxSquare, type XxxId } from "../../xxxReel";
+import { sampleXxxCam, xxxAdHook, xxxClearHook, xxxCloseNames, xxxDocHook, xxxHasHook, xxxHideCmd, xxxHiRes, xxxHuntHook, xxxHuntSight, xxxInstantHook, xxxQuiet, xxxScanHunt, xxxSpin, xxxSquare, type XxxId } from "../../xxxReel";
 import { MIX8_ID, MIX9_SLOW, isMix9, mixBodyPass, mixTagPass, sampleMixBottom, sampleMixTop, type MixId } from "../../mixReel";
 import { DefendRing } from "./DefendRing";
 import { VsFoes } from "./VsFoes";
@@ -637,6 +637,7 @@ function SceneContent({
       {cinematic && xxx && xxxHasHook(xxx) && (
         <XxxHookHud variant={xxxHuntHook(xxx) ? "hunt" : xxxDocHook(xxx) ? "doc" : xxxAdHook(xxx) ? "ad" : xxxClearHook(xxx) ? "clear" : "banner"} instant={xxxInstantHook(xxx)} />
       )}
+      {cinematic && xxx && xxxHuntSight(xxx) && <HuntSightHud />}
       {cinematic && !split && <ReelVignette />}
       {countdown && <CountdownFlash />}
       {cinematic && !discover && !countdown && !defend && !vs && !split && <ReelFade duration={duration ?? 8} />}

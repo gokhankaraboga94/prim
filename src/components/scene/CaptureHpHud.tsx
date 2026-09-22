@@ -604,6 +604,114 @@ export function XxxHookHud({ variant = "banner", instant = false }: { variant?: 
   );
 }
 
+const SIGHT_INK = "#111111";
+const SIGHT_EDGE = "#f5f5f5";
+
+function drawHuntSight(canvas: HTMLCanvasElement, recT: number) {
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return;
+  const w = canvas.width;
+  const h = canvas.height;
+  ctx.clearRect(0, 0, w, h);
+  if (recT < -0.05 || recT >= 4) return;
+
+  const lock = recT >= 2.55 && recT < 3.2;
+  const slam = lock ? 0.82 : 1;
+  const boxW = w * 0.62 * slam;
+  const boxH = h * 0.34 * slam;
+  const x = (w - boxW) * 0.5;
+  const y = h * 0.42 - boxH * 0.5;
+  const arm = Math.max(28, boxW * 0.12);
+  const thick = lock ? 14 : 9;
+
+  const corner = (cx: number, cy: number, dx: number, dy: number) => {
+    ctx.beginPath();
+    ctx.moveTo(cx, cy + dy * arm);
+    ctx.lineTo(cx, cy);
+    ctx.lineTo(cx + dx * arm, cy);
+    ctx.stroke();
+  };
+
+  ctx.lineCap = "square";
+  ctx.lineJoin = "miter";
+  ctx.strokeStyle = SIGHT_INK;
+  ctx.lineWidth = thick + 6;
+  corner(x, y, 1, 1);
+  corner(x + boxW, y, -1, 1);
+  corner(x, y + boxH, 1, -1);
+  corner(x + boxW, y + boxH, -1, -1);
+  ctx.strokeStyle = SIGHT_EDGE;
+  ctx.lineWidth = thick;
+  corner(x, y, 1, 1);
+  corner(x + boxW, y, -1, 1);
+  corner(x, y + boxH, 1, -1);
+  corner(x + boxW, y + boxH, -1, -1);
+
+  if (!lock) {
+    const sweep = (recT % 0.82) / 0.82;
+    const ly = y + 8 + sweep * (boxH - 16);
+    ctx.strokeStyle = "rgba(17,17,17,0.55)";
+    ctx.lineWidth = 5;
+    ctx.beginPath();
+    ctx.moveTo(x + 10, ly);
+    ctx.lineTo(x + boxW - 10, ly);
+    ctx.stroke();
+    ctx.strokeStyle = "rgba(245,245,245,0.92)";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(x + 10, ly);
+    ctx.lineTo(x + boxW - 10, ly);
+    ctx.stroke();
+  } else {
+    ctx.strokeStyle = SIGHT_EDGE;
+    ctx.lineWidth = 3;
+    ctx.strokeRect(x + 16, y + boxH * 0.5 - 2, boxW - 32, 4);
+  }
+}
+
+function HuntSightPlate() {
+  const size = useThree((s) => s.size);
+  const mat = useRef<THREE.MeshBasicMaterial>(null);
+  const tex = useMemo(() => {
+    const c = document.createElement("canvas");
+    c.width = 1080;
+    c.height = 1080;
+    drawHuntSight(c, 0);
+    const t = new THREE.CanvasTexture(c);
+    t.colorSpace = THREE.SRGBColorSpace;
+    t.minFilter = THREE.LinearFilter;
+    t.magFilter = THREE.LinearFilter;
+    return t;
+  }, []);
+
+  useFrame(({ clock }) => {
+    const recT = clock.elapsedTime - REEL_HOLD;
+    drawHuntSight(tex.image as HTMLCanvasElement, recT);
+    tex.needsUpdate = true;
+    if (mat.current) mat.current.opacity = recT >= -0.05 && recT < 4 ? 1 : 0;
+  });
+
+  const width = size.width * 0.78;
+  const height = width;
+  const y = size.height * 0.04;
+
+  return (
+    <mesh position={[0, y, 0]} renderOrder={28}>
+      <planeGeometry args={[width, height]} />
+      <meshBasicMaterial ref={mat} map={tex} transparent opacity={0} depthTest={false} toneMapped={false} />
+    </mesh>
+  );
+}
+
+export function HuntSightHud() {
+  return (
+    <Hud renderPriority={4}>
+      <OrthographicCamera makeDefault position={[0, 0, 10]} />
+      <HuntSightPlate />
+    </Hud>
+  );
+}
+
 function drawSpinName(canvas: HTMLCanvasElement, text: string) {
   const ctx = canvas.getContext("2d");
   if (!ctx) return;
