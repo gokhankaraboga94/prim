@@ -836,11 +836,10 @@ export function AdminPage() {
               </button>
             ))}
           </div>
-          <label>xxx — {XXX_SECONDS}s / xxx3 · vv1 · vv2 · harika — {XXXV_SECONDS}s / harika2 · harika3 · harika4 · harika5 — {HARIKA2_SECONDS}s / spin — {SPIN_SECONDS}s</label>
+          <label>xxx — {XXX_SECONDS}s / xxx3 · vv1 · vv2 · harika — {XXXV_SECONDS}s / harika2–6 — {HARIKA2_SECONDS}s / spin — {SPIN_SECONDS}s</label>
           <p className="muted">
-            Keşfet sinematikleri. xxx: yazısız. harika5 = harika4 + nişangah
-            (ilk 4s ismin üstünde köşe çerçeve, tarama çizgisi, 2.7s kilit).
-            0–1.5 İSMİN NERDE. 18s, 1080p, ok yok.
+            Keşfet sinematikleri. xxx: yazısız. harika6 = harika5, kanca 3s sabit:
+            DUR. SENİN İSMİN DE BURADA OLABİLİR. 18s, 1080p, ok yok.
             spin: siyah zemin, 13s — isimler karışık ve tekrarsız geçer, 6. saniyede kilit, sonra büyür.
           </p>
           <div className="dur-pills shot-pills">
