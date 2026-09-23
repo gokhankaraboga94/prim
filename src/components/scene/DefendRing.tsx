@@ -42,7 +42,7 @@ export function DefendRing({ soldiers, mode, level = 1 }: DefendRingProps) {
     const recT = state.clock.elapsedTime - REEL_HOLD;
     const wrapping = isDefendSortie(mode) && recT < DEFEND2_SORTIE;
     skip.current += 1;
-    if (!wrapping && skip.current % 2 === 1) return;
+    if (!wrapping && !redTip && skip.current % 2 === 1) return;
     const t = state.clock.elapsedTime;
     const n = Math.min(cap, baked.length);
     for (let k = 0; k < n; k++) {
@@ -60,7 +60,11 @@ export function DefendRing({ soldiers, mode, level = 1 }: DefendRingProps) {
 
   return (
     <instancedMesh key={`${cap}-${mode}-spear-tip`} ref={bodies} args={[geo, undefined, cap]} frustumCulled={false}>
-      <meshBasicMaterial vertexColors />
+      {redTip ? (
+        <meshStandardMaterial vertexColors roughness={0.48} metalness={0.18} envMapIntensity={0.55} />
+      ) : (
+        <meshBasicMaterial vertexColors />
+      )}
     </instancedMesh>
   );
 }

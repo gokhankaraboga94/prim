@@ -32,12 +32,12 @@ export const DEFEND2_RINGS = 8;
 export const DEFEND2_RING_GAP = 1.12;
 export const DEFEND2_RING_SPACING = 0.98;
 export const DEFEND2_MAX_ENEMIES = 1400;
-export const DEFEND3_RINGS = 20;
-export const DEFEND3_RING_GAP = 0.67;
-export const DEFEND3_RING_SPACING = 0.76;
-export const DEFEND3_MAX_ENEMIES = 4800;
+export const DEFEND3_RINGS = 28;
+export const DEFEND3_RING_GAP = 0.52;
+export const DEFEND3_RING_SPACING = 0.72;
+export const DEFEND3_MAX_ENEMIES = 7800;
 export const DEFEND_INNER_GAP = 4.2;
-export const DEFEND3_INNER_GAP = 1.4;
+export const DEFEND3_INNER_GAP = 0.52;
 export const DEFEND_APPROACH = 26;
 
 export const DEFEND_HOOK_END = 2.2;
@@ -196,18 +196,32 @@ export function defendRingLayout(soldiers: number, id: DefendId = DEFEND_ID): De
   const maxE = ringCap(id);
   const outer0 = defendOuterAt(0, armyR, id);
   const minR = armyR + innerGap(id) - 0.4;
-  const rings: DefendRingSpec[] = [];
-  let cap = 0;
+  const specs: DefendRingSpec[] = [];
   for (let ring = 0; ring < ringCount(id); ring++) {
     const r0 = outer0 - ring * gap;
     if (r0 < minR) continue;
     const innerU = ring / Math.max(1, ringCount(id) - 1);
-    const sp = isDefend3(id) ? spacing * (1 - innerU * 0.34) : spacing;
-    const n = Math.max(16, Math.round((2 * Math.PI * r0) / sp));
-    if (cap + n > maxE) break;
-    rings.push({ ring, n, offset: (ring % 2) * (Math.PI / n) });
-    cap += n;
+    const pack = isDefend3(id) ? Math.max(0.34, 1 - Math.pow(innerU, 1.25) * 0.58) : 1;
+    const sp = spacing * pack;
+    const n = Math.max(isDefend3(id) ? 22 : 16, Math.round((2 * Math.PI * r0) / sp));
+    specs.push({ ring, n, offset: (ring % 2) * (Math.PI / Math.max(1, n)) });
   }
+  if (isDefend3(id)) specs.sort((a, b) => b.ring - a.ring);
+  const rings: DefendRingSpec[] = [];
+  let cap = 0;
+  for (const spec of specs) {
+    if (cap >= maxE) break;
+    if (cap + spec.n > maxE) {
+      const take = maxE - cap;
+      if (take < 12) break;
+      rings.push({ ring: spec.ring, n: take, offset: spec.offset });
+      cap += take;
+      break;
+    }
+    rings.push(spec);
+    cap += spec.n;
+  }
+  rings.sort((a, b) => a.ring - b.ring);
   return { armyR, rings, cap: Math.max(1, cap), gap };
 }
 

@@ -569,10 +569,10 @@ function SceneContent({
   return (
     <>
       <color attach="background" args={["#7eb6ee"]} />
-      <fog attach="fog" args={defend ? (sortie ? ["#9ec8ee", 600, 2200] : ["#9ec8ee", 1400, 4200]) : field ? ["#9ec8ee", 140, 720] : ["#9ec8ee", 380, 1500]} />
-      <SkyDome cheap={Boolean(defend)} />
+      <fog attach="fog" args={defend ? (isDefend3(defend) ? ["#9ec8ee", 1100, 3200] : sortie ? ["#9ec8ee", 600, 2200] : ["#9ec8ee", 1400, 4200]) : field ? ["#9ec8ee", 140, 720] : ["#9ec8ee", 380, 1500]} />
+      <SkyDome cheap={Boolean(defend) && !isDefend3(defend)} />
       <SteelSky />
-      <DayLights cinematic={cinematic} slim={Boolean(defend)} />
+      <DayLights cinematic={cinematic} slim={Boolean(defend) && !isDefend3(defend)} />
       <Terrain road={!defend && !field} cheap={Boolean(defend)} />
       {!defend && !field && <Castle level={level} pressure={pressure} gateClosed={Boolean(countdown) || split || climb || Boolean(xxx)} wallFight={climb} />}
       {sortie && (
@@ -745,7 +745,7 @@ function BattleSceneInner({
       shadows={!cinematic}
       dpr={cinematic ? (xxx && xxxHiRes(xxx) ? 2 : 1) : [1, 1.5]}
       gl={{
-        antialias: !defend && !(xxx && xxxQuiet(xxx)),
+        antialias: !(xxx && xxxQuiet(xxx)) && (!defend || isDefend3(defend)),
         alpha: false,
         powerPreference: "high-performance",
         stencil: false,

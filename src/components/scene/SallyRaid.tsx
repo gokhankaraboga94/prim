@@ -72,11 +72,11 @@ function createDefendRaiderGeometry(redTip = false) {
     part(new THREE.BoxGeometry(0.12, 0.4, 0.12), redDk, -0.28, 0.9, 0.04),
     part(new THREE.BoxGeometry(0.12, 0.4, 0.12), redDk, 0.28, 0.9, 0.06),
     part(new THREE.BoxGeometry(0.22, 0.18, 0.2), skin, 0, 1.28, 0.03),
-    part(new THREE.SphereGeometry(0.14, 6, 5), helm, 0, 1.48, 0.02),
+    part(new THREE.SphereGeometry(0.14, redTip ? 12 : 6, redTip ? 9 : 5), helm, 0, 1.48, 0.02),
     part(new THREE.BoxGeometry(0.16, 0.03, 0.05), "#080202", 0, 1.46, 0.14),
     part(new THREE.BoxGeometry(0.09, 0.08, 0.1), skin, 0.36, 0.86, 0.16),
     part(new THREE.BoxGeometry(0.036, 0.036, 1.55), steel, 0.4, 0.9, 0.92, 0.18, 0, 0.12),
-    part(new THREE.ConeGeometry(0.028, 0.52, 7), tip, 0.51, 1.07, 1.84, Math.PI / 2 + 0.18, 0, 0.12),
+    part(new THREE.ConeGeometry(0.028, 0.52, redTip ? 10 : 7), tip, 0.51, 1.07, 1.84, Math.PI / 2 + 0.18, 0, 0.12),
   ];
   const merged = mergeGeometries(pieces, false);
   pieces.forEach((g) => g.dispose());
@@ -85,7 +85,7 @@ function createDefendRaiderGeometry(redTip = false) {
 
 let raiderGeoCache: THREE.BufferGeometry | null = null;
 let defendRaiderSpearTipGeo: THREE.BufferGeometry | null = null;
-let defendRaiderRedTipGeo: THREE.BufferGeometry | null = null;
+let defendRaiderRedTipGeoV2: THREE.BufferGeometry | null = null;
 
 export function getRaiderGeometry() {
   if (!raiderGeoCache) raiderGeoCache = createRaiderGeometry();
@@ -94,8 +94,8 @@ export function getRaiderGeometry() {
 
 export function getDefendRaiderGeometry(redTip = false) {
   if (redTip) {
-    if (!defendRaiderRedTipGeo) defendRaiderRedTipGeo = createDefendRaiderGeometry(true);
-    return defendRaiderRedTipGeo;
+    if (!defendRaiderRedTipGeoV2) defendRaiderRedTipGeoV2 = createDefendRaiderGeometry(true);
+    return defendRaiderRedTipGeoV2;
   }
   if (!defendRaiderSpearTipGeo) defendRaiderSpearTipGeo = createDefendRaiderGeometry();
   return defendRaiderSpearTipGeo;
