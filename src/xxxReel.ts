@@ -209,7 +209,7 @@ export function harika4TextPhase(recT: number): "scan" | "hook" | "off" {
 }
 
 export function harika6TextPhase(recT: number): "hook" | "off" {
-  if (recT < 3) return "hook";
+  if (recT >= 2 && recT < 5) return "hook";
   return "off";
 }
 

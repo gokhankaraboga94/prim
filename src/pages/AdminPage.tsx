@@ -838,7 +838,7 @@ export function AdminPage() {
           </div>
           <label>xxx — {XXX_SECONDS}s / xxx3 · vv1 · vv2 · harika — {XXXV_SECONDS}s / harika2–6 — {HARIKA2_SECONDS}s / spin — {SPIN_SECONDS}s</label>
           <p className="muted">
-            Keşfet sinematikleri. xxx: yazısız. harika6 = harika5, kanca 3s sabit:
+            Keşfet sinematikleri. xxx: yazısız. harika6 = harika5, kanca 2–5s sabit:
             DUR. SENİN İSMİN DE BURADA OLABİLİR. 18s, 1080p, ok yok.
             spin: siyah zemin, 13s — isimler karışık ve tekrarsız geçer, 6. saniyede kilit, sonra büyür.
           </p>

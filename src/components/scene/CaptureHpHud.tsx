@@ -565,7 +565,7 @@ function XxxHookPlate({ variant = "banner", instant = false }: { variant?: HookV
     const c = document.createElement("canvas");
     c.width = variant === "doc" || variant === "hunt" || variant === "hold" ? 1080 : 2160;
     c.height = variant === "doc" || variant === "hunt" || variant === "hold" ? 520 : variant === "ad" ? 680 : variant === "clear" ? 560 : 800;
-    if (variant === "hold") drawHarika6Hook(c, "hook");
+    if (variant === "hold") drawHarika6Hook(c, "off");
     else if (variant === "hunt") drawHarika4Hook(c, "scan");
     else if (variant === "doc") drawHarika3Hook(c, "scan");
     else if (variant === "ad") drawAdHook(c, instant ? "scan" : "static");
@@ -579,7 +579,7 @@ function XxxHookPlate({ variant = "banner", instant = false }: { variant?: HookV
   }, [variant, instant]);
   const redraws = useRef(0);
   const lastPhase = useRef<AdHookPhase | DocHookPhase>(
-    variant === "hold" ? "hook" : variant === "doc" || variant === "hunt" || instant ? "scan" : "static"
+    variant === "hold" ? "off" : variant === "doc" || variant === "hunt" || instant ? "scan" : "static"
   );
 
   useEffect(() => {
