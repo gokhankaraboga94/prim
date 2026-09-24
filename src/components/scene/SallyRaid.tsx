@@ -86,6 +86,36 @@ function createDefendRaiderGeometry(redTip = false) {
 let raiderGeoCache: THREE.BufferGeometry | null = null;
 let defendRaiderSpearTipGeo: THREE.BufferGeometry | null = null;
 let defendRaiderRedTipGeoV2: THREE.BufferGeometry | null = null;
+let swordRaiderGeo: THREE.BufferGeometry | null = null;
+
+function createSwordRaiderGeometry() {
+  const red = "#d31c1c";
+  const redDk = "#7a1212";
+  const pieces = [
+    part(new THREE.BoxGeometry(0.16, 0.12, 0.26), "#1a100c", -0.11, 0.06, 0.08),
+    part(new THREE.BoxGeometry(0.16, 0.12, 0.26), "#1a100c", 0.11, 0.06, -0.08),
+    part(new THREE.BoxGeometry(0.13, 0.52, 0.14), redDk, -0.11, 0.38, 0.04),
+    part(new THREE.BoxGeometry(0.13, 0.52, 0.14), redDk, 0.11, 0.38, -0.04),
+    part(new THREE.BoxGeometry(0.38, 0.46, 0.24), red, 0, 0.96, 0.02),
+    part(new THREE.BoxGeometry(0.12, 0.4, 0.12), redDk, -0.28, 0.9, 0.04),
+    part(new THREE.BoxGeometry(0.12, 0.4, 0.12), redDk, 0.28, 0.9, 0.06),
+    part(new THREE.BoxGeometry(0.22, 0.18, 0.2), "#d4a57c", 0, 1.28, 0.03),
+    part(new THREE.SphereGeometry(0.14, 12, 9), "#9a1616", 0, 1.48, 0.02),
+    part(new THREE.BoxGeometry(0.16, 0.03, 0.05), "#080202", 0, 1.46, 0.14),
+    part(new THREE.BoxGeometry(0.22, 0.04, 0.055), "#c9a24a", 0.42, 1.05, 0.36, 0.65, 0, -0.3),
+    part(new THREE.BoxGeometry(0.04, 0.045, 0.14), "#3a2414", 0.38, 0.96, 0.24, 0.65, 0, -0.3),
+    part(new THREE.BoxGeometry(0.016, 0.05, 0.86), "#e8eef4", 0.5, 1.32, 0.72, 0.9, 0.1, -0.4),
+    part(new THREE.BoxGeometry(0.008, 0.02, 0.84), "#ffffff", 0.5, 1.34, 0.72, 0.9, 0.1, -0.4),
+  ];
+  const merged = mergeGeometries(pieces, false);
+  pieces.forEach((g) => g.dispose());
+  return merged ?? colorize(new THREE.BoxGeometry(0.4, 1.2, 0.28), red);
+}
+
+export function getSwordRaiderGeometry() {
+  if (!swordRaiderGeo) swordRaiderGeo = createSwordRaiderGeometry();
+  return swordRaiderGeo;
+}
 
 export function getRaiderGeometry() {
   if (!raiderGeoCache) raiderGeoCache = createRaiderGeometry();

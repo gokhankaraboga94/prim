@@ -1716,7 +1716,7 @@ export function CountdownFlash() {
   );
 }
 
-function New2RatioPlate({ soldiers }: { soldiers: number }) {
+function New2RatioPlate({ soldiers, drop = 0 }: { soldiers: number; drop?: number }) {
   const size = useThree((s) => s.size);
   const tex = useMemo(() => {
     const canvas = document.createElement("canvas");
@@ -1761,18 +1761,18 @@ function New2RatioPlate({ soldiers }: { soldiers: number }) {
   const w = size.width * 0.88;
   const h = w * (128 / 1024);
   return (
-    <mesh position={[0, size.height / 2 - h * 0.62 - 36, 4]} renderOrder={30}>
+    <mesh position={[0, size.height / 2 - h * 0.62 - 36 - drop, 4]} renderOrder={30}>
       <planeGeometry args={[w, h]} />
       <meshBasicMaterial map={tex} transparent depthTest={false} toneMapped={false} />
     </mesh>
   );
 }
 
-export function New2RatioBar({ soldiers }: { soldiers: number }) {
+export function New2RatioBar({ soldiers, drop = 0 }: { soldiers: number; drop?: number }) {
   return (
     <Hud renderPriority={3}>
       <OrthographicCamera makeDefault position={[0, 0, 10]} />
-      <New2RatioPlate soldiers={soldiers} />
+      <New2RatioPlate soldiers={soldiers} drop={drop} />
     </Hud>
   );
 }

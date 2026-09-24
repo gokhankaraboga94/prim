@@ -63,6 +63,7 @@ type ArmyProps = {
   vs2?: boolean;
   new1?: boolean;
   new2?: boolean;
+  blade?: boolean;
   mix?: boolean;
   mixSlow?: boolean;
   nameHunt?: boolean;
@@ -567,6 +568,16 @@ function createDefendSoldierGeometry() {
 
 const BLUE_DYE = { armor: "#1a56e8", hi: "#4d8cff", dk: "#0c2f8a", leather: "#123a9a" };
 
+function heldSword() {
+  return [
+    part(new THREE.BoxGeometry(0.22, 0.045, 0.06), "#c9a24a", 0.5, 1.08, 0.38, 0.7, 0.15, -0.35),
+    part(new THREE.BoxGeometry(0.045, 0.05, 0.16), "#3a2414", 0.46, 0.98, 0.26, 0.7, 0.15, -0.35),
+    part(new THREE.SphereGeometry(0.04, 8, 6), "#c9a24a", 0.42, 0.9, 0.16),
+    part(new THREE.BoxGeometry(0.015, 0.055, 0.92), "#d5dde8", 0.58, 1.38, 0.78, 0.95, 0.2, -0.45),
+    part(new THREE.BoxGeometry(0.008, 0.02, 0.9), "#f4f7fb", 0.575, 1.4, 0.78, 0.95, 0.2, -0.45),
+  ];
+}
+
 function createBlueSoldierGeometry() {
   return mergeParts(
     [
@@ -577,6 +588,10 @@ function createBlueSoldierGeometry() {
     ],
     BLUE_DYE.armor
   );
+}
+
+function createBlueSwordGeometry() {
+  return mergeParts([...plateArmor(true, BLUE_DYE), ...corinthianShell(12), ...heldSword()], BLUE_DYE.armor);
 }
 
 function createBluePlumeGeometry() {
@@ -624,6 +639,7 @@ function createCommanderFaceGeometry() {
 let archerGeoV14: THREE.BufferGeometry | null = null;
 let defendSoldierGeoV15: THREE.BufferGeometry | null = null;
 let blueSoldierGeo: THREE.BufferGeometry | null = null;
+let blueSwordGeo: THREE.BufferGeometry | null = null;
 let bluePlumeGeo: THREE.BufferGeometry | null = null;
 let commanderGeoV14: THREE.BufferGeometry | null = null;
 let commanderSwordArmV3: THREE.BufferGeometry | null = null;
@@ -650,6 +666,11 @@ function getDefendSoldierGeometry() {
 function getBlueSoldierGeometry() {
   if (!blueSoldierGeo) blueSoldierGeo = createBlueSoldierGeometry();
   return blueSoldierGeo;
+}
+
+function getBlueSwordGeometry() {
+  if (!blueSwordGeo) blueSwordGeo = createBlueSwordGeometry();
+  return blueSwordGeo;
 }
 
 function getBluePlumeGeometry() {
@@ -801,7 +822,7 @@ function NameLayers({
 }
 
 
-export function Army({ count, names = [], commanders = [], cinematic, duration = 8, skipCommander = false, roster = null, discover = null, countdown = false, defend = false, defend2 = false, defend3 = false, vs = false, vs2 = false, new1 = false, new2 = false, mix = false, mixSlow = false, nameHunt = false, quiet = false, square = false, readNames = false, scanHunt = false, level = 1, rosterIds = null }: ArmyProps) {
+export function Army({ count, names = [], commanders = [], cinematic, duration = 8, skipCommander = false, roster = null, discover = null, countdown = false, defend = false, defend2 = false, defend3 = false, vs = false, vs2 = false, new1 = false, new2 = false, blade = false, mix = false, mixSlow = false, nameHunt = false, quiet = false, square = false, readNames = false, scanHunt = false, level = 1, rosterIds = null }: ArmyProps) {
   const bodies = useRef<THREE.InstancedMesh>(null);
   const soldierPlumes = useRef<THREE.InstancedMesh>(null);
   const bowHolds = useRef<THREE.InstancedMesh>(null);
@@ -826,7 +847,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
   const pos = useMemo(() => new THREE.Vector3(), []);
   const melee = defend || vs || vs2 || new1 || new2;
   const openField = new1 || new2;
-  const archerGeo = useMemo(() => (new2 ? getBlueSoldierGeometry() : melee ? getDefendSoldierGeometry() : getArcherGeometry()), [melee, new2]);
+  const archerGeo = useMemo(() => (blade ? getBlueSwordGeometry() : new2 ? getBlueSoldierGeometry() : melee ? getDefendSoldierGeometry() : getArcherGeometry()), [melee, new2, blade]);
   const commanderGeo = useMemo(() => (melee ? archerGeo : getCommanderGeometry()), [melee, archerGeo]);
   const commanderCapeGeo = useMemo(() => (melee ? archerGeo : getCommanderCapeGeometry()), [melee, archerGeo]);
   const soldierPlumeGeo = useMemo(() => (new2 ? getBluePlumeGeometry() : getSoldierPlumeGeometry()), [new2]);
