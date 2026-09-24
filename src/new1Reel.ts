@@ -435,13 +435,13 @@ export function sampleNew1Cam(recT: number, soldiers: number): ShotPose {
   };
 }
 
-export const NEW5_FRIENDS = 18;
-const NEW5_LANES = 2;
-const NEW5_LANE = 1.22;
+export const NEW5_FRIENDS = 21;
+const NEW5_LANES = 3;
+const NEW5_LANE = 1.15;
 const NEW5_RANK = 1.46;
 const NEW5_SPEED = 7.4;
 const NEW5_FOE_GAP = 1.56;
-const NEW5_FOE_START = 8.2;
+const NEW5_FOE_START = 14.5;
 const NEW5_FOE_ROWS = 155;
 export const NEW5_FOES = NEW5_LANES * NEW5_FOE_ROWS;
 const NEW5_REACH = 0.42;
@@ -505,12 +505,12 @@ export function sampleNew5Cam(recT: number): ShotPose {
   const front = new5Front(t);
   const bob = Math.sin(t * 16) * 0.05;
   return {
-    x: 0.35,
-    y: 5.4 + bob,
-    z: front - 10.5,
+    x: 0.2,
+    y: 9.2 + bob,
+    z: front - 12.2,
     lx: 0,
-    ly: 1.25,
-    lz: front + 7.5,
+    ly: 1.35,
+    lz: front - 0.6,
     fov: 38,
   };
 }

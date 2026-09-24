@@ -564,21 +564,38 @@ function useNew1GroundTexture() {
 function New5Bridge() {
   const length = 340;
   const z = 118;
+  const posts = [];
+  const tones = ["#2c3834", "#5a4030", "#243246", "#3a3228", "#1d4034", "#4a3038"];
+  for (let i = 0; i < 46; i++) {
+    const pz = -16 + i * 7.4;
+    const h = 1.4 + (i % 4) * 0.7;
+    posts.push(
+      <mesh key={`bl${i}`} position={[-6.4, h * 0.5 - 0.3, pz]}>
+        <boxGeometry args={[1.15 + (i % 3) * 0.28, h, 1.05]} />
+        <meshStandardMaterial color={tones[i % tones.length]} roughness={0.96} />
+      </mesh>,
+      <mesh key={`br${i}`} position={[6.7, h * 0.38, pz + 3.2]}>
+        <boxGeometry args={[0.85 + (i % 2) * 0.4, h * 0.75, 1.35]} />
+        <meshStandardMaterial color={tones[(i + 3) % tones.length]} roughness={0.96} />
+      </mesh>
+    );
+  }
   return (
     <group>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -36, z]}>
         <planeGeometry args={[900, 900]} />
         <meshStandardMaterial color="#14181c" roughness={1} />
       </mesh>
+      {posts}
       <mesh position={[0, -0.22, z]}>
-        <boxGeometry args={[4.7, 0.42, length]} />
+        <boxGeometry args={[7.2, 0.42, length]} />
         <meshStandardMaterial color="#6a6258" roughness={0.92} metalness={0.04} />
       </mesh>
-      <mesh position={[-2.15, 0.28, z]}>
+      <mesh position={[-3.4, 0.28, z]}>
         <boxGeometry args={[0.16, 0.7, length]} />
         <meshStandardMaterial color="#3e3832" roughness={0.9} />
       </mesh>
-      <mesh position={[2.15, 0.28, z]}>
+      <mesh position={[3.4, 0.28, z]}>
         <boxGeometry args={[0.16, 0.7, length]} />
         <meshStandardMaterial color="#3e3832" roughness={0.9} />
       </mesh>

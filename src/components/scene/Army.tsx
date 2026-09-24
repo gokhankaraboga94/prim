@@ -1386,6 +1386,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
       const staggered = Boolean(countdown || defend || vs || vs2 || openField);
       if (countdown) nameScale = 1.12 * crowd;
       else if (defend) nameScale = 1.22 * crowd;
+      else if (bridge) nameScale = 0.34;
       else if (new2) {
         const lift = Math.max(0, Math.min(1, (recT - 3.2) / 12));
         nameScale = Math.max(0.78, crowd * (0.95 + lift * 0.65));
@@ -1422,7 +1423,10 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
         const slot = layout.slotOf[idx];
         ({ row, col } = slotCoord(slot >= 0 ? slot : 0, form.sizes));
         if (defend && staggered) lift = 2.7 + (idx % 5) * 0.22;
-        else if (openField && staggered) {
+        else if (bridge) {
+          lift = 1.58;
+          nx = pos.x;
+        } else if (openField && staggered) {
           const band = idx % 7;
           lift = 2.42 + band * 0.3 + vsPose.y * 0.04;
           nx = pos.x + ((idx % 2) * 2 - 1) * 0.28;
@@ -1448,7 +1452,8 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
         }
       }
       let sx = (isolate ? Math.min(1.05, cell.sx * nameScale) : cell.sx * nameScale);
-      if (defend && staggered) sx = Math.min(sx, FILE * 1.28);
+      if (bridge) sx = Math.min(sx, 0.72);
+      else if (defend && staggered) sx = Math.min(sx, FILE * 1.28);
       else if (openField && staggered) sx = Math.min(sx, FILE * 1.12);
       else if ((vs || vs2) && staggered) sx = Math.min(sx, FILE * (vs2 ? 0.92 : 1.05));
       else if (staggered) sx = Math.min(sx, FILE * 0.78);
@@ -1460,7 +1465,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
       if (cam) {
         nockOff.copy(cam.position).sub(pos);
         const len = nockOff.length() || 1;
-        const pull = new2 ? Math.min(2.4, Math.max(0.4, len * 0.055)) : defend || vs || vs2 || new1 ? Math.min(14, Math.max(7, len * 0.12)) : Math.min(4.5, Math.max(1.2, len * 0.04));
+        const pull = bridge ? 0.08 : new2 ? Math.min(2.4, Math.max(0.4, len * 0.055)) : defend || vs || vs2 || new1 ? Math.min(14, Math.max(7, len * 0.12)) : Math.min(4.5, Math.max(1.2, len * 0.04));
         px = nx + (nockOff.x / len) * pull;
         py = baseY + (nockOff.y / len) * pull;
         pz = pos.z + (nockOff.z / len) * pull;
