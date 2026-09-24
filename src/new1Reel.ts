@@ -25,6 +25,11 @@ export type New3Id = typeof NEW3_ID;
 export const NEW3_MODE = { id: NEW3_ID, label: "new3" } as const;
 export const NEW3_SECONDS = 30;
 
+export const NEW4_ID = "new4" as const;
+export type New4Id = typeof NEW4_ID;
+export const NEW4_MODE = { id: NEW4_ID, label: "new4" } as const;
+export const NEW4_SECONDS = 30;
+
 export function isNew1(id: string | null | undefined): id is New1Id {
   return id === NEW1_ID;
 }
@@ -37,12 +42,16 @@ export function isNew3(id: string | null | undefined): id is New3Id {
   return id === NEW3_ID;
 }
 
-export function isNewDuel(id: string | null | undefined): id is New2Id | New3Id {
-  return id === NEW2_ID || id === NEW3_ID;
+export function isNew4(id: string | null | undefined): id is New4Id {
+  return id === NEW4_ID;
 }
 
-export function isNewField(id: string | null | undefined): id is New1Id | New2Id | New3Id {
-  return id === NEW1_ID || id === NEW2_ID || id === NEW3_ID;
+export function isNewDuel(id: string | null | undefined): id is New2Id | New3Id | New4Id {
+  return id === NEW2_ID || id === NEW3_ID || id === NEW4_ID;
+}
+
+export function isNewField(id: string | null | undefined): id is New1Id | New2Id | New3Id | New4Id {
+  return id === NEW1_ID || id === NEW2_ID || id === NEW3_ID || id === NEW4_ID;
 }
 
 export function new1Duration(id: string | null | undefined) {
