@@ -864,7 +864,7 @@ export function AdminPage() {
           )}
           {isDefend4(reelShot) && (
             <p className="muted">
-              Savunma 3 ile aynı. Zemin düz toprak, bizim askerler mavi.
+              Savunma 3 ile aynı. Zemin new3 toprağı, bizim askerler mavi.
             </p>
           )}
           {reelShot === DEFEND3_ID && (

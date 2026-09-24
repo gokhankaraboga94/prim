@@ -578,15 +578,6 @@ function New4Peak() {
   );
 }
 
-function Defend4Terrain() {
-  return (
-    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
-      <planeGeometry args={[1600, 1600]} />
-      <meshStandardMaterial color="#6b5a38" roughness={1} metalness={0} />
-    </mesh>
-  );
-}
-
 function New1Terrain() {
   const ground = useNew1GroundTexture();
   return (
@@ -708,7 +699,7 @@ function SceneContent({
       <SkyDome cheap={Boolean(defend) && !isDefend3(defend)} />
       <SteelSky />
       <DayLights cinematic={cinematic} slim={Boolean(defend) && !isDefend3(defend)} warm={slaughter} />
-      {new4 ? <New4Peak /> : isDefend4(defend) ? <Defend4Terrain /> : slaughter ? <New1Terrain /> : <Terrain road={!defend && !field} cheap={Boolean(defend)} />}
+      {new4 ? <New4Peak /> : slaughter || isDefend4(defend) ? <New1Terrain /> : <Terrain road={!defend && !field} cheap={Boolean(defend)} />}
       {!defend && !field && !slaughter && <Castle level={level} pressure={pressure} gateClosed={Boolean(countdown) || split || climb || Boolean(xxx)} wallFight={climb} />}
       {sortie && (
         <TimedVisible until={DEFEND2_SORTIE + 0.85}>
