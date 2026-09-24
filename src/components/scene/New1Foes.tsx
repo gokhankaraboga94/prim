@@ -2,7 +2,7 @@ import { useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { REEL_HOLD } from "../../recordCanvas";
-import { new1EnemyAt, new1EnemyCount, new2EnemyAt, new2VisualFriends, type New1Pose } from "../../new1Reel";
+import { NEW5_FOES, new1EnemyAt, new1EnemyCount, new2EnemyAt, new2VisualFriends, new5EnemyAt, type New1Pose } from "../../new1Reel";
 import { getDefendRaiderGeometry, getSwordRaiderGeometry } from "./SallyRaid";
 
 const dummy = new THREE.Object3D();
@@ -12,14 +12,15 @@ type New1FoesProps = {
   soldiers: number;
   duel?: boolean;
   swords?: boolean;
+  bridge?: boolean;
 };
 
-export function New1Foes({ soldiers, duel = false, swords = false }: New1FoesProps) {
+export function New1Foes({ soldiers, duel = false, swords = false, bridge = false }: New1FoesProps) {
   const bodies = useRef<THREE.InstancedMesh>(null);
   const skip = useRef(0);
-  const geo = useMemo(() => (swords ? getSwordRaiderGeometry() : getDefendRaiderGeometry(true)), [swords]);
+  const geo = useMemo(() => (swords || bridge ? getSwordRaiderGeometry() : getDefendRaiderGeometry(true)), [swords, bridge]);
   const fightFriends = duel ? new2VisualFriends(soldiers) : soldiers;
-  const cap = Math.max(1, new1EnemyCount(fightFriends));
+  const cap = bridge ? NEW5_FOES : Math.max(1, new1EnemyCount(fightFriends));
 
   useFrame((state) => {
     if (!bodies.current) return;
@@ -27,9 +28,10 @@ export function New1Foes({ soldiers, duel = false, swords = false }: New1FoesPro
     skip.current += 1;
     if (!duel && cap > 3600 && recT > 2.1 && skip.current % 2 === 1) return;
     const n = cap;
-    const place = duel ? new2EnemyAt : new1EnemyAt;
     for (let i = 0; i < n; i++) {
-      place(i, fightFriends, recT, scratch);
+      if (bridge) new5EnemyAt(i, recT, scratch);
+      else if (duel) new2EnemyAt(i, fightFriends, recT, scratch);
+      else new1EnemyAt(i, fightFriends, recT, scratch);
       dummy.position.set(scratch.x, scratch.y, scratch.z);
       dummy.rotation.set(scratch.rx, scratch.ry, scratch.rz);
       dummy.scale.setScalar((scratch.s ?? 1) > 0 ? 1.44 : 0);

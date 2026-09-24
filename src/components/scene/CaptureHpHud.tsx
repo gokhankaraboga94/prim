@@ -11,7 +11,7 @@ import { discoverBeat, DISCOVER_HOOK_END, isDiscoverEngage, isDiscoverShelf, isD
 import { countdownBeat, countdownFlash, type CountdownId } from "../../countdownReel";
 import { DEFEND_HOOK_END, defendBeat, defendPlayhead, type DefendId } from "../../defendReel";
 import { harika2TextPhase, harika3TextPhase, harika4TextPhase, harika6TextPhase, spinNamePool, spinScramble, spinShuffle, SPIN_LOCK, SPIN_SECONDS } from "../../xxxReel";
-import { new2AliveCounts } from "../../new1Reel";
+import { new2AliveCounts, new5AliveCounts } from "../../new1Reel";
 
 function roundRect(
   ctx: CanvasRenderingContext2D,
@@ -1716,7 +1716,7 @@ export function CountdownFlash() {
   );
 }
 
-function New2RatioPlate({ soldiers, drop = 0 }: { soldiers: number; drop?: number }) {
+function New2RatioPlate({ soldiers, drop = 0, bridge = false }: { soldiers: number; drop?: number; bridge?: boolean }) {
   const size = useThree((s) => s.size);
   const tex = useMemo(() => {
     const canvas = document.createElement("canvas");
@@ -1730,7 +1730,7 @@ function New2RatioPlate({ soldiers, drop = 0 }: { soldiers: number; drop?: numbe
 
   useFrame(({ clock }) => {
     const recT = Math.max(0, clock.elapsedTime - REEL_HOLD);
-    const { friends, foes } = new2AliveCounts(soldiers, recT);
+    const { friends, foes } = bridge ? new5AliveCounts(soldiers, recT) : new2AliveCounts(soldiers, recT);
     const key = `${friends}:${foes}`;
     const canvas = tex.image as HTMLCanvasElement;
     const ctx = canvas.getContext("2d");
@@ -1786,11 +1786,11 @@ function New2RatioPlate({ soldiers, drop = 0 }: { soldiers: number; drop?: numbe
   );
 }
 
-export function New2RatioBar({ soldiers, drop = 0 }: { soldiers: number; drop?: number }) {
+export function New2RatioBar({ soldiers, drop = 0, bridge = false }: { soldiers: number; drop?: number; bridge?: boolean }) {
   return (
     <Hud renderPriority={3}>
       <OrthographicCamera makeDefault position={[0, 0, 10]} />
-      <New2RatioPlate soldiers={soldiers} drop={drop} />
+      <New2RatioPlate soldiers={soldiers} drop={drop} bridge={bridge} />
     </Hud>
   );
 }

@@ -16,7 +16,7 @@ import { discoverGateRecT, sampleDiscover, type DiscoverId } from "../../discove
 import { countdownShake, sampleCountdown, type CountdownId } from "../../countdownReel";
 import { DEFEND2_SORTIE, isDefend3, isDefend4, isDefendSortie, sampleDefendCam, type DefendId } from "../../defendReel";
 import { isVs, isVs2, sampleVsCam, type VsId } from "../../vsReel";
-import { sampleNew1Cam, sampleNew2Cam, type New1Id, type New2Id, type New3Id, type New4Id } from "../../new1Reel";
+import { sampleNew1Cam, sampleNew2Cam, sampleNew5Cam, type New1Id, type New2Id, type New3Id, type New4Id, type New5Id } from "../../new1Reel";
 import { sampleXxxCam, xxxAdHook, xxxClearHook, xxxCloseNames, xxxDocHook, xxxHasHook, xxxHideCmd, xxxHiRes, xxxHoldHook, xxxHuntHook, xxxHuntSight, xxxInstantHook, xxxQuiet, xxxScanHunt, xxxSpin, xxxSquare, type XxxId } from "../../xxxReel";
 import { MIX8_ID, MIX9_SLOW, isMix9, mixBodyPass, mixTagPass, sampleMixBottom, sampleMixTop, type MixId } from "../../mixReel";
 import { DefendRing } from "./DefendRing";
@@ -60,6 +60,7 @@ type BattleSceneProps = {
   new2?: New2Id | null;
   new3?: New3Id | null;
   new4?: New4Id | null;
+  new5?: New5Id | null;
   mix?: MixId | null;
   xxx?: XxxId | null;
   rosterIds?: number[] | null;
@@ -100,6 +101,7 @@ function CinematicCam({
   new2 = null,
   new3 = null,
   new4 = null,
+  new5 = null,
   xxx = null,
   rosterIds = null,
 }: {
@@ -121,6 +123,7 @@ function CinematicCam({
   new2?: New2Id | null;
   new3?: New3Id | null;
   new4?: New4Id | null;
+  new5?: New5Id | null;
   xxx?: XxxId | null;
   rosterIds?: number[] | null;
 }) {
@@ -185,11 +188,13 @@ function CinematicCam({
       fov: 38,
     };
 
-    if (cinema || shotMode || roster || saga || discover || countdown || defend || vs || new1 || new2 || new3 || new4 || xxx) {
+    if (cinema || shotMode || roster || saga || discover || countdown || defend || vs || new1 || new2 || new3 || new4 || new5 || xxx) {
       const sampleT = recT;
       const ctx = { cmdZ, form, castle, fit, castleFit, level };
       const pose = xxx
         ? sampleXxxCam(sampleT, ctx, xxx)
+        : new5
+        ? sampleNew5Cam(sampleT)
         : new2 || new3 || new4
         ? sampleNew2Cam(sampleT, soldiers)
         : new1
@@ -210,7 +215,7 @@ function CinematicCam({
               ? sampleCinema(sampleT, duration, ctx)
               : sampleShotMode(shotMode as ShotId, sampleT, duration, skipCommander, ctx);
       persp.fov = pose.fov;
-      if (defend || vs || new1 || new2 || new3 || new4 || xxx) {
+      if (defend || vs || new1 || new2 || new3 || new4 || new5 || xxx) {
         persp.near = 0.8;
         persp.far = 6000;
       }
@@ -556,6 +561,31 @@ function useNew1GroundTexture() {
   }, []);
 }
 
+function New5Bridge() {
+  const length = 340;
+  const z = 118;
+  return (
+    <group>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -36, z]}>
+        <planeGeometry args={[900, 900]} />
+        <meshStandardMaterial color="#14181c" roughness={1} />
+      </mesh>
+      <mesh position={[0, -0.22, z]}>
+        <boxGeometry args={[4.7, 0.42, length]} />
+        <meshStandardMaterial color="#6a6258" roughness={0.92} metalness={0.04} />
+      </mesh>
+      <mesh position={[-2.15, 0.28, z]}>
+        <boxGeometry args={[0.16, 0.7, length]} />
+        <meshStandardMaterial color="#3e3832" roughness={0.9} />
+      </mesh>
+      <mesh position={[2.15, 0.28, z]}>
+        <boxGeometry args={[0.16, 0.7, length]} />
+        <meshStandardMaterial color="#3e3832" roughness={0.9} />
+      </mesh>
+    </group>
+  );
+}
+
 function New4Peak() {
   const ground = useNew1GroundTexture();
   const top = 24;
@@ -658,20 +688,22 @@ function SceneContent({
   new2 = null,
   new3 = null,
   new4 = null,
+  new5 = null,
   mix = null,
   xxx = null,
   rosterIds = null,
 }: BattleSceneProps) {
   const chiefs = effectiveCommanders(commanders, names);
-  const hideCmd = skipCommander || Boolean(discover) || Boolean(countdown) || Boolean(defend) || Boolean(vs) || Boolean(new1) || Boolean(new2) || Boolean(new3) || Boolean(new4) || Boolean(xxx && xxxHideCmd(xxx));
+  const hideCmd = skipCommander || Boolean(discover) || Boolean(countdown) || Boolean(defend) || Boolean(vs) || Boolean(new1) || Boolean(new2) || Boolean(new3) || Boolean(new4) || Boolean(new5) || Boolean(xxx && xxxHideCmd(xxx));
   const chiefN = hideCmd ? 0 : chiefs.length;
   const split = Boolean(mix);
   const sortie = isDefendSortie(defend);
   const field = isVs(vs);
   const climb = isVs2(vs);
-  const slaughter = Boolean(new1 || new2 || new3 || new4);
+  const chase = Boolean(new5);
+  const slaughter = Boolean(new1 || new2 || new3 || new4 || new5);
   const duel = Boolean(new2 || new3 || new4);
-  const blades = Boolean(new3 || new4);
+  const blades = Boolean(new3 || new4 || new5);
   const spin = Boolean(xxx && xxxSpin(xxx));
   if (spin) {
     return (
@@ -699,7 +731,7 @@ function SceneContent({
       <SkyDome cheap={Boolean(defend) && !isDefend3(defend)} />
       <SteelSky />
       <DayLights cinematic={cinematic} slim={Boolean(defend) && !isDefend3(defend)} warm={slaughter} />
-      {new4 ? <New4Peak /> : slaughter || isDefend4(defend) ? <New1Terrain /> : <Terrain road={!defend && !field} cheap={Boolean(defend)} />}
+      {chase ? <New5Bridge /> : new4 ? <New4Peak /> : slaughter || isDefend4(defend) ? <New1Terrain /> : <Terrain road={!defend && !field} cheap={Boolean(defend)} />}
       {!defend && !field && !slaughter && <Castle level={level} pressure={pressure} gateClosed={Boolean(countdown) || split || climb || Boolean(xxx)} wallFight={climb} />}
       {sortie && (
         <TimedVisible until={DEFEND2_SORTIE + 0.85}>
@@ -711,12 +743,12 @@ function SceneContent({
       ) : field ? (
         <VsFoes soldiers={soldiers} />
       ) : slaughter ? (
-        <New1Foes soldiers={soldiers} duel={duel} swords={blades} />
+        <New1Foes soldiers={soldiers} duel={duel} swords={blades} bridge={chase} />
       ) : (
         !roster && !split && !countdown && !vs && !xxx && <SallyRaid soldiers={soldiers} commanders={chiefN} />
       )}
       {climb && <VsLadders level={level} />}
-      <Army count={soldiers} names={names} commanders={commanders} cinematic={cinematic} duration={duration} skipCommander={hideCmd} roster={roster} discover={discover} countdown={Boolean(countdown)} defend={Boolean(defend)} defend2={sortie} defend3={isDefend3(defend)} blue={isDefend4(defend)} vs={field} vs2={climb} new1={Boolean(new1)} new2={duel} blade={blades} mix={split} mixSlow={isMix9(mix)} nameHunt={Boolean(xxx)} quiet={Boolean(xxx && xxxQuiet(xxx)) || slaughter} square={Boolean(xxx && xxxSquare(xxx))} readNames={Boolean(xxx && xxxCloseNames(xxx))} scanHunt={Boolean(xxx && xxxScanHunt(xxx))} level={level} rosterIds={rosterIds} />
+      <Army count={soldiers} names={names} commanders={commanders} cinematic={cinematic} duration={duration} skipCommander={hideCmd} roster={roster} discover={discover} countdown={Boolean(countdown)} defend={Boolean(defend)} defend2={sortie} defend3={isDefend3(defend)} blue={isDefend4(defend)} vs={field} vs2={climb} new1={Boolean(new1)} new2={duel} blade={blades} bridge={chase} mix={split} mixSlow={isMix9(mix)} nameHunt={Boolean(xxx)} quiet={Boolean(xxx && xxxQuiet(xxx)) || slaughter} square={Boolean(xxx && xxxSquare(xxx))} readNames={Boolean(xxx && xxxCloseNames(xxx))} scanHunt={Boolean(xxx && xxxScanHunt(xxx))} level={level} rosterIds={rosterIds} />
       {Boolean(xxx && xxxSquare(xxx)) && <Catapults soldiers={soldiers} square />}
       {Boolean(xxx && xxxScanHunt(xxx)) && <NameScanBeam soldiers={soldiers} />}
       {cinematic && split ? (
@@ -741,6 +773,7 @@ function SceneContent({
           new2={new2}
           new3={new3}
           new4={new4}
+          new5={new5}
           xxx={xxx}
           rosterIds={rosterIds}
         />
@@ -770,7 +803,7 @@ function SceneContent({
         <XxxHookHud variant={xxxHoldHook(xxx) ? "hold" : xxxHuntHook(xxx) ? "hunt" : xxxDocHook(xxx) ? "doc" : xxxAdHook(xxx) ? "ad" : xxxClearHook(xxx) ? "clear" : "banner"} instant={xxxInstantHook(xxx)} />
       )}
       {cinematic && xxx && xxxHuntSight(xxx) && <HuntSightHud />}
-      {cinematic && duel && <New2RatioBar soldiers={soldiers} drop={blades ? 64 : 0} />}
+      {cinematic && (duel || chase) && <New2RatioBar soldiers={soldiers} drop={blades ? 64 : 0} bridge={chase} />}
       {cinematic && !split && <ReelVignette />}
       {countdown && <CountdownFlash />}
       {cinematic && !discover && !countdown && !defend && !vs && !slaughter && !split && <ReelFade duration={duration ?? 8} />}
@@ -823,13 +856,14 @@ function BattleSceneInner({
   new2 = null,
   new3 = null,
   new4 = null,
+  new5 = null,
   mix = null,
   xxx = null,
   rosterIds = null,
   onReady,
 }: BattleSceneProps) {
   const [active, setActive] = useState(() => typeof document === "undefined" || !document.hidden);
-  const hideCmd = skipCommander || Boolean(discover) || Boolean(countdown) || Boolean(defend) || Boolean(vs) || Boolean(new1) || Boolean(new2) || Boolean(new3) || Boolean(new4) || Boolean(xxx && xxxHideCmd(xxx));
+  const hideCmd = skipCommander || Boolean(discover) || Boolean(countdown) || Boolean(defend) || Boolean(vs) || Boolean(new1) || Boolean(new2) || Boolean(new3) || Boolean(new4) || Boolean(new5) || Boolean(xxx && xxxHideCmd(xxx));
 
   useLayoutEffect(() => {
     if (cinematic && (mix || xxx)) {
@@ -838,7 +872,7 @@ function BattleSceneInner({
     } else if (cinematic && roster) {
       setSallyOrigin(80);
       setSwordStart(80);
-    } else if (cinematic && (countdown || defend || vs || new1 || new2 || new3 || new4)) {
+    } else if (cinematic && (countdown || defend || vs || new1 || new2 || new3 || new4 || new5)) {
       setSallyOrigin(SALLY_START_DELAY - 90);
       setSwordStart(80);
     } else if (cinematic && discover) {
@@ -869,7 +903,7 @@ function BattleSceneInner({
       setSallyOrigin(0);
       setSwordStart(SWORD_START);
     };
-  }, [cinematic, cinema, duration, hideCmd, roster, saga, discover, countdown, defend, vs, new1, new2, new3, new4, mix, xxx]);
+  }, [cinematic, cinema, duration, hideCmd, roster, saga, discover, countdown, defend, vs, new1, new2, new3, new4, new5, mix, xxx]);
 
   useEffect(() => {
     const onVis = () => setActive(!document.hidden);
@@ -882,7 +916,7 @@ function BattleSceneInner({
       shadows={!cinematic}
       dpr={cinematic ? (xxx && xxxHiRes(xxx) ? 2 : 1) : [1, 1.5]}
       gl={{
-        antialias: Boolean(new1 || new2 || new3 || new4) || (!(xxx && xxxQuiet(xxx)) && (!defend || isDefend3(defend))),
+        antialias: Boolean(new1 || new2 || new3 || new4 || new5) || (!(xxx && xxxQuiet(xxx)) && (!defend || isDefend3(defend))),
         alpha: false,
         powerPreference: "high-performance",
         stencil: false,
@@ -896,11 +930,11 @@ function BattleSceneInner({
       style={{ width: "100%", height: "100%", display: "block" }}
       onCreated={({ gl }) => {
         gl.toneMapping = THREE.ACESFilmicToneMapping;
-        gl.toneMappingExposure = cinematic ? (new1 || new2 || new3 || new4 ? 1.06 : 1.16) : 1.22;
+        gl.toneMappingExposure = cinematic ? (new1 || new2 || new3 || new4 || new5 ? 1.06 : 1.16) : 1.22;
         gl.outputColorSpace = THREE.SRGBColorSpace;
         gl.shadowMap.enabled = !cinematic;
         gl.shadowMap.type = THREE.PCFSoftShadowMap;
-        gl.setClearColor(xxx && xxxSpin(xxx) ? "#000000" : new1 || new2 || new3 || new4 ? "#8f9aa0" : "#7eb6ee", 1);
+        gl.setClearColor(xxx && xxxSpin(xxx) ? "#000000" : new1 || new2 || new3 || new4 || new5 ? "#8f9aa0" : "#7eb6ee", 1);
         if (cinematic) {
           const dpr = xxx && xxxHiRes(xxx) ? 2 : 1;
           gl.setPixelRatio(dpr);
@@ -936,6 +970,7 @@ function BattleSceneInner({
         new2={new2}
         new3={new3}
         new4={new4}
+        new5={new5}
         mix={mix}
         xxx={xxx}
         rosterIds={rosterIds}

@@ -30,6 +30,11 @@ export type New4Id = typeof NEW4_ID;
 export const NEW4_MODE = { id: NEW4_ID, label: "new4" } as const;
 export const NEW4_SECONDS = 30;
 
+export const NEW5_ID = "new5" as const;
+export type New5Id = typeof NEW5_ID;
+export const NEW5_MODE = { id: NEW5_ID, label: "new5" } as const;
+export const NEW5_SECONDS = 30;
+
 export function isNew1(id: string | null | undefined): id is New1Id {
   return id === NEW1_ID;
 }
@@ -46,12 +51,16 @@ export function isNew4(id: string | null | undefined): id is New4Id {
   return id === NEW4_ID;
 }
 
+export function isNew5(id: string | null | undefined): id is New5Id {
+  return id === NEW5_ID;
+}
+
 export function isNewDuel(id: string | null | undefined): id is New2Id | New3Id | New4Id {
   return id === NEW2_ID || id === NEW3_ID || id === NEW4_ID;
 }
 
-export function isNewField(id: string | null | undefined): id is New1Id | New2Id | New3Id | New4Id {
-  return id === NEW1_ID || id === NEW2_ID || id === NEW3_ID || id === NEW4_ID;
+export function isNewField(id: string | null | undefined): id is New1Id | New2Id | New3Id | New4Id | New5Id {
+  return id === NEW1_ID || id === NEW2_ID || id === NEW3_ID || id === NEW4_ID || id === NEW5_ID;
 }
 
 export function new1Duration(id: string | null | undefined) {
@@ -423,5 +432,85 @@ export function sampleNew1Cam(recT: number, soldiers: number): ShotPose {
     x: p.x + hit * 0.45,
     y: p.y + Math.abs(hit) * 0.2,
     z: p.z + hit * 0.25,
+  };
+}
+
+export const NEW5_FRIENDS = 18;
+const NEW5_LANES = 2;
+const NEW5_LANE = 1.22;
+const NEW5_RANK = 1.46;
+const NEW5_SPEED = 7.4;
+const NEW5_FOE_GAP = 1.56;
+const NEW5_FOE_START = 8.2;
+const NEW5_FOE_ROWS = 155;
+export const NEW5_FOES = NEW5_LANES * NEW5_FOE_ROWS;
+const NEW5_REACH = 0.42;
+
+export function new5VisualFriends(soldiers: number) {
+  return Math.min(Math.max(1, Math.floor(soldiers)), NEW5_FRIENDS);
+}
+
+function new5Front(t: number) {
+  return NEW5_SPEED * Math.max(0, t);
+}
+
+function new5FoeZ(i: number) {
+  return NEW5_FOE_START + Math.floor(i / NEW5_LANES) * NEW5_FOE_GAP;
+}
+
+export function new5FriendAt(i: number, n: number, recT: number, out: New1Pose) {
+  const count = Math.max(1, Math.min(n, NEW5_FRIENDS));
+  const col = i % NEW5_LANES;
+  const row = Math.floor(i / NEW5_LANES);
+  const t = Math.max(0, recT);
+  const front = new5Front(t);
+  const bob = Math.sin(t * 16 + row * 0.65 + col * 1.4);
+  const gap = new5FoeZ(Math.floor((front - NEW5_FOE_START) / NEW5_FOE_GAP) * NEW5_LANES) - front;
+  const hit = row === 0 && gap > -0.2 && gap < 1.15 ? 1 - gap / 1.15 : 0;
+  out.x = (col - (NEW5_LANES - 1) / 2) * NEW5_LANE;
+  out.y = Math.abs(bob) * 0.07;
+  out.z = front - row * NEW5_RANK + Math.max(0, hit) * 0.22;
+  out.rx = 0.42 + bob * 0.1 + Math.max(0, hit) * 0.7;
+  out.ry = 0;
+  out.rz = bob * 0.05;
+  out.s = i < count ? 1 : 0;
+  if (i >= count) out.y = -40;
+}
+
+export function new5EnemyAt(i: number, recT: number, out: New1Pose) {
+  const col = i % NEW5_LANES;
+  const z = new5FoeZ(i);
+  const dead = new5Front(recT) >= z - NEW5_REACH;
+  out.x = (col - (NEW5_LANES - 1) / 2) * NEW5_LANE;
+  out.y = dead ? -40 : 0;
+  out.z = z;
+  out.rx = 0.08;
+  out.ry = Math.PI;
+  out.rz = 0;
+  out.s = dead ? 0 : 1;
+}
+
+export function new5AliveCounts(soldiers: number, recT: number) {
+  const friends = new5VisualFriends(soldiers);
+  const front = new5Front(recT);
+  let foes = 0;
+  for (let row = 0; row < NEW5_FOE_ROWS; row++) {
+    if (front < NEW5_FOE_START + row * NEW5_FOE_GAP - NEW5_REACH) foes += NEW5_LANES;
+  }
+  return { friends, foes };
+}
+
+export function sampleNew5Cam(recT: number): ShotPose {
+  const t = Math.max(0, recT);
+  const front = new5Front(t);
+  const bob = Math.sin(t * 16) * 0.05;
+  return {
+    x: 0.35,
+    y: 5.4 + bob,
+    z: front - 10.5,
+    lx: 0,
+    ly: 1.25,
+    lz: front + 7.5,
+    fov: 38,
   };
 }
