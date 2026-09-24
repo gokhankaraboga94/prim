@@ -11,7 +11,7 @@ import { type DiscoverId } from "../../discoverReel";
 import { COUNT_1_END, countdownBeat, countdownVolley } from "../../countdownReel";
 import { DEFEND_CZ, DEFEND2_CX, DEFEND2_CZ, defendSoldierPos, defendYawOut } from "../../defendReel";
 import { vsSoldierAt, type VsPose } from "../../vsReel";
-import { new1FriendAt } from "../../new1Reel";
+import { new1FriendAt, new2FriendAt } from "../../new1Reel";
 import { sfxArrowLoose, sfxBowDraw, sfxVolleyPeak } from "../../reelSfx";
 import { raidCount, sallyHunting, sallyLiveIndex, sallyLocal, sallyRaiderAt, swordArmPose, swordStyleAt, swordSwingU } from "../../siegeEvent";
 import { castleFrame } from "../../castleLayout";
@@ -62,6 +62,7 @@ type ArmyProps = {
   vs?: boolean;
   vs2?: boolean;
   new1?: boolean;
+  new2?: boolean;
   mix?: boolean;
   mixSlow?: boolean;
   nameHunt?: boolean;
@@ -338,7 +339,7 @@ function commanderFace() {
   ];
 }
 
-function horsehairPlume(tall: boolean) {
+function horsehairPlume(tall: boolean, crest = PLUME, crestHi = PLUME_HI) {
   const strands: THREE.BufferGeometry[] = [];
   const n = tall ? 14 : 7;
   const baseH = tall ? 0.68 : 0.4;
@@ -351,44 +352,48 @@ function horsehairPlume(tall: boolean) {
     const h = baseH * (0.58 + 0.55 * arch);
     const x = ((i % 3) - 1) * 0.013;
     const lean = (u - 0.5) * 0.42;
-    const col = i % 3 === 0 ? PLUME_HI : PLUME;
+    const col = i % 3 === 0 ? crestHi : crest;
     strands.push(part(new THREE.BoxGeometry(0.018 + (i % 2) * 0.008, h, 0.03), col, x, baseY + h * 0.36, z, lean * 0.18, 0, 0));
   }
-  strands.push(part(new THREE.BoxGeometry(0.072, 0.2, 0.11), PLUME, 0, 1.64, -0.24, 0.42));
+  strands.push(part(new THREE.BoxGeometry(0.072, 0.2, 0.11), crest, 0, 1.64, -0.24, 0.42));
   return strands;
 }
 
-function plateArmor(withArms: boolean | "left" = true) {
+function plateArmor(withArms: boolean | "left" = true, dye?: { armor: string; hi: string; dk: string; leather: string }) {
+  const armor = dye?.armor ?? ARMOR;
+  const hi = dye?.hi ?? ARMOR_HI;
+  const dk = dye?.dk ?? ARMOR_DK;
+  const leather = dye?.leather ?? LEATHER;
   const flaps: THREE.BufferGeometry[] = [];
   for (let i = 0; i < 9; i++) {
     const x = (i - 4) * 0.05;
-    flaps.push(part(new THREE.BoxGeometry(0.046, 0.28, 0.05), LEATHER, x, 0.64, 0.12));
-    flaps.push(part(new THREE.BoxGeometry(0.046, 0.26, 0.042), ARMOR_DK, x, 0.62, -0.1));
+    flaps.push(part(new THREE.BoxGeometry(0.046, 0.28, 0.05), leather, x, 0.64, 0.12));
+    flaps.push(part(new THREE.BoxGeometry(0.046, 0.26, 0.042), dk, x, 0.62, -0.1));
   }
   return [
-    part(new THREE.BoxGeometry(0.15, 0.1, 0.24), ARMOR_DK, -0.1, 0.05, 0.04),
-    part(new THREE.BoxGeometry(0.15, 0.1, 0.24), ARMOR_DK, 0.1, 0.05, 0.04),
-    part(new THREE.CylinderGeometry(0.058, 0.072, 0.28, 10), ARMOR, -0.1, 0.22, 0.03),
-    part(new THREE.CylinderGeometry(0.058, 0.072, 0.28, 10), ARMOR, 0.1, 0.22, 0.03),
+    part(new THREE.BoxGeometry(0.15, 0.1, 0.24), dk, -0.1, 0.05, 0.04),
+    part(new THREE.BoxGeometry(0.15, 0.1, 0.24), dk, 0.1, 0.05, 0.04),
+    part(new THREE.CylinderGeometry(0.058, 0.072, 0.28, 10), armor, -0.1, 0.22, 0.03),
+    part(new THREE.CylinderGeometry(0.058, 0.072, 0.28, 10), armor, 0.1, 0.22, 0.03),
     part(new THREE.BoxGeometry(0.018, 0.26, 0.02), GOLD_DK, -0.16, 0.22, 0.09),
     part(new THREE.BoxGeometry(0.018, 0.26, 0.02), GOLD_DK, 0.16, 0.22, 0.09),
-    part(new THREE.CylinderGeometry(0.08, 0.095, 0.28, 10), ARMOR, -0.1, 0.48, 0.02),
-    part(new THREE.CylinderGeometry(0.08, 0.095, 0.28, 10), ARMOR, 0.1, 0.48, 0.02),
+    part(new THREE.CylinderGeometry(0.08, 0.095, 0.28, 10), armor, -0.1, 0.48, 0.02),
+    part(new THREE.CylinderGeometry(0.08, 0.095, 0.28, 10), armor, 0.1, 0.48, 0.02),
     ...flaps,
-    part(new THREE.BoxGeometry(0.42, 0.08, 0.24), ARMOR_HI, 0, 0.8, 0.02),
+    part(new THREE.BoxGeometry(0.42, 0.08, 0.24), hi, 0, 0.8, 0.02),
     part(new THREE.BoxGeometry(0.11, 0.055, 0.055), GOLD, 0, 0.8, 0.15),
-    part(new THREE.BoxGeometry(0.42, 0.46, 0.16), ARMOR, 0, 1.04, 0.02),
-    part(new THREE.BoxGeometry(0.06, 0.42, 0.03), ARMOR_HI, 0, 1.04, 0.105),
+    part(new THREE.BoxGeometry(0.42, 0.46, 0.16), armor, 0, 1.04, 0.02),
+    part(new THREE.BoxGeometry(0.06, 0.42, 0.03), hi, 0, 1.04, 0.105),
     part(new THREE.BoxGeometry(0.38, 0.014, 0.18), GOLD, 0, 1.25, 0.03),
     part(new THREE.BoxGeometry(0.38, 0.01, 0.018), GOLD, 0, 0.84, 0.108),
     part(new THREE.BoxGeometry(0.012, 0.42, 0.018), GOLD, 0, 1.04, 0.108),
     part(new THREE.BoxGeometry(0.012, 0.42, 0.018), GOLD, -0.19, 1.04, 0.104),
     part(new THREE.BoxGeometry(0.012, 0.42, 0.018), GOLD, 0.19, 1.04, 0.104),
-    part(new THREE.BoxGeometry(0.2, 0.16, 0.14), ARMOR_HI, -0.34, 1.2, -0.02),
-    part(new THREE.BoxGeometry(0.2, 0.16, 0.14), ARMOR_HI, 0.34, 1.2, -0.02),
+    part(new THREE.BoxGeometry(0.2, 0.16, 0.14), hi, -0.34, 1.2, -0.02),
+    part(new THREE.BoxGeometry(0.2, 0.16, 0.14), hi, 0.34, 1.2, -0.02),
     part(new THREE.TorusGeometry(0.08, 0.012, 6, 12), GOLD, -0.34, 1.12, 0.02, Math.PI / 2),
     part(new THREE.TorusGeometry(0.08, 0.012, 6, 12), GOLD, 0.34, 1.12, 0.02, Math.PI / 2),
-    ...(withArms === true ? [...arm(-1), ...arm(1)] : withArms === "left" ? [...arm(1)] : []),
+    ...(withArms === true ? [...arm(-1, armor, hi, dk, leather), ...arm(1, armor, hi, dk, leather)] : withArms === "left" ? [...arm(1, armor, hi, dk, leather)] : []),
   ];
 }
 
@@ -434,19 +439,19 @@ function fingers(hx: number, hy: number, hz: number, s: -1 | 1, curl: number, sp
   return digits;
 }
 
-function arm(side: -1 | 1) {
+function arm(side: -1 | 1, armor = ARMOR, hi = ARMOR_HI, dk = ARMOR_DK, leather = LEATHER) {
   const s = side;
   const hx = s * 0.4;
   const hy = 0.58;
   const hz = 0.14;
   return [
-    part(new THREE.CylinderGeometry(0.058, 0.068, 0.26, 12), ARMOR, s * 0.3, 1.02, 0.04, 0.08, 0, s * 0.22),
-    part(new THREE.SphereGeometry(0.052, 10, 8), ARMOR_HI, s * 0.35, 0.88, 0.07),
-    part(new THREE.CylinderGeometry(0.05, 0.056, 0.24, 12), ARMOR_DK, s * 0.38, 0.74, 0.1, 0.18, 0, s * 0.08),
+    part(new THREE.CylinderGeometry(0.058, 0.068, 0.26, 12), armor, s * 0.3, 1.02, 0.04, 0.08, 0, s * 0.22),
+    part(new THREE.SphereGeometry(0.052, 10, 8), hi, s * 0.35, 0.88, 0.07),
+    part(new THREE.CylinderGeometry(0.05, 0.056, 0.24, 12), dk, s * 0.38, 0.74, 0.1, 0.18, 0, s * 0.08),
     part(new THREE.BoxGeometry(0.018, 0.18, 0.016), GOLD, s * 0.38, 0.74, 0.15),
     part(new THREE.TorusGeometry(0.048, 0.01, 7, 12), GOLD, s * 0.39, 0.64, 0.12, Math.PI / 2),
-    part(new THREE.CylinderGeometry(0.04, 0.042, 0.05, 10), LEATHER, hx, 0.62, 0.13, 0.2, 0, s * 0.04),
-    part(new THREE.BoxGeometry(0.072, 0.09, 0.048), LEATHER, hx, hy, hz, 0.25, 0, s * 0.05),
+    part(new THREE.CylinderGeometry(0.04, 0.042, 0.05, 10), leather, hx, 0.62, 0.13, 0.2, 0, s * 0.04),
+    part(new THREE.BoxGeometry(0.072, 0.09, 0.048), leather, hx, hy, hz, 0.25, 0, s * 0.05),
     part(new THREE.SphereGeometry(0.026, 8, 6), SKIN, hx, hy - 0.018, hz + 0.01),
     ...fingers(hx, hy, hz, s, 0.35),
   ];
@@ -560,6 +565,24 @@ function createDefendSoldierGeometry() {
   return mergeParts([...plateArmor(true), ...corinthianShell(14)], ARMOR);
 }
 
+const BLUE_DYE = { armor: "#1a56e8", hi: "#4d8cff", dk: "#0c2f8a", leather: "#123a9a" };
+
+function createBlueSoldierGeometry() {
+  return mergeParts(
+    [
+      ...plateArmor(true, BLUE_DYE),
+      ...corinthianShell(12),
+      part(new THREE.BoxGeometry(0.04, 0.04, 1.25), "#d5dde6", 0.36, 1.02, 0.78, 0.22, 0, 0.08),
+      part(new THREE.ConeGeometry(0.045, 0.28, 8), "#e8eef4", 0.42, 1.12, 1.42, Math.PI / 2, 0, 0.08),
+    ],
+    BLUE_DYE.armor
+  );
+}
+
+function createBluePlumeGeometry() {
+  return mergeParts(horsehairPlume(false, "#1a56e8", "#7eb0ff"), "#1a56e8");
+}
+
 function createCommanderGeometry() {
   return mergeParts([...plateArmor("left"), ...commanderHelm(), ...hipScabbard()], ARMOR);
 }
@@ -600,6 +623,8 @@ function createCommanderFaceGeometry() {
 
 let archerGeoV14: THREE.BufferGeometry | null = null;
 let defendSoldierGeoV15: THREE.BufferGeometry | null = null;
+let blueSoldierGeo: THREE.BufferGeometry | null = null;
+let bluePlumeGeo: THREE.BufferGeometry | null = null;
 let commanderGeoV14: THREE.BufferGeometry | null = null;
 let commanderSwordArmV3: THREE.BufferGeometry | null = null;
 let commanderCapeV9: THREE.BufferGeometry | null = null;
@@ -620,6 +645,16 @@ function getArcherGeometry() {
 function getDefendSoldierGeometry() {
   if (!defendSoldierGeoV15) defendSoldierGeoV15 = createDefendSoldierGeometry();
   return defendSoldierGeoV15;
+}
+
+function getBlueSoldierGeometry() {
+  if (!blueSoldierGeo) blueSoldierGeo = createBlueSoldierGeometry();
+  return blueSoldierGeo;
+}
+
+function getBluePlumeGeometry() {
+  if (!bluePlumeGeo) bluePlumeGeo = createBluePlumeGeometry();
+  return bluePlumeGeo;
 }
 
 function getCommanderGeometry() {
@@ -766,7 +801,7 @@ function NameLayers({
 }
 
 
-export function Army({ count, names = [], commanders = [], cinematic, duration = 8, skipCommander = false, roster = null, discover = null, countdown = false, defend = false, defend2 = false, defend3 = false, vs = false, vs2 = false, new1 = false, mix = false, mixSlow = false, nameHunt = false, quiet = false, square = false, readNames = false, scanHunt = false, level = 1, rosterIds = null }: ArmyProps) {
+export function Army({ count, names = [], commanders = [], cinematic, duration = 8, skipCommander = false, roster = null, discover = null, countdown = false, defend = false, defend2 = false, defend3 = false, vs = false, vs2 = false, new1 = false, new2 = false, mix = false, mixSlow = false, nameHunt = false, quiet = false, square = false, readNames = false, scanHunt = false, level = 1, rosterIds = null }: ArmyProps) {
   const bodies = useRef<THREE.InstancedMesh>(null);
   const soldierPlumes = useRef<THREE.InstancedMesh>(null);
   const bowHolds = useRef<THREE.InstancedMesh>(null);
@@ -789,11 +824,12 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
   const fireSfx = useRef(false);
   const countSfx = useRef("");
   const pos = useMemo(() => new THREE.Vector3(), []);
-  const melee = defend || vs || vs2 || new1;
-  const archerGeo = useMemo(() => (melee ? getDefendSoldierGeometry() : getArcherGeometry()), [melee]);
+  const melee = defend || vs || vs2 || new1 || new2;
+  const openField = new1 || new2;
+  const archerGeo = useMemo(() => (new2 ? getBlueSoldierGeometry() : melee ? getDefendSoldierGeometry() : getArcherGeometry()), [melee, new2]);
   const commanderGeo = useMemo(() => (melee ? archerGeo : getCommanderGeometry()), [melee, archerGeo]);
   const commanderCapeGeo = useMemo(() => (melee ? archerGeo : getCommanderCapeGeometry()), [melee, archerGeo]);
-  const soldierPlumeGeo = useMemo(() => getSoldierPlumeGeometry(), []);
+  const soldierPlumeGeo = useMemo(() => (new2 ? getBluePlumeGeometry() : getSoldierPlumeGeometry()), [new2]);
   const commanderPlumeGeo = useMemo(() => (melee ? archerGeo : getCommanderPlumeGeometry()), [melee, archerGeo]);
   const commanderFaceGeo = useMemo(() => (melee ? archerGeo : getCommanderFaceGeometry()), [melee, archerGeo]);
   const bowHoldGeo = useMemo(() => (melee ? archerGeo : getBowHoldGeometry()), [melee, archerGeo]);
@@ -808,7 +844,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
   const defendOz = defend2 ? DEFEND2_CZ : DEFEND_CZ;
   const chiefsList = useMemo(() => effectiveCommanders(commanders, names), [commanders, names]);
   const layout = useMemo(() => {
-    if (defend || vs || vs2 || new1) {
+    if (defend || vs || vs2 || openField) {
       const rest: number[] = [];
       for (let i = 0; i < visible; i++) rest.push(i);
       const slotOf = new Array<number>(visible).fill(-1);
@@ -829,7 +865,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
       return { cmd: [] as number[], rest, slotOf, cmdOf, sizes: squareRankSizes(rest.length) };
     }
     return buildLayout(names, chiefsList, visible);
-  }, [names, chiefsList, visible, defend, vs, vs2, new1, square]);
+  }, [names, chiefsList, visible, defend, vs, vs2, openField, square]);
   const phantom = !skipCommander && layout.cmd.length === 0 && chiefsList.length > 0;
   const form = useMemo(() => ({ sizes: layout.sizes, scale: 1.28, square }), [layout.sizes, square]);
   const steelRough = useMemo(() => {
@@ -859,7 +895,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
   const labeled = useMemo(() => {
     const hunt = roster ? (rosterIds?.length ? rosterIds : rosterSoldierIds(names, visible)) : null;
     const ids: number[] = [];
-    if (phantom && !defend && !vs && !vs2 && !new1 && !hunt) ids.push(-1);
+    if (phantom && !defend && !vs && !vs2 && !openField && !hunt) ids.push(-1);
     if (hunt) {
       const seen = new Set<number>();
       for (const i of hunt) {
@@ -873,17 +909,17 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
       if (names[i]?.trim()) ids.push(i);
     }
     return ids;
-  }, [names, visible, phantom, defend, vs, vs2, new1, roster, rosterIds]);
+  }, [names, visible, phantom, defend, vs, vs2, openField, roster, rosterIds]);
   const nameAtlas = useMemo(
     () =>
       buildNameAtlas(
         labeled.map((i) => ({
           text: i < 0 ? DEFAULT_COMMANDER : names[i],
-          commander: !defend && !vs && !vs2 && !new1 && (i < 0 || isCommander(names[i], chiefsList)),
-          plain: Boolean(countdown || defend || vs || vs2 || new1 || roster || square),
+          commander: !defend && !vs && !vs2 && !openField && (i < 0 || isCommander(names[i], chiefsList)),
+          plain: Boolean(countdown || defend || vs || vs2 || openField || roster || square),
         }))
       ),
-    [labeled, names, chiefsList, countdown, defend, vs, vs2, new1, roster, square]
+    [labeled, names, chiefsList, countdown, defend, vs, vs2, openField, roster, square]
   );
   useEffect(() => () => nameAtlas.dispose(), [nameAtlas]);
 
@@ -897,6 +933,11 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
     if (defend) {
       const slot = layout.slotOf[soldier];
       defendSoldierPos(slot >= 0 ? slot : soldier, layout.rest.length, t, pos, defendOx, defendOz, defend3);
+      return;
+    }
+    if (new2) {
+      new2FriendAt(soldier, layout.rest.length, t - REEL_HOLD, vsPose);
+      pos.set(vsPose.x, vsPose.y, vsPose.z);
       return;
     }
     if (new1) {
@@ -1081,6 +1122,16 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
           dummy.position.copy(pos);
           dummy.rotation.set(0, defendYawOut(pos.x, pos.z, defendOx, defendOz), 0);
           dummy.scale.setScalar(scale);
+          dummy.updateMatrix();
+          stamp(bodies.current, i);
+          stamp(soldierPlumes.current, i);
+          continue;
+        }
+        if (new2) {
+          new2FriendAt(soldier, n, recT, vsPose);
+          dummy.position.set(vsPose.x, vsPose.y, vsPose.z);
+          dummy.rotation.set(vsPose.rx, vsPose.ry, vsPose.rz);
+          dummy.scale.setScalar(scale * 0.96);
           dummy.updateMatrix();
           stamp(bodies.current, i);
           stamp(soldierPlumes.current, i);
@@ -1279,10 +1330,13 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
       } else if (idx < 0) commanderPos(t, 0, pos);
       else poseSoldier(idx, t);
       let nameScale = crowd;
-      const staggered = Boolean(countdown || defend || vs || vs2 || new1);
+      const staggered = Boolean(countdown || defend || vs || vs2 || openField);
       if (countdown) nameScale = 1.12 * crowd;
       else if (defend) nameScale = 1.22 * crowd;
-      else if (new1) {
+      else if (new2) {
+        const lift = Math.max(0, Math.min(1, (recT - 3.2) / 12));
+        nameScale = Math.max(0.78, crowd * (0.95 + lift * 0.65));
+      } else if (new1) {
         const reveal = Math.max(0, Math.min(1, (recT - 8.4) / 7.2));
         const u = reveal * reveal * (3 - 2 * reveal);
         nameScale = Math.max(0.4, crowd * (0.34 + u * 1.28));
@@ -1315,7 +1369,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
         const slot = layout.slotOf[idx];
         ({ row, col } = slotCoord(slot >= 0 ? slot : 0, form.sizes));
         if (defend && staggered) lift = 2.7 + (idx % 5) * 0.22;
-        else if (new1 && staggered) {
+        else if (openField && staggered) {
           const band = idx % 7;
           lift = 2.42 + band * 0.3 + vsPose.y * 0.04;
           nx = pos.x + ((idx % 2) * 2 - 1) * 0.28;
@@ -1342,7 +1396,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
       }
       let sx = (isolate ? Math.min(1.05, cell.sx * nameScale) : cell.sx * nameScale);
       if (defend && staggered) sx = Math.min(sx, FILE * 1.28);
-      else if (new1 && staggered) sx = Math.min(sx, FILE * 1.12);
+      else if (openField && staggered) sx = Math.min(sx, FILE * 1.12);
       else if ((vs || vs2) && staggered) sx = Math.min(sx, FILE * (vs2 ? 0.92 : 1.05));
       else if (staggered) sx = Math.min(sx, FILE * 0.78);
       const sy = cell.sy * nameScale;
@@ -1353,7 +1407,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
       if (cam) {
         nockOff.copy(cam.position).sub(pos);
         const len = nockOff.length() || 1;
-        const pull = defend || vs || vs2 || new1 ? Math.min(14, Math.max(7, len * 0.12)) : Math.min(4.5, Math.max(1.2, len * 0.04));
+        const pull = new2 ? Math.min(2.4, Math.max(0.4, len * 0.055)) : defend || vs || vs2 || new1 ? Math.min(14, Math.max(7, len * 0.12)) : Math.min(4.5, Math.max(1.2, len * 0.04));
         px = nx + (nockOff.x / len) * pull;
         py = baseY + (nockOff.y / len) * pull;
         pz = pos.z + (nockOff.z / len) * pull;
@@ -1447,13 +1501,13 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
     const volley = countdown ? countdownVolley(recT) : null;
 
     acc.current += dt;
-    if (!mixSlow && (defend || vs || vs2 || new1 || roster || countdown || acc.current >= 1 / 40)) {
+    if (!mixSlow && (defend || vs || vs2 || openField || roster || countdown || acc.current >= 1 / 40)) {
       acc.current = 0;
       placeBodies(t, state.camera);
     }
 
     if (!arrows.current) return;
-    if (visible <= 0 || roster || defend || vs || vs2 || new1 || mixSlow || quiet) {
+    if (visible <= 0 || roster || defend || vs || vs2 || openField || mixSlow || quiet) {
       shots.current = [];
       arrows.current.count = 0;
       return;
@@ -1554,7 +1608,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
 
   return (
     <group>
-      {defend || vs || vs2 || new1 ? (
+      {defend || vs || vs2 || openField ? (
         <>
           <instancedMesh key={`archer-v14-defend-${instanceCap}`} ref={bodies} args={[archerGeo, undefined, instanceCap]} frustumCulled={false}>
             <meshStandardMaterial vertexColors roughness={0.46} metalness={0.72} envMapIntensity={0.9} />

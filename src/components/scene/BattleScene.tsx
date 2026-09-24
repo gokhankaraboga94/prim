@@ -16,7 +16,7 @@ import { discoverGateRecT, sampleDiscover, type DiscoverId } from "../../discove
 import { countdownShake, sampleCountdown, type CountdownId } from "../../countdownReel";
 import { DEFEND2_SORTIE, isDefend3, isDefendSortie, sampleDefendCam, type DefendId } from "../../defendReel";
 import { isVs, isVs2, sampleVsCam, type VsId } from "../../vsReel";
-import { sampleNew1Cam, type New1Id } from "../../new1Reel";
+import { sampleNew1Cam, sampleNew2Cam, type New1Id, type New2Id } from "../../new1Reel";
 import { sampleXxxCam, xxxAdHook, xxxClearHook, xxxCloseNames, xxxDocHook, xxxHasHook, xxxHideCmd, xxxHiRes, xxxHoldHook, xxxHuntHook, xxxHuntSight, xxxInstantHook, xxxQuiet, xxxScanHunt, xxxSpin, xxxSquare, type XxxId } from "../../xxxReel";
 import { MIX8_ID, MIX9_SLOW, isMix9, mixBodyPass, mixTagPass, sampleMixBottom, sampleMixTop, type MixId } from "../../mixReel";
 import { DefendRing } from "./DefendRing";
@@ -57,6 +57,7 @@ type BattleSceneProps = {
   defend?: DefendId | null;
   vs?: VsId | null;
   new1?: New1Id | null;
+  new2?: New2Id | null;
   mix?: MixId | null;
   xxx?: XxxId | null;
   rosterIds?: number[] | null;
@@ -94,6 +95,7 @@ function CinematicCam({
   defend = null,
   vs = null,
   new1 = null,
+  new2 = null,
   xxx = null,
   rosterIds = null,
 }: {
@@ -112,6 +114,7 @@ function CinematicCam({
   defend?: DefendId | null;
   vs?: VsId | null;
   new1?: New1Id | null;
+  new2?: New2Id | null;
   xxx?: XxxId | null;
   rosterIds?: number[] | null;
 }) {
@@ -176,11 +179,13 @@ function CinematicCam({
       fov: 38,
     };
 
-    if (cinema || shotMode || roster || saga || discover || countdown || defend || vs || new1 || xxx) {
+    if (cinema || shotMode || roster || saga || discover || countdown || defend || vs || new1 || new2 || xxx) {
       const sampleT = recT;
       const ctx = { cmdZ, form, castle, fit, castleFit, level };
       const pose = xxx
         ? sampleXxxCam(sampleT, ctx, xxx)
+        : new2
+        ? sampleNew2Cam(sampleT, soldiers)
         : new1
         ? sampleNew1Cam(sampleT, soldiers)
         : vs
@@ -199,7 +204,7 @@ function CinematicCam({
               ? sampleCinema(sampleT, duration, ctx)
               : sampleShotMode(shotMode as ShotId, sampleT, duration, skipCommander, ctx);
       persp.fov = pose.fov;
-      if (defend || vs || new1 || xxx) {
+      if (defend || vs || new1 || new2 || xxx) {
         persp.near = 0.8;
         persp.far = 6000;
       }
@@ -622,18 +627,19 @@ function SceneContent({
   defend = null,
   vs = null,
   new1 = null,
+  new2 = null,
   mix = null,
   xxx = null,
   rosterIds = null,
 }: BattleSceneProps) {
   const chiefs = effectiveCommanders(commanders, names);
-  const hideCmd = skipCommander || Boolean(discover) || Boolean(countdown) || Boolean(defend) || Boolean(vs) || Boolean(new1) || Boolean(xxx && xxxHideCmd(xxx));
+  const hideCmd = skipCommander || Boolean(discover) || Boolean(countdown) || Boolean(defend) || Boolean(vs) || Boolean(new1) || Boolean(new2) || Boolean(xxx && xxxHideCmd(xxx));
   const chiefN = hideCmd ? 0 : chiefs.length;
   const split = Boolean(mix);
   const sortie = isDefendSortie(defend);
   const field = isVs(vs);
   const climb = isVs2(vs);
-  const slaughter = Boolean(new1);
+  const slaughter = Boolean(new1 || new2);
   const spin = Boolean(xxx && xxxSpin(xxx));
   if (spin) {
     return (
@@ -673,12 +679,12 @@ function SceneContent({
       ) : field ? (
         <VsFoes soldiers={soldiers} />
       ) : slaughter ? (
-        <New1Foes soldiers={soldiers} />
+        <New1Foes soldiers={soldiers} duel={Boolean(new2)} />
       ) : (
         !roster && !split && !countdown && !vs && !xxx && <SallyRaid soldiers={soldiers} commanders={chiefN} />
       )}
       {climb && <VsLadders level={level} />}
-      <Army count={soldiers} names={names} commanders={commanders} cinematic={cinematic} duration={duration} skipCommander={hideCmd} roster={roster} discover={discover} countdown={Boolean(countdown)} defend={Boolean(defend)} defend2={sortie} defend3={isDefend3(defend)} vs={field} vs2={climb} new1={slaughter} mix={split} mixSlow={isMix9(mix)} nameHunt={Boolean(xxx)} quiet={Boolean(xxx && xxxQuiet(xxx)) || slaughter} square={Boolean(xxx && xxxSquare(xxx))} readNames={Boolean(xxx && xxxCloseNames(xxx))} scanHunt={Boolean(xxx && xxxScanHunt(xxx))} level={level} rosterIds={rosterIds} />
+      <Army count={soldiers} names={names} commanders={commanders} cinematic={cinematic} duration={duration} skipCommander={hideCmd} roster={roster} discover={discover} countdown={Boolean(countdown)} defend={Boolean(defend)} defend2={sortie} defend3={isDefend3(defend)} vs={field} vs2={climb} new1={Boolean(new1)} new2={Boolean(new2)} mix={split} mixSlow={isMix9(mix)} nameHunt={Boolean(xxx)} quiet={Boolean(xxx && xxxQuiet(xxx)) || slaughter} square={Boolean(xxx && xxxSquare(xxx))} readNames={Boolean(xxx && xxxCloseNames(xxx))} scanHunt={Boolean(xxx && xxxScanHunt(xxx))} level={level} rosterIds={rosterIds} />
       {Boolean(xxx && xxxSquare(xxx)) && <Catapults soldiers={soldiers} square />}
       {Boolean(xxx && xxxScanHunt(xxx)) && <NameScanBeam soldiers={soldiers} />}
       {cinematic && split ? (
@@ -700,6 +706,7 @@ function SceneContent({
           defend={defend}
           vs={vs}
           new1={new1}
+          new2={new2}
           xxx={xxx}
           rosterIds={rosterIds}
         />
@@ -778,13 +785,14 @@ function BattleSceneInner({
   defend = null,
   vs = null,
   new1 = null,
+  new2 = null,
   mix = null,
   xxx = null,
   rosterIds = null,
   onReady,
 }: BattleSceneProps) {
   const [active, setActive] = useState(() => typeof document === "undefined" || !document.hidden);
-  const hideCmd = skipCommander || Boolean(discover) || Boolean(countdown) || Boolean(defend) || Boolean(vs) || Boolean(new1) || Boolean(xxx && xxxHideCmd(xxx));
+  const hideCmd = skipCommander || Boolean(discover) || Boolean(countdown) || Boolean(defend) || Boolean(vs) || Boolean(new1) || Boolean(new2) || Boolean(xxx && xxxHideCmd(xxx));
 
   useLayoutEffect(() => {
     if (cinematic && (mix || xxx)) {
@@ -793,7 +801,7 @@ function BattleSceneInner({
     } else if (cinematic && roster) {
       setSallyOrigin(80);
       setSwordStart(80);
-    } else if (cinematic && (countdown || defend || vs || new1)) {
+    } else if (cinematic && (countdown || defend || vs || new1 || new2)) {
       setSallyOrigin(SALLY_START_DELAY - 90);
       setSwordStart(80);
     } else if (cinematic && discover) {
@@ -824,7 +832,7 @@ function BattleSceneInner({
       setSallyOrigin(0);
       setSwordStart(SWORD_START);
     };
-  }, [cinematic, cinema, duration, hideCmd, roster, saga, discover, countdown, defend, vs, new1, mix, xxx]);
+  }, [cinematic, cinema, duration, hideCmd, roster, saga, discover, countdown, defend, vs, new1, new2, mix, xxx]);
 
   useEffect(() => {
     const onVis = () => setActive(!document.hidden);
@@ -837,7 +845,7 @@ function BattleSceneInner({
       shadows={!cinematic}
       dpr={cinematic ? (xxx && xxxHiRes(xxx) ? 2 : 1) : [1, 1.5]}
       gl={{
-        antialias: Boolean(new1) || (!(xxx && xxxQuiet(xxx)) && (!defend || isDefend3(defend))),
+        antialias: Boolean(new1 || new2) || (!(xxx && xxxQuiet(xxx)) && (!defend || isDefend3(defend))),
         alpha: false,
         powerPreference: "high-performance",
         stencil: false,
@@ -851,11 +859,11 @@ function BattleSceneInner({
       style={{ width: "100%", height: "100%", display: "block" }}
       onCreated={({ gl }) => {
         gl.toneMapping = THREE.ACESFilmicToneMapping;
-        gl.toneMappingExposure = cinematic ? (new1 ? 1.06 : 1.16) : 1.22;
+        gl.toneMappingExposure = cinematic ? (new1 || new2 ? 1.06 : 1.16) : 1.22;
         gl.outputColorSpace = THREE.SRGBColorSpace;
         gl.shadowMap.enabled = !cinematic;
         gl.shadowMap.type = THREE.PCFSoftShadowMap;
-        gl.setClearColor(xxx && xxxSpin(xxx) ? "#000000" : new1 ? "#8f9aa0" : "#7eb6ee", 1);
+        gl.setClearColor(xxx && xxxSpin(xxx) ? "#000000" : new1 || new2 ? "#8f9aa0" : "#7eb6ee", 1);
         if (cinematic) {
           const dpr = xxx && xxxHiRes(xxx) ? 2 : 1;
           gl.setPixelRatio(dpr);
@@ -888,6 +896,7 @@ function BattleSceneInner({
         defend={defend}
         vs={vs}
         new1={new1}
+        new2={new2}
         mix={mix}
         xxx={xxx}
         rosterIds={rosterIds}

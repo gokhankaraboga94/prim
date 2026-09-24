@@ -14,8 +14,21 @@ export type New1Pose = {
   rz: number;
 };
 
+export const NEW2_ID = "new2" as const;
+export type New2Id = typeof NEW2_ID;
+export const NEW2_MODE = { id: NEW2_ID, label: "new2" } as const;
+export const NEW2_SECONDS = 30;
+
 export function isNew1(id: string | null | undefined): id is New1Id {
   return id === NEW1_ID;
+}
+
+export function isNew2(id: string | null | undefined): id is New2Id {
+  return id === NEW2_ID;
+}
+
+export function isNewField(id: string | null | undefined): id is New1Id | New2Id {
+  return id === NEW1_ID || id === NEW2_ID;
 }
 
 export function new1Duration(id: string | null | undefined) {
@@ -172,6 +185,98 @@ export function new1EnemyAt(i: number, soldiers: number, recT: number, out: New1
   out.ry = side < 0 ? 0 : Math.PI;
   out.rz = 0;
   crumple(t, new1EnemyDieAt(i), side * 0.22, 0.35 - hash(i, 6), out);
+}
+
+const STRIKE = 1.16;
+
+function duelPhase(t: number, friendIndex: number, n: number) {
+  const mid = Math.floor((Math.max(1, n) - 1) / 2);
+  const shift = friendIndex === mid ? 0.26 : hash(friendIndex, 4) * 0.42;
+  return ((Math.max(0, t) + shift) % STRIKE) / STRIKE;
+}
+
+function windowBlow(u: number, a: number, b: number) {
+  if (u < a || u > b) return 0;
+  const x = (u - a) / Math.max(0.05, b - a);
+  if (x < 0.28) return -0.55 * (x / 0.28);
+  if (x < 0.55) return -0.55 + 1.55 * ((x - 0.28) / 0.27);
+  return 1 - (x - 0.55) / 0.45;
+}
+
+export function new2FriendDieAt(i: number, n: number) {
+  const mid = Math.floor((Math.max(1, n) - 1) / 2);
+  if (i === mid) return 8.2;
+  return 5.4 + hash(i, 2) * 21.5;
+}
+
+export function new2FriendAt(i: number, n: number, recT: number, out: New1Pose) {
+  const t = Math.max(0, recT);
+  const count = Math.max(1, n);
+  const s = friendStand(i, count);
+  const dieAt = new2FriendDieAt(i, count);
+  const u = duelPhase(t, i, count);
+  const mine = windowBlow(u, 0.02, 0.4);
+  const front = windowBlow(u, 0.42, 0.74);
+  const back = windowBlow(u, 0.76, 1);
+  const lunge = Math.max(0, mine) * 0.46;
+  const wind = Math.max(0, -mine) * 0.16;
+  const shoveF = Math.max(0, front) * 0.22;
+  const shoveB = Math.max(0, back) * 0.22;
+  const alive = t < dieAt;
+  out.x = s.x + (alive ? Math.sin(u * Math.PI * 2) * 0.04 : 0);
+  out.y = 0;
+  out.z = s.z - lunge + wind + shoveF - shoveB;
+  out.rx = alive ? 0.12 + Math.max(0, mine) * 0.82 - Math.max(0, front) * 0.38 - Math.max(0, back) * 0.28 : 0;
+  out.ry = alive && u >= 0.76 ? 0.18 : Math.PI - Math.max(0, mine) * 0.22;
+  out.rz = alive ? Math.max(0, mine) * 0.16 - Math.max(0, front) * 0.1 : 0;
+  crumple(t, dieAt, 0.28, hash(i, 9) - 0.5, out);
+}
+
+export function new2EnemyAt(i: number, soldiers: number, recT: number, out: New1Pose) {
+  const n = Math.max(1, Math.floor(soldiers));
+  const pair = foePair(i, n);
+  const target = friendStand(pair.friend, n);
+  const t = Math.max(0, recT);
+  const side = pair.side;
+  const dieAt = new2FriendDieAt(pair.friend, n);
+  const dropped = t >= dieAt + 0.22;
+  const u = duelPhase(t, pair.friend, n);
+  const mine = side < 0 ? windowBlow(u, 0.42, 0.74) : windowBlow(u, 0.76, 1);
+  const reach = FIGHT_GAP;
+  const push = Math.max(0, mine) * 0.7;
+  const wind = Math.max(0, -mine) * 0.26;
+  let z = target.z + side * (reach + wind - push);
+  if (dropped) z = target.z + side * 0.95;
+  if (side < 0) z = Math.min(z, target.z - 0.78);
+  else z = Math.max(z, target.z + 0.78);
+  out.x = target.x + (pair.friend % 2 === 0 ? 0.12 : -0.12) * (side < 0 ? 1 : -1);
+  out.y = 0;
+  out.z = z;
+  out.rx = dropped ? 0.35 : 0.08 + Math.max(0, mine) * 0.78;
+  out.ry = side < 0 ? Math.max(0, mine) * -0.18 : Math.PI + Math.max(0, mine) * 0.18;
+  out.rz = Math.max(0, mine) * 0.08;
+  crumple(t, new1EnemyDieAt(i), side * 0.16, 0.28 - hash(i, 6), out);
+}
+
+export function sampleNew2Cam(recT: number, soldiers: number): ShotPose {
+  const n = Math.max(1, soldiers);
+  const mid = Math.floor((n - 1) / 2);
+  const s = friendStand(mid, n);
+  const lx = s.x;
+  const lz = s.z - FIGHT_GAP * 0.42;
+  const ly = 1.35;
+  const t = Math.max(0, recT);
+  const hit = t > 0.15 && t < 0.55 ? Math.sin(t * 48) * 0.12 : 0;
+  const p = sampleKeys(t, [
+    { t: 0, p: pose(lx + 1.15, 3.55, lz + 4.35, lx, ly, lz, 30) },
+    { t: 2.6, p: pose(lx - 1.8, 4.2, lz + 4.7, lx + 0.15, ly, lz - 0.1, 32) },
+    { t: 5.2, p: pose(lx + 2.4, 11, lz + 12, lx, 1.4, s.z, 36) },
+    { t: 10, p: pose(6, 36, 16, 0, 0.9, 0, 42) },
+    { t: 16, p: pose(-7, 72, 10, 0, 0.55, 0, 46) },
+    { t: 23, p: pose(4, 112, 6, 0, 0.4, 0, 48) },
+    { t: 30, p: pose(2, 150, 4, 0, 0.32, 0, 48) },
+  ]);
+  return { ...p, x: p.x + hit, z: p.z + hit * 0.4 };
 }
 
 export function sampleNew1Cam(recT: number, soldiers: number): ShotPose {
