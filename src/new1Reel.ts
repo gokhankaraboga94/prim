@@ -12,6 +12,7 @@ export type New1Pose = {
   rx: number;
   ry: number;
   rz: number;
+  s?: number;
 };
 
 export const NEW2_ID = "new2" as const;
@@ -158,6 +159,7 @@ export function new1FriendAt(i: number, n: number, recT: number, out: New1Pose) 
   out.rx = fight ? Math.sin(t * 13.2 + i) * 0.14 : 0;
   out.ry = s.faceBack ? 0 : Math.PI;
   out.rz = 0;
+  out.s = 1;
   crumple(t, dieAt, s.faceBack ? 0.55 : -0.55, hash(i, 9) - 0.5, out);
 }
 
@@ -184,6 +186,7 @@ export function new1EnemyAt(i: number, soldiers: number, recT: number, out: New1
   out.rx = charge > 0.92 && !dropped ? Math.sin(t * 12.4 + i) * 0.16 : 0;
   out.ry = side < 0 ? 0 : Math.PI;
   out.rz = 0;
+  out.s = 1;
   crumple(t, new1EnemyDieAt(i), side * 0.22, 0.35 - hash(i, 6), out);
 }
 
@@ -229,7 +232,11 @@ export function new2FriendAt(i: number, n: number, recT: number, out: New1Pose) 
   out.rx = alive ? 0.12 + Math.max(0, mine) * 0.82 - Math.max(0, front) * 0.38 - Math.max(0, back) * 0.28 : 0;
   out.ry = alive && u >= 0.76 ? 0.18 : Math.PI - Math.max(0, mine) * 0.22;
   out.rz = alive ? Math.max(0, mine) * 0.16 - Math.max(0, front) * 0.1 : 0;
-  crumple(t, dieAt, 0.28, hash(i, 9) - 0.5, out);
+  out.s = 1;
+  if (t >= dieAt + 1) {
+    out.y = -40;
+    out.s = 0;
+  }
 }
 
 export function new2EnemyAt(i: number, soldiers: number, recT: number, out: New1Pose) {
@@ -255,7 +262,26 @@ export function new2EnemyAt(i: number, soldiers: number, recT: number, out: New1
   out.rx = dropped ? 0.35 : 0.08 + Math.max(0, mine) * 0.78;
   out.ry = side < 0 ? Math.max(0, mine) * -0.18 : Math.PI + Math.max(0, mine) * 0.18;
   out.rz = Math.max(0, mine) * 0.08;
-  crumple(t, new1EnemyDieAt(i), side * 0.16, 0.28 - hash(i, 6), out);
+  out.s = 1;
+  const foeDie = new1EnemyDieAt(i);
+  if (t >= foeDie && t < foeDie + 1) {
+    out.rx = 0;
+    out.y = 0;
+  } else if (t >= foeDie + 1) {
+    out.y = -40;
+    out.s = 0;
+  }
+}
+
+export function new2AliveCounts(soldiers: number, recT: number) {
+  const n = Math.max(0, Math.floor(soldiers));
+  const foesN = new1EnemyCount(n);
+  const t = Math.max(0, recT);
+  let friends = 0;
+  for (let i = 0; i < n; i++) if (t < new2FriendDieAt(i, n)) friends++;
+  let foes = 0;
+  for (let i = 0; i < foesN; i++) if (t < new1EnemyDieAt(i)) foes++;
+  return { friends, foes };
 }
 
 export function sampleNew2Cam(recT: number, soldiers: number): ShotPose {

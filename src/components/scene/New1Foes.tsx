@@ -6,7 +6,7 @@ import { new1EnemyAt, new1EnemyCount, new2EnemyAt, type New1Pose } from "../../n
 import { getDefendRaiderGeometry } from "./SallyRaid";
 
 const dummy = new THREE.Object3D();
-const scratch: New1Pose = { x: 0, y: 0, z: 0, rx: 0, ry: 0, rz: 0 };
+const scratch: New1Pose = { x: 0, y: 0, z: 0, rx: 0, ry: 0, rz: 0, s: 1 };
 
 type New1FoesProps = {
   soldiers: number;
@@ -30,7 +30,7 @@ export function New1Foes({ soldiers, duel = false }: New1FoesProps) {
       place(i, soldiers, recT, scratch);
       dummy.position.set(scratch.x, scratch.y, scratch.z);
       dummy.rotation.set(scratch.rx, scratch.ry, scratch.rz);
-      dummy.scale.setScalar(1.44);
+      dummy.scale.setScalar((scratch.s ?? 1) > 0 ? 1.44 : 0);
       dummy.updateMatrix();
       bodies.current.setMatrixAt(i, dummy.matrix);
     }

@@ -11,6 +11,7 @@ import { discoverBeat, DISCOVER_HOOK_END, isDiscoverEngage, isDiscoverShelf, isD
 import { countdownBeat, countdownFlash, type CountdownId } from "../../countdownReel";
 import { DEFEND_HOOK_END, defendBeat, defendPlayhead, type DefendId } from "../../defendReel";
 import { harika2TextPhase, harika3TextPhase, harika4TextPhase, harika6TextPhase, spinNamePool, spinScramble, spinShuffle, SPIN_LOCK, SPIN_SECONDS } from "../../xxxReel";
+import { new2AliveCounts } from "../../new1Reel";
 
 function roundRect(
   ctx: CanvasRenderingContext2D,
@@ -1711,6 +1712,67 @@ export function CountdownFlash() {
     <Hud renderPriority={4}>
       <OrthographicCamera makeDefault position={[0, 0, 10]} />
       <CountdownFlashPlate />
+    </Hud>
+  );
+}
+
+function New2RatioPlate({ soldiers }: { soldiers: number }) {
+  const size = useThree((s) => s.size);
+  const tex = useMemo(() => {
+    const canvas = document.createElement("canvas");
+    canvas.width = 1024;
+    canvas.height = 128;
+    const map = new THREE.CanvasTexture(canvas);
+    map.colorSpace = THREE.SRGBColorSpace;
+    return map;
+  }, []);
+  const seen = useRef("");
+
+  useFrame(({ clock }) => {
+    const recT = Math.max(0, clock.elapsedTime - REEL_HOLD);
+    const { friends, foes } = new2AliveCounts(soldiers, recT);
+    const key = `${friends}:${foes}`;
+    if (key === seen.current) return;
+    seen.current = key;
+    const canvas = tex.image as HTMLCanvasElement;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    ctx.clearRect(0, 0, 1024, 128);
+    const total = Math.max(1, friends + foes);
+    const blueW = (friends / total) * 980;
+    ctx.fillStyle = "#1a56e8";
+    ctx.fillRect(22, 34, Math.max(0, blueW), 64);
+    ctx.fillStyle = "#d31c1c";
+    ctx.fillRect(22 + blueW, 34, Math.max(0, 980 - blueW), 64);
+    ctx.font = "900 46px Inter, sans-serif";
+    ctx.textBaseline = "middle";
+    ctx.lineWidth = 8;
+    ctx.strokeStyle = "rgba(0,0,0,0.72)";
+    ctx.fillStyle = "#ffffff";
+    ctx.textAlign = "left";
+    ctx.strokeText(formatCount(friends), 40, 66);
+    ctx.fillText(formatCount(friends), 40, 66);
+    ctx.textAlign = "right";
+    ctx.strokeText(formatCount(foes), 984, 66);
+    ctx.fillText(formatCount(foes), 984, 66);
+    tex.needsUpdate = true;
+  });
+
+  const w = size.width * 0.88;
+  const h = w * (128 / 1024);
+  return (
+    <mesh position={[0, size.height / 2 - h * 0.62 - 36, 4]} renderOrder={30}>
+      <planeGeometry args={[w, h]} />
+      <meshBasicMaterial map={tex} transparent depthTest={false} toneMapped={false} />
+    </mesh>
+  );
+}
+
+export function New2RatioBar({ soldiers }: { soldiers: number }) {
+  return (
+    <Hud renderPriority={3}>
+      <OrthographicCamera makeDefault position={[0, 0, 10]} />
+      <New2RatioPlate soldiers={soldiers} />
     </Hud>
   );
 }

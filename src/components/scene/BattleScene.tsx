@@ -5,7 +5,7 @@ import * as THREE from "three";
 import { Army, armyFrame } from "./Army";
 import { Castle } from "./Castle";
 import { SallyRaid } from "./SallyRaid";
-import { CaptureHpHud, CountdownFlash, HuntSightHud, ReelFade, ReelTitles, ReelVignette, SpinNameHud, XxxHookHud } from "./CaptureHpHud";
+import { CaptureHpHud, CountdownFlash, HuntSightHud, New2RatioBar, ReelFade, ReelTitles, ReelVignette, SpinNameHud, XxxHookHud } from "./CaptureHpHud";
 import { effectiveCommanders } from "../../game";
 import { castleFrame } from "../../castleLayout";
 import { REEL_HEIGHT, REEL_HOLD, REEL_WIDTH, reelBeats } from "../../recordCanvas";
@@ -736,6 +736,7 @@ function SceneContent({
         <XxxHookHud variant={xxxHoldHook(xxx) ? "hold" : xxxHuntHook(xxx) ? "hunt" : xxxDocHook(xxx) ? "doc" : xxxAdHook(xxx) ? "ad" : xxxClearHook(xxx) ? "clear" : "banner"} instant={xxxInstantHook(xxx)} />
       )}
       {cinematic && xxx && xxxHuntSight(xxx) && <HuntSightHud />}
+      {cinematic && new2 && <New2RatioBar soldiers={soldiers} />}
       {cinematic && !split && <ReelVignette />}
       {countdown && <CountdownFlash />}
       {cinematic && !discover && !countdown && !defend && !vs && !slaughter && !split && <ReelFade duration={duration ?? 8} />}

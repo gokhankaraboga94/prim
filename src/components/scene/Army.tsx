@@ -1131,7 +1131,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
           new2FriendAt(soldier, n, recT, vsPose);
           dummy.position.set(vsPose.x, vsPose.y, vsPose.z);
           dummy.rotation.set(vsPose.rx, vsPose.ry, vsPose.rz);
-          dummy.scale.setScalar(scale * 0.96);
+          dummy.scale.setScalar((vsPose.s ?? 1) > 0 ? scale * 0.96 : 0);
           dummy.updateMatrix();
           stamp(bodies.current, i);
           stamp(soldierPlumes.current, i);
@@ -1329,6 +1329,10 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
         pos.set(rosterPose.x, rosterPose.y, rosterPose.z);
       } else if (idx < 0) commanderPos(t, 0, pos);
       else poseSoldier(idx, t);
+      if (new2 && pos.y < -8) {
+        hideName(k, cell);
+        continue;
+      }
       let nameScale = crowd;
       const staggered = Boolean(countdown || defend || vs || vs2 || openField);
       if (countdown) nameScale = 1.12 * crowd;
