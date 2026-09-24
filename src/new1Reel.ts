@@ -239,27 +239,97 @@ export function new2FriendAt(i: number, n: number, recT: number, out: New1Pose) 
   }
 }
 
+let livingAt = -1;
+let livingN = -1;
+let livingOf: Int32Array | null = null;
+let hopTo: Int32Array | null = null;
+let hopSX: Float32Array | null = null;
+let hopSZ: Float32Array | null = null;
+let hopDX: Float32Array | null = null;
+let hopDZ: Float32Array | null = null;
+let hopStart: Float32Array | null = null;
+
+function livingFocus(friend: number, n: number, t: number) {
+  if (livingAt !== t || livingN !== n || !livingOf) {
+    livingN = n;
+    livingAt = t;
+    livingOf = new Int32Array(n);
+    const alive: number[] = [];
+    for (let k = 0; k < n; k++) if (t < new2FriendDieAt(k, n)) alive.push(k);
+    for (let k = 0; k < n; k++) {
+      if (t < new2FriendDieAt(k, n)) {
+        livingOf[k] = k;
+        continue;
+      }
+      const home = friendStand(k, n);
+      let best = -1;
+      let bestD = 1e12;
+      for (let a = 0; a < alive.length; a++) {
+        const j = alive[a];
+        const p = friendStand(j, n);
+        const d = (p.x - home.x) * (p.x - home.x) + (p.z - home.z) * (p.z - home.z);
+        if (d < bestD) {
+          bestD = d;
+          best = j;
+        }
+      }
+      livingOf[k] = best;
+    }
+  }
+  return livingOf[friend];
+}
+
+function ensureHop(cap: number) {
+  if (hopTo && hopTo.length >= cap) return;
+  hopTo = new Int32Array(cap);
+  hopTo.fill(-2);
+  hopSX = new Float32Array(cap);
+  hopSZ = new Float32Array(cap);
+  hopDX = new Float32Array(cap);
+  hopDZ = new Float32Array(cap);
+  hopStart = new Float32Array(cap);
+}
+
 export function new2EnemyAt(i: number, soldiers: number, recT: number, out: New1Pose) {
   const n = Math.max(1, Math.floor(soldiers));
   const pair = foePair(i, n);
-  const target = friendStand(pair.friend, n);
   const t = Math.max(0, recT);
   const side = pair.side;
   const dieAt = new2FriendDieAt(pair.friend, n);
-  const dropped = t >= dieAt + 0.22;
-  const u = duelPhase(t, pair.friend, n);
-  const mine = side < 0 ? windowBlow(u, 0.42, 0.74) : windowBlow(u, 0.76, 1);
-  const reach = FIGHT_GAP;
-  const push = Math.max(0, mine) * 0.7;
-  const wind = Math.max(0, -mine) * 0.26;
-  let z = target.z + side * (reach + wind - push);
-  if (dropped) z = target.z + side * 0.95;
-  if (side < 0) z = Math.min(z, target.z - 0.78);
-  else z = Math.max(z, target.z + 0.78);
-  out.x = target.x + (pair.friend % 2 === 0 ? 0.12 : -0.12) * (side < 0 ? 1 : -1);
+  const focus = t < dieAt ? pair.friend : livingFocus(pair.friend, n, t);
+  const target = friendStand(focus >= 0 ? focus : pair.friend, n);
+  const lane = (hash(i, 3) - 0.5) * 0.7;
+  const destX = target.x + lane;
+  const destZ = target.z + side * FIGHT_GAP;
+  ensureHop(Math.max(i + 1, new1EnemyCount(n)));
+  const fromId = hopTo![i];
+  const prevU = fromId < -1 ? 1 : ease(clamp01((t - hopStart![i]) / 0.7));
+  const curX = fromId < -1 ? destX : lerp(hopSX![i], hopDX![i], prevU);
+  const curZ = fromId < -1 ? destZ : lerp(hopSZ![i], hopDZ![i], prevU);
+  if (fromId !== focus) {
+    hopSX![i] = curX;
+    hopSZ![i] = curZ;
+    hopDX![i] = destX;
+    hopDZ![i] = destZ;
+    hopStart![i] = fromId < -1 ? t - 2 : t;
+    hopTo![i] = focus;
+  } else {
+    hopDX![i] = destX;
+    hopDZ![i] = destZ;
+  }
+  const step = ease(clamp01((t - hopStart![i]) / 0.7));
+  const engaged = focus >= 0 && step > 0.82 && t < new2FriendDieAt(focus, n);
+  const u = engaged ? duelPhase(t, focus, n) : 0;
+  const mine = engaged ? (side < 0 ? windowBlow(u, 0.42, 0.74) : windowBlow(u, 0.76, 1)) : 0;
+  const push = Math.max(0, mine) * 0.55;
+  out.x = lerp(hopSX![i], hopDX![i], step);
   out.y = 0;
-  out.z = z;
-  out.rx = dropped ? 0.35 : 0.08 + Math.max(0, mine) * 0.78;
+  out.z = lerp(hopSZ![i], hopDZ![i], step) - side * push;
+  if (step > 0.96) {
+    if (side < 0) out.z = Math.min(out.z, target.z - 0.78);
+    else out.z = Math.max(out.z, target.z + 0.78);
+  }
+  out.rx = engaged ? 0.08 + Math.max(0, mine) * 0.78 : 0.2;
   out.ry = side < 0 ? Math.max(0, mine) * -0.18 : Math.PI + Math.max(0, mine) * 0.18;
   out.rz = Math.max(0, mine) * 0.08;
   out.s = 1;
