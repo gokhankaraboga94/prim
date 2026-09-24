@@ -1378,7 +1378,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
         pos.set(rosterPose.x, rosterPose.y, rosterPose.z);
       } else if (idx < 0) commanderPos(t, 0, pos);
       else poseSoldier(idx, t);
-      if (new2 && pos.y < -8) {
+      if ((new2 || bridge) && pos.y < -8) {
         hideName(k, cell);
         continue;
       }

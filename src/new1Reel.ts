@@ -445,13 +445,23 @@ const NEW5_FOE_START = 14.5;
 const NEW5_FOE_ROWS = 155;
 export const NEW5_FOES = NEW5_LANES * NEW5_FOE_ROWS;
 const NEW5_REACH = 0.42;
+const NEW5_LOSE = 21;
+
+function new5FriendDieAt(i: number, count: number) {
+  const row = Math.floor(i / NEW5_LANES);
+  const rows = Math.max(1, Math.ceil(count / NEW5_LANES));
+  return NEW5_LOSE + 0.4 + (row / Math.max(1, rows - 1)) * 6.4 + (i % NEW5_LANES) * 0.12;
+}
 
 export function new5VisualFriends(soldiers: number) {
   return Math.min(Math.max(1, Math.floor(soldiers)), NEW5_FRIENDS);
 }
 
 function new5Front(t: number) {
-  return NEW5_SPEED * Math.max(0, t);
+  const u = Math.max(0, t);
+  if (u <= NEW5_LOSE) return NEW5_SPEED * u;
+  const extra = Math.min(u - NEW5_LOSE, 1.2);
+  return NEW5_SPEED * NEW5_LOSE + NEW5_SPEED * extra * (1 - extra / 2.4);
 }
 
 function new5FoeZ(i: number) {
@@ -463,24 +473,30 @@ export function new5FriendAt(i: number, n: number, recT: number, out: New1Pose) 
   const col = i % NEW5_LANES;
   const row = Math.floor(i / NEW5_LANES);
   const t = Math.max(0, recT);
-  const front = new5Front(t);
-  const bob = Math.sin(t * 16 + row * 0.65 + col * 1.4);
+  const dieAt = i < count ? new5FriendDieAt(i, count) : 0;
+  const alive = i < count && t < dieAt;
+  const moveT = Math.min(t, NEW5_LOSE);
+  const front = new5Front(moveT);
+  const bob = Math.sin(moveT * 16 + row * 0.65 + col * 1.4);
   const gap = new5FoeZ(Math.floor((front - NEW5_FOE_START) / NEW5_FOE_GAP) * NEW5_LANES) - front;
-  const hit = row === 0 && gap > -0.2 && gap < 1.15 ? 1 - gap / 1.15 : 0;
+  const hit = alive && row === 0 && gap > -0.2 && gap < 1.15 ? 1 - gap / 1.15 : 0;
   out.x = (col - (NEW5_LANES - 1) / 2) * NEW5_LANE;
-  out.y = Math.abs(bob) * 0.07;
+  out.y = alive ? Math.abs(bob) * 0.07 : 0;
   out.z = front - row * NEW5_RANK + Math.max(0, hit) * 0.22;
-  out.rx = 0.42 + bob * 0.1 + Math.max(0, hit) * 0.7;
+  out.rx = alive ? 0.42 + bob * 0.1 + Math.max(0, hit) * 0.7 : 0;
   out.ry = 0;
-  out.rz = bob * 0.05;
+  out.rz = alive ? bob * 0.05 : 0;
   out.s = i < count ? 1 : 0;
-  if (i >= count) out.y = -40;
+  if (i >= count || t >= dieAt + 1) {
+    out.y = -40;
+    out.s = 0;
+  }
 }
 
 export function new5EnemyAt(i: number, recT: number, out: New1Pose) {
   const col = i % NEW5_LANES;
   const z = new5FoeZ(i);
-  const dead = new5Front(recT) >= z - NEW5_REACH;
+  const dead = new5Front(Math.min(recT, NEW5_LOSE)) >= z - NEW5_REACH;
   out.x = (col - (NEW5_LANES - 1) / 2) * NEW5_LANE;
   out.y = dead ? -40 : 0;
   out.z = z;
@@ -491,8 +507,11 @@ export function new5EnemyAt(i: number, recT: number, out: New1Pose) {
 }
 
 export function new5AliveCounts(soldiers: number, recT: number) {
-  const friends = new5VisualFriends(soldiers);
-  const front = new5Front(recT);
+  const n = new5VisualFriends(soldiers);
+  const t = Math.max(0, recT);
+  let friends = 0;
+  for (let i = 0; i < n; i++) if (t < new5FriendDieAt(i, n)) friends++;
+  const front = new5Front(Math.min(t, NEW5_LOSE));
   let foes = 0;
   for (let row = 0; row < NEW5_FOE_ROWS; row++) {
     if (front < NEW5_FOE_START + row * NEW5_FOE_GAP - NEW5_REACH) foes += NEW5_LANES;
@@ -502,15 +521,15 @@ export function new5AliveCounts(soldiers: number, recT: number) {
 
 export function sampleNew5Cam(recT: number): ShotPose {
   const t = Math.max(0, recT);
-  const front = new5Front(t);
+  const front = new5Front(Math.min(t, NEW5_LOSE));
   const bob = Math.sin(t * 16) * 0.05;
   return {
-    x: 0.2,
-    y: 9.2 + bob,
-    z: front - 12.2,
+    x: 0.4,
+    y: 16.5 + bob,
+    z: front - 26,
     lx: 0,
-    ly: 1.35,
-    lz: front - 0.6,
+    ly: 1.4,
+    lz: front + 4,
     fov: 38,
   };
 }
