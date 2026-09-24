@@ -1721,7 +1721,7 @@ function New2RatioPlate({ soldiers, drop = 0 }: { soldiers: number; drop?: numbe
   const tex = useMemo(() => {
     const canvas = document.createElement("canvas");
     canvas.width = 1024;
-    canvas.height = 128;
+    canvas.height = 248;
     const map = new THREE.CanvasTexture(canvas);
     map.colorSpace = THREE.SRGBColorSpace;
     return map;
@@ -1732,34 +1732,52 @@ function New2RatioPlate({ soldiers, drop = 0 }: { soldiers: number; drop?: numbe
     const recT = Math.max(0, clock.elapsedTime - REEL_HOLD);
     const { friends, foes } = new2AliveCounts(soldiers, recT);
     const key = `${friends}:${foes}`;
-    if (key === seen.current) return;
-    seen.current = key;
     const canvas = tex.image as HTMLCanvasElement;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
-    ctx.clearRect(0, 0, 1024, 128);
-    const total = Math.max(1, friends + foes);
-    const blueW = (friends / total) * 980;
-    ctx.fillStyle = "#1a56e8";
-    ctx.fillRect(22, 34, Math.max(0, blueW), 64);
-    ctx.fillStyle = "#d31c1c";
-    ctx.fillRect(22 + blueW, 34, Math.max(0, 980 - blueW), 64);
-    ctx.font = "900 46px Inter, sans-serif";
+    if (key !== seen.current) {
+      seen.current = key;
+      ctx.clearRect(0, 0, 1024, 150);
+      const total = Math.max(1, friends + foes);
+      const innerX = 28;
+      const innerY = 22;
+      const innerW = 968;
+      const innerH = 92;
+      const blueW = (friends / total) * innerW;
+      ctx.fillStyle = "#1a56e8";
+      ctx.fillRect(innerX, innerY, Math.max(0, blueW), innerH);
+      ctx.fillStyle = "#d31c1c";
+      ctx.fillRect(innerX + blueW, innerY, Math.max(0, innerW - blueW), innerH);
+      ctx.strokeStyle = "#ffe14a";
+      ctx.lineWidth = 14;
+      ctx.strokeRect(innerX - 8, innerY - 8, innerW + 16, innerH + 16);
+      ctx.font = "900 48px Inter, sans-serif";
+      ctx.textBaseline = "middle";
+      ctx.lineWidth = 8;
+      ctx.strokeStyle = "rgba(0,0,0,0.72)";
+      ctx.fillStyle = "#ffffff";
+      ctx.textAlign = "left";
+      ctx.strokeText(formatCount(friends), 46, innerY + innerH / 2);
+      ctx.fillText(formatCount(friends), 46, innerY + innerH / 2);
+      ctx.textAlign = "right";
+      ctx.strokeText(formatCount(foes), 978, innerY + innerH / 2);
+      ctx.fillText(formatCount(foes), 978, innerY + innerH / 2);
+    }
+    const pulse = 0.55 + 0.45 * Math.abs(Math.sin(recT * 5.2));
+    ctx.clearRect(0, 150, 1024, 98);
+    ctx.font = "900 78px Inter, sans-serif";
+    ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.lineWidth = 8;
-    ctx.strokeStyle = "rgba(0,0,0,0.72)";
-    ctx.fillStyle = "#ffffff";
-    ctx.textAlign = "left";
-    ctx.strokeText(formatCount(friends), 40, 66);
-    ctx.fillText(formatCount(friends), 40, 66);
-    ctx.textAlign = "right";
-    ctx.strokeText(formatCount(foes), 984, 66);
-    ctx.fillText(formatCount(foes), 984, 66);
+    ctx.lineWidth = 12;
+    ctx.strokeStyle = `rgba(0,0,0,${0.55 + pulse * 0.35})`;
+    ctx.fillStyle = `rgb(255, ${Math.round(18 + (1 - pulse) * 40)}, ${Math.round(12 + (1 - pulse) * 18)})`;
+    ctx.strokeText("DUR", 512, 198);
+    ctx.fillText("DUR", 512, 198);
     tex.needsUpdate = true;
   });
 
   const w = size.width * 0.88;
-  const h = w * (128 / 1024);
+  const h = w * (248 / 1024);
   return (
     <mesh position={[0, size.height / 2 - h * 0.62 - 36 - drop, 4]} renderOrder={30}>
       <planeGeometry args={[w, h]} />
