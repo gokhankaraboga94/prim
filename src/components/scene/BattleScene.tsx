@@ -742,7 +742,7 @@ function SceneContent({
         <XxxHookHud variant={xxxHoldHook(xxx) ? "hold" : xxxHuntHook(xxx) ? "hunt" : xxxDocHook(xxx) ? "doc" : xxxAdHook(xxx) ? "ad" : xxxClearHook(xxx) ? "clear" : "banner"} instant={xxxInstantHook(xxx)} />
       )}
       {cinematic && xxx && xxxHuntSight(xxx) && <HuntSightHud />}
-      {cinematic && duel && <New2RatioBar soldiers={soldiers} drop={new3 ? 150 : 0} />}
+      {cinematic && duel && <New2RatioBar soldiers={soldiers} drop={new3 ? 64 : 0} />}
       {cinematic && !split && <ReelVignette />}
       {countdown && <CountdownFlash />}
       {cinematic && !discover && !countdown && !defend && !vs && !slaughter && !split && <ReelFade duration={duration ?? 8} />}
