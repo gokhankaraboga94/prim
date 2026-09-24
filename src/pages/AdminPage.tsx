@@ -28,7 +28,7 @@ import { DISCOVER_ID, DISCOVER2_ID, DISCOVER3_ID, RAF2_ID, DISCOVER_MODE, DISCOV
 import { MIX_MODES, MIX_SECONDS, MIX9_SECONDS, isMix, isMix9, type MixId } from "../mixReel";
 import { COUNTDOWN_ID, COUNTDOWN_MODE, COUNTDOWN_SECONDS, isCountdown, type CountdownId } from "../countdownReel";
 import { HARIKA2_SECONDS, SPIN_SECONDS, XXX_MODES, XXX_SECONDS, XXXV_SECONDS, isXxx, xxxHideCmd, xxxSeconds, type XxxId } from "../xxxReel";
-import { DEFEND_ID, DEFEND2_ID, DEFEND3_ID, DEFEND_MODE, DEFEND2_MODE, DEFEND3_MODE, DEFEND_SECONDS, DEFEND2_SECONDS, DEFEND3_SECONDS, isDefend, isDefend2, isDefend3, isDefendSortie, type DefendId } from "../defendReel";
+import { DEFEND_ID, DEFEND2_ID, DEFEND3_ID, DEFEND4_ID, DEFEND_MODE, DEFEND2_MODE, DEFEND3_MODE, DEFEND4_MODE, DEFEND_SECONDS, DEFEND2_SECONDS, DEFEND3_SECONDS, DEFEND4_SECONDS, isDefend, isDefend2, isDefend3, isDefend4, isDefendSortie, type DefendId } from "../defendReel";
 import { VS_ID, VS2_ID, VS_MODE, VS2_MODE, VS_SECONDS, VS2_SECONDS, isVs, isVs2, isVsMode, type VsId } from "../vsReel";
 import { NEW1_ID, NEW1_MODE, NEW1_SECONDS, NEW2_ID, NEW2_MODE, NEW2_SECONDS, NEW3_ID, NEW3_MODE, NEW3_SECONDS, isNew1, isNew2, isNew3, isNewField, type New1Id, type New2Id, type New3Id } from "../new1Reel";
 import { unlockReelSfx } from "../reelSfx";
@@ -525,6 +525,8 @@ export function AdminPage() {
                     ? [isNew3(reelShot) ? NEW3_SECONDS : isNew2(reelShot) ? NEW2_SECONDS : NEW1_SECONDS]
                   : isVsMode(reelShot)
                     ? [isVs2(reelShot) ? VS2_SECONDS : VS_SECONDS]
+                  : isDefend4(reelShot)
+                    ? [DEFEND4_SECONDS]
                   : isDefend3(reelShot)
                     ? [DEFEND3_SECONDS]
                   : isDefendSortie(reelShot)
@@ -765,6 +767,17 @@ export function AdminPage() {
             </button>
             <button
               type="button"
+              className={reelShot === DEFEND4_ID ? "on" : ""}
+              onClick={() => {
+                setReelShot((cur) => (cur === DEFEND4_ID ? null : DEFEND4_ID));
+                setReelSeconds(DEFEND4_SECONDS);
+                setReelSkipCmd(true);
+              }}
+            >
+              {DEFEND4_MODE.label} — {DEFEND4_SECONDS}s
+            </button>
+            <button
+              type="button"
               className={reelShot === VS_ID ? "on" : ""}
               onClick={() => {
                 setReelShot((cur) => (cur === VS_ID ? null : VS_ID));
@@ -834,7 +847,12 @@ export function AdminPage() {
               {" "}Hashtag: #wargame #stratejioyunu #kalekuşatma #ordu #wargame2028
             </p>
           )}
-          {isDefend3(reelShot) && (
+          {isDefend4(reelShot) && (
+            <p className="muted">
+              Savunma 3 ile aynı. Zemin new3 toprağı, bizim askerler mavi.
+            </p>
+          )}
+          {reelShot === DEFEND3_ID && (
             <p className="muted">
               27 sn. Çıkış ve yakınlaşma 13. saniyeye kadar sürer; sonra askerlerin üstünde gezinir, sabit daire değil.
               {" "}Caption: Adın çıkarsa yoruma BURADAYIM yaz. Kale düşsün diyorsan beğen. Canlı kuşatma. 1 takip = 1 asker. wargame.lol

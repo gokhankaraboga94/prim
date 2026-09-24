@@ -4,11 +4,13 @@ import { lerpPose, type ShotPose } from "./shotModes";
 export const DEFEND_ID = "savunma" as const;
 export const DEFEND2_ID = "savunma2" as const;
 export const DEFEND3_ID = "savunma3" as const;
-export type DefendId = typeof DEFEND_ID | typeof DEFEND2_ID | typeof DEFEND3_ID;
+export const DEFEND4_ID = "savunma4" as const;
+export type DefendId = typeof DEFEND_ID | typeof DEFEND2_ID | typeof DEFEND3_ID | typeof DEFEND4_ID;
 
 export const DEFEND_MODE = { id: DEFEND_ID, label: "Savunma" } as const;
 export const DEFEND2_MODE = { id: DEFEND2_ID, label: "Savunma 2" } as const;
 export const DEFEND3_MODE = { id: DEFEND3_ID, label: "Savunma 3" } as const;
+export const DEFEND4_MODE = { id: DEFEND4_ID, label: "Savunma 4" } as const;
 
 export const DEFEND_PULL_END = 0.96;
 export const DEFEND_MAIN_SECONDS = 14;
@@ -18,6 +20,7 @@ export const DEFEND2_SECONDS = DEFEND2_SORTIE + DEFEND_SECONDS;
 export const DEFEND3_ZOOM_END = 13;
 export const DEFEND3_ORBIT = 14;
 export const DEFEND3_SECONDS = DEFEND3_ZOOM_END + DEFEND3_ORBIT;
+export const DEFEND4_SECONDS = DEFEND3_SECONDS;
 
 export const DEFEND_CX = 0;
 export const DEFEND_CZ = 0;
@@ -60,19 +63,23 @@ export type DefendRingLayout = {
 };
 
 export function isDefend(id: string | null | undefined): id is DefendId {
-  return id === DEFEND_ID || id === DEFEND2_ID || id === DEFEND3_ID;
+  return id === DEFEND_ID || id === DEFEND2_ID || id === DEFEND3_ID || id === DEFEND4_ID;
 }
 
 export function isDefend2(id: string | null | undefined): id is typeof DEFEND2_ID {
   return id === DEFEND2_ID;
 }
 
-export function isDefend3(id: string | null | undefined): id is typeof DEFEND3_ID {
-  return id === DEFEND3_ID;
+export function isDefend3(id: string | null | undefined): id is typeof DEFEND3_ID | typeof DEFEND4_ID {
+  return id === DEFEND3_ID || id === DEFEND4_ID;
 }
 
-export function isDefendSortie(id: string | null | undefined): id is typeof DEFEND2_ID | typeof DEFEND3_ID {
-  return id === DEFEND2_ID || id === DEFEND3_ID;
+export function isDefend4(id: string | null | undefined): id is typeof DEFEND4_ID {
+  return id === DEFEND4_ID;
+}
+
+export function isDefendSortie(id: string | null | undefined): id is typeof DEFEND2_ID | typeof DEFEND3_ID | typeof DEFEND4_ID {
+  return id === DEFEND2_ID || id === DEFEND3_ID || id === DEFEND4_ID;
 }
 
 export function defendDuration(id: string | null | undefined) {

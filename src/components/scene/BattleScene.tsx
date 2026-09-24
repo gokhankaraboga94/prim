@@ -14,7 +14,7 @@ import { rosterSoldierIds, sampleRoster, type PlanBId } from "../../rosterReel";
 import { sagaGateRecT, sampleSaga, type SagaId } from "../../sagaReel";
 import { discoverGateRecT, sampleDiscover, type DiscoverId } from "../../discoverReel";
 import { countdownShake, sampleCountdown, type CountdownId } from "../../countdownReel";
-import { DEFEND2_SORTIE, isDefend3, isDefendSortie, sampleDefendCam, type DefendId } from "../../defendReel";
+import { DEFEND2_SORTIE, isDefend3, isDefend4, isDefendSortie, sampleDefendCam, type DefendId } from "../../defendReel";
 import { isVs, isVs2, sampleVsCam, type VsId } from "../../vsReel";
 import { sampleNew1Cam, sampleNew2Cam, type New1Id, type New2Id, type New3Id } from "../../new1Reel";
 import { sampleXxxCam, xxxAdHook, xxxClearHook, xxxCloseNames, xxxDocHook, xxxHasHook, xxxHideCmd, xxxHiRes, xxxHoldHook, xxxHuntHook, xxxHuntSight, xxxInstantHook, xxxQuiet, xxxScanHunt, xxxSpin, xxxSquare, type XxxId } from "../../xxxReel";
@@ -672,7 +672,7 @@ function SceneContent({
       <SkyDome cheap={Boolean(defend) && !isDefend3(defend)} />
       <SteelSky />
       <DayLights cinematic={cinematic} slim={Boolean(defend) && !isDefend3(defend)} warm={slaughter} />
-      {slaughter ? <New1Terrain /> : <Terrain road={!defend && !field} cheap={Boolean(defend)} />}
+      {slaughter || isDefend4(defend) ? <New1Terrain /> : <Terrain road={!defend && !field} cheap={Boolean(defend)} />}
       {!defend && !field && !slaughter && <Castle level={level} pressure={pressure} gateClosed={Boolean(countdown) || split || climb || Boolean(xxx)} wallFight={climb} />}
       {sortie && (
         <TimedVisible until={DEFEND2_SORTIE + 0.85}>
@@ -689,7 +689,7 @@ function SceneContent({
         !roster && !split && !countdown && !vs && !xxx && <SallyRaid soldiers={soldiers} commanders={chiefN} />
       )}
       {climb && <VsLadders level={level} />}
-      <Army count={soldiers} names={names} commanders={commanders} cinematic={cinematic} duration={duration} skipCommander={hideCmd} roster={roster} discover={discover} countdown={Boolean(countdown)} defend={Boolean(defend)} defend2={sortie} defend3={isDefend3(defend)} vs={field} vs2={climb} new1={Boolean(new1)} new2={duel} blade={Boolean(new3)} mix={split} mixSlow={isMix9(mix)} nameHunt={Boolean(xxx)} quiet={Boolean(xxx && xxxQuiet(xxx)) || slaughter} square={Boolean(xxx && xxxSquare(xxx))} readNames={Boolean(xxx && xxxCloseNames(xxx))} scanHunt={Boolean(xxx && xxxScanHunt(xxx))} level={level} rosterIds={rosterIds} />
+      <Army count={soldiers} names={names} commanders={commanders} cinematic={cinematic} duration={duration} skipCommander={hideCmd} roster={roster} discover={discover} countdown={Boolean(countdown)} defend={Boolean(defend)} defend2={sortie} defend3={isDefend3(defend)} blue={isDefend4(defend)} vs={field} vs2={climb} new1={Boolean(new1)} new2={duel} blade={Boolean(new3)} mix={split} mixSlow={isMix9(mix)} nameHunt={Boolean(xxx)} quiet={Boolean(xxx && xxxQuiet(xxx)) || slaughter} square={Boolean(xxx && xxxSquare(xxx))} readNames={Boolean(xxx && xxxCloseNames(xxx))} scanHunt={Boolean(xxx && xxxScanHunt(xxx))} level={level} rosterIds={rosterIds} />
       {Boolean(xxx && xxxSquare(xxx)) && <Catapults soldiers={soldiers} square />}
       {Boolean(xxx && xxxScanHunt(xxx)) && <NameScanBeam soldiers={soldiers} />}
       {cinematic && split ? (

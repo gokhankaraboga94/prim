@@ -59,6 +59,7 @@ type ArmyProps = {
   defend?: boolean;
   defend2?: boolean;
   defend3?: boolean;
+  blue?: boolean;
   vs?: boolean;
   vs2?: boolean;
   new1?: boolean;
@@ -822,7 +823,7 @@ function NameLayers({
 }
 
 
-export function Army({ count, names = [], commanders = [], cinematic, duration = 8, skipCommander = false, roster = null, discover = null, countdown = false, defend = false, defend2 = false, defend3 = false, vs = false, vs2 = false, new1 = false, new2 = false, blade = false, mix = false, mixSlow = false, nameHunt = false, quiet = false, square = false, readNames = false, scanHunt = false, level = 1, rosterIds = null }: ArmyProps) {
+export function Army({ count, names = [], commanders = [], cinematic, duration = 8, skipCommander = false, roster = null, discover = null, countdown = false, defend = false, defend2 = false, defend3 = false, blue = false, vs = false, vs2 = false, new1 = false, new2 = false, blade = false, mix = false, mixSlow = false, nameHunt = false, quiet = false, square = false, readNames = false, scanHunt = false, level = 1, rosterIds = null }: ArmyProps) {
   const bodies = useRef<THREE.InstancedMesh>(null);
   const soldierPlumes = useRef<THREE.InstancedMesh>(null);
   const bowHolds = useRef<THREE.InstancedMesh>(null);
@@ -847,10 +848,10 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
   const pos = useMemo(() => new THREE.Vector3(), []);
   const melee = defend || vs || vs2 || new1 || new2;
   const openField = new1 || new2;
-  const archerGeo = useMemo(() => (blade ? getBlueSwordGeometry() : new2 ? getBlueSoldierGeometry() : melee ? getDefendSoldierGeometry() : getArcherGeometry()), [melee, new2, blade]);
+  const archerGeo = useMemo(() => (blade ? getBlueSwordGeometry() : new2 || blue ? getBlueSoldierGeometry() : melee ? getDefendSoldierGeometry() : getArcherGeometry()), [melee, new2, blade, blue]);
   const commanderGeo = useMemo(() => (melee ? archerGeo : getCommanderGeometry()), [melee, archerGeo]);
   const commanderCapeGeo = useMemo(() => (melee ? archerGeo : getCommanderCapeGeometry()), [melee, archerGeo]);
-  const soldierPlumeGeo = useMemo(() => (new2 ? getBluePlumeGeometry() : getSoldierPlumeGeometry()), [new2]);
+  const soldierPlumeGeo = useMemo(() => (new2 || blue ? getBluePlumeGeometry() : getSoldierPlumeGeometry()), [new2, blue]);
   const commanderPlumeGeo = useMemo(() => (melee ? archerGeo : getCommanderPlumeGeometry()), [melee, archerGeo]);
   const commanderFaceGeo = useMemo(() => (melee ? archerGeo : getCommanderFaceGeometry()), [melee, archerGeo]);
   const bowHoldGeo = useMemo(() => (melee ? archerGeo : getBowHoldGeometry()), [melee, archerGeo]);
