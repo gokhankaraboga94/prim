@@ -16,10 +16,12 @@ import { discoverGateRecT, sampleDiscover, type DiscoverId } from "../../discove
 import { countdownShake, sampleCountdown, type CountdownId } from "../../countdownReel";
 import { DEFEND2_SORTIE, isDefend3, isDefendSortie, sampleDefendCam, type DefendId } from "../../defendReel";
 import { isVs, isVs2, sampleVsCam, type VsId } from "../../vsReel";
+import { sampleNew1Cam, type New1Id } from "../../new1Reel";
 import { sampleXxxCam, xxxAdHook, xxxClearHook, xxxCloseNames, xxxDocHook, xxxHasHook, xxxHideCmd, xxxHiRes, xxxHoldHook, xxxHuntHook, xxxHuntSight, xxxInstantHook, xxxQuiet, xxxScanHunt, xxxSpin, xxxSquare, type XxxId } from "../../xxxReel";
 import { MIX8_ID, MIX9_SLOW, isMix9, mixBodyPass, mixTagPass, sampleMixBottom, sampleMixTop, type MixId } from "../../mixReel";
 import { DefendRing } from "./DefendRing";
 import { VsFoes } from "./VsFoes";
+import { New1Foes } from "./New1Foes";
 import { VsLadders } from "./VsLadders";
 import { Catapults } from "./Catapults";
 import { NameScanBeam } from "./NameScanBeam";
@@ -54,6 +56,7 @@ type BattleSceneProps = {
   countdown?: CountdownId | null;
   defend?: DefendId | null;
   vs?: VsId | null;
+  new1?: New1Id | null;
   mix?: MixId | null;
   xxx?: XxxId | null;
   rosterIds?: number[] | null;
@@ -90,6 +93,7 @@ function CinematicCam({
   countdown = null,
   defend = null,
   vs = null,
+  new1 = null,
   xxx = null,
   rosterIds = null,
 }: {
@@ -107,6 +111,7 @@ function CinematicCam({
   countdown?: CountdownId | null;
   defend?: DefendId | null;
   vs?: VsId | null;
+  new1?: New1Id | null;
   xxx?: XxxId | null;
   rosterIds?: number[] | null;
 }) {
@@ -171,11 +176,13 @@ function CinematicCam({
       fov: 38,
     };
 
-    if (cinema || shotMode || roster || saga || discover || countdown || defend || vs || xxx) {
+    if (cinema || shotMode || roster || saga || discover || countdown || defend || vs || new1 || xxx) {
       const sampleT = recT;
       const ctx = { cmdZ, form, castle, fit, castleFit, level };
       const pose = xxx
         ? sampleXxxCam(sampleT, ctx, xxx)
+        : new1
+        ? sampleNew1Cam(sampleT, soldiers)
         : vs
         ? sampleVsCam(sampleT, soldiers, level, vs)
         : defend
@@ -192,7 +199,7 @@ function CinematicCam({
               ? sampleCinema(sampleT, duration, ctx)
               : sampleShotMode(shotMode as ShotId, sampleT, duration, skipCommander, ctx);
       persp.fov = pose.fov;
-      if (defend || vs || xxx) {
+      if (defend || vs || new1 || xxx) {
         persp.near = 0.8;
         persp.far = 6000;
       }
@@ -479,7 +486,86 @@ function SteelSky() {
   return null;
 }
 
-function DayLights({ cinematic = false, slim = false }: { cinematic?: boolean; slim?: boolean }) {
+function useNew1GroundTexture() {
+  return useMemo(() => {
+    const canvas = document.createElement("canvas");
+    canvas.width = 2048;
+    canvas.height = 2048;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return null;
+    ctx.fillStyle = "#6b5a38";
+    ctx.fillRect(0, 0, 2048, 2048);
+    for (let i = 0; i < 42000; i++) {
+      const n = i % 8;
+      ctx.fillStyle =
+        n === 0
+          ? "#8a7344"
+          : n === 1
+            ? "#4e4228"
+            : n === 2
+              ? "#7a6840"
+              : n === 3
+                ? "#5c4a30"
+                : n === 4
+                  ? "#3d3420"
+                  : n === 5
+                    ? "#6e5c34"
+                    : n === 6
+                      ? "#9a8452"
+                      : "#534628";
+      ctx.fillRect(Math.random() * 2048, Math.random() * 2048, 1 + Math.random() * 7, 1 + Math.random() * 6);
+    }
+    for (let i = 0; i < 180; i++) {
+      ctx.fillStyle = `rgba(42, 32, 18, ${0.12 + Math.random() * 0.22})`;
+      ctx.beginPath();
+      ctx.ellipse(Math.random() * 2048, Math.random() * 2048, 28 + Math.random() * 90, 12 + Math.random() * 36, Math.random() * Math.PI, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    for (let i = 0; i < 90; i++) {
+      ctx.fillStyle = `rgba(88, 92, 48, ${0.08 + Math.random() * 0.14})`;
+      ctx.beginPath();
+      ctx.ellipse(Math.random() * 2048, Math.random() * 2048, 40 + Math.random() * 120, 22 + Math.random() * 50, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    for (let i = 0; i < 40; i++) {
+      ctx.strokeStyle = `rgba(36, 28, 16, ${0.1 + Math.random() * 0.16})`;
+      ctx.lineWidth = 2 + Math.random() * 6;
+      ctx.beginPath();
+      ctx.moveTo(Math.random() * 2048, Math.random() * 2048);
+      ctx.quadraticCurveTo(Math.random() * 2048, Math.random() * 2048, Math.random() * 2048, Math.random() * 2048);
+      ctx.stroke();
+    }
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.wrapS = THREE.RepeatWrapping;
+    tex.wrapT = THREE.RepeatWrapping;
+    tex.repeat.set(10, 10);
+    tex.anisotropy = 8;
+    tex.colorSpace = THREE.SRGBColorSpace;
+    return tex;
+  }, []);
+}
+
+function New1Terrain() {
+  const ground = useNew1GroundTexture();
+  return (
+    <group>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.06, 0]}>
+        <planeGeometry args={[1200, 1200]} />
+        <meshStandardMaterial color="#5a4a32" roughness={1} envMapIntensity={0.08} />
+      </mesh>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
+        <planeGeometry args={[860, 860]} />
+        <meshStandardMaterial map={ground} color="#8d7546" roughness={0.96} metalness={0.02} envMapIntensity={0.16} />
+      </mesh>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.03, 0]}>
+        <circleGeometry args={[42, 36]} />
+        <meshStandardMaterial color="#3f3224" roughness={1} transparent opacity={0.5} depthWrite={false} />
+      </mesh>
+    </group>
+  );
+}
+
+function DayLights({ cinematic = false, slim = false, warm = false }: { cinematic?: boolean; slim?: boolean; warm?: boolean }) {
   const sun = useRef<THREE.DirectionalLight>(null);
   useLayoutEffect(() => {
     const light = sun.current;
@@ -497,11 +583,11 @@ function DayLights({ cinematic = false, slim = false }: { cinematic?: boolean; s
   }, [cinematic]);
   return (
     <>
-      <ambientLight intensity={slim ? 0.72 : 0.42} color="#dce6f2" />
-      <hemisphereLight args={["#9ec4f0", "#548a3c", slim ? 0.55 : 0.78]} />
-      <directionalLight ref={sun} position={[-28, 42, 18]} intensity={slim ? 1.6 : 2.7} color="#fff4dc" />
-      {!slim && <directionalLight position={[22, 14, 8]} intensity={0.55} color="#a8c4e8" />}
-      {!slim && <directionalLight position={[6, 8, 56]} intensity={0.85} color="#ffe0b8" />}
+      <ambientLight intensity={slim ? 0.72 : warm ? 0.4 : 0.42} color={warm ? "#e6d4b4" : "#dce6f2"} />
+      <hemisphereLight args={[warm ? "#c8b490" : "#9ec4f0", warm ? "#5a4830" : "#548a3c", slim ? 0.55 : warm ? 0.7 : 0.78]} />
+      <directionalLight ref={sun} position={warm ? [-22, 36, 10] : [-28, 42, 18]} intensity={slim ? 1.6 : warm ? 2.25 : 2.7} color={warm ? "#ffe2b4" : "#fff4dc"} />
+      {!slim && <directionalLight position={[22, 14, 8]} intensity={warm ? 0.42 : 0.55} color={warm ? "#c4a878" : "#a8c4e8"} />}
+      {!slim && <directionalLight position={[6, 8, 56]} intensity={warm ? 0.62 : 0.85} color="#ffe0b8" />}
     </>
   );
 }
@@ -535,17 +621,19 @@ function SceneContent({
   countdown = null,
   defend = null,
   vs = null,
+  new1 = null,
   mix = null,
   xxx = null,
   rosterIds = null,
 }: BattleSceneProps) {
   const chiefs = effectiveCommanders(commanders, names);
-  const hideCmd = skipCommander || Boolean(discover) || Boolean(countdown) || Boolean(defend) || Boolean(vs) || Boolean(xxx && xxxHideCmd(xxx));
+  const hideCmd = skipCommander || Boolean(discover) || Boolean(countdown) || Boolean(defend) || Boolean(vs) || Boolean(new1) || Boolean(xxx && xxxHideCmd(xxx));
   const chiefN = hideCmd ? 0 : chiefs.length;
   const split = Boolean(mix);
   const sortie = isDefendSortie(defend);
   const field = isVs(vs);
   const climb = isVs2(vs);
+  const slaughter = Boolean(new1);
   const spin = Boolean(xxx && xxxSpin(xxx));
   if (spin) {
     return (
@@ -568,13 +656,13 @@ function SceneContent({
   }
   return (
     <>
-      <color attach="background" args={["#7eb6ee"]} />
-      <fog attach="fog" args={defend ? (isDefend3(defend) ? ["#9ec8ee", 1100, 3200] : sortie ? ["#9ec8ee", 600, 2200] : ["#9ec8ee", 1400, 4200]) : field ? ["#9ec8ee", 140, 720] : ["#9ec8ee", 380, 1500]} />
+      <color attach="background" args={[slaughter ? "#8f9aa0" : "#7eb6ee"]} />
+      <fog attach="fog" args={slaughter ? ["#c4b89a", 240, 980] : defend ? (isDefend3(defend) ? ["#9ec8ee", 1100, 3200] : sortie ? ["#9ec8ee", 600, 2200] : ["#9ec8ee", 1400, 4200]) : field ? ["#9ec8ee", 140, 720] : ["#9ec8ee", 380, 1500]} />
       <SkyDome cheap={Boolean(defend) && !isDefend3(defend)} />
       <SteelSky />
-      <DayLights cinematic={cinematic} slim={Boolean(defend) && !isDefend3(defend)} />
-      <Terrain road={!defend && !field} cheap={Boolean(defend)} />
-      {!defend && !field && <Castle level={level} pressure={pressure} gateClosed={Boolean(countdown) || split || climb || Boolean(xxx)} wallFight={climb} />}
+      <DayLights cinematic={cinematic} slim={Boolean(defend) && !isDefend3(defend)} warm={slaughter} />
+      {slaughter ? <New1Terrain /> : <Terrain road={!defend && !field} cheap={Boolean(defend)} />}
+      {!defend && !field && !slaughter && <Castle level={level} pressure={pressure} gateClosed={Boolean(countdown) || split || climb || Boolean(xxx)} wallFight={climb} />}
       {sortie && (
         <TimedVisible until={DEFEND2_SORTIE + 0.85}>
           <Castle level={level} pressure={pressure} forceGateOpen />
@@ -584,11 +672,13 @@ function SceneContent({
         <DefendRing soldiers={soldiers} mode={defend} level={level} />
       ) : field ? (
         <VsFoes soldiers={soldiers} />
+      ) : slaughter ? (
+        <New1Foes soldiers={soldiers} />
       ) : (
         !roster && !split && !countdown && !vs && !xxx && <SallyRaid soldiers={soldiers} commanders={chiefN} />
       )}
       {climb && <VsLadders level={level} />}
-      <Army count={soldiers} names={names} commanders={commanders} cinematic={cinematic} duration={duration} skipCommander={hideCmd} roster={roster} discover={discover} countdown={Boolean(countdown)} defend={Boolean(defend)} defend2={sortie} defend3={isDefend3(defend)} vs={field} vs2={climb} mix={split} mixSlow={isMix9(mix)} nameHunt={Boolean(xxx)} quiet={Boolean(xxx && xxxQuiet(xxx))} square={Boolean(xxx && xxxSquare(xxx))} readNames={Boolean(xxx && xxxCloseNames(xxx))} scanHunt={Boolean(xxx && xxxScanHunt(xxx))} level={level} rosterIds={rosterIds} />
+      <Army count={soldiers} names={names} commanders={commanders} cinematic={cinematic} duration={duration} skipCommander={hideCmd} roster={roster} discover={discover} countdown={Boolean(countdown)} defend={Boolean(defend)} defend2={sortie} defend3={isDefend3(defend)} vs={field} vs2={climb} new1={slaughter} mix={split} mixSlow={isMix9(mix)} nameHunt={Boolean(xxx)} quiet={Boolean(xxx && xxxQuiet(xxx)) || slaughter} square={Boolean(xxx && xxxSquare(xxx))} readNames={Boolean(xxx && xxxCloseNames(xxx))} scanHunt={Boolean(xxx && xxxScanHunt(xxx))} level={level} rosterIds={rosterIds} />
       {Boolean(xxx && xxxSquare(xxx)) && <Catapults soldiers={soldiers} square />}
       {Boolean(xxx && xxxScanHunt(xxx)) && <NameScanBeam soldiers={soldiers} />}
       {cinematic && split ? (
@@ -609,6 +699,7 @@ function SceneContent({
           countdown={countdown}
           defend={defend}
           vs={vs}
+          new1={new1}
           xxx={xxx}
           rosterIds={rosterIds}
         />
@@ -628,10 +719,10 @@ function SceneContent({
           zoomSpeed={1.85}
         />
       )}
-      {cinematic && !split && !countdown && !defend && !vs && !xxx && maxHp != null && hp != null && (
+      {cinematic && !split && !countdown && !defend && !vs && !slaughter && !xxx && maxHp != null && hp != null && (
         <CaptureHpHud hp={hp} maxHp={maxHp} soldiers={soldiers} duration={duration ?? 8} skipCommander={hideCmd} cinema={cinema} roster={roster} discover={discover} />
       )}
-      {cinematic && showTitles && !split && !vs && !xxx && (
+      {cinematic && showTitles && !split && !vs && !slaughter && !xxx && (
         <ReelTitles soldiers={soldiers} duration={duration ?? 8} day={day} skipCommander={hideCmd} cinema={cinema} roster={roster} saga={saga} discover={discover} countdown={countdown} defend={defend} names={names} rosterIds={rosterIds} />
       )}
       {cinematic && xxx && xxxHasHook(xxx) && (
@@ -640,7 +731,7 @@ function SceneContent({
       {cinematic && xxx && xxxHuntSight(xxx) && <HuntSightHud />}
       {cinematic && !split && <ReelVignette />}
       {countdown && <CountdownFlash />}
-      {cinematic && !discover && !countdown && !defend && !vs && !split && <ReelFade duration={duration ?? 8} />}
+      {cinematic && !discover && !countdown && !defend && !vs && !slaughter && !split && <ReelFade duration={duration ?? 8} />}
     </>
   );
 }
@@ -686,13 +777,14 @@ function BattleSceneInner({
   countdown = null,
   defend = null,
   vs = null,
+  new1 = null,
   mix = null,
   xxx = null,
   rosterIds = null,
   onReady,
 }: BattleSceneProps) {
   const [active, setActive] = useState(() => typeof document === "undefined" || !document.hidden);
-  const hideCmd = skipCommander || Boolean(discover) || Boolean(countdown) || Boolean(defend) || Boolean(vs) || Boolean(xxx && xxxHideCmd(xxx));
+  const hideCmd = skipCommander || Boolean(discover) || Boolean(countdown) || Boolean(defend) || Boolean(vs) || Boolean(new1) || Boolean(xxx && xxxHideCmd(xxx));
 
   useLayoutEffect(() => {
     if (cinematic && (mix || xxx)) {
@@ -701,7 +793,7 @@ function BattleSceneInner({
     } else if (cinematic && roster) {
       setSallyOrigin(80);
       setSwordStart(80);
-    } else if (cinematic && (countdown || defend || vs)) {
+    } else if (cinematic && (countdown || defend || vs || new1)) {
       setSallyOrigin(SALLY_START_DELAY - 90);
       setSwordStart(80);
     } else if (cinematic && discover) {
@@ -732,7 +824,7 @@ function BattleSceneInner({
       setSallyOrigin(0);
       setSwordStart(SWORD_START);
     };
-  }, [cinematic, cinema, duration, hideCmd, roster, saga, discover, countdown, defend, vs, mix, xxx]);
+  }, [cinematic, cinema, duration, hideCmd, roster, saga, discover, countdown, defend, vs, new1, mix, xxx]);
 
   useEffect(() => {
     const onVis = () => setActive(!document.hidden);
@@ -745,7 +837,7 @@ function BattleSceneInner({
       shadows={!cinematic}
       dpr={cinematic ? (xxx && xxxHiRes(xxx) ? 2 : 1) : [1, 1.5]}
       gl={{
-        antialias: !(xxx && xxxQuiet(xxx)) && (!defend || isDefend3(defend)),
+        antialias: Boolean(new1) || (!(xxx && xxxQuiet(xxx)) && (!defend || isDefend3(defend))),
         alpha: false,
         powerPreference: "high-performance",
         stencil: false,
@@ -759,11 +851,11 @@ function BattleSceneInner({
       style={{ width: "100%", height: "100%", display: "block" }}
       onCreated={({ gl }) => {
         gl.toneMapping = THREE.ACESFilmicToneMapping;
-        gl.toneMappingExposure = cinematic ? 1.16 : 1.22;
+        gl.toneMappingExposure = cinematic ? (new1 ? 1.06 : 1.16) : 1.22;
         gl.outputColorSpace = THREE.SRGBColorSpace;
         gl.shadowMap.enabled = !cinematic;
         gl.shadowMap.type = THREE.PCFSoftShadowMap;
-        gl.setClearColor(xxx && xxxSpin(xxx) ? "#000000" : "#7eb6ee", 1);
+        gl.setClearColor(xxx && xxxSpin(xxx) ? "#000000" : new1 ? "#8f9aa0" : "#7eb6ee", 1);
         if (cinematic) {
           const dpr = xxx && xxxHiRes(xxx) ? 2 : 1;
           gl.setPixelRatio(dpr);
@@ -795,6 +887,7 @@ function BattleSceneInner({
         countdown={countdown}
         defend={defend}
         vs={vs}
+        new1={new1}
         mix={mix}
         xxx={xxx}
         rosterIds={rosterIds}

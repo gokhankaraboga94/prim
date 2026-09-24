@@ -11,6 +11,7 @@ import { type DiscoverId } from "../../discoverReel";
 import { COUNT_1_END, countdownBeat, countdownVolley } from "../../countdownReel";
 import { DEFEND_CZ, DEFEND2_CX, DEFEND2_CZ, defendSoldierPos, defendYawOut } from "../../defendReel";
 import { vsSoldierAt, type VsPose } from "../../vsReel";
+import { new1FriendAt } from "../../new1Reel";
 import { sfxArrowLoose, sfxBowDraw, sfxVolleyPeak } from "../../reelSfx";
 import { raidCount, sallyHunting, sallyLiveIndex, sallyLocal, sallyRaiderAt, swordArmPose, swordStyleAt, swordSwingU } from "../../siegeEvent";
 import { castleFrame } from "../../castleLayout";
@@ -60,6 +61,7 @@ type ArmyProps = {
   defend3?: boolean;
   vs?: boolean;
   vs2?: boolean;
+  new1?: boolean;
   mix?: boolean;
   mixSlow?: boolean;
   nameHunt?: boolean;
@@ -764,7 +766,7 @@ function NameLayers({
 }
 
 
-export function Army({ count, names = [], commanders = [], cinematic, duration = 8, skipCommander = false, roster = null, discover = null, countdown = false, defend = false, defend2 = false, defend3 = false, vs = false, vs2 = false, mix = false, mixSlow = false, nameHunt = false, quiet = false, square = false, readNames = false, scanHunt = false, level = 1, rosterIds = null }: ArmyProps) {
+export function Army({ count, names = [], commanders = [], cinematic, duration = 8, skipCommander = false, roster = null, discover = null, countdown = false, defend = false, defend2 = false, defend3 = false, vs = false, vs2 = false, new1 = false, mix = false, mixSlow = false, nameHunt = false, quiet = false, square = false, readNames = false, scanHunt = false, level = 1, rosterIds = null }: ArmyProps) {
   const bodies = useRef<THREE.InstancedMesh>(null);
   const soldierPlumes = useRef<THREE.InstancedMesh>(null);
   const bowHolds = useRef<THREE.InstancedMesh>(null);
@@ -787,7 +789,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
   const fireSfx = useRef(false);
   const countSfx = useRef("");
   const pos = useMemo(() => new THREE.Vector3(), []);
-  const melee = defend || vs || vs2;
+  const melee = defend || vs || vs2 || new1;
   const archerGeo = useMemo(() => (melee ? getDefendSoldierGeometry() : getArcherGeometry()), [melee]);
   const commanderGeo = useMemo(() => (melee ? archerGeo : getCommanderGeometry()), [melee, archerGeo]);
   const commanderCapeGeo = useMemo(() => (melee ? archerGeo : getCommanderCapeGeometry()), [melee, archerGeo]);
@@ -806,7 +808,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
   const defendOz = defend2 ? DEFEND2_CZ : DEFEND_CZ;
   const chiefsList = useMemo(() => effectiveCommanders(commanders, names), [commanders, names]);
   const layout = useMemo(() => {
-    if (defend || vs || vs2) {
+    if (defend || vs || vs2 || new1) {
       const rest: number[] = [];
       for (let i = 0; i < visible; i++) rest.push(i);
       const slotOf = new Array<number>(visible).fill(-1);
@@ -827,7 +829,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
       return { cmd: [] as number[], rest, slotOf, cmdOf, sizes: squareRankSizes(rest.length) };
     }
     return buildLayout(names, chiefsList, visible);
-  }, [names, chiefsList, visible, defend, vs, vs2, square]);
+  }, [names, chiefsList, visible, defend, vs, vs2, new1, square]);
   const phantom = !skipCommander && layout.cmd.length === 0 && chiefsList.length > 0;
   const form = useMemo(() => ({ sizes: layout.sizes, scale: 1.28, square }), [layout.sizes, square]);
   const steelRough = useMemo(() => {
@@ -857,7 +859,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
   const labeled = useMemo(() => {
     const hunt = roster ? (rosterIds?.length ? rosterIds : rosterSoldierIds(names, visible)) : null;
     const ids: number[] = [];
-    if (phantom && !defend && !vs && !vs2 && !hunt) ids.push(-1);
+    if (phantom && !defend && !vs && !vs2 && !new1 && !hunt) ids.push(-1);
     if (hunt) {
       const seen = new Set<number>();
       for (const i of hunt) {
@@ -871,17 +873,17 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
       if (names[i]?.trim()) ids.push(i);
     }
     return ids;
-  }, [names, visible, phantom, defend, vs, vs2, roster, rosterIds]);
+  }, [names, visible, phantom, defend, vs, vs2, new1, roster, rosterIds]);
   const nameAtlas = useMemo(
     () =>
       buildNameAtlas(
         labeled.map((i) => ({
           text: i < 0 ? DEFAULT_COMMANDER : names[i],
-          commander: !defend && !vs && !vs2 && (i < 0 || isCommander(names[i], chiefsList)),
-          plain: Boolean(countdown || defend || vs || vs2 || roster || square),
+          commander: !defend && !vs && !vs2 && !new1 && (i < 0 || isCommander(names[i], chiefsList)),
+          plain: Boolean(countdown || defend || vs || vs2 || new1 || roster || square),
         }))
       ),
-    [labeled, names, chiefsList, countdown, defend, vs, vs2, roster, square]
+    [labeled, names, chiefsList, countdown, defend, vs, vs2, new1, roster, square]
   );
   useEffect(() => () => nameAtlas.dispose(), [nameAtlas]);
 
@@ -895,6 +897,11 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
     if (defend) {
       const slot = layout.slotOf[soldier];
       defendSoldierPos(slot >= 0 ? slot : soldier, layout.rest.length, t, pos, defendOx, defendOz, defend3);
+      return;
+    }
+    if (new1) {
+      new1FriendAt(soldier, layout.rest.length, t - REEL_HOLD, vsPose);
+      pos.set(vsPose.x, vsPose.y, vsPose.z);
       return;
     }
     if (vs || vs2) {
@@ -1074,6 +1081,16 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
           dummy.position.copy(pos);
           dummy.rotation.set(0, defendYawOut(pos.x, pos.z, defendOx, defendOz), 0);
           dummy.scale.setScalar(scale);
+          dummy.updateMatrix();
+          stamp(bodies.current, i);
+          stamp(soldierPlumes.current, i);
+          continue;
+        }
+        if (new1) {
+          new1FriendAt(soldier, n, recT, vsPose);
+          dummy.position.set(vsPose.x, vsPose.y, vsPose.z);
+          dummy.rotation.set(vsPose.rx, vsPose.ry, vsPose.rz);
+          dummy.scale.setScalar(scale * 0.96);
           dummy.updateMatrix();
           stamp(bodies.current, i);
           stamp(soldierPlumes.current, i);
@@ -1262,10 +1279,14 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
       } else if (idx < 0) commanderPos(t, 0, pos);
       else poseSoldier(idx, t);
       let nameScale = crowd;
-      const staggered = Boolean(countdown || defend || vs || vs2);
+      const staggered = Boolean(countdown || defend || vs || vs2 || new1);
       if (countdown) nameScale = 1.12 * crowd;
       else if (defend) nameScale = 1.22 * crowd;
-      else if (vs || vs2) nameScale = crowd;
+      else if (new1) {
+        const reveal = Math.max(0, Math.min(1, (recT - 8.4) / 7.2));
+        const u = reveal * reveal * (3 - 2 * reveal);
+        nameScale = Math.max(0.4, crowd * (0.34 + u * 1.28));
+      } else if (vs || vs2) nameScale = crowd;
       else if (scanHunt) nameScale = Math.max(1.35, crowd * 1.68);
       else if (readNames) nameScale = Math.max(1.18, crowd * 1.42);
       else if (square) nameScale = Math.max(0.7, crowd * 1.05);
@@ -1294,7 +1315,11 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
         const slot = layout.slotOf[idx];
         ({ row, col } = slotCoord(slot >= 0 ? slot : 0, form.sizes));
         if (defend && staggered) lift = 2.7 + (idx % 5) * 0.22;
-        else if ((vs || vs2) && staggered) {
+        else if (new1 && staggered) {
+          const band = idx % 7;
+          lift = 2.42 + band * 0.3 + vsPose.y * 0.04;
+          nx = pos.x + ((idx % 2) * 2 - 1) * 0.28;
+        } else if ((vs || vs2) && staggered) {
           const band = idx % 9;
           const lane = idx % 4;
           lift = 2.35 + band * 0.34 + (vs2 ? vsPose.y * 0.02 : 0);
@@ -1317,6 +1342,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
       }
       let sx = (isolate ? Math.min(1.05, cell.sx * nameScale) : cell.sx * nameScale);
       if (defend && staggered) sx = Math.min(sx, FILE * 1.28);
+      else if (new1 && staggered) sx = Math.min(sx, FILE * 1.12);
       else if ((vs || vs2) && staggered) sx = Math.min(sx, FILE * (vs2 ? 0.92 : 1.05));
       else if (staggered) sx = Math.min(sx, FILE * 0.78);
       const sy = cell.sy * nameScale;
@@ -1327,7 +1353,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
       if (cam) {
         nockOff.copy(cam.position).sub(pos);
         const len = nockOff.length() || 1;
-        const pull = defend || vs || vs2 ? Math.min(14, Math.max(7, len * 0.12)) : Math.min(4.5, Math.max(1.2, len * 0.04));
+        const pull = defend || vs || vs2 || new1 ? Math.min(14, Math.max(7, len * 0.12)) : Math.min(4.5, Math.max(1.2, len * 0.04));
         px = nx + (nockOff.x / len) * pull;
         py = baseY + (nockOff.y / len) * pull;
         pz = pos.z + (nockOff.z / len) * pull;
@@ -1421,13 +1447,13 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
     const volley = countdown ? countdownVolley(recT) : null;
 
     acc.current += dt;
-    if (!mixSlow && (defend || vs || vs2 || roster || countdown || acc.current >= 1 / 40)) {
+    if (!mixSlow && (defend || vs || vs2 || new1 || roster || countdown || acc.current >= 1 / 40)) {
       acc.current = 0;
       placeBodies(t, state.camera);
     }
 
     if (!arrows.current) return;
-    if (visible <= 0 || roster || defend || vs || vs2 || mixSlow || quiet) {
+    if (visible <= 0 || roster || defend || vs || vs2 || new1 || mixSlow || quiet) {
       shots.current = [];
       arrows.current.count = 0;
       return;
@@ -1528,7 +1554,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
 
   return (
     <group>
-      {defend || vs || vs2 ? (
+      {defend || vs || vs2 || new1 ? (
         <>
           <instancedMesh key={`archer-v14-defend-${instanceCap}`} ref={bodies} args={[archerGeo, undefined, instanceCap]} frustumCulled={false}>
             <meshStandardMaterial vertexColors roughness={0.46} metalness={0.72} envMapIntensity={0.9} />

@@ -12,6 +12,7 @@ import type { MixId } from "../mixReel";
 import type { CountdownId } from "../countdownReel";
 import type { DefendId } from "../defendReel";
 import type { VsId } from "../vsReel";
+import { type New1Id } from "../new1Reel";
 
 type ReelCaptureProps = {
   soldiers: number;
@@ -34,6 +35,7 @@ type ReelCaptureProps = {
   countdown?: CountdownId | null;
   defend?: DefendId | null;
   vs?: VsId | null;
+  new1?: New1Id | null;
   mix?: MixId | null;
   xxx?: XxxId | null;
   rosterIds?: number[] | null;
@@ -41,7 +43,7 @@ type ReelCaptureProps = {
   onClose: () => void;
 };
 
-export function ReelCapture({ soldiers, names, commanders = [], level, pressure, hp, maxHp, seconds, showTitles = true, warLook = false, day = 0, skipCommander = false, shotMode = null, cinema = false, roster = null, saga = null, discover = null, countdown = null, defend = null, vs = null, mix = null, xxx = null, rosterIds = null, onRecorded, onClose }: ReelCaptureProps) {
+export function ReelCapture({ soldiers, names, commanders = [], level, pressure, hp, maxHp, seconds, showTitles = true, warLook = false, day = 0, skipCommander = false, shotMode = null, cinema = false, roster = null, saga = null, discover = null, countdown = null, defend = null, vs = null, new1 = null, mix = null, xxx = null, rosterIds = null, onRecorded, onClose }: ReelCaptureProps) {
   const clip = seconds;
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [phase, setPhase] = useState<"boot" | "rec" | "done" | "err">("boot");
@@ -134,8 +136,8 @@ export function ReelCapture({ soldiers, names, commanders = [], level, pressure,
             duration={clip}
             warLook={warLook}
             day={day}
-            skipCommander={skipCommander || Boolean(discover) || Boolean(countdown) || Boolean(defend) || Boolean(vs) || Boolean(xxx && xxxHideCmd(xxx))}
-            shotMode={cinema || roster || saga || discover || countdown || defend || vs || mix || xxx ? null : shotMode}
+            skipCommander={skipCommander || Boolean(discover) || Boolean(countdown) || Boolean(defend) || Boolean(vs) || Boolean(new1) || Boolean(xxx && xxxHideCmd(xxx))}
+            shotMode={cinema || roster || saga || discover || countdown || defend || vs || new1 || mix || xxx ? null : shotMode}
             cinema={cinema}
             roster={roster}
             saga={saga}
@@ -143,9 +145,10 @@ export function ReelCapture({ soldiers, names, commanders = [], level, pressure,
             countdown={countdown}
             defend={defend}
             vs={vs}
+            new1={new1}
             mix={mix}
             xxx={xxx}
-            showTitles={showTitles && !mix && !xxx}
+            showTitles={showTitles && !mix && !xxx && !new1}
             rosterIds={rosterIds}
             onReady={(canvas) => {
               canvasRef.current = canvas;

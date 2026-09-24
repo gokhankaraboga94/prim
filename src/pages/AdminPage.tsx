@@ -30,6 +30,7 @@ import { COUNTDOWN_ID, COUNTDOWN_MODE, COUNTDOWN_SECONDS, isCountdown, type Coun
 import { HARIKA2_SECONDS, SPIN_SECONDS, XXX_MODES, XXX_SECONDS, XXXV_SECONDS, isXxx, xxxHideCmd, xxxSeconds, type XxxId } from "../xxxReel";
 import { DEFEND_ID, DEFEND2_ID, DEFEND3_ID, DEFEND_MODE, DEFEND2_MODE, DEFEND3_MODE, DEFEND_SECONDS, DEFEND2_SECONDS, DEFEND3_SECONDS, isDefend, isDefend2, isDefend3, isDefendSortie, type DefendId } from "../defendReel";
 import { VS_ID, VS2_ID, VS_MODE, VS2_MODE, VS_SECONDS, VS2_SECONDS, isVs, isVs2, isVsMode, type VsId } from "../vsReel";
+import { NEW1_ID, NEW1_MODE, NEW1_SECONDS, isNew1, type New1Id } from "../new1Reel";
 import { unlockReelSfx } from "../reelSfx";
 
 export function AdminPage() {
@@ -45,7 +46,7 @@ export function AdminPage() {
   const [reelSeconds, setReelSeconds] = useState<number>(7);
   const [reelText, setReelText] = useState(true);
   const [reelSkipCmd, setReelSkipCmd] = useState(false);
-  const [reelShot, setReelShot] = useState<ReelShot | PlanBId | SagaId | DiscoverId | MixId | CountdownId | DefendId | VsId | XxxId | null>(null);
+  const [reelShot, setReelShot] = useState<ReelShot | PlanBId | SagaId | DiscoverId | MixId | CountdownId | DefendId | VsId | New1Id | XxxId | null>(null);
   const [reelDay, setReelDay] = useState("1");
   const [capturing, setCapturing] = useState(false);
   const [editIndex, setEditIndex] = useState<number | null>(null);
@@ -520,6 +521,8 @@ export function AdminPage() {
                     ? [RAF2_SECONDS]
                   : isCountdown(reelShot)
                     ? [COUNTDOWN_SECONDS]
+                  : isNew1(reelShot)
+                    ? [NEW1_SECONDS]
                   : isVsMode(reelShot)
                     ? [isVs2(reelShot) ? VS2_SECONDS : VS_SECONDS]
                   : isDefend3(reelShot)
@@ -584,6 +587,25 @@ export function AdminPage() {
             İşaretlersen kayıt komutan yakın planı olmadan, kamera dönüşünden başlar. “X. GÜN” ve
             “KALE KUŞATILDI” o anda çıkar. İşaretlemezsen eski usül komutanla başlar.
           </p>
+          <label>new1 — {NEW1_SECONDS}s</label>
+          <p className="muted">
+            Yazı yok. Kuş bakışı açık arazi. Düşman önden ve arkadan kalabalık basar, bizimkiler tek tek düşer.
+            Kamera alçalınca kullanıcı adları okunur.
+          </p>
+          <div className="dur-pills shot-pills">
+            <button
+              type="button"
+              className={reelShot === NEW1_ID ? "on" : ""}
+              onClick={() => {
+                setReelShot((cur) => (cur === NEW1_ID ? null : NEW1_ID));
+                setReelSeconds(NEW1_SECONDS);
+                setReelText(false);
+                setReelSkipCmd(true);
+              }}
+            >
+              {NEW1_MODE.label} — {NEW1_SECONDS}s
+            </button>
+          </div>
           <label>Çekim modu</label>
           <p className="muted">
             On bir tekil açı duruyor; tek tek çekebilirsin. Birleşim, bunların en iyi sahnelerini 30 /
@@ -1035,8 +1057,8 @@ export function AdminPage() {
           maxHp={maxHp}
           seconds={captureSec}
           showTitles={reelText}
-          skipCommander={reelSkipCmd || isDiscover(reelShot) || isCountdown(reelShot) || isDefend(reelShot) || isVsMode(reelShot) || (isXxx(reelShot) && xxxHideCmd(reelShot))}
-          shotMode={reelShot === CINEMA_ID || isPlanB(reelShot) || isSaga(reelShot) || isDiscover(reelShot) || isCountdown(reelShot) || isDefend(reelShot) || isVsMode(reelShot) || isMix(reelShot) || isXxx(reelShot) ? null : reelShot}
+          skipCommander={reelSkipCmd || isDiscover(reelShot) || isCountdown(reelShot) || isDefend(reelShot) || isVsMode(reelShot) || isNew1(reelShot) || (isXxx(reelShot) && xxxHideCmd(reelShot))}
+          shotMode={reelShot === CINEMA_ID || isPlanB(reelShot) || isSaga(reelShot) || isDiscover(reelShot) || isCountdown(reelShot) || isDefend(reelShot) || isVsMode(reelShot) || isNew1(reelShot) || isMix(reelShot) || isXxx(reelShot) ? null : reelShot}
           cinema={reelShot === CINEMA_ID}
           roster={isPlanB(reelShot) ? reelShot : null}
           saga={isSaga(reelShot) ? reelShot : null}
@@ -1044,6 +1066,7 @@ export function AdminPage() {
           countdown={isCountdown(reelShot) ? reelShot : null}
           defend={isDefend(reelShot) ? reelShot : null}
           vs={isVsMode(reelShot) ? reelShot : null}
+          new1={isNew1(reelShot) ? reelShot : null}
           mix={isMix(reelShot) ? reelShot : null}
           xxx={isXxx(reelShot) ? reelShot : null}
           rosterIds={isJoin(reelShot) ? captureJoinIds.current : null}
