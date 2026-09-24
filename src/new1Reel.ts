@@ -53,10 +53,10 @@ const FILE = 2.38;
 const RANK = 2.18;
 const CHARGE = 4.35;
 const CLASH = 4.2;
-const FIGHT_GAP = 1.62;
+const FIGHT_GAP = 2.05;
 const BODY_GAP = 0.58;
 
-export const NEW2_VISUAL_FRIENDS = 110;
+export const NEW2_VISUAL_FRIENDS = 140;
 
 export function new2VisualFriends(soldiers: number) {
   return Math.min(Math.max(1, Math.floor(soldiers)), NEW2_VISUAL_FRIENDS);
@@ -240,7 +240,7 @@ export function new2FriendAt(i: number, n: number, recT: number, out: New1Pose) 
   const mine = windowBlow(u, 0.02, 0.4);
   const front = windowBlow(u, 0.42, 0.74);
   const back = windowBlow(u, 0.76, 1);
-  const lunge = Math.max(0, mine) * 0.22;
+  const lunge = Math.max(0, mine) * 0.28;
   const wind = Math.max(0, -mine) * 0.16;
   const shoveF = Math.max(0, front) * 0.22;
   const shoveB = Math.max(0, back) * 0.22;
@@ -340,7 +340,7 @@ export function new2EnemyAt(i: number, soldiers: number, recT: number, out: New1
   const engaged = focus >= 0 && step > 0.82 && t < new2FriendDieAt(focus, n);
   const u = engaged ? duelPhase(t, focus, n) : 0;
   const mine = engaged ? (side < 0 ? windowBlow(u, 0.42, 0.74) : windowBlow(u, 0.76, 1)) : 0;
-  const push = Math.max(0, mine) * 0.22;
+  const push = Math.max(0, mine) * 0.28;
   out.x = lerp(hopSX![i], hopDX![i], step);
   out.y = 0;
   out.z = lerp(hopSZ![i], hopDZ![i], step) - side * push;
