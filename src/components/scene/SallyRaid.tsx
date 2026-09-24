@@ -102,10 +102,10 @@ function createSwordRaiderGeometry() {
     part(new THREE.BoxGeometry(0.22, 0.18, 0.2), "#d4a57c", 0, 1.28, 0.03),
     part(new THREE.SphereGeometry(0.14, 12, 9), "#9a1616", 0, 1.48, 0.02),
     part(new THREE.BoxGeometry(0.16, 0.03, 0.05), "#080202", 0, 1.46, 0.14),
-    part(new THREE.BoxGeometry(0.22, 0.04, 0.055), "#c9a24a", 0.42, 1.05, 0.36, 0.65, 0, -0.3),
-    part(new THREE.BoxGeometry(0.04, 0.045, 0.14), "#3a2414", 0.38, 0.96, 0.24, 0.65, 0, -0.3),
-    part(new THREE.BoxGeometry(0.016, 0.05, 0.86), "#e8eef4", 0.5, 1.32, 0.72, 0.9, 0.1, -0.4),
-    part(new THREE.BoxGeometry(0.008, 0.02, 0.84), "#ffffff", 0.5, 1.34, 0.72, 0.9, 0.1, -0.4),
+    part(new THREE.BoxGeometry(0.15, 0.032, 0.042), "#c9a24a", 0.42, 1.05, 0.36, 0.65, 0, -0.3),
+    part(new THREE.BoxGeometry(0.034, 0.038, 0.1), "#3a2414", 0.38, 0.96, 0.24, 0.65, 0, -0.3),
+    part(new THREE.BoxGeometry(0.012, 0.034, 0.52), "#e8eef4", 0.467, 1.22, 0.587, 0.9, 0.1, -0.4),
+    part(new THREE.BoxGeometry(0.006, 0.014, 0.5), "#ffffff", 0.467, 1.24, 0.587, 0.9, 0.1, -0.4),
   ];
   const merged = mergeGeometries(pieces, false);
   pieces.forEach((g) => g.dispose());

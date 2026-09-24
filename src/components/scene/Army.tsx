@@ -571,11 +571,11 @@ const BLUE_DYE = { armor: "#1a56e8", hi: "#4d8cff", dk: "#0c2f8a", leather: "#12
 
 function heldSword() {
   return [
-    part(new THREE.BoxGeometry(0.22, 0.045, 0.06), "#c9a24a", 0.5, 1.08, 0.38, 0.7, 0.15, -0.35),
-    part(new THREE.BoxGeometry(0.045, 0.05, 0.16), "#3a2414", 0.46, 0.98, 0.26, 0.7, 0.15, -0.35),
-    part(new THREE.SphereGeometry(0.04, 8, 6), "#c9a24a", 0.42, 0.9, 0.16),
-    part(new THREE.BoxGeometry(0.015, 0.055, 0.92), "#d5dde8", 0.58, 1.38, 0.78, 0.95, 0.2, -0.45),
-    part(new THREE.BoxGeometry(0.008, 0.02, 0.9), "#f4f7fb", 0.575, 1.4, 0.78, 0.95, 0.2, -0.45),
+    part(new THREE.BoxGeometry(0.15, 0.034, 0.045), "#c9a24a", 0.5, 1.08, 0.38, 0.7, 0.15, -0.35),
+    part(new THREE.BoxGeometry(0.038, 0.042, 0.11), "#3a2414", 0.46, 0.98, 0.26, 0.7, 0.15, -0.35),
+    part(new THREE.SphereGeometry(0.032, 8, 6), "#c9a24a", 0.42, 0.9, 0.16),
+    part(new THREE.BoxGeometry(0.011, 0.038, 0.56), "#d5dde8", 0.548, 1.272, 0.64, 0.95, 0.2, -0.45),
+    part(new THREE.BoxGeometry(0.006, 0.014, 0.54), "#f4f7fb", 0.543, 1.292, 0.64, 0.95, 0.2, -0.45),
   ];
 }
 
@@ -589,6 +589,10 @@ function createBlueSoldierGeometry() {
     ],
     BLUE_DYE.armor
   );
+}
+
+function createBlueBareGeometry() {
+  return mergeParts([...plateArmor(true, BLUE_DYE), ...corinthianShell(12)], BLUE_DYE.armor);
 }
 
 function createBlueSwordGeometry() {
@@ -640,6 +644,7 @@ function createCommanderFaceGeometry() {
 let archerGeoV14: THREE.BufferGeometry | null = null;
 let defendSoldierGeoV15: THREE.BufferGeometry | null = null;
 let blueSoldierGeo: THREE.BufferGeometry | null = null;
+let blueBareGeo: THREE.BufferGeometry | null = null;
 let blueSwordGeo: THREE.BufferGeometry | null = null;
 let bluePlumeGeo: THREE.BufferGeometry | null = null;
 let commanderGeoV14: THREE.BufferGeometry | null = null;
@@ -667,6 +672,11 @@ function getDefendSoldierGeometry() {
 function getBlueSoldierGeometry() {
   if (!blueSoldierGeo) blueSoldierGeo = createBlueSoldierGeometry();
   return blueSoldierGeo;
+}
+
+function getBlueBareGeometry() {
+  if (!blueBareGeo) blueBareGeo = createBlueBareGeometry();
+  return blueBareGeo;
 }
 
 function getBlueSwordGeometry() {
@@ -848,7 +858,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
   const pos = useMemo(() => new THREE.Vector3(), []);
   const melee = defend || vs || vs2 || new1 || new2;
   const openField = new1 || new2;
-  const archerGeo = useMemo(() => (blade ? getBlueSwordGeometry() : new2 || blue ? getBlueSoldierGeometry() : melee ? getDefendSoldierGeometry() : getArcherGeometry()), [melee, new2, blade, blue]);
+  const archerGeo = useMemo(() => (blade ? getBlueSwordGeometry() : blue ? getBlueBareGeometry() : new2 ? getBlueSoldierGeometry() : melee ? getDefendSoldierGeometry() : getArcherGeometry()), [melee, new2, blade, blue]);
   const commanderGeo = useMemo(() => (melee ? archerGeo : getCommanderGeometry()), [melee, archerGeo]);
   const commanderCapeGeo = useMemo(() => (melee ? archerGeo : getCommanderCapeGeometry()), [melee, archerGeo]);
   const soldierPlumeGeo = useMemo(() => (new2 || blue ? getBluePlumeGeometry() : getSoldierPlumeGeometry()), [new2, blue]);
