@@ -56,6 +56,12 @@ const CLASH = 4.2;
 const FIGHT_GAP = 1.62;
 const BODY_GAP = 0.58;
 
+export const NEW2_VISUAL_FRIENDS = 48;
+
+export function new2VisualFriends(soldiers: number) {
+  return Math.min(Math.max(1, Math.floor(soldiers)), NEW2_VISUAL_FRIENDS);
+}
+
 export function new1EnemyCount(soldiers: number) {
   const n = Math.max(1, Math.floor(soldiers));
   return Math.min(4800, n * 2);
@@ -368,7 +374,7 @@ export function new2AliveCounts(soldiers: number, recT: number) {
 }
 
 export function sampleNew2Cam(recT: number, soldiers: number): ShotPose {
-  const n = Math.max(1, soldiers);
+  const n = new2VisualFriends(soldiers);
   const mid = Math.floor((n - 1) / 2);
   const s = friendStand(mid, n);
   const lx = s.x;

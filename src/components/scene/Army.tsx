@@ -11,7 +11,7 @@ import { type DiscoverId } from "../../discoverReel";
 import { COUNT_1_END, countdownBeat, countdownVolley } from "../../countdownReel";
 import { DEFEND_CZ, DEFEND2_CX, DEFEND2_CZ, defendSoldierPos, defendYawOut } from "../../defendReel";
 import { vsSoldierAt, type VsPose } from "../../vsReel";
-import { new1FriendAt, new2FriendAt } from "../../new1Reel";
+import { new1FriendAt, new2FriendAt, new2VisualFriends } from "../../new1Reel";
 import { sfxArrowLoose, sfxBowDraw, sfxVolleyPeak } from "../../reelSfx";
 import { raidCount, sallyHunting, sallyLiveIndex, sallyLocal, sallyRaiderAt, swordArmPose, swordStyleAt, swordSwingU } from "../../siegeEvent";
 import { castleFrame } from "../../castleLayout";
@@ -859,7 +859,8 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
   const swordGeo = useMemo(() => (melee ? archerGeo : getSwordGeometry()), [melee, archerGeo]);
   const nockGeo = useMemo(() => (melee ? archerGeo : getNockArrowGeometry()), [melee, archerGeo]);
 
-  const visible = Math.min(roster ? 80 : MAX_SOLDIERS, Math.max(0, Math.floor(count)));
+  const rosterCap = Math.min(roster ? 80 : MAX_SOLDIERS, Math.max(0, Math.floor(count)));
+  const visible = new2 ? Math.min(rosterCap, new2VisualFriends(rosterCap)) : rosterCap;
   const instanceCap = Math.min(MAX_SOLDIERS, Math.max(visible, roster ? 24 : 1, 1));
   const defendOx = defend2 ? DEFEND2_CX : 0;
   const defendOz = defend2 ? DEFEND2_CZ : DEFEND_CZ;

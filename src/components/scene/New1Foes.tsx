@@ -2,7 +2,7 @@ import { useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { REEL_HOLD } from "../../recordCanvas";
-import { new1EnemyAt, new1EnemyCount, new2EnemyAt, type New1Pose } from "../../new1Reel";
+import { new1EnemyAt, new1EnemyCount, new2EnemyAt, new2VisualFriends, type New1Pose } from "../../new1Reel";
 import { getDefendRaiderGeometry, getSwordRaiderGeometry } from "./SallyRaid";
 
 const dummy = new THREE.Object3D();
@@ -18,7 +18,8 @@ export function New1Foes({ soldiers, duel = false, swords = false }: New1FoesPro
   const bodies = useRef<THREE.InstancedMesh>(null);
   const skip = useRef(0);
   const geo = useMemo(() => (swords ? getSwordRaiderGeometry() : getDefendRaiderGeometry(true)), [swords]);
-  const cap = Math.max(1, new1EnemyCount(soldiers));
+  const fightFriends = duel ? new2VisualFriends(soldiers) : soldiers;
+  const cap = Math.max(1, new1EnemyCount(fightFriends));
 
   useFrame((state) => {
     if (!bodies.current) return;
@@ -28,7 +29,7 @@ export function New1Foes({ soldiers, duel = false, swords = false }: New1FoesPro
     const n = cap;
     const place = duel ? new2EnemyAt : new1EnemyAt;
     for (let i = 0; i < n; i++) {
-      place(i, soldiers, recT, scratch);
+      place(i, fightFriends, recT, scratch);
       dummy.position.set(scratch.x, scratch.y, scratch.z);
       dummy.rotation.set(scratch.rx, scratch.ry, scratch.rz);
       dummy.scale.setScalar((scratch.s ?? 1) > 0 ? 1.44 : 0);

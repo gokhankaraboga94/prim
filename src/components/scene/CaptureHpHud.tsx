@@ -1765,14 +1765,14 @@ function New2RatioPlate({ soldiers, drop = 0 }: { soldiers: number; drop?: numbe
     }
     const pulse = 0.55 + 0.45 * Math.abs(Math.sin(recT * 5.2));
     ctx.clearRect(0, 150, 1024, 98);
-    ctx.font = "900 78px Inter, sans-serif";
+    ctx.font = "900 90px Inter, sans-serif";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.lineWidth = 12;
     ctx.strokeStyle = `rgba(0,0,0,${0.55 + pulse * 0.35})`;
     ctx.fillStyle = `rgb(255, ${Math.round(18 + (1 - pulse) * 40)}, ${Math.round(12 + (1 - pulse) * 18)})`;
-    ctx.strokeText("DUR", 512, 198);
-    ctx.fillText("DUR", 512, 198);
+    ctx.strokeText("DUR", 512, 186);
+    ctx.fillText("DUR", 512, 186);
     tex.needsUpdate = true;
   });
 
