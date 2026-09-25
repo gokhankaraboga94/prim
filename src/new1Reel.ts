@@ -725,7 +725,9 @@ function new6EnemyParts(i: number) {
 
 function new6RepulseAt(row: number) {
   if (row >= NEW6_REPULSE_ROWS) return 1e9;
-  return 0.45 + (row / (NEW6_REPULSE_ROWS - 1)) * 26;
+  const early = 0.45 + (row / (NEW6_REPULSE_ROWS - 1)) * 26;
+  if (early < 16) return early;
+  return 16 + (early - 16) * 3;
 }
 
 export function new6FriendAt(i: number, n: number, recT: number, out: New1Pose) {
