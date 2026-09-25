@@ -228,8 +228,16 @@ export function joinQueue(names: string[], soldiers: number, includeLastTen: boo
   const all = rosterSoldierIds(names, soldiers);
   const seen = new Set(marked.map((n) => n.toLowerCase()));
   const keyOf = (i: number) => keyOfName(names, i);
-  const backlog = joinBacklogOpen() && all.length > JOIN_KEEP;
-  const pool = backlog ? all.slice(JOIN_KEEP).filter((i) => !seen.has(keyOf(i))) : all.filter((i) => !seen.has(keyOf(i)));
+  const afterKeep = all.slice(JOIN_KEEP).filter((i) => !seen.has(keyOf(i)));
+  let backlog = joinBacklogOpen() && all.length > JOIN_KEEP && afterKeep.length > 0;
+  if (joinBacklogOpen() && afterKeep.length === 0) {
+    try {
+      localStorage.setItem(JOIN_BACKLOG_KEY, "done");
+    } catch {
+      /* ignore */
+    }
+  }
+  const pool = backlog ? afterKeep : all.filter((i) => !seen.has(keyOf(i)));
   let ids: number[];
   let leftover = 0;
   if (pool.length > 0) {
