@@ -1731,35 +1731,36 @@ function New2RatioPlate({ soldiers, drop = 0, bridge = false, cross = false, wid
   useFrame(({ clock }) => {
     const recT = Math.max(0, clock.elapsedTime - REEL_HOLD);
     const { friends, foes } = relief ? new7AliveCounts(soldiers, recT) : cross ? new6AliveCounts(soldiers, recT, wide) : bridge ? new5AliveCounts(soldiers, recT, true) : new2AliveCounts(soldiers, recT);
+    const hot = cross || (bridge && !relief);
     const key = `${friends}:${foes}`;
     const canvas = tex.image as HTMLCanvasElement;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
     const pulse = 0.45 + 0.55 * Math.abs(Math.sin(recT * 3.4));
     const flashT = recT % 1.65;
-    const flash = cross && flashT < 0.16 ? 1 - flashT / 0.16 : 0;
-    if (cross || key !== seen.current) {
+    const flash = hot && flashT < 0.16 ? 1 - flashT / 0.16 : 0;
+    if (hot || key !== seen.current) {
       seen.current = key;
       ctx.clearRect(0, 0, 1024, 248);
       const total = Math.max(1, friends + foes);
       const innerX = 28;
-      const innerY = cross ? 58 : 22;
+      const innerY = hot ? 58 : 22;
       const innerW = 968;
-      const innerH = cross ? 118 : 92;
+      const innerH = hot ? 118 : 92;
       const blueW = (friends / total) * innerW;
-      ctx.fillStyle = cross ? "#1d6bff" : "#1a56e8";
+      ctx.fillStyle = hot ? "#1d6bff" : "#1a56e8";
       ctx.fillRect(innerX, innerY, Math.max(0, blueW), innerH);
-      ctx.fillStyle = cross ? "#ff2418" : "#d31c1c";
+      ctx.fillStyle = hot ? "#ff2418" : "#d31c1c";
       ctx.fillRect(innerX + blueW, innerY, Math.max(0, innerW - blueW), innerH);
-      if (cross) {
+      if (hot) {
         ctx.shadowColor = `rgba(255, ${Math.round(214 + flash * 41)}, ${Math.round(70 + flash * 160)}, ${0.45 + pulse * 0.5 + flash * 0.4})`;
         ctx.shadowBlur = 22 + pulse * 18 + flash * 36;
       }
-      ctx.strokeStyle = cross ? `rgb(255, ${Math.round(210 + pulse * 40 + flash * 45)}, ${Math.round(48 + flash * 190)})` : "#ffe14a";
-      ctx.lineWidth = cross ? 20 : 14;
+      ctx.strokeStyle = hot ? `rgb(255, ${Math.round(210 + pulse * 40 + flash * 45)}, ${Math.round(48 + flash * 190)})` : "#ffe14a";
+      ctx.lineWidth = hot ? 20 : 14;
       ctx.strokeRect(innerX - 10, innerY - 10, innerW + 20, innerH + 20);
       ctx.shadowBlur = 0;
-      if (cross) {
+      if (hot) {
         ctx.strokeStyle = `rgba(255,255,236,${0.35 + pulse * 0.5 + flash * 0.4})`;
         ctx.lineWidth = 4 + flash * 6;
         ctx.strokeRect(innerX - 2, innerY - 2, innerW + 4, innerH + 4);
@@ -1768,7 +1769,7 @@ function New2RatioPlate({ soldiers, drop = 0, bridge = false, cross = false, wid
           ctx.fillRect(innerX, innerY, innerW, innerH);
         }
       }
-      ctx.font = cross ? "900 64px Inter, sans-serif" : "900 48px Inter, sans-serif";
+      ctx.font = hot ? "900 64px Inter, sans-serif" : "900 48px Inter, sans-serif";
       ctx.textBaseline = "middle";
       ctx.lineWidth = 8;
       ctx.strokeStyle = "rgba(0,0,0,0.72)";
@@ -1779,7 +1780,7 @@ function New2RatioPlate({ soldiers, drop = 0, bridge = false, cross = false, wid
       ctx.textAlign = "right";
       ctx.strokeText(formatCount(foes), 978, innerY + innerH / 2);
       ctx.fillText(formatCount(foes), 978, innerY + innerH / 2);
-      if (cross) {
+      if (hot) {
         ctx.font = "900 42px Inter, sans-serif";
         ctx.textAlign = "center";
         ctx.lineWidth = 6;
@@ -1787,7 +1788,7 @@ function New2RatioPlate({ soldiers, drop = 0, bridge = false, cross = false, wid
         ctx.fillText("ASKER", 512, innerY + innerH / 2);
       }
     }
-    if (!cross) {
+    if (!hot) {
       ctx.clearRect(0, 150, 1024, 98);
       const durPulse = 0.55 + 0.45 * Math.abs(Math.sin(recT * 5.2));
       ctx.font = "900 90px Inter, sans-serif";
@@ -1802,7 +1803,7 @@ function New2RatioPlate({ soldiers, drop = 0, bridge = false, cross = false, wid
     tex.needsUpdate = true;
   });
 
-  const w = size.width * (cross ? 0.94 : 0.88);
+  const w = size.width * (cross || (bridge && !relief) ? 0.94 : 0.88);
   const h = w * (248 / 1024);
   return (
     <mesh position={[0, size.height / 2 - h * 0.62 - 36 - drop, 4]} renderOrder={30}>
