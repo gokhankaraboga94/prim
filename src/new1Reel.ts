@@ -755,7 +755,7 @@ function new6EnemyDieAt(i: number) {
   const scheduled = 0.45 + (row / (NEW6_REPULSE_ROWS - 1)) * 26;
   const under20 = new6ThinAt(19);
   const at10 = new6ThinAt(10);
-  if (scheduled >= at10 || scheduled >= 22) return 1e9;
+  if (scheduled >= at10 || scheduled >= 18) return 1e9;
   if (scheduled < under20) return scheduled;
   const late = new6LatePair();
   return late[0] === i || late[1] === i ? scheduled : 1e9;
@@ -770,7 +770,7 @@ function new6LatePair() {
     const { row } = new6EnemyParts(i);
     if (row >= NEW6_REPULSE_ROWS) continue;
     const scheduled = 0.45 + (row / (NEW6_REPULSE_ROWS - 1)) * 26;
-    if (scheduled >= under20 && scheduled < at10 && scheduled < 22) pick.push(i);
+    if (scheduled >= under20 && scheduled < at10 && scheduled < 18) pick.push(i);
   }
   new6LateCache = pick;
   return pick;
