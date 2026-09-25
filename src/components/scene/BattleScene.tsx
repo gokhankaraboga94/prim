@@ -572,10 +572,10 @@ function useNew1GroundTexture() {
 }
 
 function New6Cross() {
-  const arm = 168;
-  const near = 7.2;
+  const arm = 172;
+  const near = 3.6;
   const mid = near + arm / 2;
-  const width = 7.2;
+  const width = 6;
   const arms = [
     [0, mid],
     [0, -mid],
@@ -588,12 +588,12 @@ function New6Cross() {
         <planeGeometry args={[900, 900]} />
         <meshStandardMaterial color="#14181c" roughness={1} />
       </mesh>
-      <mesh position={[0, -0.16, 0]}>
+      <mesh position={[0, -0.21, 0]}>
         <cylinderGeometry args={[6.4, 6.4, 0.42, 28]} />
         <meshStandardMaterial color="#6a6258" roughness={0.92} />
       </mesh>
       {arms.map(([x, z], i) => (
-        <mesh key={i} position={[x, -0.22, z]}>
+        <mesh key={i} position={[x, -0.21, z]}>
           <boxGeometry args={[i < 2 ? width : arm, 0.42, i < 2 ? arm : width]} />
           <meshStandardMaterial color="#6a6258" roughness={0.92} metalness={0.04} />
         </mesh>
