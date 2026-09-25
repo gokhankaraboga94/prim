@@ -496,7 +496,7 @@ export function new5VisualFriends(soldiers: number) {
 }
 
 const NEW5_PACK_LOSE = 54;
-const NEW5_LANE_GAP = 2.2;
+const NEW5_LANE_GAP = 1.58;
 
 function new5Front(t: number, lose = NEW5_LOSE) {
   const u = Math.max(0, t);

@@ -623,12 +623,12 @@ function New6Cross() {
 }
 
 function New5Bridge() {
-  const length = 340;
-  const z = 118;
+  const length = 560;
+  const z = 228;
   const posts = [];
   const tones = ["#2c3834", "#5a4030", "#243246", "#3a3228", "#1d4034", "#4a3038"];
-  for (let i = 0; i < 46; i++) {
-    const pz = -16 + i * 7.4;
+  for (let i = 0; i < 76; i++) {
+    const pz = -40 + i * 7.4;
     const h = 1.4 + (i % 4) * 0.7;
     posts.push(
       <mesh key={`bl${i}`} position={[-6.4, h * 0.5 - 0.3, pz]}>
