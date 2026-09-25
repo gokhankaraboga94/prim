@@ -40,6 +40,11 @@ export type New6Id = typeof NEW6_ID;
 export const NEW6_MODE = { id: NEW6_ID, label: "new6" } as const;
 export const NEW6_SECONDS = 30;
 
+export const NEW7_ID = "new7" as const;
+export type New7Id = typeof NEW7_ID;
+export const NEW7_MODE = { id: NEW7_ID, label: "new7" } as const;
+export const NEW7_SECONDS = 30;
+
 export function isNew1(id: string | null | undefined): id is New1Id {
   return id === NEW1_ID;
 }
@@ -64,12 +69,16 @@ export function isNew6(id: string | null | undefined): id is New6Id {
   return id === NEW6_ID;
 }
 
+export function isNew7(id: string | null | undefined): id is New7Id {
+  return id === NEW7_ID;
+}
+
 export function isNewDuel(id: string | null | undefined): id is New2Id | New3Id | New4Id {
   return id === NEW2_ID || id === NEW3_ID || id === NEW4_ID;
 }
 
-export function isNewField(id: string | null | undefined): id is New1Id | New2Id | New3Id | New4Id | New5Id | New6Id {
-  return id === NEW1_ID || id === NEW2_ID || id === NEW3_ID || id === NEW4_ID || id === NEW5_ID || id === NEW6_ID;
+export function isNewField(id: string | null | undefined): id is New1Id | New2Id | New3Id | New4Id | New5Id | New6Id | New7Id {
+  return id === NEW1_ID || id === NEW2_ID || id === NEW3_ID || id === NEW4_ID || id === NEW5_ID || id === NEW6_ID || id === NEW7_ID;
 }
 
 export function new1Duration(id: string | null | undefined) {
@@ -526,6 +535,58 @@ export function new5AliveCounts(soldiers: number, recT: number) {
     if (front < NEW5_FOE_START + row * NEW5_FOE_GAP - NEW5_REACH) foes += NEW5_LANES;
   }
   return { friends, foes };
+}
+
+export const NEW7_SPAWN = 24;
+export const NEW7_SPAWN_AT = 19.6;
+
+export function new7VisualFriends(soldiers: number) {
+  return new5VisualFriends(soldiers) + NEW7_SPAWN;
+}
+
+export function new7FriendAt(i: number, n: number, recT: number, out: New1Pose) {
+  const base = Math.max(0, n - NEW7_SPAWN);
+  if (i < base) {
+    new5FriendAt(i, base, recT, out);
+    return;
+  }
+  const t = Math.max(0, recT);
+  const si = i - base;
+  if (t < NEW7_SPAWN_AT) {
+    out.x = 0;
+    out.y = -40;
+    out.z = 0;
+    out.rx = 0;
+    out.ry = 0;
+    out.rz = 0;
+    out.s = 0;
+    return;
+  }
+  const col = si % NEW5_LANES;
+  const row = Math.floor(si / NEW5_LANES);
+  const u = Math.min(1, (t - NEW7_SPAWN_AT) / 1.15);
+  const ease = u * u * (3 - 2 * u);
+  const front = new5Front(Math.min(t, NEW5_LOSE));
+  const back = front - 6 * NEW5_RANK;
+  const bob = Math.sin(t * 16 + si);
+  out.x = (col - (NEW5_LANES - 1) / 2) * NEW5_LANE;
+  out.y = Math.abs(bob) * 0.07;
+  out.z = back - 10 + ease * 6 - row * NEW5_RANK;
+  out.rx = 0.42 + bob * 0.1;
+  out.ry = 0;
+  out.rz = bob * 0.05;
+  out.s = 1;
+}
+
+export function new7AliveCounts(soldiers: number, recT: number) {
+  const base = new5AliveCounts(soldiers, recT);
+  const extra = Math.max(0, recT) >= NEW7_SPAWN_AT ? NEW7_SPAWN : 0;
+  return { friends: base.friends + extra, foes: base.foes };
+}
+
+export function sampleNew7Cam(recT: number): ShotPose {
+  const cam = sampleNew5Cam(recT);
+  return { ...cam, y: cam.y + 11, z: cam.z - 18, fov: 46 };
 }
 
 export function sampleNew5Cam(recT: number): ShotPose {
