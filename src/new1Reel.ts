@@ -635,16 +635,16 @@ export function sampleNew5Cam(recT: number): ShotPose {
   };
 }
 
-export const NEW6_FRIENDS = 72;
-const NEW6_RING_N = [12, 16, 20, 24];
-const NEW6_RING_R = [1.5, 2.65, 3.7, 4.75];
+export const NEW6_FRIENDS = 100;
+const NEW6_RING_N = [16, 22, 28, 34];
+const NEW6_RING_R = [2.2, 4.1, 6.0, 8.0];
 const NEW6_RING_TW = [0, 0.18, 0.07, 0.28];
 const NEW6_ARMS = 4;
 const NEW6_LANES = 3;
 const NEW6_LANE = 1.15;
 const NEW6_GAP = 1.56;
 const NEW6_SPEED = 5.6;
-const NEW6_RIM = 6.2;
+const NEW6_RIM = 9.5;
 const NEW6_ROWS = 72;
 const NEW6_CORE = 12;
 const NEW6_REPULSE_ROWS = 40;
@@ -759,9 +759,20 @@ export function new6EnemyAt(i: number, recT: number, out: New1Pose) {
   const hitAt = new6RepulseAt(row);
   const killed = row < NEW6_REPULSE_ROWS && t >= hitAt;
   const travel = NEW6_SPEED * (killed ? hitAt : t);
-  let dist = NEW6_RIM + row * NEW6_GAP - travel;
-  if (!killed) dist = Math.max(5.15 + (row % 4) * 0.42, dist);
-  const p = new6OnArm(Math.max(5.15, dist), lane, arm);
+  const dist = NEW6_RIM + row * NEW6_GAP - travel;
+  const reached = Math.min(NEW6_ROWS, Math.floor(travel / NEW6_GAP) + 1);
+  const fill = Math.min(1, Math.max(0, reached - 1) / 26);
+  const span = (Math.PI / 2) * (0.28 + 0.72 * fill);
+  const slot = Math.min(row, Math.max(0, reached - 1));
+  const u = slot / Math.max(1, reached - 1);
+  const ang = arm * (Math.PI / 2) + (u - 0.5) * span + (lane - 1) * 0.05;
+  const p = dist > NEW6_RIM
+    ? new6OnArm(dist, lane, arm)
+    : {
+        x: Math.sin(ang) * (NEW6_RIM + lane * 0.62),
+        z: Math.cos(ang) * (NEW6_RIM + lane * 0.62),
+        ry: ang + Math.PI,
+      };
   const bob = Math.sin(t * 14 + row + lane);
   out.x = p.x;
   out.z = p.z;
@@ -798,7 +809,7 @@ export function sampleNew6Cam(recT: number): ShotPose {
   const t = Math.max(0, recT);
   const u = t <= 4 ? 0 : Math.min(1, (t - 4) / 24);
   const e = u * u * (3 - 2 * u);
-  const dist = 38.26 * (1 + e * 0.55);
+  const dist = 46.5 * (1 + e * 0.55);
   return {
     x: (14 / 38.26) * dist,
     y: (28 / 38.26) * dist,

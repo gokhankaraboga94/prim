@@ -574,7 +574,7 @@ function useNew1GroundTexture() {
 function New6Cross() {
   const ground = useNew1GroundTexture();
   const arm = 172;
-  const near = 3.6;
+  const near = 9.2;
   const mid = near + arm / 2;
   const width = 6;
   const arms = [
@@ -590,15 +590,15 @@ function New6Cross() {
         <meshStandardMaterial color="#14181c" roughness={1} />
       </mesh>
       <mesh position={[0, -0.28, 0]}>
-        <cylinderGeometry args={[6.55, 6.7, 0.36, 32]} />
+        <cylinderGeometry args={[10.5, 10.7, 0.36, 40]} />
         <meshStandardMaterial color="#4a4034" roughness={0.96} />
       </mesh>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 0]}>
-        <circleGeometry args={[6.35, 36]} />
+        <circleGeometry args={[10.2, 48]} />
         <meshStandardMaterial map={ground} color="#9a7d52" roughness={0.94} metalness={0.02} />
       </mesh>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.03, 0]}>
-        <circleGeometry args={[4.7, 28]} />
+        <circleGeometry args={[7.4, 36]} />
         <meshStandardMaterial color="#3c3124" roughness={1} transparent opacity={0.42} depthWrite={false} />
       </mesh>
       {arms.map(([x, z], i) => (
