@@ -33,7 +33,7 @@ export const NEW4_SECONDS = 30;
 export const NEW5_ID = "new5" as const;
 export type New5Id = typeof NEW5_ID;
 export const NEW5_MODE = { id: NEW5_ID, label: "new5" } as const;
-export const NEW5_SECONDS = 30;
+export const NEW5_SECONDS = 60;
 
 export const NEW6_ID = "new6" as const;
 export type New6Id = typeof NEW6_ID;
@@ -495,11 +495,14 @@ export function new5VisualFriends(soldiers: number) {
   return Math.min(Math.max(1, Math.floor(soldiers)), NEW5_FRIENDS);
 }
 
-function new5Front(t: number) {
+const NEW5_PACK_LOSE = 54;
+const NEW5_LANE_GAP = 2.2;
+
+function new5Front(t: number, lose = NEW5_LOSE) {
   const u = Math.max(0, t);
-  if (u <= NEW5_LOSE) return NEW5_SPEED * u;
-  const extra = Math.min(u - NEW5_LOSE, 1.2);
-  return NEW5_SPEED * NEW5_LOSE + NEW5_SPEED * extra * (1 - extra / 2.4);
+  if (u <= lose) return NEW5_SPEED * u;
+  const extra = Math.min(u - lose, 1.2);
+  return NEW5_SPEED * lose + NEW5_SPEED * extra * (1 - extra / 2.4);
 }
 
 const NEW5_PACK_GAP = 1.02;
@@ -514,7 +517,8 @@ function new5FoeZ(i: number, packed = false) {
 
 function new5EnemyDieAt(i: number, packed = false) {
   const z = new5FoeZ(i, packed);
-  if (new5Front(NEW5_LOSE) < z - NEW5_REACH) return 1e9;
+  const lose = packed ? NEW5_PACK_LOSE : NEW5_LOSE;
+  if (new5Front(lose, lose) < z - NEW5_REACH) return 1e9;
   return (z - NEW5_REACH) / NEW5_SPEED;
 }
 
@@ -566,24 +570,25 @@ export function new5FriendAt(i: number, n: number, recT: number, out: New1Pose, 
   const falling = i < count && t >= dieAt && dieAt < 1e8;
   const row = queue ? Math.floor(i / NEW5_LANES) - (falling ? new5LaneAhead(i, dieAt, count) : new5LaneAhead(i, t, count)) : Math.floor(i / NEW5_LANES);
   const alive = i < count && t < dieAt;
-  const moveT = Math.min(falling ? dieAt : t, NEW5_LOSE);
-  const front = new5Front(moveT);
+  const lose = queue ? NEW5_PACK_LOSE : NEW5_LOSE;
+  const moveT = Math.min(falling ? dieAt : t, lose);
+  const front = new5Front(moveT, lose);
   const bob = Math.sin(moveT * 16 + row * 0.65 + col * 1.4);
   const gap = new5FoeZ(Math.floor((front - NEW5_FOE_START) / (queue ? NEW5_PACK_GAP : NEW5_FOE_GAP)) * NEW5_LANES, queue) - front;
   const hit = alive && row === 0 && gap > -0.2 && gap < 1.15 ? 1 - gap / 1.15 : 0;
-  out.x = (col - (NEW5_LANES - 1) / 2) * NEW5_LANE;
+  out.x = (col - (NEW5_LANES - 1) / 2) * (queue ? NEW5_LANE_GAP : NEW5_LANE);
   out.y = alive ? Math.abs(bob) * 0.07 : 0;
   out.z = front - row * NEW5_RANK + Math.max(0, hit) * 0.22;
   out.rx = alive ? 0.42 + bob * 0.1 + Math.max(0, hit) * 0.7 : 0;
   out.ry = 0;
   out.rz = alive ? bob * 0.05 : 0;
   out.s = i < count ? 1 : 0;
-  if (falling && t < dieAt + 2) {
-    const u = Math.min(1, (t - dieAt) / (queue ? 0.45 : 0.4));
-    out.rx = u * (queue ? 1.55 : 1.45);
-    out.y = queue ? -u * 1.85 : 0.08;
+  if (falling && t < dieAt + (queue ? 1.05 : 2)) {
+    const u = Math.min(1, (t - dieAt) / (queue ? 0.9 : 0.4));
+    out.rx = u * (queue ? 1.15 : 1.45);
+    out.y = queue ? -(u * u) * 6.2 : 0.08;
     out.s = 1;
-  } else if (i >= count || t >= dieAt + 2) {
+  } else if (i >= count || t >= dieAt + (queue ? 1.05 : 2)) {
     out.y = -40;
     out.s = 0;
   }
@@ -595,18 +600,18 @@ export function new5EnemyAt(i: number, recT: number, out: New1Pose, roster = 0) 
   const col = i % NEW5_LANES;
   const z = new5FoeZ(i, packed);
   const dieAt = new5EnemyDieAt(i, packed);
-  out.x = (col - (NEW5_LANES - 1) / 2) * NEW5_LANE;
+  out.x = (col - (NEW5_LANES - 1) / 2) * (packed ? NEW5_LANE_GAP : NEW5_LANE);
   out.z = z;
   out.ry = Math.PI;
   out.rz = 0;
   out.y = 0;
   out.rx = 0.08;
   out.s = 1;
-  if (t >= dieAt && t < dieAt + 1) {
-    const u = Math.min(1, (t - dieAt) / 0.4);
-    out.rx = u * 1.55;
-    out.y = -u * 1.85;
-  } else if (t >= dieAt + 1) {
+  if (t >= dieAt && t < dieAt + (packed ? 0.95 : 1)) {
+    const u = Math.min(1, (t - dieAt) / (packed ? 0.8 : 0.4));
+    out.rx = u * (packed ? 1.15 : 1.55);
+    out.y = packed ? -(u * u) * 6.2 : -u * 1.85;
+  } else if (t >= dieAt + (packed ? 0.95 : 1)) {
     out.y = -40;
     out.s = 0;
   }
@@ -685,9 +690,10 @@ export function sampleNew7Cam(recT: number): ShotPose {
   return { ...cam, y: cam.y + 11, z: cam.z - 18, fov: 46 };
 }
 
-export function sampleNew5Cam(recT: number): ShotPose {
+export function sampleNew5Cam(recT: number, pack = false): ShotPose {
   const t = Math.max(0, recT);
-  const front = new5Front(Math.min(t, NEW5_LOSE));
+  const lose = pack ? NEW5_PACK_LOSE : NEW5_LOSE;
+  const front = new5Front(Math.min(t, lose), lose);
   const bob = Math.sin(t * 16) * 0.05;
   return {
     x: 0.4,

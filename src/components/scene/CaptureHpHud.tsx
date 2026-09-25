@@ -1806,7 +1806,7 @@ function New2RatioPlate({ soldiers, drop = 0, bridge = false, cross = false, wid
   const w = size.width * (cross || (bridge && !relief) ? 0.94 : 0.88);
   const h = w * (248 / 1024);
   return (
-    <mesh position={[0, size.height / 2 - h * 0.62 - 36 - drop, 4]} renderOrder={30}>
+    <mesh position={[0, size.height / 2 - h * 0.62 - 36 - drop + (bridge && !relief ? 28 : 0), 4]} renderOrder={30}>
       <planeGeometry args={[w, h]} />
       <meshBasicMaterial map={tex} transparent depthTest={false} toneMapped={false} />
     </mesh>

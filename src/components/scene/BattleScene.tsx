@@ -209,7 +209,7 @@ function CinematicCam({
         : new6
         ? sampleNew6Cam(sampleT)
         : new5
-        ? sampleNew5Cam(sampleT)
+        ? sampleNew5Cam(sampleT, true)
         : new2 || new3 || new4
         ? sampleNew2Cam(sampleT, soldiers)
         : new1
