@@ -764,7 +764,7 @@ export function new6EnemyAt(i: number, recT: number, out: New1Pose) {
   const slot = row * NEW6_LANES + lane;
   const u = (slot * 0.61803398875) % 1;
   const ang = arm * (Math.PI / 2) + (u - 0.5) * (Math.PI / 2);
-  const close = Math.min(1, Math.max(0, (t - 20) / 3.2));
+  const close = Math.min(1, Math.max(0, (t - 12) / 4));
   const farRad = NEW6_RIM - 0.15 + lane * 0.38;
   const nearRad = 6.55 + lane * 0.28;
   const rad = farRad + (nearRad - farRad) * close;
@@ -815,9 +815,9 @@ export function new6AliveCounts(soldiers: number, recT: number) {
 
 export function sampleNew6Cam(recT: number): ShotPose {
   const t = Math.max(0, recT);
-  const u = t <= 4 ? 0 : Math.min(1, (t - 4) / 24);
+  const u = t <= 1.5 ? 0 : Math.min(1, (t - 1.5) / 26.5);
   const e = u * u * (3 - 2 * u);
-  const dist = 44.6 * (1 + e * 0.55);
+  const dist = 54 * (1 + e * 0.55);
   return {
     x: (14 / 38.26) * dist,
     y: (28 / 38.26) * dist,
