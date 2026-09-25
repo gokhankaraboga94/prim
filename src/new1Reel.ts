@@ -645,6 +645,7 @@ const NEW6_INNER = 20;
 const NEW6_HOLD = 6.8;
 const NEW6_ROWS = 72;
 const NEW6_LOSE = 17;
+const NEW6_REPULSE_ROWS = 10;
 export const NEW6_FOES = NEW6_ARMS * NEW6_LANES * NEW6_ROWS;
 
 export function new6VisualFriends(soldiers: number) {
@@ -733,10 +734,10 @@ export function new6EnemyAt(i: number, recT: number, out: New1Pose) {
   const t = Math.max(0, recT);
   const { arm, lane, row } = new6EnemyParts(i);
   const hitAt = new6HitAt(i);
-  const killed = hitAt < NEW6_LOSE && t >= hitAt;
+  const killed = row < NEW6_REPULSE_ROWS && t >= hitAt;
   const travel = NEW6_SPEED * (killed ? hitAt : t);
   let dist = NEW6_INNER + row * NEW6_GAP - travel;
-  if (!killed && t >= NEW6_LOSE) dist = Math.max(5.15, dist);
+  if (!killed) dist = Math.max(5.15 + (row % 4) * 0.42, dist);
   const p = new6OnArm(Math.max(5.15, dist), lane, arm);
   const bob = Math.sin(t * 14 + row + lane);
   out.x = p.x;
@@ -763,8 +764,9 @@ export function new6AliveCounts(soldiers: number, recT: number) {
   for (let i = 0; i < n; i++) if (t < new6FriendDieAt(i, n)) friends++;
   let foes = 0;
   for (let i = 0; i < NEW6_FOES; i++) {
+    const { row } = new6EnemyParts(i);
     const hitAt = new6HitAt(i);
-    if (!(hitAt < NEW6_LOSE && t >= hitAt)) foes++;
+    if (!(row < NEW6_REPULSE_ROWS && t >= hitAt)) foes++;
   }
   return { friends, foes };
 }
