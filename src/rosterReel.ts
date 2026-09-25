@@ -52,8 +52,8 @@ export function rosterDuration(kind: PlanBId, named: number, packSize?: number):
   const size = packSize ?? rosterPackSize(kind, named);
   const packs = Math.max(1, Math.ceil(Math.max(1, named) / size));
   if (kind === JOIN_ID) {
-    const raw = 1.65 + 2.05 + packs * 2.15 + 1.9;
-    return Math.min(60, Math.max(10, Math.round(raw)));
+    const raw = 1.65 + 2.05 + packs * 2.2 + 1.9;
+    return Math.min(90, Math.max(10, Math.ceil(raw)));
   }
   const raw = 2.1 + 2.4 + packs * 3.15 + 3.05;
   return raw <= 34 ? 30 : 45;
@@ -323,9 +323,11 @@ export function rosterTimeline(kind: PlanBId, named: number, duration: number) {
   const hook = kind === JOIN_ID ? 1.65 : kind === HOOK_ID ? 1.85 : 2.1;
   const overview = kind === JOIN_ID ? 2.05 : kind === HOOK_ID ? 1.95 : 2.4;
   const cta = kind === JOIN_ID ? 1.9 : kind === HOOK_ID ? 2.35 : 3.05;
-  const packWindow = Math.max(0.5, duration - hook - overview - cta);
-  const hold = kind === JOIN_ID ? packWindow / Math.max(1, packs) : Math.max(2.45, packWindow / Math.max(1, packs));
-  return { hook, overview, cta, packs, hold, packStart: hook + overview, ctaAt: duration - cta, size };
+  const packStart = hook + overview;
+  const hold = kind === JOIN_ID ? 2.2 : Math.max(2.45, Math.max(0.5, duration - hook - overview - cta) / Math.max(1, packs));
+  const packsEnd = packStart + packs * hold;
+  const ctaAt = kind === JOIN_ID ? packsEnd : duration - cta;
+  return { hook, overview, cta, packs, hold, packStart, ctaAt, size };
 }
 
 function packSlice(ids: number[], pack: number, size: number) {

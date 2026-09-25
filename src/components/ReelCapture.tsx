@@ -5,7 +5,7 @@ import { recordCanvas, saveReelBlob, wait, REEL_HOLD } from "../recordCanvas";
 import { xxxHideCmd, xxxHiRes, type XxxId } from "../xxxReel";
 import { reelSfxStream, unlockReelSfx } from "../reelSfx";
 import type { ShotId } from "../shotModes";
-import type { PlanBId } from "../rosterReel";
+import { isJoin, rosterDuration, type PlanBId } from "../rosterReel";
 import type { SagaId } from "../sagaReel";
 import type { DiscoverId } from "../discoverReel";
 import type { MixId } from "../mixReel";
@@ -50,7 +50,7 @@ type ReelCaptureProps = {
 };
 
 export function ReelCapture({ soldiers, names, commanders = [], level, pressure, hp, maxHp, seconds, showTitles = true, warLook = false, day = 0, skipCommander = false, shotMode = null, cinema = false, roster = null, saga = null, discover = null, countdown = null, defend = null, vs = null, new1 = null, new2 = null, new3 = null, new4 = null, new5 = null, new6 = null, new7 = null, mix = null, xxx = null, rosterIds = null, onRecorded, onClose }: ReelCaptureProps) {
-  const clip = seconds;
+  const clip = roster && isJoin(roster) && rosterIds?.length ? rosterDuration(roster, rosterIds.length) : seconds;
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [phase, setPhase] = useState<"boot" | "rec" | "done" | "err">("boot");
   const [blob, setBlob] = useState<Blob | null>(null);
