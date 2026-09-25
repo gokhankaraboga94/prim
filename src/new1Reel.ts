@@ -760,19 +760,27 @@ export function new6EnemyAt(i: number, recT: number, out: New1Pose) {
   const killed = row < NEW6_REPULSE_ROWS && t >= hitAt;
   const travel = NEW6_SPEED * (killed ? hitAt : t);
   const dist = NEW6_RIM + row * NEW6_GAP - travel;
-  const reached = Math.min(NEW6_ROWS, Math.floor(travel / NEW6_GAP) + 1);
-  const fill = Math.min(1, Math.max(0, reached - 1) / 26);
-  const span = (Math.PI / 2) * (0.28 + 0.72 * fill);
-  const slot = Math.min(row, Math.max(0, reached - 1));
-  const u = slot / Math.max(1, reached - 1);
-  const ang = arm * (Math.PI / 2) + (u - 0.5) * span + (lane - 1) * 0.05;
-  const p = dist > NEW6_RIM
-    ? new6OnArm(dist, lane, arm)
-    : {
-        x: Math.sin(ang) * (NEW6_RIM + lane * 0.62),
-        z: Math.cos(ang) * (NEW6_RIM + lane * 0.62),
-        ry: ang + Math.PI,
-      };
+  const reached = Math.min(NEW6_ROWS, Math.max(1, Math.floor(travel / NEW6_GAP) + 1));
+  const localSlot = Math.min(row, reached - 1) * NEW6_LANES + lane;
+  const around = Math.max(1, reached * NEW6_LANES);
+  const u = localSlot / Math.max(1, around - 1);
+  const ang = arm * (Math.PI / 2) + (u - 0.5) * (Math.PI / 2);
+  const close = Math.min(1, Math.max(0, (t - 20) / 3.2));
+  const farRad = NEW6_RIM - 0.15 + lane * 0.38;
+  const nearRad = 6.55 + lane * 0.28;
+  const rad = farRad + (nearRad - farRad) * close;
+  const armPos = new6OnArm(Math.max(NEW6_RIM, dist), lane, arm);
+  const circle = {
+    x: Math.sin(ang) * rad,
+    z: Math.cos(ang) * rad,
+    ry: ang + Math.PI,
+  };
+  const blend = dist > NEW6_RIM ? close : 1;
+  const p = {
+    x: armPos.x + (circle.x - armPos.x) * blend,
+    z: armPos.z + (circle.z - armPos.z) * blend,
+    ry: armPos.ry + (circle.ry - armPos.ry) * blend,
+  };
   const bob = Math.sin(t * 14 + row + lane);
   out.x = p.x;
   out.z = p.z;
@@ -809,7 +817,7 @@ export function sampleNew6Cam(recT: number): ShotPose {
   const t = Math.max(0, recT);
   const u = t <= 4 ? 0 : Math.min(1, (t - 4) / 24);
   const e = u * u * (3 - 2 * u);
-  const dist = 46.5 * (1 + e * 0.55);
+  const dist = 41.2 * (1 + e * 0.55);
   return {
     x: (14 / 38.26) * dist,
     y: (28 / 38.26) * dist,
