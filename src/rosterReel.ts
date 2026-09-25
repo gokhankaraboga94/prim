@@ -82,6 +82,8 @@ export const JOIN_KEEP = 317;
 const JOIN_BACKLOG_KEY = "wars.joinBacklog317.v2";
 const JOIN_BACKLOG_SEED = "wars.joinBacklog317.seed.v2";
 const JOIN_WIPE_KEY = "wars.joinWipeAfter317.v3";
+const JOIN_TAIL_KEY = "wars.joinDropTail76.v1";
+const JOIN_TAIL = 76;
 
 function keyOfName(names: string[], i: number) {
   return normalizeHandle(names[i] || "").toLowerCase();
@@ -124,6 +126,29 @@ function ensureWipeAfter317(names: string[], soldiers: number) {
     return;
   }
   wipeJoinCacheAfter317(names, soldiers);
+}
+
+function dropJoinCacheTail(names: string[], soldiers: number) {
+  const all = rosterSoldierIds(names, soldiers);
+  const cut = Math.max(0, all.length - JOIN_TAIL);
+  const keep = all.slice(0, cut).map((i) => normalizeHandle(names[i] || "")).filter(Boolean);
+  writeJoinMark(keep);
+  try {
+    localStorage.setItem(JOIN_BACKLOG_KEY, "done");
+    localStorage.setItem(JOIN_TAIL_KEY, "1");
+  } catch {
+    /* ignore */
+  }
+  return Math.min(JOIN_TAIL, all.length);
+}
+
+function ensureDropJoinTail(names: string[], soldiers: number) {
+  try {
+    if (localStorage.getItem(JOIN_TAIL_KEY)) return;
+  } catch {
+    return;
+  }
+  dropJoinCacheTail(names, soldiers);
 }
 
 export function finishJoinBacklogIfCaughtUp(names: string[], soldiers: number) {
@@ -224,6 +249,7 @@ function manualJoinIds(names: string[], _soldiers: number, handles: string[], sk
 
 export function joinQueue(names: string[], soldiers: number, includeLastTen: boolean, extraHandles: string[] = []) {
   ensureWipeAfter317(names, soldiers);
+  ensureDropJoinTail(names, soldiers);
   const marked = loadJoinMark();
   const all = rosterSoldierIds(names, soldiers);
   const seen = new Set(marked.map((n) => n.toLowerCase()));
