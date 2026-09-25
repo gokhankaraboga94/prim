@@ -11,7 +11,7 @@ import { type DiscoverId } from "../../discoverReel";
 import { COUNT_1_END, countdownBeat, countdownVolley } from "../../countdownReel";
 import { DEFEND_CZ, DEFEND2_CX, DEFEND2_CZ, defendSoldierPos, defendYawOut } from "../../defendReel";
 import { vsSoldierAt, type VsPose } from "../../vsReel";
-import { new1FriendAt, new2FriendAt, new2VisualFriends, new5FriendAt, new5VisualFriends, new6FriendAt, new6SwordPitch, new6VisualFriends, new7FriendAt, new7VisualFriends } from "../../new1Reel";
+import { NEW6_ARCHERS, new1FriendAt, new2FriendAt, new2VisualFriends, new5FriendAt, new5VisualFriends, new6FriendAt, new6SwordPitch, new6VisualFriends, new7FriendAt, new7VisualFriends } from "../../new1Reel";
 import { sfxArrowLoose, sfxBowDraw, sfxVolleyPeak } from "../../reelSfx";
 import { raidCount, sallyHunting, sallyLiveIndex, sallyLocal, sallyRaiderAt, swordArmPose, swordStyleAt, swordSwingU } from "../../siegeEvent";
 import { castleFrame } from "../../castleLayout";
@@ -879,11 +879,11 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
   const soldierPlumeGeo = useMemo(() => (new2 || blue || bridge || cross ? getBluePlumeGeometry() : getSoldierPlumeGeometry()), [new2, blue, bridge, cross]);
   const commanderPlumeGeo = useMemo(() => (melee ? archerGeo : getCommanderPlumeGeometry()), [melee, archerGeo]);
   const commanderFaceGeo = useMemo(() => (melee ? archerGeo : getCommanderFaceGeometry()), [melee, archerGeo]);
-  const bowHoldGeo = useMemo(() => (melee ? archerGeo : getBowHoldGeometry()), [melee, archerGeo]);
-  const drawArmGeo = useMemo(() => (melee ? archerGeo : getDrawArmGeometry()), [melee, archerGeo]);
+  const bowHoldGeo = useMemo(() => (cross ? getBowHoldGeometry() : melee ? archerGeo : getBowHoldGeometry()), [melee, archerGeo, cross]);
+  const drawArmGeo = useMemo(() => (cross ? getDrawArmGeometry() : melee ? archerGeo : getDrawArmGeometry()), [melee, archerGeo, cross]);
   const swordArmGeo = useMemo(() => (melee ? archerGeo : getSwordArmGeometry()), [melee, archerGeo]);
   const swordGeo = useMemo(() => (melee ? archerGeo : getSwordGeometry()), [melee, archerGeo]);
-  const nockGeo = useMemo(() => (melee ? archerGeo : getNockArrowGeometry()), [melee, archerGeo]);
+  const nockGeo = useMemo(() => (cross ? getNockArrowGeometry() : melee ? archerGeo : getNockArrowGeometry()), [melee, archerGeo, cross]);
 
   const rosterCap = Math.min(roster ? 80 : MAX_SOLDIERS, Math.max(0, Math.floor(count)));
   const visible = relief ? Math.min(rosterCap, new7VisualFriends(rosterCap)) : cross ? Math.min(rosterCap, new6VisualFriends(rosterCap)) : bridge ? Math.min(rosterCap, new5VisualFriends(rosterCap)) : new2 ? Math.min(rosterCap, new2VisualFriends(rosterCap)) : rosterCap;
@@ -1134,9 +1134,9 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
       const bodyN = isolate ? Math.min(instanceCap, Math.max(packShow.length, 1)) : n;
       bodies.current.count = bodyN;
       if (soldierPlumes.current) soldierPlumes.current.count = bodyN;
-      if (bowHolds.current) bowHolds.current.count = melee ? 0 : bodyN;
-      if (drawArms.current) drawArms.current.count = melee ? 0 : bodyN;
-      if (nocks.current) nocks.current.count = melee ? 0 : bodyN;
+      if (bowHolds.current) bowHolds.current.count = cross ? n : melee ? 0 : bodyN;
+      if (drawArms.current) drawArms.current.count = cross ? n : melee ? 0 : bodyN;
+      if (nocks.current) nocks.current.count = cross ? n : melee ? 0 : bodyN;
       const hideSlot = (i: number) => {
         dummy.scale.setScalar(0);
         dummy.position.set(0, -40, 0);
@@ -1224,14 +1224,44 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
           dummy.updateMatrix();
           stamp(bodies.current, i);
           stamp(soldierPlumes.current, i);
+          const archer = soldier < NEW6_ARCHERS && (vsPose.s ?? 1) > 0;
+          _bodyQ.setFromEuler(_limbEul.set(vsPose.rx, vsPose.ry, vsPose.rz, "XYZ"));
           if (bladeSwings.current) {
-            const pitch = new6SwordPitch(soldier, recT, vsPose.rx > 0.2 || (vsPose.s ?? 1) <= 0);
-            _swingM.makeTranslation(0.48, 1, 0.3);
-            _swingSpin.makeRotationX(-pitch);
-            _swingNeg.makeTranslation(-0.48, -1, -0.3);
-            _swingM.multiply(_swingSpin).multiply(_swingNeg);
-            _swingBody.copy(dummy.matrix).multiply(_swingM);
-            bladeSwings.current.setMatrixAt(i, _swingBody);
+            if (archer) {
+              dummy.scale.setScalar(0);
+              dummy.updateMatrix();
+              bladeSwings.current.setMatrixAt(i, dummy.matrix);
+            } else {
+              const pitch = new6SwordPitch(soldier, recT, vsPose.rx > 0.2 || (vsPose.s ?? 1) <= 0);
+              _swingM.makeTranslation(0.48, 1, 0.3);
+              _swingSpin.makeRotationX(-pitch);
+              _swingNeg.makeTranslation(-0.48, -1, -0.3);
+              _swingM.multiply(_swingSpin).multiply(_swingNeg);
+              _swingBody.copy(dummy.matrix).multiply(_swingM);
+              bladeSwings.current.setMatrixAt(i, _swingBody);
+            }
+          }
+          if (archer) {
+            const bodyScale = scale * 0.96;
+            pos.set(vsPose.x, vsPose.y, vsPose.z);
+            stampLimb(bowHolds.current, i, L_SHOULDER, -0.35, 0.05, 0.08, bodyScale);
+            stampLimb(drawArms.current, i, R_SHOULDER, -0.72, 0.28, -0.08, bodyScale);
+            if (nocks.current) {
+              nockOff.set(-0.08, 1.22, 0.28);
+              nockOff.applyQuaternion(_bodyQ);
+              nockOff.multiplyScalar(bodyScale);
+              dummy.position.set(vsPose.x + nockOff.x, vsPose.y + nockOff.y, vsPose.z + nockOff.z);
+              dummy.rotation.set(vsPose.rx, vsPose.ry, vsPose.rz);
+              dummy.scale.setScalar(bodyScale);
+              dummy.updateMatrix();
+              nocks.current.setMatrixAt(i, dummy.matrix);
+            }
+          } else {
+            dummy.scale.setScalar(0);
+            dummy.updateMatrix();
+            if (bowHolds.current) bowHolds.current.setMatrixAt(i, dummy.matrix);
+            if (drawArms.current) drawArms.current.setMatrixAt(i, dummy.matrix);
+            if (nocks.current) nocks.current.setMatrixAt(i, dummy.matrix);
           }
           continue;
         }
@@ -1751,6 +1781,15 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
           </instancedMesh>
           <instancedMesh ref={bladeSwings} args={[swingGeo, undefined, instanceCap]} frustumCulled={false}>
             <meshStandardMaterial vertexColors roughness={0.35} metalness={0.72} />
+          </instancedMesh>
+          <instancedMesh ref={bowHolds} args={[bowHoldGeo, undefined, instanceCap]} frustumCulled={false}>
+            <meshStandardMaterial vertexColors roughness={0.52} metalness={0.28} />
+          </instancedMesh>
+          <instancedMesh ref={drawArms} args={[drawArmGeo, undefined, instanceCap]} frustumCulled={false}>
+            <meshStandardMaterial vertexColors roughness={0.48} metalness={0.2} />
+          </instancedMesh>
+          <instancedMesh ref={nocks} args={[nockGeo, undefined, instanceCap]} frustumCulled={false}>
+            <meshStandardMaterial vertexColors roughness={0.6} metalness={0.1} />
           </instancedMesh>
         </>
       ) : (

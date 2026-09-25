@@ -637,6 +637,7 @@ export function sampleNew5Cam(recT: number): ShotPose {
 
 export const NEW6_FRIENDS = 100;
 const NEW6_RING_N = [16, 22, 28, 34];
+export const NEW6_ARCHERS = NEW6_RING_N[0];
 const NEW6_RING_R = [2.2, 4.1, 6.0, 8.0];
 const NEW6_RING_TW = [0, 0.18, 0.07, 0.28];
 const NEW6_ARMS = 4;
