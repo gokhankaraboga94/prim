@@ -771,13 +771,15 @@ export function new6AliveCounts(soldiers: number, recT: number) {
 
 export function sampleNew6Cam(recT: number): ShotPose {
   const t = Math.max(0, recT);
-  const u = Math.min(1, t / 30);
+  const u = t <= 2 ? 0 : Math.min(1, (t - 2) / 26);
+  const e = u * u * (3 - 2 * u);
+  const dist = 38.26 * (1 + e * 0.55);
   return {
-    x: 6 + u * 2,
-    y: 22 + u * 6,
-    z: 36 + u * 5,
+    x: (14 / 38.26) * dist,
+    y: (28 / 38.26) * dist,
+    z: (22 / 38.26) * dist,
     lx: 0,
-    ly: 1.1,
+    ly: 1.2,
     lz: 0,
     fov: 42,
   };
