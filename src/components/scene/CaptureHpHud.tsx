@@ -1779,6 +1779,13 @@ function New2RatioPlate({ soldiers, drop = 0, bridge = false, cross = false, rel
       ctx.textAlign = "right";
       ctx.strokeText(formatCount(foes), 978, innerY + innerH / 2);
       ctx.fillText(formatCount(foes), 978, innerY + innerH / 2);
+      if (cross) {
+        ctx.font = "900 42px Inter, sans-serif";
+        ctx.textAlign = "center";
+        ctx.lineWidth = 6;
+        ctx.strokeText("ASKER", 512, innerY + innerH / 2);
+        ctx.fillText("ASKER", 512, innerY + innerH / 2);
+      }
     }
     if (!cross) {
       ctx.clearRect(0, 150, 1024, 98);
