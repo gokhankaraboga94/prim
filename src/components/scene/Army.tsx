@@ -1443,7 +1443,8 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
       const staggered = Boolean(countdown || defend || vs || vs2 || openField);
       if (countdown) nameScale = 1.12 * crowd;
       else if (defend) nameScale = 1.22 * crowd;
-      else if (bridge || cross || relief) nameScale = 0.34;
+      else if (cross) nameScale = 0.408;
+      else if (bridge || relief) nameScale = 0.34;
       else if (new2) {
         const lift = Math.max(0, Math.min(1, (recT - 3.2) / 12));
         nameScale = Math.max(0.78, crowd * (0.95 + lift * 0.65));
@@ -1509,7 +1510,8 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
         }
       }
       let sx = (isolate ? Math.min(1.05, cell.sx * nameScale) : cell.sx * nameScale);
-      if (bridge || cross || relief) sx = Math.min(sx, 0.72);
+      if (cross) sx = Math.min(sx, 0.864);
+      else if (bridge || relief) sx = Math.min(sx, 0.72);
       else if (defend && staggered) sx = Math.min(sx, FILE * 1.28);
       else if (openField && staggered) sx = Math.min(sx, FILE * 1.12);
       else if ((vs || vs2) && staggered) sx = Math.min(sx, FILE * (vs2 ? 0.92 : 1.05));
