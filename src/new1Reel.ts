@@ -651,8 +651,28 @@ export function new6VisualFriends(soldiers: number) {
   return Math.min(Math.max(1, Math.floor(soldiers)), NEW6_FRIENDS);
 }
 
+function new6Group(i: number) {
+  let left = i;
+  let g = 0;
+  while (left >= 0) {
+    const size = g % 2 === 0 ? 3 : 2;
+    if (left < size) return g;
+    left -= size;
+    g += 1;
+  }
+  return g;
+}
+
 function new6FriendDieAt(i: number, count: number) {
-  return NEW6_LOSE + 0.3 + (i / Math.max(1, count - 1)) * 9.2;
+  const groups = new6Group(Math.max(0, count - 1)) + 1;
+  return NEW6_LOSE + 0.3 + (new6Group(i) / Math.max(1, groups - 1)) * 8;
+}
+
+export function new6SwordPitch(i: number, recT: number, fallen: boolean) {
+  if (fallen) return 0;
+  const t = Math.max(0, recT);
+  if (t < 1.6 || t > NEW6_LOSE) return 0;
+  return Math.max(0, Math.sin(t * 7 + i * 1.7)) * 0.95;
 }
 
 function new6OnArm(dist: number, lane: number, arm: number) {
@@ -687,16 +707,19 @@ export function new6FriendAt(i: number, n: number, recT: number, out: New1Pose) 
   const ringN = Math.max(1, outer ? count - 8 : Math.min(8, count));
   const ang = (idx / ringN) * Math.PI * 2 + (outer ? 0.18 : 0);
   const rad = outer ? 3.55 : 1.65;
-  const bob = Math.sin(t * 11 + i);
-  const strike = alive && t > 1.6 && t < NEW6_LOSE ? Math.max(0, Math.sin(t * 7 + i)) : 0;
   out.x = Math.sin(ang) * rad;
   out.z = Math.cos(ang) * rad;
-  out.y = alive ? Math.abs(bob) * 0.04 : 0;
-  out.rx = alive ? 0.16 + strike * 0.7 : 0;
+  out.y = 0;
+  out.rx = 0;
   out.ry = ang;
   out.rz = 0;
   out.s = i < count ? 1 : 0;
-  if (i >= count || t >= dieAt + 1) {
+  if (i < count && t >= dieAt && t < dieAt + 2) {
+    const u = Math.min(1, (t - dieAt) / 0.4);
+    out.rx = u * 1.45;
+    out.y = 0.08;
+    out.s = 1;
+  } else if (i >= count || t >= dieAt + 2) {
     out.y = -40;
     out.s = 0;
   }

@@ -11,7 +11,7 @@ import { type DiscoverId } from "../../discoverReel";
 import { COUNT_1_END, countdownBeat, countdownVolley } from "../../countdownReel";
 import { DEFEND_CZ, DEFEND2_CX, DEFEND2_CZ, defendSoldierPos, defendYawOut } from "../../defendReel";
 import { vsSoldierAt, type VsPose } from "../../vsReel";
-import { new1FriendAt, new2FriendAt, new2VisualFriends, new5FriendAt, new5VisualFriends, new6FriendAt, new6VisualFriends, new7FriendAt, new7VisualFriends } from "../../new1Reel";
+import { new1FriendAt, new2FriendAt, new2VisualFriends, new5FriendAt, new5VisualFriends, new6FriendAt, new6SwordPitch, new6VisualFriends, new7FriendAt, new7VisualFriends } from "../../new1Reel";
 import { sfxArrowLoose, sfxBowDraw, sfxVolleyPeak } from "../../reelSfx";
 import { raidCount, sallyHunting, sallyLiveIndex, sallyLocal, sallyRaiderAt, swordArmPose, swordStyleAt, swordSwingU } from "../../siegeEvent";
 import { castleFrame } from "../../castleLayout";
@@ -22,6 +22,10 @@ const MAX_COMMANDERS = 24;
 const MAX_ARROWS = 28;
 const IDLE_ARROWS = 8;
 const dummy = new THREE.Object3D();
+const _swingBody = new THREE.Matrix4();
+const _swingM = new THREE.Matrix4();
+const _swingSpin = new THREE.Matrix4();
+const _swingNeg = new THREE.Matrix4();
 const vsPose: VsPose = { x: 0, y: 0, z: 0, rx: 0, ry: 0, rz: 0 };
 const ARROW_FLIGHT = 3.2;
 const FRONT_Z = 52;
@@ -598,6 +602,12 @@ function createBlueBareGeometry() {
   return mergeParts([...plateArmor(true, BLUE_DYE), ...corinthianShell(12)], BLUE_DYE.armor);
 }
 
+let swingSwordGeo: THREE.BufferGeometry | null = null;
+function getSwingSwordGeometry() {
+  if (!swingSwordGeo) swingSwordGeo = mergeParts(heldSword(), "#d5dde8");
+  return swingSwordGeo;
+}
+
 function createBlueSwordGeometry() {
   return mergeParts([...plateArmor(true, BLUE_DYE), ...corinthianShell(12), ...heldSword()], BLUE_DYE.armor);
 }
@@ -847,6 +857,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
   const chiefFaces = useRef<THREE.InstancedMesh>(null);
   const swordArms = useRef<THREE.InstancedMesh>(null);
   const swords = useRef<THREE.InstancedMesh>(null);
+  const bladeSwings = useRef<THREE.InstancedMesh>(null);
   const nocks = useRef<THREE.InstancedMesh>(null);
   const arrows = useRef<THREE.InstancedMesh>(null);
   const nameMeshRefs = useRef<(THREE.InstancedMesh | null)[]>([]);
@@ -861,7 +872,8 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
   const pos = useMemo(() => new THREE.Vector3(), []);
   const melee = defend || vs || vs2 || new1 || new2 || bridge || cross;
   const openField = new1 || new2 || bridge || cross;
-  const archerGeo = useMemo(() => (blade ? getBlueSwordGeometry() : blue ? getBlueBareGeometry() : new2 ? getBlueSoldierGeometry() : melee ? getDefendSoldierGeometry() : getArcherGeometry()), [melee, new2, blade, blue]);
+  const archerGeo = useMemo(() => (cross ? getBlueBareGeometry() : blade ? getBlueSwordGeometry() : blue ? getBlueBareGeometry() : new2 ? getBlueSoldierGeometry() : melee ? getDefendSoldierGeometry() : getArcherGeometry()), [melee, new2, blade, blue, cross]);
+  const swingGeo = useMemo(() => getSwingSwordGeometry(), []);
   const commanderGeo = useMemo(() => (melee ? archerGeo : getCommanderGeometry()), [melee, archerGeo]);
   const commanderCapeGeo = useMemo(() => (melee ? archerGeo : getCommanderCapeGeometry()), [melee, archerGeo]);
   const soldierPlumeGeo = useMemo(() => (new2 || blue || bridge || cross ? getBluePlumeGeometry() : getSoldierPlumeGeometry()), [new2, blue, bridge, cross]);
@@ -1196,6 +1208,15 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
           dummy.updateMatrix();
           stamp(bodies.current, i);
           stamp(soldierPlumes.current, i);
+          if (bladeSwings.current) {
+            const pitch = new6SwordPitch(soldier, recT, vsPose.rx > 0.2 || (vsPose.s ?? 1) <= 0);
+            _swingM.makeTranslation(0.48, 1, 0.3);
+            _swingSpin.makeRotationX(-pitch);
+            _swingNeg.makeTranslation(-0.48, -1, -0.3);
+            _swingM.multiply(_swingSpin).multiply(_swingNeg);
+            _swingBody.copy(dummy.matrix).multiply(_swingM);
+            bladeSwings.current.setMatrixAt(i, _swingBody);
+          }
           continue;
         }
         if (bridge) {
@@ -1277,6 +1298,10 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
       }
       bodies.current.instanceMatrix.needsUpdate = true;
       if (soldierPlumes.current) soldierPlumes.current.instanceMatrix.needsUpdate = true;
+      if (bladeSwings.current) {
+        bladeSwings.current.count = cross ? n : 0;
+        bladeSwings.current.instanceMatrix.needsUpdate = true;
+      }
       if (bowHolds.current) bowHolds.current.instanceMatrix.needsUpdate = true;
       if (drawArms.current) drawArms.current.instanceMatrix.needsUpdate = true;
       if (nocks.current) nocks.current.instanceMatrix.needsUpdate = true;
@@ -1705,6 +1730,9 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
           </instancedMesh>
           <instancedMesh ref={soldierPlumes} args={[soldierPlumeGeo, undefined, instanceCap]} frustumCulled={false}>
             <meshStandardMaterial vertexColors roughness={0.86} metalness={0} side={THREE.DoubleSide} />
+          </instancedMesh>
+          <instancedMesh ref={bladeSwings} args={[swingGeo, undefined, instanceCap]} frustumCulled={false}>
+            <meshStandardMaterial vertexColors roughness={0.35} metalness={0.72} />
           </instancedMesh>
         </>
       ) : (
