@@ -760,10 +760,8 @@ export function new6EnemyAt(i: number, recT: number, out: New1Pose) {
   const killed = row < NEW6_REPULSE_ROWS && t >= hitAt;
   const travel = NEW6_SPEED * (killed ? hitAt : t);
   const dist = NEW6_RIM + row * NEW6_GAP - travel;
-  const reached = Math.min(NEW6_ROWS, Math.max(1, Math.floor(travel / NEW6_GAP) + 1));
-  const localSlot = Math.min(row, reached - 1) * NEW6_LANES + lane;
-  const around = Math.max(1, reached * NEW6_LANES);
-  const u = localSlot / Math.max(1, around - 1);
+  const slot = row * NEW6_LANES + lane;
+  const u = (slot * 0.61803398875) % 1;
   const ang = arm * (Math.PI / 2) + (u - 0.5) * (Math.PI / 2);
   const close = Math.min(1, Math.max(0, (t - 20) / 3.2));
   const farRad = NEW6_RIM - 0.15 + lane * 0.38;
@@ -781,13 +779,14 @@ export function new6EnemyAt(i: number, recT: number, out: New1Pose) {
     z: armPos.z + (circle.z - armPos.z) * blend,
     ry: armPos.ry + (circle.ry - armPos.ry) * blend,
   };
-  const bob = Math.sin(t * 14 + row + lane);
+  const onRing = dist <= NEW6_RIM;
+  const bob = onRing ? 0 : Math.sin(t * 14 + row + lane);
   out.x = p.x;
   out.z = p.z;
   out.ry = p.ry;
   out.rz = 0;
-  out.y = Math.abs(bob) * 0.05;
-  out.rx = 0.28 + bob * 0.08;
+  out.y = onRing ? 0 : Math.abs(bob) * 0.05;
+  out.rx = onRing ? 0 : 0.28 + bob * 0.08;
   out.s = 1;
   if (killed && t < hitAt + 1) {
     const u = Math.min(1, (t - hitAt) / 0.35);
@@ -817,7 +816,7 @@ export function sampleNew6Cam(recT: number): ShotPose {
   const t = Math.max(0, recT);
   const u = t <= 4 ? 0 : Math.min(1, (t - 4) / 24);
   const e = u * u * (3 - 2 * u);
-  const dist = 41.2 * (1 + e * 0.55);
+  const dist = 44.6 * (1 + e * 0.55);
   return {
     x: (14 / 38.26) * dist,
     y: (28 / 38.26) * dist,
