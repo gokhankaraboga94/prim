@@ -643,9 +643,8 @@ const NEW6_GAP = 1.56;
 const NEW6_SPEED = 5.6;
 const NEW6_RIM = 6.2;
 const NEW6_ROWS = 72;
-const NEW6_LOSE = 17;
 const NEW6_CORE = 12;
-const NEW6_REPULSE_ROWS = 10;
+const NEW6_REPULSE_ROWS = 40;
 export const NEW6_FOES = NEW6_ARMS * NEW6_LANES * NEW6_ROWS;
 
 export function new6VisualFriends(soldiers: number) {
@@ -676,15 +675,14 @@ function new6FriendDieAt(i: number, count: number) {
   const rank = new6DeathRank(i, count);
   const core = Math.min(NEW6_CORE, count);
   const trickle = count - core;
-  if (rank >= trickle) return NEW6_LOSE + 8.2;
+  if (rank >= trickle) return 25.2;
   const groups = new6Group(Math.max(0, trickle - 1)) + 1;
-  return NEW6_LOSE + 0.3 + (new6Group(rank) / Math.max(1, groups - 1)) * 6.2;
+  return 0.9 + (new6Group(rank) / Math.max(1, groups - 1)) * 21;
 }
 
 export function new6SwordPitch(i: number, recT: number, fallen: boolean) {
   if (fallen) return 0;
   const t = Math.max(0, recT);
-  if (t > NEW6_LOSE) return 0;
   return Math.max(0, Math.sin(t * 7 + i * 1.7)) * 0.95;
 }
 
@@ -706,7 +704,8 @@ function new6EnemyParts(i: number) {
 }
 
 function new6RepulseAt(row: number) {
-  return 0.35 + row * 0.7;
+  if (row >= NEW6_REPULSE_ROWS) return 1e9;
+  return 0.45 + (row / (NEW6_REPULSE_ROWS - 1)) * 26;
 }
 
 export function new6FriendAt(i: number, n: number, recT: number, out: New1Pose) {

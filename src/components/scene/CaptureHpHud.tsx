@@ -1736,6 +1736,8 @@ function New2RatioPlate({ soldiers, drop = 0, bridge = false, cross = false, rel
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
     const pulse = 0.45 + 0.55 * Math.abs(Math.sin(recT * 3.4));
+    const flashT = recT % 1.65;
+    const flash = cross && flashT < 0.16 ? 1 - flashT / 0.16 : 0;
     if (cross || key !== seen.current) {
       seen.current = key;
       ctx.clearRect(0, 0, 1024, 248);
@@ -1750,17 +1752,21 @@ function New2RatioPlate({ soldiers, drop = 0, bridge = false, cross = false, rel
       ctx.fillStyle = cross ? "#ff2418" : "#d31c1c";
       ctx.fillRect(innerX + blueW, innerY, Math.max(0, innerW - blueW), innerH);
       if (cross) {
-        ctx.shadowColor = `rgba(255, 214, 70, ${0.45 + pulse * 0.5})`;
-        ctx.shadowBlur = 22 + pulse * 18;
+        ctx.shadowColor = `rgba(255, ${Math.round(214 + flash * 41)}, ${Math.round(70 + flash * 160)}, ${0.45 + pulse * 0.5 + flash * 0.4})`;
+        ctx.shadowBlur = 22 + pulse * 18 + flash * 36;
       }
-      ctx.strokeStyle = cross ? `rgb(255, ${210 + Math.round(pulse * 40)}, 48)` : "#ffe14a";
+      ctx.strokeStyle = cross ? `rgb(255, ${Math.round(210 + pulse * 40 + flash * 45)}, ${Math.round(48 + flash * 190)})` : "#ffe14a";
       ctx.lineWidth = cross ? 20 : 14;
       ctx.strokeRect(innerX - 10, innerY - 10, innerW + 20, innerH + 20);
       ctx.shadowBlur = 0;
       if (cross) {
-        ctx.strokeStyle = `rgba(255,255,236,${0.35 + pulse * 0.5})`;
-        ctx.lineWidth = 4;
+        ctx.strokeStyle = `rgba(255,255,236,${0.35 + pulse * 0.5 + flash * 0.4})`;
+        ctx.lineWidth = 4 + flash * 6;
         ctx.strokeRect(innerX - 2, innerY - 2, innerW + 4, innerH + 4);
+        if (flash > 0.02) {
+          ctx.fillStyle = `rgba(255, 248, 210, ${flash * 0.42})`;
+          ctx.fillRect(innerX, innerY, innerW, innerH);
+        }
       }
       ctx.font = cross ? "900 64px Inter, sans-serif" : "900 48px Inter, sans-serif";
       ctx.textBaseline = "middle";
