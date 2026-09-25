@@ -35,6 +35,11 @@ export type New5Id = typeof NEW5_ID;
 export const NEW5_MODE = { id: NEW5_ID, label: "new5" } as const;
 export const NEW5_SECONDS = 30;
 
+export const NEW6_ID = "new6" as const;
+export type New6Id = typeof NEW6_ID;
+export const NEW6_MODE = { id: NEW6_ID, label: "new6" } as const;
+export const NEW6_SECONDS = 30;
+
 export function isNew1(id: string | null | undefined): id is New1Id {
   return id === NEW1_ID;
 }
@@ -55,12 +60,16 @@ export function isNew5(id: string | null | undefined): id is New5Id {
   return id === NEW5_ID;
 }
 
+export function isNew6(id: string | null | undefined): id is New6Id {
+  return id === NEW6_ID;
+}
+
 export function isNewDuel(id: string | null | undefined): id is New2Id | New3Id | New4Id {
   return id === NEW2_ID || id === NEW3_ID || id === NEW4_ID;
 }
 
-export function isNewField(id: string | null | undefined): id is New1Id | New2Id | New3Id | New4Id | New5Id {
-  return id === NEW1_ID || id === NEW2_ID || id === NEW3_ID || id === NEW4_ID || id === NEW5_ID;
+export function isNewField(id: string | null | undefined): id is New1Id | New2Id | New3Id | New4Id | New5Id | New6Id {
+  return id === NEW1_ID || id === NEW2_ID || id === NEW3_ID || id === NEW4_ID || id === NEW5_ID || id === NEW6_ID;
 }
 
 export function new1Duration(id: string | null | undefined) {
@@ -531,5 +540,118 @@ export function sampleNew5Cam(recT: number): ShotPose {
     ly: 1.4,
     lz: front + 4,
     fov: 38,
+  };
+}
+
+export const NEW6_FRIENDS = 24;
+const NEW6_ARMS = 4;
+const NEW6_LANES = 3;
+const NEW6_LANE = 1.15;
+const NEW6_GAP = 1.56;
+const NEW6_SPEED = 5.6;
+const NEW6_INNER = 20;
+const NEW6_HOLD = 6.8;
+const NEW6_ROWS = 72;
+const NEW6_LOSE = 17;
+export const NEW6_FOES = NEW6_ARMS * NEW6_LANES * NEW6_ROWS;
+
+export function new6VisualFriends(soldiers: number) {
+  return Math.min(Math.max(1, Math.floor(soldiers)), NEW6_FRIENDS);
+}
+
+function new6FriendDieAt(i: number, count: number) {
+  return NEW6_LOSE + 0.3 + (i / Math.max(1, count - 1)) * 9.2;
+}
+
+function new6OnArm(dist: number, lane: number, arm: number) {
+  const ang = arm * (Math.PI / 2);
+  const side = (lane - 1) * NEW6_LANE;
+  return {
+    x: Math.sin(ang) * dist + Math.cos(ang) * side,
+    z: Math.cos(ang) * dist - Math.sin(ang) * side,
+    ry: ang + Math.PI,
+  };
+}
+
+function new6EnemyParts(i: number) {
+  const per = NEW6_LANES * NEW6_ROWS;
+  const arm = Math.floor(i / per);
+  const local = i % per;
+  return { arm, lane: local % NEW6_LANES, row: Math.floor(local / NEW6_LANES) };
+}
+
+function new6HitAt(i: number) {
+  const { row } = new6EnemyParts(i);
+  return (NEW6_INNER + row * NEW6_GAP - NEW6_HOLD) / NEW6_SPEED;
+}
+
+export function new6FriendAt(i: number, n: number, recT: number, out: New1Pose) {
+  const count = Math.max(1, Math.min(n, NEW6_FRIENDS));
+  const t = Math.max(0, recT);
+  const dieAt = i < count ? new6FriendDieAt(i, count) : 0;
+  const alive = i < count && t < dieAt;
+  const outer = i >= 8;
+  const idx = outer ? i - 8 : i;
+  const ringN = Math.max(1, outer ? count - 8 : Math.min(8, count));
+  const ang = (idx / ringN) * Math.PI * 2 + (outer ? 0.18 : 0);
+  const rad = outer ? 3.55 : 1.65;
+  const bob = Math.sin(t * 11 + i);
+  const strike = alive && t > 1.6 && t < NEW6_LOSE ? Math.max(0, Math.sin(t * 7 + i)) : 0;
+  out.x = Math.sin(ang) * rad;
+  out.z = Math.cos(ang) * rad;
+  out.y = alive ? Math.abs(bob) * 0.04 : 0;
+  out.rx = alive ? 0.16 + strike * 0.7 : 0;
+  out.ry = ang;
+  out.rz = 0;
+  out.s = i < count ? 1 : 0;
+  if (i >= count || t >= dieAt + 1) {
+    out.y = -40;
+    out.s = 0;
+  }
+}
+
+export function new6EnemyAt(i: number, recT: number, out: New1Pose) {
+  const t = Math.max(0, recT);
+  const { arm, lane, row } = new6EnemyParts(i);
+  const hitAt = new6HitAt(i);
+  const killed = hitAt < NEW6_LOSE && t >= hitAt;
+  const travel = NEW6_SPEED * t;
+  let dist = NEW6_INNER + row * NEW6_GAP - travel;
+  if (t >= NEW6_LOSE) dist = Math.max(5.15, dist);
+  const p = new6OnArm(Math.max(5.15, dist), lane, arm);
+  const bob = Math.sin(t * 14 + row + lane);
+  out.x = p.x;
+  out.z = p.z;
+  out.y = killed ? -40 : Math.abs(bob) * 0.05;
+  out.rx = killed ? 0 : 0.28 + bob * 0.08;
+  out.ry = p.ry;
+  out.rz = 0;
+  out.s = killed ? 0 : 1;
+}
+
+export function new6AliveCounts(soldiers: number, recT: number) {
+  const n = new6VisualFriends(soldiers);
+  const t = Math.max(0, recT);
+  let friends = 0;
+  for (let i = 0; i < n; i++) if (t < new6FriendDieAt(i, n)) friends++;
+  let foes = 0;
+  for (let i = 0; i < NEW6_FOES; i++) {
+    const hitAt = new6HitAt(i);
+    if (!(hitAt < NEW6_LOSE && t >= hitAt)) foes++;
+  }
+  return { friends, foes };
+}
+
+export function sampleNew6Cam(recT: number): ShotPose {
+  const t = Math.max(0, recT);
+  const u = Math.min(1, t / 30);
+  return {
+    x: 14 + u * 6,
+    y: 28 + u * 10,
+    z: 22 + u * 4,
+    lx: 0,
+    ly: 1.2,
+    lz: 0,
+    fov: 42,
   };
 }
