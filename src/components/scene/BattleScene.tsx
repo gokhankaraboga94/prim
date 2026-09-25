@@ -572,6 +572,7 @@ function useNew1GroundTexture() {
 }
 
 function New6Cross() {
+  const ground = useNew1GroundTexture();
   const arm = 172;
   const near = 3.6;
   const mid = near + arm / 2;
@@ -588,15 +589,29 @@ function New6Cross() {
         <planeGeometry args={[900, 900]} />
         <meshStandardMaterial color="#14181c" roughness={1} />
       </mesh>
-      <mesh position={[0, -0.21, 0]}>
-        <cylinderGeometry args={[6.4, 6.4, 0.42, 28]} />
-        <meshStandardMaterial color="#6a6258" roughness={0.92} />
+      <mesh position={[0, -0.28, 0]}>
+        <cylinderGeometry args={[6.55, 6.7, 0.36, 32]} />
+        <meshStandardMaterial color="#4a4034" roughness={0.96} />
+      </mesh>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 0]}>
+        <circleGeometry args={[6.35, 36]} />
+        <meshStandardMaterial map={ground} color="#9a7d52" roughness={0.94} metalness={0.02} />
+      </mesh>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.03, 0]}>
+        <circleGeometry args={[4.7, 28]} />
+        <meshStandardMaterial color="#3c3124" roughness={1} transparent opacity={0.42} depthWrite={false} />
       </mesh>
       {arms.map(([x, z], i) => (
-        <mesh key={i} position={[x, -0.21, z]}>
-          <boxGeometry args={[i < 2 ? width : arm, 0.42, i < 2 ? arm : width]} />
-          <meshStandardMaterial color="#6a6258" roughness={0.92} metalness={0.04} />
-        </mesh>
+        <group key={i}>
+          <mesh position={[x, -0.24, z]}>
+            <boxGeometry args={[i < 2 ? width + 0.35 : arm, 0.28, i < 2 ? arm : width + 0.35]} />
+            <meshStandardMaterial color="#3e352c" roughness={0.98} />
+          </mesh>
+          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[x, 0.02, z]}>
+            <planeGeometry args={[i < 2 ? width : arm, i < 2 ? arm : width]} />
+            <meshStandardMaterial map={ground} color="#8d7546" roughness={0.95} metalness={0.02} />
+          </mesh>
+        </group>
       ))}
     </group>
   );

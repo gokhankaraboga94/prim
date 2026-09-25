@@ -1735,23 +1735,34 @@ function New2RatioPlate({ soldiers, drop = 0, bridge = false, cross = false, rel
     const canvas = tex.image as HTMLCanvasElement;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
-    if (key !== seen.current) {
+    const pulse = 0.45 + 0.55 * Math.abs(Math.sin(recT * 3.4));
+    if (cross || key !== seen.current) {
       seen.current = key;
-      ctx.clearRect(0, 0, 1024, 150);
+      ctx.clearRect(0, 0, 1024, 248);
       const total = Math.max(1, friends + foes);
       const innerX = 28;
-      const innerY = 22;
+      const innerY = cross ? 58 : 22;
       const innerW = 968;
-      const innerH = 92;
+      const innerH = cross ? 118 : 92;
       const blueW = (friends / total) * innerW;
-      ctx.fillStyle = "#1a56e8";
+      ctx.fillStyle = cross ? "#1d6bff" : "#1a56e8";
       ctx.fillRect(innerX, innerY, Math.max(0, blueW), innerH);
-      ctx.fillStyle = "#d31c1c";
+      ctx.fillStyle = cross ? "#ff2418" : "#d31c1c";
       ctx.fillRect(innerX + blueW, innerY, Math.max(0, innerW - blueW), innerH);
-      ctx.strokeStyle = "#ffe14a";
-      ctx.lineWidth = 14;
-      ctx.strokeRect(innerX - 8, innerY - 8, innerW + 16, innerH + 16);
-      ctx.font = "900 48px Inter, sans-serif";
+      if (cross) {
+        ctx.shadowColor = `rgba(255, 214, 70, ${0.45 + pulse * 0.5})`;
+        ctx.shadowBlur = 22 + pulse * 18;
+      }
+      ctx.strokeStyle = cross ? `rgb(255, ${210 + Math.round(pulse * 40)}, 48)` : "#ffe14a";
+      ctx.lineWidth = cross ? 20 : 14;
+      ctx.strokeRect(innerX - 10, innerY - 10, innerW + 20, innerH + 20);
+      ctx.shadowBlur = 0;
+      if (cross) {
+        ctx.strokeStyle = `rgba(255,255,236,${0.35 + pulse * 0.5})`;
+        ctx.lineWidth = 4;
+        ctx.strokeRect(innerX - 2, innerY - 2, innerW + 4, innerH + 4);
+      }
+      ctx.font = cross ? "900 64px Inter, sans-serif" : "900 48px Inter, sans-serif";
       ctx.textBaseline = "middle";
       ctx.lineWidth = 8;
       ctx.strokeStyle = "rgba(0,0,0,0.72)";
@@ -1763,20 +1774,22 @@ function New2RatioPlate({ soldiers, drop = 0, bridge = false, cross = false, rel
       ctx.strokeText(formatCount(foes), 978, innerY + innerH / 2);
       ctx.fillText(formatCount(foes), 978, innerY + innerH / 2);
     }
-    const pulse = 0.55 + 0.45 * Math.abs(Math.sin(recT * 5.2));
-    ctx.clearRect(0, 150, 1024, 98);
-    ctx.font = "900 90px Inter, sans-serif";
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.lineWidth = 12;
-    ctx.strokeStyle = `rgba(0,0,0,${0.55 + pulse * 0.35})`;
-    ctx.fillStyle = `rgb(255, ${Math.round(18 + (1 - pulse) * 40)}, ${Math.round(12 + (1 - pulse) * 18)})`;
-    ctx.strokeText("DUR", 512, 186);
-    ctx.fillText("DUR", 512, 186);
+    if (!cross) {
+      ctx.clearRect(0, 150, 1024, 98);
+      const durPulse = 0.55 + 0.45 * Math.abs(Math.sin(recT * 5.2));
+      ctx.font = "900 90px Inter, sans-serif";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.lineWidth = 12;
+      ctx.strokeStyle = `rgba(0,0,0,${0.55 + durPulse * 0.35})`;
+      ctx.fillStyle = `rgb(255, ${Math.round(18 + (1 - durPulse) * 40)}, ${Math.round(12 + (1 - durPulse) * 18)})`;
+      ctx.strokeText("DUR", 512, 186);
+      ctx.fillText("DUR", 512, 186);
+    }
     tex.needsUpdate = true;
   });
 
-  const w = size.width * 0.88;
+  const w = size.width * (cross ? 0.94 : 0.88);
   const h = w * (248 / 1024);
   return (
     <mesh position={[0, size.height / 2 - h * 0.62 - 36 - drop, 4]} renderOrder={30}>

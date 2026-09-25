@@ -635,7 +635,7 @@ export function sampleNew5Cam(recT: number): ShotPose {
   };
 }
 
-export const NEW6_FRIENDS = 36;
+export const NEW6_FRIENDS = 48;
 const NEW6_ARMS = 4;
 const NEW6_LANES = 3;
 const NEW6_LANE = 1.15;
@@ -701,14 +701,14 @@ export function new6FriendAt(i: number, n: number, recT: number, out: New1Pose) 
   const count = Math.max(1, Math.min(n, NEW6_FRIENDS));
   const t = Math.max(0, recT);
   const dieAt = i < count ? new6FriendDieAt(i, count) : 0;
-  const innerN = Math.min(8, count);
-  const midN = Math.min(12, Math.max(0, count - innerN));
+  const innerN = Math.min(12, count);
+  const midN = Math.min(16, Math.max(0, count - innerN));
   const outerN = Math.max(0, count - innerN - midN);
   const ring = i < innerN
-    ? { idx: i, n: innerN, r: 1.5, twist: 0 }
+    ? { idx: i, n: innerN, r: 1.7, twist: 0 }
     : i < innerN + midN
-      ? { idx: i - innerN, n: midN, r: 2.85, twist: 0.16 }
-      : { idx: i - innerN - midN, n: Math.max(1, outerN), r: 4.15, twist: 0.08 };
+      ? { idx: i - innerN, n: midN, r: 3.05, twist: 0.16 }
+      : { idx: i - innerN - midN, n: Math.max(1, outerN), r: 4.4, twist: 0.08 };
   const ang = (ring.idx / ring.n) * Math.PI * 2 + ring.twist;
   const rad = ring.r;
   out.x = Math.sin(ang) * rad;
