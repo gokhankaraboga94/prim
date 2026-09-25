@@ -506,14 +506,30 @@ function new5FoeZ(i: number) {
   return NEW5_FOE_START + Math.floor(i / NEW5_LANES) * NEW5_FOE_GAP;
 }
 
-export function new5FriendAt(i: number, n: number, recT: number, out: New1Pose) {
-  const count = Math.max(1, Math.min(n, NEW5_FRIENDS));
-  const col = i % NEW5_LANES;
-  const row = Math.floor(i / NEW5_LANES);
+function new5LaneAhead(i: number, t: number) {
+  const lane = i % NEW5_LANES;
+  let ahead = 0;
+  for (let j = lane; j < i && j < NEW5_FRIENDS; j += NEW5_LANES) {
+    if (new5FriendDieAt(j, NEW5_FRIENDS) <= t) ahead += 1;
+  }
+  return ahead;
+}
+
+export function new5OnScreen(i: number, recT: number) {
+  const file = Math.floor(i / NEW5_LANES) - new5LaneAhead(i, Math.max(0, recT));
+  return file >= 0 && file < NEW5_FRIENDS / NEW5_LANES;
+}
+
+export function new5FriendAt(i: number, n: number, recT: number, out: New1Pose, queue = false) {
+  const roster = Math.max(1, Math.floor(n));
+  const count = queue ? roster : Math.max(1, Math.min(roster, NEW5_FRIENDS));
+  const col = queue ? i % NEW5_LANES : i % NEW5_LANES;
   const t = Math.max(0, recT);
-  const dieAt = i < count ? new5FriendDieAt(i, count) : 0;
+  const dieAt = queue ? (i < NEW5_FRIENDS ? new5FriendDieAt(i, NEW5_FRIENDS) : 1e9) : i < count ? new5FriendDieAt(i, count) : 0;
+  const falling = i < count && t >= dieAt && dieAt < 1e8;
+  const row = queue ? Math.floor(i / NEW5_LANES) - (falling ? new5LaneAhead(i, dieAt) : new5LaneAhead(i, t)) : Math.floor(i / NEW5_LANES);
   const alive = i < count && t < dieAt;
-  const moveT = Math.min(t, NEW5_LOSE);
+  const moveT = Math.min(falling ? dieAt : t, NEW5_LOSE);
   const front = new5Front(moveT);
   const bob = Math.sin(moveT * 16 + row * 0.65 + col * 1.4);
   const gap = new5FoeZ(Math.floor((front - NEW5_FOE_START) / NEW5_FOE_GAP) * NEW5_LANES) - front;
@@ -525,10 +541,10 @@ export function new5FriendAt(i: number, n: number, recT: number, out: New1Pose) 
   out.ry = 0;
   out.rz = alive ? bob * 0.05 : 0;
   out.s = i < count ? 1 : 0;
-  if (i < count && t >= dieAt && t < dieAt + 2) {
-    const u = Math.min(1, (t - dieAt) / 0.4);
-    out.rx = u * 1.45;
-    out.y = 0.08;
+  if (falling && t < dieAt + 2) {
+    const u = Math.min(1, (t - dieAt) / (queue ? 0.45 : 0.4));
+    out.rx = u * (queue ? 1.55 : 1.45);
+    out.y = queue ? -u * 1.85 : 0.08;
     out.s = 1;
   } else if (i >= count || t >= dieAt + 2) {
     out.y = -40;
@@ -555,20 +571,23 @@ export function new5EnemyAt(i: number, recT: number, out: New1Pose) {
   out.rx = 0.08;
   out.s = 1;
   if (t >= dieAt && t < dieAt + 1) {
-    const u = Math.min(1, (t - dieAt) / 0.35);
-    out.rx = u * 1.45;
-    out.y = 0.08;
+    const u = Math.min(1, (t - dieAt) / 0.4);
+    out.rx = u * 1.55;
+    out.y = -u * 1.85;
   } else if (t >= dieAt + 1) {
     out.y = -40;
     out.s = 0;
   }
 }
 
-export function new5AliveCounts(soldiers: number, recT: number) {
-  const n = new5VisualFriends(soldiers);
+export function new5AliveCounts(soldiers: number, recT: number, queue = false) {
+  const n = queue ? Math.max(1, Math.floor(soldiers)) : new5VisualFriends(soldiers);
   const t = Math.max(0, recT);
   let friends = 0;
-  for (let i = 0; i < n; i++) if (t < new5FriendDieAt(i, n)) friends++;
+  for (let i = 0; i < n; i++) {
+    const dieAt = queue ? (i < NEW5_FRIENDS ? new5FriendDieAt(i, NEW5_FRIENDS) : 1e9) : new5FriendDieAt(i, n);
+    if (t < dieAt) friends++;
+  }
   const front = new5Front(Math.min(t, NEW5_LOSE));
   let foes = 0;
   for (let row = 0; row < NEW5_FOE_ROWS; row++) {

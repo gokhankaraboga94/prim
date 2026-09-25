@@ -11,7 +11,7 @@ import { type DiscoverId } from "../../discoverReel";
 import { COUNT_1_END, countdownBeat, countdownVolley } from "../../countdownReel";
 import { DEFEND_CZ, DEFEND2_CX, DEFEND2_CZ, defendSoldierPos, defendYawOut } from "../../defendReel";
 import { vsSoldierAt, type VsPose } from "../../vsReel";
-import { NEW6_ARCHERS, NEW62_ARCHERS, new1FriendAt, new2FriendAt, new2VisualFriends, new5FriendAt, new5VisualFriends, new6FriendAt, new6SwordPitch, new6VisualFriends, new7FriendAt, new7VisualFriends } from "../../new1Reel";
+import { NEW5_FRIENDS, NEW6_ARCHERS, NEW62_ARCHERS, new1FriendAt, new2FriendAt, new2VisualFriends, new5FriendAt, new5OnScreen, new6FriendAt, new6SwordPitch, new6VisualFriends, new7FriendAt, new7VisualFriends } from "../../new1Reel";
 import { sfxArrowLoose, sfxBowDraw, sfxVolleyPeak } from "../../reelSfx";
 import { raidCount, sallyHunting, sallyLiveIndex, sallyLocal, sallyRaiderAt, swordArmPose, swordStyleAt, swordSwingU } from "../../siegeEvent";
 import { castleFrame } from "../../castleLayout";
@@ -887,7 +887,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
   const nockGeo = useMemo(() => (cross ? getNockArrowGeometry() : melee ? archerGeo : getNockArrowGeometry()), [melee, archerGeo, cross]);
 
   const rosterCap = Math.min(roster ? 80 : MAX_SOLDIERS, Math.max(0, Math.floor(count)));
-  const visible = relief ? Math.min(rosterCap, new7VisualFriends(rosterCap)) : cross ? Math.min(rosterCap, new6VisualFriends(rosterCap, wide)) : bridge ? Math.min(rosterCap, new5VisualFriends(rosterCap)) : new2 ? Math.min(rosterCap, new2VisualFriends(rosterCap)) : rosterCap;
+  const visible = relief ? Math.min(rosterCap, new7VisualFriends(rosterCap)) : cross ? Math.min(rosterCap, new6VisualFriends(rosterCap, wide)) : bridge ? rosterCap : new2 ? Math.min(rosterCap, new2VisualFriends(rosterCap)) : rosterCap;
   const instanceCap = Math.min(MAX_SOLDIERS, Math.max(visible, roster ? 24 : 1, 1));
   const defendOx = defend2 ? DEFEND2_CX : 0;
   const defendOz = defend2 ? DEFEND2_CZ : DEFEND_CZ;
@@ -954,6 +954,11 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
       }
       return ids;
     }
+    if (bridge && !relief && !cross) {
+      const windowN = NEW5_FRIENDS * 2;
+      for (let i = 0; i < names.length && i < windowN; i++) if (names[i]?.trim()) ids.push(i);
+      return ids;
+    }
     if (cross) {
       const named: number[] = [];
       for (let i = 0; i < names.length; i++) if (names[i]?.trim()) named.push(i);
@@ -974,7 +979,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
       if (names[i]?.trim()) ids.push(i);
     }
     return ids;
-  }, [names, visible, phantom, defend, vs, vs2, openField, roster, rosterIds, cross]);
+  }, [names, visible, phantom, defend, vs, vs2, openField, roster, rosterIds, cross, bridge, relief]);
   const nameAtlas = useMemo(
     () =>
       buildNameAtlas(
@@ -1011,7 +1016,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
       return;
     }
     if (bridge) {
-      new5FriendAt(soldier, layout.rest.length, t - REEL_HOLD, vsPose);
+      new5FriendAt(soldier, layout.rest.length, t - REEL_HOLD, vsPose, true);
       pos.set(vsPose.x, vsPose.y, vsPose.z);
       return;
     }
@@ -1267,7 +1272,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
           continue;
         }
         if (bridge) {
-          new5FriendAt(soldier, n, recT, vsPose);
+          new5FriendAt(soldier, n, recT, vsPose, true);
           dummy.position.set(vsPose.x, vsPose.y, vsPose.z);
           dummy.rotation.set(vsPose.rx, vsPose.ry, vsPose.rz);
           dummy.scale.setScalar((vsPose.s ?? 1) > 0 ? scale * 0.96 : 0);
@@ -1486,12 +1491,16 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
         hideName(k, cell);
         continue;
       }
+      if (bridge && !relief && idx >= 0 && !new5OnScreen(idx, recT)) {
+        hideName(k, cell);
+        continue;
+      }
       let nameScale = crowd;
       const staggered = Boolean(countdown || defend || vs || vs2 || openField);
       if (countdown) nameScale = 1.12 * crowd;
       else if (defend) nameScale = 1.22 * crowd;
-      else if (cross) nameScale = 1.112;
-      else if (bridge || relief) nameScale = 0.34;
+      else if (cross || (bridge && !relief)) nameScale = 1.112;
+      else if (relief) nameScale = 0.34;
       else if (new2) {
         const lift = Math.max(0, Math.min(1, (recT - 3.2) / 12));
         nameScale = Math.max(0.78, crowd * (0.95 + lift * 0.65));
@@ -1557,8 +1566,8 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
         }
       }
       let sx = (isolate ? Math.min(1.05, cell.sx * nameScale) : cell.sx * nameScale);
-      if (cross) sx = Math.min(sx, 2.357);
-      else if (bridge || relief) sx = Math.min(sx, 0.72);
+      if (cross || (bridge && !relief)) sx = Math.min(sx, 2.357);
+      else if (relief) sx = Math.min(sx, 0.72);
       else if (defend && staggered) sx = Math.min(sx, FILE * 1.28);
       else if (openField && staggered) sx = Math.min(sx, FILE * 1.12);
       else if ((vs || vs2) && staggered) sx = Math.min(sx, FILE * (vs2 ? 0.92 : 1.05));

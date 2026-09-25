@@ -1730,7 +1730,7 @@ function New2RatioPlate({ soldiers, drop = 0, bridge = false, cross = false, wid
 
   useFrame(({ clock }) => {
     const recT = Math.max(0, clock.elapsedTime - REEL_HOLD);
-    const { friends, foes } = relief ? new7AliveCounts(soldiers, recT) : cross ? new6AliveCounts(soldiers, recT, wide) : bridge ? new5AliveCounts(soldiers, recT) : new2AliveCounts(soldiers, recT);
+    const { friends, foes } = relief ? new7AliveCounts(soldiers, recT) : cross ? new6AliveCounts(soldiers, recT, wide) : bridge ? new5AliveCounts(soldiers, recT, true) : new2AliveCounts(soldiers, recT);
     const key = `${friends}:${foes}`;
     const canvas = tex.image as HTMLCanvasElement;
     const ctx = canvas.getContext("2d");
