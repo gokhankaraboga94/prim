@@ -40,6 +40,11 @@ export type New6Id = typeof NEW6_ID;
 export const NEW6_MODE = { id: NEW6_ID, label: "new6" } as const;
 export const NEW6_SECONDS = 30;
 
+export const NEW62_ID = "new62" as const;
+export type New62Id = typeof NEW62_ID;
+export const NEW62_MODE = { id: NEW62_ID, label: "new6/2" } as const;
+export const NEW62_SECONDS = 30;
+
 export const NEW7_ID = "new7" as const;
 export type New7Id = typeof NEW7_ID;
 export const NEW7_MODE = { id: NEW7_ID, label: "new7" } as const;
@@ -69,6 +74,10 @@ export function isNew6(id: string | null | undefined): id is New6Id {
   return id === NEW6_ID;
 }
 
+export function isNew62(id: string | null | undefined): id is New62Id {
+  return id === NEW62_ID;
+}
+
 export function isNew7(id: string | null | undefined): id is New7Id {
   return id === NEW7_ID;
 }
@@ -77,8 +86,8 @@ export function isNewDuel(id: string | null | undefined): id is New2Id | New3Id 
   return id === NEW2_ID || id === NEW3_ID || id === NEW4_ID;
 }
 
-export function isNewField(id: string | null | undefined): id is New1Id | New2Id | New3Id | New4Id | New5Id | New6Id | New7Id {
-  return id === NEW1_ID || id === NEW2_ID || id === NEW3_ID || id === NEW4_ID || id === NEW5_ID || id === NEW6_ID || id === NEW7_ID;
+export function isNewField(id: string | null | undefined): id is New1Id | New2Id | New3Id | New4Id | New5Id | New6Id | New62Id | New7Id {
+  return id === NEW1_ID || id === NEW2_ID || id === NEW3_ID || id === NEW4_ID || id === NEW5_ID || id === NEW6_ID || id === NEW62_ID || id === NEW7_ID;
 }
 
 export function new1Duration(id: string | null | undefined) {
@@ -638,6 +647,9 @@ export function sampleNew5Cam(recT: number): ShotPose {
 export const NEW6_FRIENDS = 100;
 const NEW6_RING_N = [16, 22, 28, 34];
 export const NEW6_ARCHERS = NEW6_RING_N[0];
+export const NEW62_FRIENDS = 150;
+const NEW62_RING_N = [24, 33, 42, 51];
+export const NEW62_ARCHERS = NEW62_RING_N[0];
 const NEW6_RING_R = [2.2, 4.1, 6.0, 8.0];
 const NEW6_RING_TW = [0, 0.18, 0.07, 0.28];
 const NEW6_ARMS = 4;
@@ -647,12 +659,21 @@ const NEW6_GAP = 1.56;
 const NEW6_SPEED = 5.6;
 const NEW6_RIM = 9.5;
 const NEW6_ROWS = 72;
+const NEW62_ROWS = 90;
 const NEW6_CORE = 12;
 const NEW6_REPULSE_ROWS = 40;
+const NEW62_REPULSE_ROWS = 50;
 export const NEW6_FOES = NEW6_ARMS * NEW6_LANES * NEW6_ROWS;
+export const NEW62_FOES = NEW6_ARMS * NEW6_LANES * NEW62_ROWS;
 
-export function new6VisualFriends(soldiers: number) {
-  return Math.min(Math.max(1, Math.floor(soldiers)), NEW6_FRIENDS);
+function new6Tune(wide: boolean) {
+  return wide
+    ? { friends: NEW62_FRIENDS, rings: NEW62_RING_N, rows: NEW62_ROWS, repulse: NEW62_REPULSE_ROWS, foes: NEW62_FOES }
+    : { friends: NEW6_FRIENDS, rings: NEW6_RING_N, rows: NEW6_ROWS, repulse: NEW6_REPULSE_ROWS, foes: NEW6_FOES };
+}
+
+export function new6VisualFriends(soldiers: number, wide = false) {
+  return Math.min(Math.max(1, Math.floor(soldiers)), new6Tune(wide).friends);
 }
 
 function new6Group(i: number) {
@@ -667,12 +688,13 @@ function new6Group(i: number) {
   return g;
 }
 
-function new6Rings(count: number) {
+function new6Rings(count: number, wide = false) {
   const rings: { start: number; n: number; r: number; twist: number }[] = [];
+  const table = new6Tune(wide).rings;
   let left = count;
   let start = 0;
-  for (let r = 0; r < NEW6_RING_N.length && left > 0; r++) {
-    const n = r === NEW6_RING_N.length - 1 ? left : Math.min(NEW6_RING_N[r], left);
+  for (let r = 0; r < table.length && left > 0; r++) {
+    const n = r === table.length - 1 ? left : Math.min(table[r], left);
     rings.push({ start, n, r: NEW6_RING_R[r], twist: NEW6_RING_TW[r] });
     start += n;
     left -= n;
@@ -680,8 +702,8 @@ function new6Rings(count: number) {
   return rings;
 }
 
-function new6DeathRank(i: number, count: number) {
-  const rings = new6Rings(count);
+function new6DeathRank(i: number, count: number, wide = false) {
+  const rings = new6Rings(count, wide);
   let rank = 0;
   for (let r = rings.length - 1; r >= 0; r--) {
     const ring = rings[r];
@@ -691,8 +713,8 @@ function new6DeathRank(i: number, count: number) {
   return Math.max(0, count - 1);
 }
 
-function new6FriendDieAt(i: number, count: number) {
-  const rank = new6DeathRank(i, count);
+function new6FriendDieAt(i: number, count: number, wide = false) {
+  const rank = new6DeathRank(i, count, wide);
   const core = Math.min(NEW6_CORE, count);
   const trickle = count - core;
   if (rank >= trickle) return 25.2;
@@ -716,22 +738,23 @@ function new6OnArm(dist: number, lane: number, arm: number) {
   };
 }
 
-function new6EnemyParts(i: number) {
-  const per = NEW6_LANES * NEW6_ROWS;
+function new6EnemyParts(i: number, wide = false) {
+  const per = NEW6_LANES * new6Tune(wide).rows;
   const arm = Math.floor(i / per);
   const local = i % per;
   return { arm, lane: local % NEW6_LANES, row: Math.floor(local / NEW6_LANES) };
 }
 
-const new6ThinCache = new Map<number, number>();
-let new6LateCache: number[] | null = null;
+const new6ThinCache = new Map<string, number>();
+const new6LateCache = new Map<string, number[]>();
 
-function new6ThinAt(limit: number) {
-  const cached = new6ThinCache.get(limit);
+function new6ThinAt(limit: number, wide = false) {
+  const key = `${wide ? 1 : 0}:${limit}`;
+  const cached = new6ThinCache.get(key);
   if (cached != null) return cached;
-  const count = NEW6_FRIENDS;
+  const count = new6Tune(wide).friends;
   const times: number[] = [];
-  for (let i = 0; i < count; i++) times.push(new6FriendDieAt(i, count));
+  for (let i = 0; i < count; i++) times.push(new6FriendDieAt(i, count, wide));
   times.sort((a, b) => a - b);
   let alive = count;
   for (let i = 0; i < times.length; ) {
@@ -741,46 +764,50 @@ function new6ThinAt(limit: number) {
       i += 1;
     }
     if (alive <= limit) {
-      new6ThinCache.set(limit, t);
+      new6ThinCache.set(key, t);
       return t;
     }
   }
-  new6ThinCache.set(limit, 1e9);
+  new6ThinCache.set(key, 1e9);
   return 1e9;
 }
 
-function new6EnemyDieAt(i: number) {
-  const { row } = new6EnemyParts(i);
-  if (row >= NEW6_REPULSE_ROWS) return 1e9;
-  const scheduled = 0.45 + (row / (NEW6_REPULSE_ROWS - 1)) * 26;
-  const under20 = new6ThinAt(19);
-  const at10 = new6ThinAt(10);
+function new6EnemyDieAt(i: number, wide = false) {
+  const tune = new6Tune(wide);
+  const { row } = new6EnemyParts(i, wide);
+  if (row >= tune.repulse) return 1e9;
+  const scheduled = 0.45 + (row / (tune.repulse - 1)) * 26;
+  const under20 = new6ThinAt(19, wide);
+  const at10 = new6ThinAt(10, wide);
   if (scheduled >= at10 || scheduled >= 18) return 1e9;
   if (scheduled < under20) return scheduled;
-  const late = new6LatePair();
+  const late = new6LatePair(wide);
   return late[0] === i || late[1] === i ? scheduled : 1e9;
 }
 
-function new6LatePair() {
-  if (new6LateCache) return new6LateCache;
-  const under20 = new6ThinAt(19);
-  const at10 = new6ThinAt(10);
+function new6LatePair(wide = false) {
+  const key = wide ? "w" : "n";
+  const cached = new6LateCache.get(key);
+  if (cached) return cached;
+  const tune = new6Tune(wide);
+  const under20 = new6ThinAt(19, wide);
+  const at10 = new6ThinAt(10, wide);
   const pick: number[] = [];
-  for (let i = 0; i < NEW6_FOES && pick.length < 2; i++) {
-    const { row } = new6EnemyParts(i);
-    if (row >= NEW6_REPULSE_ROWS) continue;
-    const scheduled = 0.45 + (row / (NEW6_REPULSE_ROWS - 1)) * 26;
+  for (let i = 0; i < tune.foes && pick.length < 2; i++) {
+    const { row } = new6EnemyParts(i, wide);
+    if (row >= tune.repulse) continue;
+    const scheduled = 0.45 + (row / (tune.repulse - 1)) * 26;
     if (scheduled >= under20 && scheduled < at10 && scheduled < 18) pick.push(i);
   }
-  new6LateCache = pick;
+  new6LateCache.set(key, pick);
   return pick;
 }
 
-export function new6FriendAt(i: number, n: number, recT: number, out: New1Pose) {
-  const count = Math.max(1, Math.min(n, NEW6_FRIENDS));
+export function new6FriendAt(i: number, n: number, recT: number, out: New1Pose, wide = false) {
+  const count = Math.max(1, Math.min(n, new6Tune(wide).friends));
   const t = Math.max(0, recT);
-  const dieAt = i < count ? new6FriendDieAt(i, count) : 0;
-  const rings = new6Rings(count);
+  const dieAt = i < count ? new6FriendDieAt(i, count, wide) : 0;
+  const rings = new6Rings(count, wide);
   const ring = rings.find((item) => i >= item.start && i < item.start + item.n) ?? rings[rings.length - 1];
   const ang = ((i - ring.start) / Math.max(1, ring.n)) * Math.PI * 2 + ring.twist;
   const rad = ring.r;
@@ -802,10 +829,10 @@ export function new6FriendAt(i: number, n: number, recT: number, out: New1Pose) 
   }
 }
 
-export function new6EnemyAt(i: number, recT: number, out: New1Pose) {
+export function new6EnemyAt(i: number, recT: number, out: New1Pose, wide = false) {
   const t = Math.max(0, recT);
-  const { arm, lane, row } = new6EnemyParts(i);
-  const hitAt = new6EnemyDieAt(i);
+  const { arm, lane, row } = new6EnemyParts(i, wide);
+  const hitAt = new6EnemyDieAt(i, wide);
   const killed = hitAt < 1e8 && t >= hitAt;
   const travel = NEW6_SPEED * (killed ? hitAt : t);
   const dist = NEW6_RIM + row * NEW6_GAP - travel;
@@ -847,16 +874,23 @@ export function new6EnemyAt(i: number, recT: number, out: New1Pose) {
   }
 }
 
-export function new6AliveCounts(soldiers: number, recT: number) {
-  const n = new6VisualFriends(soldiers);
+export function new6AliveCounts(soldiers: number, recT: number, wide = false) {
+  const n = new6VisualFriends(soldiers, wide);
   const t = Math.max(0, recT);
   let friends = 0;
-  for (let i = 0; i < n; i++) if (t < new6FriendDieAt(i, n)) friends++;
+  for (let i = 0; i < n; i++) if (t < new6FriendDieAt(i, n, wide)) friends++;
   let foes = 0;
-  for (let i = 0; i < NEW6_FOES; i++) {
-    if (t < new6EnemyDieAt(i)) foes++;
+  const foeCount = new6Tune(wide).foes;
+  for (let i = 0; i < foeCount; i++) {
+    if (t < new6EnemyDieAt(i, wide)) foes++;
   }
   return { friends, foes };
+}
+
+export function sampleNew62Cam(recT: number): ShotPose {
+  const cam = sampleNew6Cam(recT);
+  const pull = 1.28;
+  return { ...cam, x: cam.x * pull, y: cam.y * pull, z: cam.z * pull };
 }
 
 export function sampleNew6Cam(recT: number): ShotPose {

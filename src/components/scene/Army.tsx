@@ -11,7 +11,7 @@ import { type DiscoverId } from "../../discoverReel";
 import { COUNT_1_END, countdownBeat, countdownVolley } from "../../countdownReel";
 import { DEFEND_CZ, DEFEND2_CX, DEFEND2_CZ, defendSoldierPos, defendYawOut } from "../../defendReel";
 import { vsSoldierAt, type VsPose } from "../../vsReel";
-import { NEW6_ARCHERS, new1FriendAt, new2FriendAt, new2VisualFriends, new5FriendAt, new5VisualFriends, new6FriendAt, new6SwordPitch, new6VisualFriends, new7FriendAt, new7VisualFriends } from "../../new1Reel";
+import { NEW6_ARCHERS, NEW62_ARCHERS, new1FriendAt, new2FriendAt, new2VisualFriends, new5FriendAt, new5VisualFriends, new6FriendAt, new6SwordPitch, new6VisualFriends, new7FriendAt, new7VisualFriends } from "../../new1Reel";
 import { sfxArrowLoose, sfxBowDraw, sfxVolleyPeak } from "../../reelSfx";
 import { raidCount, sallyHunting, sallyLiveIndex, sallyLocal, sallyRaiderAt, swordArmPose, swordStyleAt, swordSwingU } from "../../siegeEvent";
 import { castleFrame } from "../../castleLayout";
@@ -71,6 +71,7 @@ type ArmyProps = {
   blade?: boolean;
   bridge?: boolean;
   cross?: boolean;
+  wide?: boolean;
   relief?: boolean;
   mix?: boolean;
   mixSlow?: boolean;
@@ -846,7 +847,7 @@ function NameLayers({
 }
 
 
-export function Army({ count, names = [], commanders = [], cinematic, duration = 8, skipCommander = false, roster = null, discover = null, countdown = false, defend = false, defend2 = false, defend3 = false, blue = false, vs = false, vs2 = false, new1 = false, new2 = false, blade = false, bridge = false, cross = false, relief = false, mix = false, mixSlow = false, nameHunt = false, quiet = false, square = false, readNames = false, scanHunt = false, level = 1, rosterIds = null }: ArmyProps) {
+export function Army({ count, names = [], commanders = [], cinematic, duration = 8, skipCommander = false, roster = null, discover = null, countdown = false, defend = false, defend2 = false, defend3 = false, blue = false, vs = false, vs2 = false, new1 = false, new2 = false, blade = false, bridge = false, cross = false, wide = false, relief = false, mix = false, mixSlow = false, nameHunt = false, quiet = false, square = false, readNames = false, scanHunt = false, level = 1, rosterIds = null }: ArmyProps) {
   const bodies = useRef<THREE.InstancedMesh>(null);
   const soldierPlumes = useRef<THREE.InstancedMesh>(null);
   const bowHolds = useRef<THREE.InstancedMesh>(null);
@@ -886,7 +887,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
   const nockGeo = useMemo(() => (cross ? getNockArrowGeometry() : melee ? archerGeo : getNockArrowGeometry()), [melee, archerGeo, cross]);
 
   const rosterCap = Math.min(roster ? 80 : MAX_SOLDIERS, Math.max(0, Math.floor(count)));
-  const visible = relief ? Math.min(rosterCap, new7VisualFriends(rosterCap)) : cross ? Math.min(rosterCap, new6VisualFriends(rosterCap)) : bridge ? Math.min(rosterCap, new5VisualFriends(rosterCap)) : new2 ? Math.min(rosterCap, new2VisualFriends(rosterCap)) : rosterCap;
+  const visible = relief ? Math.min(rosterCap, new7VisualFriends(rosterCap)) : cross ? Math.min(rosterCap, new6VisualFriends(rosterCap, wide)) : bridge ? Math.min(rosterCap, new5VisualFriends(rosterCap)) : new2 ? Math.min(rosterCap, new2VisualFriends(rosterCap)) : rosterCap;
   const instanceCap = Math.min(MAX_SOLDIERS, Math.max(visible, roster ? 24 : 1, 1));
   const defendOx = defend2 ? DEFEND2_CX : 0;
   const defendOz = defend2 ? DEFEND2_CZ : DEFEND_CZ;
@@ -1005,7 +1006,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
       return;
     }
     if (cross) {
-      new6FriendAt(soldier, layout.rest.length, t - REEL_HOLD, vsPose);
+      new6FriendAt(soldier, layout.rest.length, t - REEL_HOLD, vsPose, wide);
       pos.set(vsPose.x, vsPose.y, vsPose.z);
       return;
     }
@@ -1217,14 +1218,14 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
           continue;
         }
         if (cross) {
-          new6FriendAt(soldier, n, recT, vsPose);
+          new6FriendAt(soldier, n, recT, vsPose, wide);
           dummy.position.set(vsPose.x, vsPose.y, vsPose.z);
           dummy.rotation.set(vsPose.rx, vsPose.ry, vsPose.rz);
           dummy.scale.setScalar((vsPose.s ?? 1) > 0 ? scale * 0.96 : 0);
           dummy.updateMatrix();
           stamp(bodies.current, i);
           stamp(soldierPlumes.current, i);
-          const archer = soldier < NEW6_ARCHERS && (vsPose.s ?? 1) > 0;
+          const archer = soldier < (wide ? NEW62_ARCHERS : NEW6_ARCHERS) && (vsPose.s ?? 1) > 0;
           _bodyQ.setFromEuler(_limbEul.set(vsPose.rx, vsPose.ry, vsPose.rz, "XYZ"));
           if (bladeSwings.current) {
             if (archer) {

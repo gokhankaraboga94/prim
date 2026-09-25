@@ -30,7 +30,7 @@ import { COUNTDOWN_ID, COUNTDOWN_MODE, COUNTDOWN_SECONDS, isCountdown, type Coun
 import { HARIKA2_SECONDS, SPIN_SECONDS, XXX_MODES, XXX_SECONDS, XXXV_SECONDS, isXxx, xxxHideCmd, xxxSeconds, type XxxId } from "../xxxReel";
 import { DEFEND_ID, DEFEND2_ID, DEFEND3_ID, DEFEND4_ID, DEFEND_MODE, DEFEND2_MODE, DEFEND3_MODE, DEFEND4_MODE, DEFEND_SECONDS, DEFEND2_SECONDS, DEFEND3_SECONDS, DEFEND4_SECONDS, isDefend, isDefend2, isDefend3, isDefend4, isDefendSortie, type DefendId } from "../defendReel";
 import { VS_ID, VS2_ID, VS_MODE, VS2_MODE, VS_SECONDS, VS2_SECONDS, isVs, isVs2, isVsMode, type VsId } from "../vsReel";
-import { NEW1_ID, NEW1_MODE, NEW1_SECONDS, NEW2_ID, NEW2_MODE, NEW2_SECONDS, NEW3_ID, NEW3_MODE, NEW3_SECONDS, NEW4_ID, NEW4_MODE, NEW4_SECONDS, NEW5_ID, NEW5_MODE, NEW5_SECONDS, NEW6_ID, NEW6_MODE, NEW6_SECONDS, NEW7_ID, NEW7_MODE, NEW7_SECONDS, isNew1, isNew2, isNew3, isNew4, isNew5, isNew6, isNew7, isNewField, type New1Id, type New2Id, type New3Id, type New4Id, type New5Id, type New6Id, type New7Id } from "../new1Reel";
+import { NEW1_ID, NEW1_MODE, NEW1_SECONDS, NEW2_ID, NEW2_MODE, NEW2_SECONDS, NEW3_ID, NEW3_MODE, NEW3_SECONDS, NEW4_ID, NEW4_MODE, NEW4_SECONDS, NEW5_ID, NEW5_MODE, NEW5_SECONDS, NEW6_ID, NEW6_MODE, NEW6_SECONDS, NEW62_ID, NEW62_MODE, NEW62_SECONDS, NEW7_ID, NEW7_MODE, NEW7_SECONDS, isNew1, isNew2, isNew3, isNew4, isNew5, isNew6, isNew62, isNew7, isNewField, type New1Id, type New2Id, type New3Id, type New4Id, type New5Id, type New6Id, type New62Id, type New7Id } from "../new1Reel";
 import { unlockReelSfx } from "../reelSfx";
 
 export function AdminPage() {
@@ -46,7 +46,7 @@ export function AdminPage() {
   const [reelSeconds, setReelSeconds] = useState<number>(7);
   const [reelText, setReelText] = useState(true);
   const [reelSkipCmd, setReelSkipCmd] = useState(false);
-  const [reelShot, setReelShot] = useState<ReelShot | PlanBId | SagaId | DiscoverId | MixId | CountdownId | DefendId | VsId | New1Id | New2Id | New3Id | New4Id | New5Id | New6Id | New7Id | XxxId | null>(null);
+  const [reelShot, setReelShot] = useState<ReelShot | PlanBId | SagaId | DiscoverId | MixId | CountdownId | DefendId | VsId | New1Id | New2Id | New3Id | New4Id | New5Id | New6Id | New62Id | New7Id | XxxId | null>(null);
   const [reelDay, setReelDay] = useState("1");
   const [capturing, setCapturing] = useState(false);
   const [editIndex, setEditIndex] = useState<number | null>(null);
@@ -522,7 +522,7 @@ export function AdminPage() {
                   : isCountdown(reelShot)
                     ? [COUNTDOWN_SECONDS]
                   : isNewField(reelShot)
-                    ? [isNew7(reelShot) ? NEW7_SECONDS : isNew6(reelShot) ? NEW6_SECONDS : isNew5(reelShot) ? NEW5_SECONDS : isNew4(reelShot) ? NEW4_SECONDS : isNew3(reelShot) ? NEW3_SECONDS : isNew2(reelShot) ? NEW2_SECONDS : NEW1_SECONDS]
+                    ? [isNew7(reelShot) ? NEW7_SECONDS : isNew62(reelShot) ? NEW62_SECONDS : isNew6(reelShot) ? NEW6_SECONDS : isNew5(reelShot) ? NEW5_SECONDS : isNew4(reelShot) ? NEW4_SECONDS : isNew3(reelShot) ? NEW3_SECONDS : isNew2(reelShot) ? NEW2_SECONDS : NEW1_SECONDS]
                   : isVsMode(reelShot)
                     ? [isVs2(reelShot) ? VS2_SECONDS : VS_SECONDS]
                   : isDefend4(reelShot)
@@ -669,6 +669,18 @@ export function AdminPage() {
             </button>
             <button
               type="button"
+              className={reelShot === NEW62_ID ? "on" : ""}
+              onClick={() => {
+                setReelShot((cur) => (cur === NEW62_ID ? null : NEW62_ID));
+                setReelSeconds(NEW62_SECONDS);
+                setReelText(false);
+                setReelSkipCmd(true);
+              }}
+            >
+              {NEW62_MODE.label} — {NEW62_SECONDS}s
+            </button>
+            <button
+              type="button"
               className={reelShot === NEW7_ID ? "on" : ""}
               onClick={() => {
                 setReelShot((cur) => (cur === NEW7_ID ? null : NEW7_ID));
@@ -682,6 +694,9 @@ export function AdminPage() {
           </div>
           {isNew7(reelShot) && (
             <p className="muted">new5 ile aynı, kamera daha geriden. Kaybedecekken arkadan 24 asker belirir. Yazıyı sen eklersin.</p>
+          )}
+          {isNew62(reelShot) && (
+            <p className="muted">new6 ile aynı. Bizim asker yüzde 50, düşman yüzde 25 fazla. Kamera aynı açıda daha uzaktan.</p>
           )}
           {isNew6(reelShot) && (
             <p className="muted">4 köprü tek merkeze bağlı. Üçerli düşman koşarak gelir. Ortadaki dar halka tutunur, sonra kaybeder. Üstte bar.</p>
@@ -1182,6 +1197,7 @@ export function AdminPage() {
           new4={isNew4(reelShot) ? reelShot : null}
           new5={isNew5(reelShot) ? reelShot : null}
           new6={isNew6(reelShot) ? reelShot : null}
+          new62={isNew62(reelShot) ? reelShot : null}
           new7={isNew7(reelShot) ? reelShot : null}
           mix={isMix(reelShot) ? reelShot : null}
           xxx={isXxx(reelShot) ? reelShot : null}

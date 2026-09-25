@@ -1716,7 +1716,7 @@ export function CountdownFlash() {
   );
 }
 
-function New2RatioPlate({ soldiers, drop = 0, bridge = false, cross = false, relief = false }: { soldiers: number; drop?: number; bridge?: boolean; cross?: boolean; relief?: boolean }) {
+function New2RatioPlate({ soldiers, drop = 0, bridge = false, cross = false, wide = false, relief = false }: { soldiers: number; drop?: number; bridge?: boolean; cross?: boolean; wide?: boolean; relief?: boolean }) {
   const size = useThree((s) => s.size);
   const tex = useMemo(() => {
     const canvas = document.createElement("canvas");
@@ -1730,7 +1730,7 @@ function New2RatioPlate({ soldiers, drop = 0, bridge = false, cross = false, rel
 
   useFrame(({ clock }) => {
     const recT = Math.max(0, clock.elapsedTime - REEL_HOLD);
-    const { friends, foes } = relief ? new7AliveCounts(soldiers, recT) : cross ? new6AliveCounts(soldiers, recT) : bridge ? new5AliveCounts(soldiers, recT) : new2AliveCounts(soldiers, recT);
+    const { friends, foes } = relief ? new7AliveCounts(soldiers, recT) : cross ? new6AliveCounts(soldiers, recT, wide) : bridge ? new5AliveCounts(soldiers, recT) : new2AliveCounts(soldiers, recT);
     const key = `${friends}:${foes}`;
     const canvas = tex.image as HTMLCanvasElement;
     const ctx = canvas.getContext("2d");
@@ -1812,11 +1812,11 @@ function New2RatioPlate({ soldiers, drop = 0, bridge = false, cross = false, rel
   );
 }
 
-export function New2RatioBar({ soldiers, drop = 0, bridge = false, cross = false, relief = false }: { soldiers: number; drop?: number; bridge?: boolean; cross?: boolean; relief?: boolean }) {
+export function New2RatioBar({ soldiers, drop = 0, bridge = false, cross = false, wide = false, relief = false }: { soldiers: number; drop?: number; bridge?: boolean; cross?: boolean; wide?: boolean; relief?: boolean }) {
   return (
     <Hud renderPriority={3}>
       <OrthographicCamera makeDefault position={[0, 0, 10]} />
-      <New2RatioPlate soldiers={soldiers} drop={drop} bridge={bridge} cross={cross} relief={relief} />
+      <New2RatioPlate soldiers={soldiers} drop={drop} bridge={bridge} cross={cross} wide={wide} relief={relief} />
     </Hud>
   );
 }

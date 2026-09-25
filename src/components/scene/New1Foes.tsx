@@ -2,7 +2,7 @@ import { useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { REEL_HOLD } from "../../recordCanvas";
-import { NEW5_FOES, NEW6_FOES, new1EnemyAt, new1EnemyCount, new2EnemyAt, new2VisualFriends, new5EnemyAt, new6EnemyAt, type New1Pose } from "../../new1Reel";
+import { NEW5_FOES, NEW6_FOES, NEW62_FOES, new1EnemyAt, new1EnemyCount, new2EnemyAt, new2VisualFriends, new5EnemyAt, new6EnemyAt, type New1Pose } from "../../new1Reel";
 import { getDefendRaiderGeometry, getSwordRaiderGeometry } from "./SallyRaid";
 
 const dummy = new THREE.Object3D();
@@ -14,14 +14,15 @@ type New1FoesProps = {
   swords?: boolean;
   bridge?: boolean;
   cross?: boolean;
+  wide?: boolean;
 };
 
-export function New1Foes({ soldiers, duel = false, swords = false, bridge = false, cross = false }: New1FoesProps) {
+export function New1Foes({ soldiers, duel = false, swords = false, bridge = false, cross = false, wide = false }: New1FoesProps) {
   const bodies = useRef<THREE.InstancedMesh>(null);
   const skip = useRef(0);
   const geo = useMemo(() => (swords || bridge || cross ? getSwordRaiderGeometry() : getDefendRaiderGeometry(true)), [swords, bridge, cross]);
   const fightFriends = duel ? new2VisualFriends(soldiers) : soldiers;
-  const cap = cross ? NEW6_FOES : bridge ? NEW5_FOES : Math.max(1, new1EnemyCount(fightFriends));
+  const cap = wide ? NEW62_FOES : cross ? NEW6_FOES : bridge ? NEW5_FOES : Math.max(1, new1EnemyCount(fightFriends));
 
   useFrame((state) => {
     if (!bodies.current) return;
@@ -30,7 +31,7 @@ export function New1Foes({ soldiers, duel = false, swords = false, bridge = fals
     if (!duel && cap > 3600 && recT > 2.1 && skip.current % 2 === 1) return;
     const n = cap;
     for (let i = 0; i < n; i++) {
-      if (cross) new6EnemyAt(i, recT, scratch);
+      if (cross) new6EnemyAt(i, recT, scratch, wide);
       else if (bridge) new5EnemyAt(i, recT, scratch);
       else if (duel) new2EnemyAt(i, fightFriends, recT, scratch);
       else new1EnemyAt(i, fightFriends, recT, scratch);
