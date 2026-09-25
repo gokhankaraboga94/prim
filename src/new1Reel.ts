@@ -723,11 +723,57 @@ function new6EnemyParts(i: number) {
   return { arm, lane: local % NEW6_LANES, row: Math.floor(local / NEW6_LANES) };
 }
 
-function new6RepulseAt(row: number) {
+const new6ThinCache = new Map<number, number>();
+let new6LateCache: number[] | null = null;
+
+function new6ThinAt(limit: number) {
+  const cached = new6ThinCache.get(limit);
+  if (cached != null) return cached;
+  const count = NEW6_FRIENDS;
+  const times: number[] = [];
+  for (let i = 0; i < count; i++) times.push(new6FriendDieAt(i, count));
+  times.sort((a, b) => a - b);
+  let alive = count;
+  for (let i = 0; i < times.length; ) {
+    const t = times[i];
+    while (i < times.length && times[i] === t) {
+      alive -= 1;
+      i += 1;
+    }
+    if (alive <= limit) {
+      new6ThinCache.set(limit, t);
+      return t;
+    }
+  }
+  new6ThinCache.set(limit, 1e9);
+  return 1e9;
+}
+
+function new6EnemyDieAt(i: number) {
+  const { row } = new6EnemyParts(i);
   if (row >= NEW6_REPULSE_ROWS) return 1e9;
-  const early = 0.45 + (row / (NEW6_REPULSE_ROWS - 1)) * 26;
-  if (early < 16) return early;
-  return 16 + (early - 16) * 3;
+  const scheduled = 0.45 + (row / (NEW6_REPULSE_ROWS - 1)) * 26;
+  const under20 = new6ThinAt(19);
+  const at10 = new6ThinAt(10);
+  if (scheduled >= at10) return 1e9;
+  if (scheduled < under20) return scheduled;
+  const late = new6LatePair();
+  return late[0] === i || late[1] === i ? scheduled : 1e9;
+}
+
+function new6LatePair() {
+  if (new6LateCache) return new6LateCache;
+  const under20 = new6ThinAt(19);
+  const at10 = new6ThinAt(10);
+  const pick: number[] = [];
+  for (let i = 0; i < NEW6_FOES && pick.length < 2; i++) {
+    const { row } = new6EnemyParts(i);
+    if (row >= NEW6_REPULSE_ROWS) continue;
+    const scheduled = 0.45 + (row / (NEW6_REPULSE_ROWS - 1)) * 26;
+    if (scheduled >= under20 && scheduled < at10) pick.push(i);
+  }
+  new6LateCache = pick;
+  return pick;
 }
 
 export function new6FriendAt(i: number, n: number, recT: number, out: New1Pose) {
@@ -759,8 +805,8 @@ export function new6FriendAt(i: number, n: number, recT: number, out: New1Pose) 
 export function new6EnemyAt(i: number, recT: number, out: New1Pose) {
   const t = Math.max(0, recT);
   const { arm, lane, row } = new6EnemyParts(i);
-  const hitAt = new6RepulseAt(row);
-  const killed = row < NEW6_REPULSE_ROWS && t >= hitAt;
+  const hitAt = new6EnemyDieAt(i);
+  const killed = hitAt < 1e8 && t >= hitAt;
   const travel = NEW6_SPEED * (killed ? hitAt : t);
   const dist = NEW6_RIM + row * NEW6_GAP - travel;
   const slot = row * NEW6_LANES + lane;
@@ -808,9 +854,7 @@ export function new6AliveCounts(soldiers: number, recT: number) {
   for (let i = 0; i < n; i++) if (t < new6FriendDieAt(i, n)) friends++;
   let foes = 0;
   for (let i = 0; i < NEW6_FOES; i++) {
-    const { row } = new6EnemyParts(i);
-    const hitAt = new6RepulseAt(row);
-    if (!(row < NEW6_REPULSE_ROWS && t >= hitAt)) foes++;
+    if (t < new6EnemyDieAt(i)) foes++;
   }
   return { friends, foes };
 }
