@@ -953,11 +953,27 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
       }
       return ids;
     }
+    if (cross) {
+      const named: number[] = [];
+      for (let i = 0; i < names.length; i++) if (names[i]?.trim()) named.push(i);
+      const take = Math.min(visible, named.length);
+      const headN = Math.ceil(take / 2);
+      const tailN = take - headN;
+      const head = named.slice(0, headN);
+      const seen = new Set(head);
+      ids.push(...head);
+      for (const i of named.slice(Math.max(headN, named.length - tailN))) {
+        if (seen.has(i)) continue;
+        seen.add(i);
+        ids.push(i);
+      }
+      return ids;
+    }
     for (let i = 0; i < visible; i++) {
       if (names[i]?.trim()) ids.push(i);
     }
     return ids;
-  }, [names, visible, phantom, defend, vs, vs2, openField, roster, rosterIds]);
+  }, [names, visible, phantom, defend, vs, vs2, openField, roster, rosterIds, cross]);
   const nameAtlas = useMemo(
     () =>
       buildNameAtlas(
@@ -1433,8 +1449,8 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
         if (liveSlot >= 0) stampRosterSoldier(liveSlot, liveIds.length, beat.pack, recT, beat.enter, 0, beat.u, rosterPose);
         else stampRosterSoldier(Math.max(0, outSlot), outIds?.length ?? 1, Math.max(0, beat.pack - 1), recT, 1, beat.exit, 1, rosterPose);
         pos.set(rosterPose.x, rosterPose.y, rosterPose.z);
-      } else if (idx < 0) commanderPos(t, 0, pos);
-      else poseSoldier(idx, t);
+      }       else if (idx < 0) commanderPos(t, 0, pos);
+      else poseSoldier(cross ? k : idx, t);
       if ((new2 || bridge || cross || relief) && pos.y < -8) {
         hideName(k, cell);
         continue;
@@ -1443,7 +1459,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
       const staggered = Boolean(countdown || defend || vs || vs2 || openField);
       if (countdown) nameScale = 1.12 * crowd;
       else if (defend) nameScale = 1.22 * crowd;
-      else if (cross) nameScale = 0.706;
+      else if (cross) nameScale = 0.777;
       else if (bridge || relief) nameScale = 0.34;
       else if (new2) {
         const lift = Math.max(0, Math.min(1, (recT - 3.2) / 12));
@@ -1510,7 +1526,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
         }
       }
       let sx = (isolate ? Math.min(1.05, cell.sx * nameScale) : cell.sx * nameScale);
-      if (cross) sx = Math.min(sx, 1.498);
+      if (cross) sx = Math.min(sx, 1.648);
       else if (bridge || relief) sx = Math.min(sx, 0.72);
       else if (defend && staggered) sx = Math.min(sx, FILE * 1.28);
       else if (openField && staggered) sx = Math.min(sx, FILE * 1.12);

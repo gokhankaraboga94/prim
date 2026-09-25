@@ -635,7 +635,10 @@ export function sampleNew5Cam(recT: number): ShotPose {
   };
 }
 
-export const NEW6_FRIENDS = 48;
+export const NEW6_FRIENDS = 72;
+const NEW6_RING_N = [12, 16, 20, 24];
+const NEW6_RING_R = [1.5, 2.65, 3.7, 4.75];
+const NEW6_RING_TW = [0, 0.18, 0.07, 0.28];
 const NEW6_ARMS = 4;
 const NEW6_LANES = 3;
 const NEW6_LANE = 1.15;
@@ -663,12 +666,28 @@ function new6Group(i: number) {
   return g;
 }
 
+function new6Rings(count: number) {
+  const rings: { start: number; n: number; r: number; twist: number }[] = [];
+  let left = count;
+  let start = 0;
+  for (let r = 0; r < NEW6_RING_N.length && left > 0; r++) {
+    const n = r === NEW6_RING_N.length - 1 ? left : Math.min(NEW6_RING_N[r], left);
+    rings.push({ start, n, r: NEW6_RING_R[r], twist: NEW6_RING_TW[r] });
+    start += n;
+    left -= n;
+  }
+  return rings;
+}
+
 function new6DeathRank(i: number, count: number) {
-  const innerN = Math.min(12, count);
-  const midN = Math.min(16, Math.max(0, count - innerN));
-  if (i >= innerN + midN) return i - innerN - midN;
-  if (i >= innerN) return count - innerN - midN + (i - innerN);
-  return count - innerN + i;
+  const rings = new6Rings(count);
+  let rank = 0;
+  for (let r = rings.length - 1; r >= 0; r--) {
+    const ring = rings[r];
+    if (i >= ring.start && i < ring.start + ring.n) return rank + (i - ring.start);
+    rank += ring.n;
+  }
+  return Math.max(0, count - 1);
 }
 
 function new6FriendDieAt(i: number, count: number) {
@@ -712,15 +731,9 @@ export function new6FriendAt(i: number, n: number, recT: number, out: New1Pose) 
   const count = Math.max(1, Math.min(n, NEW6_FRIENDS));
   const t = Math.max(0, recT);
   const dieAt = i < count ? new6FriendDieAt(i, count) : 0;
-  const innerN = Math.min(12, count);
-  const midN = Math.min(16, Math.max(0, count - innerN));
-  const outerN = Math.max(0, count - innerN - midN);
-  const ring = i < innerN
-    ? { idx: i, n: innerN, r: 1.7, twist: 0 }
-    : i < innerN + midN
-      ? { idx: i - innerN, n: midN, r: 3.05, twist: 0.16 }
-      : { idx: i - innerN - midN, n: Math.max(1, outerN), r: 4.4, twist: 0.08 };
-  const ang = (ring.idx / ring.n) * Math.PI * 2 + ring.twist;
+  const rings = new6Rings(count);
+  const ring = rings.find((item) => i >= item.start && i < item.start + item.n) ?? rings[rings.length - 1];
+  const ang = ((i - ring.start) / Math.max(1, ring.n)) * Math.PI * 2 + ring.twist;
   const rad = ring.r;
   out.x = Math.sin(ang) * rad;
   out.z = Math.cos(ang) * rad;
