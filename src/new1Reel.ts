@@ -586,10 +586,20 @@ export function new5FriendAt(i: number, n: number, recT: number, out: New1Pose, 
   out.ry = 0;
   out.rz = alive ? bob * 0.05 : 0;
   out.s = i < count ? 1 : 0;
-  if (falling && t < dieAt + (queue ? 1.5 : 2)) {
-    const u = Math.min(1, (t - dieAt) / (queue ? 0.32 : 0.4));
+  if (queue && falling && t < dieAt + 1.5) {
+    const u = Math.min(1, (t - dieAt) / 0.42);
+    const e = 1 - (1 - u) * (1 - u);
+    const dir = col === 0 ? -1 : col === 2 ? 1 : Math.floor(i / NEW5_LANES) % 2 === 0 ? -1 : 1;
+    out.x += dir * e * 3.6;
+    out.z -= e * 0.9;
+    out.rz = dir * e * 1.5;
+    out.rx = 0.2 + e * 0.35;
+    out.y = Math.sin(u * Math.PI) * 0.9;
+    out.s = 1;
+  } else if (falling && t < dieAt + 2) {
+    const u = Math.min(1, (t - dieAt) / 0.4);
     out.rx = u * 1.45;
-    out.y = queue ? 0.06 : 0.08;
+    out.y = 0.08;
     out.s = 1;
   } else if (i >= count || t >= dieAt + (queue ? 1.5 : 2)) {
     out.y = -40;
