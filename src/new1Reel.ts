@@ -587,14 +587,9 @@ export function new5FriendAt(i: number, n: number, recT: number, out: New1Pose, 
   out.rz = alive ? bob * 0.05 : 0;
   out.s = i < count ? 1 : 0;
   if (queue && falling && t < dieAt + 1.5) {
-    const u = Math.min(1, (t - dieAt) / 0.42);
-    const e = 1 - (1 - u) * (1 - u);
-    const dir = col === 0 ? -1 : col === 2 ? 1 : Math.floor(i / NEW5_LANES) % 2 === 0 ? -1 : 1;
-    out.x += dir * e * 3.6;
-    out.z -= e * 0.9;
-    out.rz = dir * e * 1.5;
-    out.rx = 0.2 + e * 0.35;
-    out.y = Math.sin(u * Math.PI) * 0.9;
+    const u = Math.min(1, (t - dieAt) / 0.35);
+    out.rx = u * 1.45;
+    out.y = 0.06;
     out.s = 1;
   } else if (falling && t < dieAt + 2) {
     const u = Math.min(1, (t - dieAt) / 0.4);
@@ -620,20 +615,15 @@ export function new5EnemyAt(i: number, recT: number, out: New1Pose, roster = 0) 
   out.y = 0;
   out.rx = 0.08;
   out.s = 1;
-  if (packed && t >= dieAt && t < dieAt + 1) {
-    const u = Math.min(1, (t - dieAt) / 0.42);
-    const e = 1 - (1 - u) * (1 - u);
-    const dir = col === 0 ? -1 : col === 2 ? 1 : Math.floor(i / NEW5_LANES) % 2 === 0 ? -1 : 1;
-    out.x += dir * e * 3.6;
-    out.z += e * 0.9;
-    out.rz = dir * e * 1.5;
-    out.rx = 0.2 + e * 0.35;
-    out.y = Math.sin(u * Math.PI) * 0.9;
+  if (packed && t >= dieAt && t < dieAt + 1.5) {
+    const u = Math.min(1, (t - dieAt) / 0.35);
+    out.rx = u * 1.45;
+    out.y = 0.06;
   } else if (!packed && t >= dieAt && t < dieAt + 1) {
     const u = Math.min(1, (t - dieAt) / 0.4);
     out.rx = u * 1.55;
     out.y = -u * 1.85;
-  } else if (t >= dieAt + 1) {
+  } else if (t >= dieAt + (packed ? 1.5 : 1)) {
     out.y = -40;
     out.s = 0;
   }
