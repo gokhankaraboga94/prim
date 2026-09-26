@@ -584,12 +584,12 @@ export function new5FriendAt(i: number, n: number, recT: number, out: New1Pose, 
   out.ry = 0;
   out.rz = alive ? bob * 0.05 : 0;
   out.s = i < count ? 1 : 0;
-  if (falling && t < dieAt + (queue ? 1.05 : 2)) {
-    const u = Math.min(1, (t - dieAt) / (queue ? 0.9 : 0.4));
-    out.rx = u * (queue ? 1.15 : 1.45);
-    out.y = queue ? -(u * u) * 6.2 : 0.08;
+  if (falling && t < dieAt + (queue ? 1.5 : 2)) {
+    const u = Math.min(1, (t - dieAt) / (queue ? 0.32 : 0.4));
+    out.rx = u * 1.45;
+    out.y = queue ? 0.06 : 0.08;
     out.s = 1;
-  } else if (i >= count || t >= dieAt + (queue ? 1.05 : 2)) {
+  } else if (i >= count || t >= dieAt + (queue ? 1.5 : 2)) {
     out.y = -40;
     out.s = 0;
   }
@@ -608,7 +608,7 @@ export function new5EnemyAt(i: number, recT: number, out: New1Pose, roster = 0) 
   out.y = 0;
   out.rx = 0.08;
   out.s = 1;
-  if (packed && t >= dieAt && t < dieAt + 1.7) {
+  if (packed && t >= dieAt && t < dieAt + 1) {
     const u = Math.min(1, (t - dieAt) / 0.42);
     const e = 1 - (1 - u) * (1 - u);
     const dir = col === 0 ? -1 : col === 2 ? 1 : Math.floor(i / NEW5_LANES) % 2 === 0 ? -1 : 1;
@@ -621,7 +621,7 @@ export function new5EnemyAt(i: number, recT: number, out: New1Pose, roster = 0) 
     const u = Math.min(1, (t - dieAt) / 0.4);
     out.rx = u * 1.55;
     out.y = -u * 1.85;
-  } else if (t >= dieAt + (packed ? 1.7 : 1)) {
+  } else if (t >= dieAt + 1) {
     out.y = -40;
     out.s = 0;
   }
