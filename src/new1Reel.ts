@@ -518,8 +518,9 @@ function new5FoeZ(i: number, packed = false) {
 function new5EnemyDieAt(i: number, packed = false) {
   const z = new5FoeZ(i, packed);
   const lose = packed ? NEW5_PACK_LOSE : NEW5_LOSE;
-  if (new5Front(lose, lose) < z - NEW5_REACH) return 1e9;
-  return (z - NEW5_REACH) / NEW5_SPEED;
+  const reach = packed ? -0.08 : NEW5_REACH;
+  if (new5Front(lose, lose) < z - reach) return 1e9;
+  return (z - reach) / NEW5_SPEED;
 }
 
 const new5QueueDie = new Map<number, Float64Array>();
@@ -578,8 +579,8 @@ export function new5FriendAt(i: number, n: number, recT: number, out: New1Pose, 
   const hit = alive && row === 0 && gap > -0.2 && gap < 1.15 ? 1 - gap / 1.15 : 0;
   out.x = (col - (NEW5_LANES - 1) / 2) * (queue ? NEW5_LANE_GAP : NEW5_LANE);
   out.y = alive ? Math.abs(bob) * 0.07 : 0;
-  out.z = front - row * NEW5_RANK + Math.max(0, hit) * 0.22;
-  out.rx = alive ? 0.42 + bob * 0.1 + Math.max(0, hit) * 0.7 : 0;
+  out.z = front - row * NEW5_RANK + (queue ? -1.15 : Math.max(0, hit) * 0.22);
+  out.rx = alive ? 0.42 + bob * 0.1 + Math.max(0, hit) * (queue ? 0.22 : 0.7) : 0;
   out.ry = 0;
   out.rz = alive ? bob * 0.05 : 0;
   out.s = i < count ? 1 : 0;
@@ -607,11 +608,20 @@ export function new5EnemyAt(i: number, recT: number, out: New1Pose, roster = 0) 
   out.y = 0;
   out.rx = 0.08;
   out.s = 1;
-  if (t >= dieAt && t < dieAt + (packed ? 0.95 : 1)) {
-    const u = Math.min(1, (t - dieAt) / (packed ? 0.8 : 0.4));
-    out.rx = u * (packed ? 1.15 : 1.55);
-    out.y = packed ? -(u * u) * 6.2 : -u * 1.85;
-  } else if (t >= dieAt + (packed ? 0.95 : 1)) {
+  if (packed && t >= dieAt && t < dieAt + 1.7) {
+    const u = Math.min(1, (t - dieAt) / 0.42);
+    const e = 1 - (1 - u) * (1 - u);
+    const dir = col === 0 ? -1 : col === 2 ? 1 : Math.floor(i / NEW5_LANES) % 2 === 0 ? -1 : 1;
+    out.x += dir * e * 3.6;
+    out.z += e * 0.9;
+    out.rz = dir * e * 1.5;
+    out.rx = 0.2 + e * 0.35;
+    out.y = Math.sin(u * Math.PI) * 0.9;
+  } else if (!packed && t >= dieAt && t < dieAt + 1) {
+    const u = Math.min(1, (t - dieAt) / 0.4);
+    out.rx = u * 1.55;
+    out.y = -u * 1.85;
+  } else if (t >= dieAt + (packed ? 1.7 : 1)) {
     out.y = -40;
     out.s = 0;
   }
