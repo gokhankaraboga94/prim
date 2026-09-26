@@ -497,15 +497,16 @@ export function new5VisualFriends(soldiers: number) {
 
 const NEW5_PACK_LOSE = 54;
 const NEW5_LANE_GAP = 1.58;
+const NEW5_PACK_SPEED = 6.2;
 
-function new5Front(t: number, lose = NEW5_LOSE) {
+function new5Front(t: number, lose = NEW5_LOSE, speed = NEW5_SPEED) {
   const u = Math.max(0, t);
-  if (u <= lose) return NEW5_SPEED * u;
+  if (u <= lose) return speed * u;
   const extra = Math.min(u - lose, 1.2);
-  return NEW5_SPEED * lose + NEW5_SPEED * extra * (1 - extra / 2.4);
+  return speed * lose + speed * extra * (1 - extra / 2.4);
 }
 
-const NEW5_PACK_GAP = 1.02;
+const NEW5_PACK_GAP = 1.72;
 
 export function new5FoeCount(soldiers: number) {
   return Math.max(1, Math.floor(soldiers)) * 3;
@@ -519,8 +520,9 @@ function new5EnemyDieAt(i: number, packed = false) {
   const z = new5FoeZ(i, packed);
   const lose = packed ? NEW5_PACK_LOSE : NEW5_LOSE;
   const reach = packed ? -0.08 : NEW5_REACH;
-  if (new5Front(lose, lose) < z - reach) return 1e9;
-  return (z - reach) / NEW5_SPEED;
+  const speed = packed ? NEW5_PACK_SPEED : NEW5_SPEED;
+  if (new5Front(lose, lose, speed) < z - reach) return 1e9;
+  return (z - reach) / speed;
 }
 
 const new5QueueDie = new Map<number, Float64Array>();
@@ -573,7 +575,7 @@ export function new5FriendAt(i: number, n: number, recT: number, out: New1Pose, 
   const alive = i < count && t < dieAt;
   const lose = queue ? NEW5_PACK_LOSE : NEW5_LOSE;
   const moveT = Math.min(falling ? dieAt : t, lose);
-  const front = new5Front(moveT, lose);
+  const front = new5Front(moveT, lose, queue ? NEW5_PACK_SPEED : NEW5_SPEED);
   const bob = Math.sin(moveT * 16 + row * 0.65 + col * 1.4);
   const gap = new5FoeZ(Math.floor((front - NEW5_FOE_START) / (queue ? NEW5_PACK_GAP : NEW5_FOE_GAP)) * NEW5_LANES, queue) - front;
   const hit = alive && row === 0 && gap > -0.2 && gap < 1.15 ? 1 - gap / 1.15 : 0;
@@ -703,7 +705,7 @@ export function sampleNew7Cam(recT: number): ShotPose {
 export function sampleNew5Cam(recT: number, pack = false): ShotPose {
   const t = Math.max(0, recT);
   const lose = pack ? NEW5_PACK_LOSE : NEW5_LOSE;
-  const front = new5Front(Math.min(t, lose), lose);
+  const front = new5Front(Math.min(t, lose), lose, pack ? NEW5_PACK_SPEED : NEW5_SPEED);
   const bob = Math.sin(t * 16) * 0.05;
   return {
     x: 0.4,
