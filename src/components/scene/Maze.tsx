@@ -2,7 +2,7 @@ import { useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { REEL_HOLD } from "../../recordCanvas";
-import { LAB_FOES, LAB_SEGMENTS, labFoeAt } from "../../mazeReel";
+import { LAB_FOES, LAB_WALLS, labFoeAt } from "../../mazeReel";
 import type { New1Pose } from "../../new1Reel";
 import { getSwordRaiderGeometry } from "./SallyRaid";
 
@@ -83,43 +83,14 @@ function dirtTexture() {
   return tex;
 }
 
-function wallBoxes() {
-  const boxes: { x: number; y: number; z: number; w: number; h: number; d: number; ry: number }[] = [];
-  for (const seg of LAB_SEGMENTS) {
-    const dx = seg.x2 - seg.x1;
-    const dz = seg.z2 - seg.z1;
-    const len = Math.hypot(dx, dz) || 1;
-    const ry = Math.atan2(dx, dz);
-    const px = Math.cos(ry);
-    const pz = -Math.sin(ry);
-    const mx = (seg.x1 + seg.x2) / 2;
-    const mz = (seg.z1 + seg.z2) / 2;
-    const span = len + seg.half * 1.6;
-    const h = 2.7;
-    const thick = 1.15;
-    for (const side of [-1, 1]) {
-      boxes.push({
-        x: mx + px * (seg.half + thick * 0.35) * side,
-        y: h / 2,
-        z: mz + pz * (seg.half + thick * 0.35) * side,
-        w: thick,
-        h,
-        d: span,
-        ry,
-      });
-    }
-  }
-  return boxes;
-}
-
-function Foes({ soldiers }: { soldiers: number }) {
+function Foes() {
   const bodies = useRef<THREE.InstancedMesh>(null);
   const geo = useMemo(() => getSwordRaiderGeometry(), []);
   useFrame(({ clock }) => {
     if (!bodies.current) return;
     const recT = clock.elapsedTime - REEL_HOLD;
     for (let i = 0; i < LAB_FOES; i++) {
-      labFoeAt(i, recT, soldiers, scratch);
+      labFoeAt(i, recT, scratch);
       dummy.position.set(scratch.x, scratch.y, scratch.z);
       dummy.rotation.set(scratch.rx, scratch.ry, scratch.rz);
       dummy.scale.setScalar((scratch.s ?? 1) > 0 ? 1.15 : 0);
@@ -136,8 +107,8 @@ function Foes({ soldiers }: { soldiers: number }) {
   );
 }
 
-export function Maze({ soldiers }: { soldiers: number }) {
-  const boxes = useMemo(() => wallBoxes(), []);
+export function Maze({ soldiers: _soldiers }: { soldiers: number }) {
+  const boxes = useMemo(() => LAB_WALLS, []);
   const stone = useMemo(() => stoneTexture(), []);
   const dirt = useMemo(() => dirtTexture(), []);
   const stoneMat = useMemo(
@@ -147,8 +118,8 @@ export function Maze({ soldiers }: { soldiers: number }) {
   const capMat = useMemo(() => new THREE.MeshStandardMaterial({ color: "#d9cbb8", roughness: 0.78 }), []);
   return (
     <group>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[2, -0.04, 34]}>
-        <planeGeometry args={[120, 140]} />
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.04, 40]}>
+        <planeGeometry args={[130, 170]} />
         <meshStandardMaterial map={dirt ?? undefined} color={dirt ? "#ffffff" : "#6d5b3e"} roughness={0.94} />
       </mesh>
       {boxes.map((box, i) => (
@@ -164,7 +135,7 @@ export function Maze({ soldiers }: { soldiers: number }) {
       <ambientLight intensity={0.7} color="#fff6ea" />
       <directionalLight position={[30, 52, 16]} intensity={1.7} color="#fff8ee" />
       <hemisphereLight args={["#fff4e2", "#6a5c4c", 0.75]} />
-      <Foes soldiers={soldiers} />
+      <Foes />
     </group>
   );
 }
