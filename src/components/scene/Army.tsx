@@ -12,7 +12,7 @@ import { COUNT_1_END, countdownBeat, countdownVolley } from "../../countdownReel
 import { DEFEND_CZ, DEFEND2_CX, DEFEND2_CZ, defendSoldierPos, defendYawOut } from "../../defendReel";
 import { vsSoldierAt, type VsPose } from "../../vsReel";
 import { NEW6_ARCHERS, NEW62_ARCHERS, new1FriendAt, new2FriendAt, new2VisualFriends, new5FriendAt, new5OnScreen, new6FriendAt, new6SwordPitch, new6VisualFriends, new7FriendAt, new7VisualFriends } from "../../new1Reel";
-import { LAB_N, labFriendAt } from "../../mazeReel";
+import { labFriendAt } from "../../mazeReel";
 import { sfxArrowLoose, sfxBowDraw, sfxVolleyPeak } from "../../reelSfx";
 import { raidCount, sallyHunting, sallyLiveIndex, sallyLocal, sallyRaiderAt, swordArmPose, swordStyleAt, swordSwingU } from "../../siegeEvent";
 import { castleFrame } from "../../castleLayout";
@@ -889,7 +889,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
   const nockGeo = useMemo(() => (cross ? getNockArrowGeometry() : melee ? archerGeo : getNockArrowGeometry()), [melee, archerGeo, cross]);
 
   const rosterCap = Math.min(roster ? 80 : MAX_SOLDIERS, Math.max(0, Math.floor(count)));
-  const visible = maze ? Math.min(rosterCap, LAB_N) : relief ? Math.min(rosterCap, new7VisualFriends(rosterCap)) : cross ? Math.min(rosterCap, new6VisualFriends(rosterCap, wide)) : bridge ? rosterCap : new2 ? Math.min(rosterCap, new2VisualFriends(rosterCap)) : rosterCap;
+  const visible = maze ? rosterCap : relief ? Math.min(rosterCap, new7VisualFriends(rosterCap)) : cross ? Math.min(rosterCap, new6VisualFriends(rosterCap, wide)) : bridge ? rosterCap : new2 ? Math.min(rosterCap, new2VisualFriends(rosterCap)) : rosterCap;
   const instanceCap = Math.min(MAX_SOLDIERS, Math.max(visible, roster ? 24 : 1, 1));
   const defendOx = defend2 ? DEFEND2_CX : 0;
   const defendOz = defend2 ? DEFEND2_CZ : DEFEND_CZ;
@@ -956,6 +956,14 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
       }
       return ids;
     }
+    if (maze) {
+      const finale = Math.max(0, visible - 8);
+      for (let i = 0; i < names.length && i < visible; i++) {
+        if (i > 15 && i < finale) continue;
+        if (names[i]?.trim()) ids.push(i);
+      }
+      return ids;
+    }
     if (bridge && !relief && !cross) {
       for (let i = 0; i < names.length && i < visible; i++) if (names[i]?.trim()) ids.push(i);
       return ids;
@@ -980,7 +988,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
       if (names[i]?.trim()) ids.push(i);
     }
     return ids;
-  }, [names, visible, phantom, defend, vs, vs2, openField, roster, rosterIds, cross, bridge, relief]);
+  }, [names, visible, phantom, defend, vs, vs2, openField, roster, rosterIds, cross, bridge, relief, maze]);
   const nameAtlas = useMemo(
     () =>
       buildNameAtlas(
@@ -1515,7 +1523,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
       const staggered = Boolean(countdown || defend || vs || vs2 || openField);
       if (countdown) nameScale = 1.12 * crowd;
       else if (defend) nameScale = 1.22 * crowd;
-      else if (maze) nameScale = 1.55;
+      else if (maze) nameScale = 1.05;
       else if (cross) nameScale = 1.112;
       else if (bridge && !relief) nameScale = 1.112 * 0.56;
       else if (relief) nameScale = 0.34;

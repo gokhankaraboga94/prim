@@ -8,67 +8,62 @@ export const LAB_MODE = { id: LAB_ID, label: "labirent1" } as const;
 export function isLab(id: string | null | undefined): id is LabId {
   return id === LAB_ID;
 }
-export const LAB_SECONDS = 34;
-export const LAB_N = 36;
-export const LAB_FOES = 9;
 
-const SPEED = 5.05;
-const GAP = 1.58;
-const HEAD0 = 6;
-const SIDE = 1.12;
+export const LAB_SECONDS = 60;
 
-const MAIN: Array<[number, number]> = [
+const LANES = 3;
+const GAP = 1.28;
+const HEAD0 = -8;
+
+type Pt = [number, number];
+type Seg = { x1: number; z1: number; x2: number; z2: number; half: number };
+
+const ENTRANCE: Pt[] = [
+  [0, -16],
   [0, 0],
-  [0, 15],
-  [13, 15],
-  [13, 30],
-  [1, 30],
-  [1, 46],
-  [1, 60],
-  [16, 60],
+  [0, 18],
 ];
-const WRONG: Array<[number, number]> = [
-  [16, 60],
-  [28, 60],
-  [28, 74],
+const DEAD: Pt[][] = [
+  [[0, 18], [-16, 18], [-16, 34]],
+  [[0, 18], [16, 18], [16, 4]],
+  [[0, 18], [0, 34], [-14, 34], [-14, 48]],
+  [[0, 18], [14, 30], [14, 46], [28, 46]],
+  [[0, 18], [-12, 26], [-26, 26], [-26, 40]],
 ];
-const RIGHT: Array<[number, number]> = [
-  [16, 60],
-  [16, 78],
-  [4, 78],
-  [4, 94],
-];
-
-export const LAB_WALLS: Array<[number, number, number, number]> = [
-  ...pairs(MAIN),
-  ...pairs(WRONG),
-  ...pairs(RIGHT),
-  [0, 15, -14, 15],
-  [-14, 15, -14, 30],
-  [13, 22, 13, 6],
-  [13, 6, 26, 6],
-  [1, 46, -14, 46],
-  [-14, 46, -14, 60],
-  [16, 68, 28, 68],
-  [4, 86, -8, 86],
+const FIGHT: Pt[] = [
+  [0, 18],
+  [10, 18],
+  [10, 34],
+  [24, 34],
+  [24, 50],
+  [12, 50],
+  [12, 68],
+  [12, 84],
 ];
 
-function pairs(pts: Array<[number, number]>) {
-  const out: Array<[number, number, number, number]> = [];
-  for (let i = 1; i < pts.length; i++) out.push([pts[i - 1][0], pts[i - 1][1], pts[i][0], pts[i][1]]);
-  return out;
-}
-
-function polyLen(pts: Array<[number, number]>) {
+function polyLen(pts: Pt[]) {
   let n = 0;
   for (let i = 1; i < pts.length; i++) n += Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]);
   return n;
 }
 
-const FORK = polyLen(MAIN);
-const WRONG_LEN = polyLen(WRONG);
+const SPLIT = polyLen(ENTRANCE);
+const DEAD_LEN = DEAD.map(polyLen);
+const FIGHT_LEN = polyLen(FIGHT);
 
-function sample(pts: Array<[number, number]>, dist: number) {
+function pairs(pts: Pt[], half: number): Seg[] {
+  const out: Seg[] = [];
+  for (let i = 1; i < pts.length; i++) out.push({ x1: pts[i - 1][0], z1: pts[i - 1][1], x2: pts[i][0], z2: pts[i][1], half });
+  return out;
+}
+
+export const LAB_SEGMENTS: Seg[] = [
+  ...pairs(ENTRANCE, 2.55),
+  ...DEAD.flatMap((pts) => pairs(pts, 1.28)),
+  ...pairs(FIGHT, 1.72),
+];
+
+function sample(pts: Pt[], dist: number) {
   let left = Math.max(0, dist);
   for (let i = 1; i < pts.length; i++) {
     const dx = pts[i][0] - pts[i - 1][0];
@@ -84,33 +79,80 @@ function sample(pts: Array<[number, number]>, dist: number) {
   return { x: last[0], z: last[1], ry: 0 };
 }
 
-export function labDieAt(i: number) {
-  if (i < 8) return 7.5 + i * 0.22;
-  if (i < 21) return 13.3 + (i - 8) * 0.28;
-  if (i < 30) {
-    const back = Math.floor(i / 2) * GAP;
-    return (FORK + WRONG_LEN - 0.6 + back - HEAD0) / SPEED;
+function speedOf(n: number) {
+  const count = Math.max(1, n);
+  const back = Math.floor((count - 1) / LANES) * GAP;
+  const raw = (SPLIT + FIGHT_LEN + back - HEAD0) / 56;
+  return Math.max(2.4, Math.min(7.6, raw));
+}
+
+type Plan = { die: Float64Array; kind: Uint8Array };
+
+const plans = new Map<number, Plan>();
+
+function planOf(n: number): Plan {
+  const count = Math.max(1, n);
+  const hit = plans.get(count);
+  if (hit) return hit;
+  const liveN = Math.max(4, Math.min(7, Math.round(count * 0.02)));
+  const fightN = Math.max(liveN, Math.round(count * 0.16));
+  const deadN = Math.max(0, count - fightN - liveN);
+  const speed = speedOf(count);
+  const die = new Float64Array(count);
+  const kind = new Uint8Array(count);
+  const pockets = [polyLen(FIGHT.slice(0, 3)), polyLen(FIGHT.slice(0, 5)), polyLen(FIGHT.slice(0, 7))];
+  let fightSeen = 0;
+  for (let i = 0; i < count; i++) {
+    const back = Math.floor(i / LANES) * GAP;
+    if (i < deadN) {
+      kind[i] = i % DEAD.length;
+      const dist = SPLIT + DEAD_LEN[kind[i]] - 0.7;
+      die[i] = (dist + back - HEAD0) / speed;
+    } else if (i < deadN + fightN) {
+      kind[i] = 5;
+      const pocket = fightSeen % 3;
+      fightSeen += 1;
+      const dist = SPLIT + pockets[pocket] - 0.4;
+      die[i] = (dist + back - HEAD0) / speed;
+    } else {
+      kind[i] = 6;
+      die[i] = 1e9;
+    }
   }
-  return 1e9;
+  const plan = { die, kind };
+  plans.set(count, plan);
+  return plan;
 }
 
-function headAt(t: number) {
-  return HEAD0 + SPEED * Math.max(0, t);
-}
-
-function place(i: number, t: number) {
-  const moving = Math.min(Math.max(0, t), labDieAt(i));
-  const along = headAt(moving) - Math.floor(i / 2) * GAP;
-  const branch = i >= 30 ? RIGHT : i >= 21 ? WRONG : null;
-  const pose = !branch || along <= FORK ? sample(MAIN, along) : sample(branch, along - FORK);
-  const lane = (i % 2) - 0.5;
+function poseAt(i: number, n: number, t: number) {
+  const plan = planOf(n);
+  const moving = Math.min(Math.max(0, t), plan.die[i] ?? 1e9);
+  const along = HEAD0 + speedOf(n) * moving - Math.floor(i / LANES) * GAP;
+  const kind = plan.kind[i] ?? 0;
+  let pose = sample(ENTRANCE, along);
+  if (along > SPLIT) {
+    if (kind < DEAD.length) pose = sample(DEAD[kind], along - SPLIT);
+    else pose = sample(FIGHT, along - SPLIT);
+  }
+  const narrow = kind < DEAD.length;
+  const lane = (i % LANES) - (LANES - 1) / 2;
+  const span = narrow ? 0.42 : 0.72;
   const rx = Math.cos(pose.ry);
   const rz = -Math.sin(pose.ry);
-  return { x: pose.x + rx * lane * SIDE, z: pose.z + rz * lane * SIDE, ry: pose.ry };
+  return { x: pose.x + rx * lane * span, z: pose.z + rz * lane * span, ry: pose.ry };
+}
+
+export function labAlive(recT: number, soldiers: number) {
+  const n = Math.max(1, Math.floor(soldiers));
+  const plan = planOf(n);
+  const t = Math.max(0, recT);
+  let alive = 0;
+  for (let i = 0; i < n; i++) if (t < plan.die[i]) alive += 1;
+  return alive;
 }
 
 export function labFriendAt(i: number, n: number, recT: number, out: New1Pose) {
-  const count = Math.max(1, Math.min(n, LAB_N));
+  const count = Math.max(1, Math.floor(n));
   const t = Math.max(0, recT);
   if (i >= count) {
     out.x = 0;
@@ -122,95 +164,94 @@ export function labFriendAt(i: number, n: number, recT: number, out: New1Pose) {
     out.s = 0;
     return;
   }
-  const dieAt = labDieAt(i);
-  const p = place(i, t);
-  const bob = Math.sin(t * 11 + i);
+  const dieAt = planOf(count).die[i];
+  const p = poseAt(i, count, t);
+  const bob = Math.sin(t * 10 + i * 0.7);
   out.x = p.x;
   out.z = p.z;
   out.ry = p.ry;
   out.rz = 0;
-  out.y = Math.abs(bob) * 0.05;
-  out.rx = 0.28 + bob * 0.06;
+  out.y = t < dieAt ? Math.abs(bob) * 0.045 : 0;
+  out.rx = t < dieAt ? 0.26 + bob * 0.05 : 0;
   out.s = 1;
-  if (t >= dieAt && dieAt < 1e8 && t < dieAt + 1.5) {
-    const u = Math.min(1, (t - dieAt) / 0.34);
+  if (t >= dieAt && dieAt < 1e8 && t < dieAt + 1.45) {
+    const u = Math.min(1, (t - dieAt) / 0.32);
     out.rx = u * 1.45;
-    out.y = 0.06;
-    out.rz = 0;
-  } else if (t >= dieAt + 1.5) {
+    out.y = 0.05;
+  } else if (dieAt < 1e8 && t >= dieAt + 1.45) {
     out.y = -40;
     out.s = 0;
   }
 }
 
-export function labFoeAt(i: number, recT: number, out: New1Pose) {
+const FOE_POCKETS = [polyLen(FIGHT.slice(0, 3)), polyLen(FIGHT.slice(0, 5)), polyLen(FIGHT.slice(0, 7))];
+export const LAB_FOES = FOE_POCKETS.length * 6;
+
+export function labFoeAt(i: number, recT: number, soldiers: number, out: New1Pose) {
   const t = Math.max(0, recT);
-  const col = i % 3;
-  const row = Math.floor(i / 3);
-  const dieAt = 7.7 + i * 0.16;
-  out.x = 11.2 + col * 1.15;
-  out.z = 32.2 + row * 1.35;
-  out.ry = Math.PI;
+  const pocket = Math.floor(i / 6);
+  const slot = i % 6;
+  const col = slot % 3;
+  const row = Math.floor(slot / 3);
+  const at = sample(FIGHT, FOE_POCKETS[pocket] - 1.1 - row * 1.25);
+  const rx = Math.cos(at.ry);
+  const rz = -Math.sin(at.ry);
+  const lane = col - 1;
+  out.x = at.x + rx * lane * 0.78;
+  out.z = at.z + rz * lane * 0.78;
+  out.ry = at.ry + Math.PI;
   out.rx = 0.08;
   out.rz = 0;
   out.y = 0;
   out.s = 1;
-  if (t >= dieAt && t < dieAt + 1.4) {
-    const u = Math.min(1, (t - dieAt) / 0.32);
+  const n = Math.max(1, Math.floor(soldiers));
+  const speed = speedOf(n);
+  const dist = SPLIT + FOE_POCKETS[pocket] - 0.2;
+  const dieAt = (dist - HEAD0) / speed + slot * 0.12;
+  if (t >= dieAt && t < dieAt + 1.35) {
+    const u = Math.min(1, (t - dieAt) / 0.3);
     out.rx = u * 1.45;
-    out.y = 0.06;
-  } else if (t >= dieAt + 1.4) {
+    out.y = 0.05;
+  } else if (t >= dieAt + 1.35) {
     out.y = -40;
     out.s = 0;
   }
 }
 
-export const LAB_DRAGON = { x: 1, z: 52, die: 17.4 };
-
-export function labDragonFall(recT: number) {
+export function labLead(recT: number, soldiers: number) {
+  const n = Math.max(1, Math.floor(soldiers));
+  const plan = planOf(n);
   const t = Math.max(0, recT);
-  if (t < LAB_DRAGON.die) return { u: 0, gone: false, flap: t };
-  if (t < LAB_DRAGON.die + 1.6) return { u: Math.min(1, (t - LAB_DRAGON.die) / 0.45), gone: false, flap: t };
-  return { u: 1, gone: true, flap: t };
-}
-
-export function labAlive(recT: number) {
-  const t = Math.max(0, recT);
-  let n = 0;
-  for (let i = 0; i < LAB_N; i++) if (t < labDieAt(i)) n += 1;
-  return n;
-}
-
-export function labLead(recT: number) {
-  const t = Math.max(0, recT);
-  let i = 0;
-  while (i < LAB_N - 1 && t >= labDieAt(i)) i += 1;
-  return place(i, t);
-}
-
-export function sampleLabCam(recT: number): ShotPose {
-  const t = Math.max(0, recT);
-  const lead = labLead(t);
-  const rise = t <= 3 ? 0 : Math.min(1, (t - 3) / 4.2);
-  const e = rise * rise * (3 - 2 * rise);
-  let height = 11.5 + e * 16;
-  let back = 6.4 + e * 3.2;
-  let fov = 30 + e * 12;
-  if (t > 12.4 && t < 18.2) {
-    const k = Math.min(1, (t - 12.4) / 1.2);
-    height = height * (1 - k) + 13.5 * k;
-    back = back * (1 - k) + 8 * k;
-    fov = fov * (1 - k) + 36 * k;
+  let best = 0;
+  for (let i = 0; i < n; i++) {
+    if (plan.kind[i] >= 5 && t < plan.die[i]) {
+      best = i;
+      break;
+    }
   }
-  const fx = Math.sin(lead.ry);
-  const fz = Math.cos(lead.ry);
+  return poseAt(best, n, t);
+}
+
+export function sampleLabCam(recT: number, soldiers = 36): ShotPose {
+  const t = Math.max(0, recT);
+  const wide = t <= 9 ? 0 : Math.min(1, (t - 9) / 8);
+  const e = wide * wide * (3 - 2 * wide);
+  const lead = labLead(t, soldiers);
+  const mouth = sample(ENTRANCE, SPLIT * 0.45);
+  const lookX = mouth.x * (1 - e) + lead.x * e;
+  const lookZ = mouth.z * (1 - e) + lead.z * e;
+  const height = 46 - e * 18;
+  const back = 34 - e * 16;
+  const ry = e > 0.2 ? lead.ry : 0;
+  const fx = Math.sin(ry);
+  const fz = Math.cos(ry);
   return {
-    x: lead.x - fx * back,
+    x: lookX - fx * back,
     y: height,
-    z: lead.z - fz * back,
-    lx: lead.x + fx * 2.2,
-    ly: 1.15,
-    lz: lead.z + fz * 2.2,
-    fov,
+    z: lookZ - fz * back - (1 - e) * 8,
+    lx: lookX + fx * 3,
+    ly: 1.2,
+    lz: lookZ + fz * 3,
+    fov: 48 - e * 8,
   };
 }

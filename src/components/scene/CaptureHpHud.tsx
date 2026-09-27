@@ -12,7 +12,7 @@ import { countdownBeat, countdownFlash, type CountdownId } from "../../countdown
 import { DEFEND_HOOK_END, defendBeat, defendPlayhead, type DefendId } from "../../defendReel";
 import { harika2TextPhase, harika3TextPhase, harika4TextPhase, harika6TextPhase, spinNamePool, spinScramble, spinShuffle, SPIN_LOCK, SPIN_SECONDS } from "../../xxxReel";
 import { new2AliveCounts, new5AliveCounts, new6AliveCounts, new7AliveCounts } from "../../new1Reel";
-import { LAB_N, labAlive } from "../../mazeReel";
+import { labAlive } from "../../mazeReel";
 
 function roundRect(
   ctx: CanvasRenderingContext2D,
@@ -1814,7 +1814,7 @@ function New2RatioPlate({ soldiers, drop = 0, bridge = false, cross = false, wid
   );
 }
 
-function LabHealthPlate() {
+function LabHealthPlate({ soldiers }: { soldiers: number }) {
   const size = useThree((s) => s.size);
   const tex = useMemo(() => {
     const canvas = document.createElement("canvas");
@@ -1826,7 +1826,7 @@ function LabHealthPlate() {
   }, []);
   useFrame(({ clock }) => {
     const recT = Math.max(0, clock.elapsedTime - REEL_HOLD);
-    const alive = labAlive(recT);
+    const alive = labAlive(recT, soldiers);
     const canvas = tex.image as HTMLCanvasElement;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
@@ -1835,7 +1835,7 @@ function LabHealthPlate() {
     const innerY = 46;
     const innerW = 968;
     const innerH = 92;
-    const fill = (alive / LAB_N) * innerW;
+    const fill = (alive / Math.max(1, soldiers)) * innerW;
     ctx.fillStyle = "#3a1212";
     ctx.fillRect(innerX, innerY, innerW, innerH);
     ctx.fillStyle = "#1d6bff";
@@ -1868,11 +1868,11 @@ function LabHealthPlate() {
   );
 }
 
-export function LabHealthBar() {
+export function LabHealthBar({ soldiers }: { soldiers: number }) {
   return (
     <Hud renderPriority={3}>
       <OrthographicCamera makeDefault position={[0, 0, 10]} />
-      <LabHealthPlate />
+      <LabHealthPlate soldiers={soldiers} />
     </Hud>
   );
 }

@@ -706,7 +706,7 @@ export function AdminPage() {
             </button>
           </div>
           {isLab(reelShot) && (
-            <p className="muted">Kuş bakışı labirent. İsimler ilk saniyede okunur. Az düşman, sonra ejderha, yanlış yol, kalanlar çıkışı bulur.</p>
+            <p className="muted">Kuş bakışı labirent, 60 saniye. Herkes girer, çoğu çıkmazda ölür. Kalanlar içerdeki düşmanı keserek ilerler, finale çok azı ulaşır.</p>
           )}
           {isNew7(reelShot) && (
             <p className="muted">new5 ile aynı, kamera daha geriden. Kaybedecekken arkadan 24 asker belirir. Yazıyı sen eklersin.</p>

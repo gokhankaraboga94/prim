@@ -208,7 +208,7 @@ function CinematicCam({
       const pose = xxx
         ? sampleXxxCam(sampleT, ctx, xxx)
         : maze
-        ? sampleLabCam(sampleT)
+        ? sampleLabCam(sampleT, soldiers)
         : new7
         ? sampleNew7Cam(sampleT)
         : new62
@@ -823,7 +823,7 @@ function SceneContent({
       {!maze && <SkyDome cheap={Boolean(defend) && !isDefend3(defend)} />}
       {!maze && <SteelSky />}
       {!maze && <DayLights cinematic={cinematic} slim={Boolean(defend) && !isDefend3(defend)} warm={slaughter} />}
-      {maze ? <Maze /> : cross ? <New6Cross /> : chase ? <New5Bridge /> : new4 ? <New4Peak /> : slaughter || isDefend4(defend) ? <New1Terrain /> : <Terrain road={!defend && !field} cheap={Boolean(defend)} />}
+      {maze ? <Maze soldiers={soldiers} /> : cross ? <New6Cross /> : chase ? <New5Bridge /> : new4 ? <New4Peak /> : slaughter || isDefend4(defend) ? <New1Terrain /> : <Terrain road={!defend && !field} cheap={Boolean(defend)} />}
       {!defend && !field && !slaughter && !maze && <Castle level={level} pressure={pressure} gateClosed={Boolean(countdown) || split || climb || Boolean(xxx)} wallFight={climb} />}
       {sortie && (
         <TimedVisible until={DEFEND2_SORTIE + 0.85}>
@@ -900,7 +900,7 @@ function SceneContent({
       )}
       {cinematic && xxx && xxxHuntSight(xxx) && <HuntSightHud />}
       {cinematic && (duel || chase || cross) && <New2RatioBar soldiers={soldiers} drop={blades ? 64 : 0} bridge={Boolean(new5)} cross={cross} wide={wide} relief={relief} />}
-      {cinematic && maze && <LabHealthBar />}
+      {cinematic && maze && <LabHealthBar soldiers={soldiers} />}
       {cinematic && !split && <ReelVignette />}
       {countdown && <CountdownFlash />}
       {cinematic && !discover && !countdown && !defend && !vs && !slaughter && !split && <ReelFade duration={duration ?? 8} />}
