@@ -12,6 +12,7 @@ import { COUNT_1_END, countdownBeat, countdownVolley } from "../../countdownReel
 import { DEFEND_CZ, DEFEND2_CX, DEFEND2_CZ, defendSoldierPos, defendYawOut } from "../../defendReel";
 import { vsSoldierAt, type VsPose } from "../../vsReel";
 import { NEW6_ARCHERS, NEW62_ARCHERS, new1FriendAt, new2FriendAt, new2VisualFriends, new5FriendAt, new5OnScreen, new6FriendAt, new6SwordPitch, new6VisualFriends, new7FriendAt, new7VisualFriends } from "../../new1Reel";
+import { LAB_N, labFriendAt } from "../../mazeReel";
 import { sfxArrowLoose, sfxBowDraw, sfxVolleyPeak } from "../../reelSfx";
 import { raidCount, sallyHunting, sallyLiveIndex, sallyLocal, sallyRaiderAt, swordArmPose, swordStyleAt, swordSwingU } from "../../siegeEvent";
 import { castleFrame } from "../../castleLayout";
@@ -73,6 +74,7 @@ type ArmyProps = {
   cross?: boolean;
   wide?: boolean;
   relief?: boolean;
+  maze?: boolean;
   mix?: boolean;
   mixSlow?: boolean;
   nameHunt?: boolean;
@@ -847,7 +849,7 @@ function NameLayers({
 }
 
 
-export function Army({ count, names = [], commanders = [], cinematic, duration = 8, skipCommander = false, roster = null, discover = null, countdown = false, defend = false, defend2 = false, defend3 = false, blue = false, vs = false, vs2 = false, new1 = false, new2 = false, blade = false, bridge = false, cross = false, wide = false, relief = false, mix = false, mixSlow = false, nameHunt = false, quiet = false, square = false, readNames = false, scanHunt = false, level = 1, rosterIds = null }: ArmyProps) {
+export function Army({ count, names = [], commanders = [], cinematic, duration = 8, skipCommander = false, roster = null, discover = null, countdown = false, defend = false, defend2 = false, defend3 = false, blue = false, vs = false, vs2 = false, new1 = false, new2 = false, blade = false, bridge = false, cross = false, wide = false, relief = false, maze = false, mix = false, mixSlow = false, nameHunt = false, quiet = false, square = false, readNames = false, scanHunt = false, level = 1, rosterIds = null }: ArmyProps) {
   const bodies = useRef<THREE.InstancedMesh>(null);
   const soldierPlumes = useRef<THREE.InstancedMesh>(null);
   const bowHolds = useRef<THREE.InstancedMesh>(null);
@@ -871,13 +873,13 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
   const fireSfx = useRef(false);
   const countSfx = useRef("");
   const pos = useMemo(() => new THREE.Vector3(), []);
-  const melee = defend || vs || vs2 || new1 || new2 || bridge || cross;
-  const openField = new1 || new2 || bridge || cross;
+  const melee = defend || vs || vs2 || new1 || new2 || bridge || cross || maze;
+  const openField = new1 || new2 || bridge || cross || maze;
   const archerGeo = useMemo(() => (cross ? getBlueBareGeometry() : blade ? getBlueSwordGeometry() : blue ? getBlueBareGeometry() : new2 ? getBlueSoldierGeometry() : melee ? getDefendSoldierGeometry() : getArcherGeometry()), [melee, new2, blade, blue, cross]);
   const swingGeo = useMemo(() => getSwingSwordGeometry(), []);
   const commanderGeo = useMemo(() => (melee ? archerGeo : getCommanderGeometry()), [melee, archerGeo]);
   const commanderCapeGeo = useMemo(() => (melee ? archerGeo : getCommanderCapeGeometry()), [melee, archerGeo]);
-  const soldierPlumeGeo = useMemo(() => (new2 || blue || bridge || cross ? getBluePlumeGeometry() : getSoldierPlumeGeometry()), [new2, blue, bridge, cross]);
+  const soldierPlumeGeo = useMemo(() => (new2 || blue || bridge || cross || maze ? getBluePlumeGeometry() : getSoldierPlumeGeometry()), [new2, blue, bridge, cross, maze]);
   const commanderPlumeGeo = useMemo(() => (melee ? archerGeo : getCommanderPlumeGeometry()), [melee, archerGeo]);
   const commanderFaceGeo = useMemo(() => (melee ? archerGeo : getCommanderFaceGeometry()), [melee, archerGeo]);
   const bowHoldGeo = useMemo(() => (cross ? getBowHoldGeometry() : melee ? archerGeo : getBowHoldGeometry()), [melee, archerGeo, cross]);
@@ -887,7 +889,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
   const nockGeo = useMemo(() => (cross ? getNockArrowGeometry() : melee ? archerGeo : getNockArrowGeometry()), [melee, archerGeo, cross]);
 
   const rosterCap = Math.min(roster ? 80 : MAX_SOLDIERS, Math.max(0, Math.floor(count)));
-  const visible = relief ? Math.min(rosterCap, new7VisualFriends(rosterCap)) : cross ? Math.min(rosterCap, new6VisualFriends(rosterCap, wide)) : bridge ? rosterCap : new2 ? Math.min(rosterCap, new2VisualFriends(rosterCap)) : rosterCap;
+  const visible = maze ? Math.min(rosterCap, LAB_N) : relief ? Math.min(rosterCap, new7VisualFriends(rosterCap)) : cross ? Math.min(rosterCap, new6VisualFriends(rosterCap, wide)) : bridge ? rosterCap : new2 ? Math.min(rosterCap, new2VisualFriends(rosterCap)) : rosterCap;
   const instanceCap = Math.min(MAX_SOLDIERS, Math.max(visible, roster ? 24 : 1, 1));
   const defendOx = defend2 ? DEFEND2_CX : 0;
   const defendOz = defend2 ? DEFEND2_CZ : DEFEND_CZ;
@@ -999,6 +1001,11 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
   }, []);
 
   function poseSoldier(soldier: number, t: number) {
+    if (maze) {
+      labFriendAt(soldier, layout.rest.length, t - REEL_HOLD, vsPose);
+      pos.set(vsPose.x, vsPose.y, vsPose.z);
+      return;
+    }
     if (defend) {
       const slot = layout.slotOf[soldier];
       defendSoldierPos(slot >= 0 ? slot : soldier, layout.rest.length, t, pos, defendOx, defendOz, defend3);
@@ -1201,6 +1208,16 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
       } else {
       for (let i = 0; i < n; i++) {
         const soldier = layout.rest[i];
+        if (maze) {
+          labFriendAt(soldier, n, recT, vsPose);
+          dummy.position.set(vsPose.x, vsPose.y, vsPose.z);
+          dummy.rotation.set(vsPose.rx, vsPose.ry, vsPose.rz);
+          dummy.scale.setScalar((vsPose.s ?? 1) > 0 ? scale * 0.96 : 0);
+          dummy.updateMatrix();
+          stamp(bodies.current, i);
+          stamp(soldierPlumes.current, i);
+          continue;
+        }
         if (defend) {
           defendSoldierPos(i, n, t, pos, defendOx, defendOz, defend3);
           dummy.position.copy(pos);
@@ -1486,7 +1503,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
         pos.set(rosterPose.x, rosterPose.y, rosterPose.z);
       }       else if (idx < 0) commanderPos(t, 0, pos);
       else poseSoldier(cross ? k : idx, t);
-      if ((new2 || bridge || cross || relief) && pos.y < -8) {
+      if ((new2 || bridge || cross || relief || maze) && pos.y < -8) {
         hideName(k, cell);
         continue;
       }
@@ -1498,6 +1515,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
       const staggered = Boolean(countdown || defend || vs || vs2 || openField);
       if (countdown) nameScale = 1.12 * crowd;
       else if (defend) nameScale = 1.22 * crowd;
+      else if (maze) nameScale = 1.55;
       else if (cross) nameScale = 1.112;
       else if (bridge && !relief) nameScale = 1.112 * 0.56;
       else if (relief) nameScale = 0.34;
@@ -1537,7 +1555,10 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
         const slot = layout.slotOf[idx];
         ({ row, col } = slotCoord(slot >= 0 ? slot : 0, form.sizes));
         if (defend && staggered) lift = 2.7 + (idx % 5) * 0.22;
-        else if (bridge || cross || relief) {
+        else if (maze) {
+          lift = 1.72;
+          nx = pos.x;
+        } else if (bridge || cross || relief) {
           lift = 1.58;
           nx = pos.x;
         } else if (openField && staggered) {
@@ -1566,7 +1587,8 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
         }
       }
       let sx = (isolate ? Math.min(1.05, cell.sx * nameScale) : cell.sx * nameScale);
-      if (cross) sx = Math.min(sx, 2.357);
+      if (maze) sx = Math.min(sx, 2.9);
+      else if (cross) sx = Math.min(sx, 2.357);
       else if (bridge && !relief) sx = Math.min(sx, 2.357 * 0.56);
       else if (relief) sx = Math.min(sx, 0.72);
       else if (defend && staggered) sx = Math.min(sx, FILE * 1.28);
@@ -1581,7 +1603,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
       if (cam) {
         nockOff.copy(cam.position).sub(pos);
         const len = nockOff.length() || 1;
-        const pull = bridge || cross || relief ? 0.08 : new2 ? Math.min(2.4, Math.max(0.4, len * 0.055)) : defend || vs || vs2 || new1 ? Math.min(14, Math.max(7, len * 0.12)) : Math.min(4.5, Math.max(1.2, len * 0.04));
+        const pull = maze ? 0.04 : bridge || cross || relief ? 0.08 : new2 ? Math.min(2.4, Math.max(0.4, len * 0.055)) : defend || vs || vs2 || new1 ? Math.min(14, Math.max(7, len * 0.12)) : Math.min(4.5, Math.max(1.2, len * 0.04));
         px = nx + (nockOff.x / len) * pull;
         py = baseY + (nockOff.y / len) * pull;
         pz = pos.z + (nockOff.z / len) * pull;
