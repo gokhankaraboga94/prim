@@ -18,7 +18,9 @@ import { DEFEND2_SORTIE, isDefend3, isDefend4, isDefendSortie, sampleDefendCam, 
 import { isVs, isVs2, sampleVsCam, type VsId } from "../../vsReel";
 import { sampleNew1Cam, sampleNew2Cam, sampleNew5Cam, sampleNew6Cam, sampleNew62Cam, sampleNew7Cam, type New1Id, type New2Id, type New3Id, type New4Id, type New5Id, type New6Id, type New62Id, type New7Id } from "../../new1Reel";
 import { LAB_N, sampleLabCam, type LabId } from "../../mazeReel";
+import { sampleDevCam, type DevId } from "../../devReel";
 import { Maze } from "./Maze";
+import { DevHealthBar, Giant } from "./Giant";
 import { sampleXxxCam, xxxAdHook, xxxClearHook, xxxCloseNames, xxxDocHook, xxxHasHook, xxxHideCmd, xxxHiRes, xxxHoldHook, xxxHuntHook, xxxHuntSight, xxxInstantHook, xxxQuiet, xxxScanHunt, xxxSpin, xxxSquare, type XxxId } from "../../xxxReel";
 import { MIX8_ID, MIX9_SLOW, isMix9, mixBodyPass, mixTagPass, sampleMixBottom, sampleMixTop, type MixId } from "../../mixReel";
 import { DefendRing } from "./DefendRing";
@@ -67,6 +69,7 @@ type BattleSceneProps = {
   new62?: New62Id | null;
   new7?: New7Id | null;
   maze?: LabId | null;
+  giant?: DevId | null;
   mix?: MixId | null;
   xxx?: XxxId | null;
   rosterIds?: number[] | null;
@@ -112,6 +115,7 @@ function CinematicCam({
   new62 = null,
   new7 = null,
   maze = null,
+  giant = null,
   xxx = null,
   rosterIds = null,
 }: {
@@ -138,6 +142,7 @@ function CinematicCam({
   new62?: New62Id | null;
   new7?: New7Id | null;
   maze?: LabId | null;
+  giant?: DevId | null;
   xxx?: XxxId | null;
   rosterIds?: number[] | null;
 }) {
@@ -202,11 +207,13 @@ function CinematicCam({
       fov: 38,
     };
 
-    if (cinema || shotMode || roster || saga || discover || countdown || defend || vs || new1 || new2 || new3 || new4 || new5 || new6 || new62 || new7 || maze || xxx) {
+    if (cinema || shotMode || roster || saga || discover || countdown || defend || vs || new1 || new2 || new3 || new4 || new5 || new6 || new62 || new7 || maze || giant || xxx) {
       const sampleT = recT;
       const ctx = { cmdZ, form, castle, fit, castleFit, level };
       const pose = xxx
         ? sampleXxxCam(sampleT, ctx, xxx)
+        : giant
+        ? sampleDevCam(sampleT)
         : maze
         ? sampleLabCam(sampleT)
         : new7
@@ -778,12 +785,13 @@ function SceneContent({
   new62 = null,
   new7 = null,
   maze = null,
+  giant = null,
   mix = null,
   xxx = null,
   rosterIds = null,
 }: BattleSceneProps) {
   const chiefs = effectiveCommanders(commanders, names);
-  const hideCmd = skipCommander || Boolean(discover) || Boolean(countdown) || Boolean(defend) || Boolean(vs) || Boolean(new1) || Boolean(new2) || Boolean(new3) || Boolean(new4) || Boolean(new5) || Boolean(new6) || Boolean(new62) || Boolean(new7) || Boolean(maze) || Boolean(xxx && xxxHideCmd(xxx));
+  const hideCmd = skipCommander || Boolean(discover) || Boolean(countdown) || Boolean(defend) || Boolean(vs) || Boolean(new1) || Boolean(new2) || Boolean(new3) || Boolean(new4) || Boolean(new5) || Boolean(new6) || Boolean(new62) || Boolean(new7) || Boolean(maze) || Boolean(giant) || Boolean(xxx && xxxHideCmd(xxx));
   const chiefN = hideCmd ? 0 : chiefs.length;
   const split = Boolean(mix);
   const sortie = isDefendSortie(defend);
@@ -819,12 +827,12 @@ function SceneContent({
   return (
     <>
       <color attach="background" args={[maze ? "#9eb0c4" : slaughter ? "#8f9aa0" : "#7eb6ee"]} />
-      <fog attach="fog" args={maze ? ["#c6d0da", 340, 720] : slaughter ? ["#c4b89a", 240, 980] : defend ? (isDefend3(defend) ? ["#9ec8ee", 1100, 3200] : sortie ? ["#9ec8ee", 600, 2200] : ["#9ec8ee", 1400, 4200]) : field ? ["#9ec8ee", 140, 720] : ["#9ec8ee", 380, 1500]} />
+      <fog attach="fog" args={giant ? ["#d5e4f2", 90, 520] : maze ? ["#c6d0da", 340, 720] : slaughter ? ["#c4b89a", 240, 980] : defend ? (isDefend3(defend) ? ["#9ec8ee", 1100, 3200] : sortie ? ["#9ec8ee", 600, 2200] : ["#9ec8ee", 1400, 4200]) : field ? ["#9ec8ee", 140, 720] : ["#9ec8ee", 380, 1500]} />
       {!maze && <SkyDome cheap={Boolean(defend) && !isDefend3(defend)} />}
       {!maze && <SteelSky />}
       {!maze && <DayLights cinematic={cinematic} slim={Boolean(defend) && !isDefend3(defend)} warm={slaughter} />}
-      {maze ? <Maze soldiers={soldiers} /> : cross ? <New6Cross /> : chase ? <New5Bridge /> : new4 ? <New4Peak /> : slaughter || isDefend4(defend) ? <New1Terrain /> : <Terrain road={!defend && !field} cheap={Boolean(defend)} />}
-      {!defend && !field && !slaughter && !maze && <Castle level={level} pressure={pressure} gateClosed={Boolean(countdown) || split || climb || Boolean(xxx)} wallFight={climb} />}
+      {giant ? <New1Terrain /> : maze ? <Maze soldiers={soldiers} /> : cross ? <New6Cross /> : chase ? <New5Bridge /> : new4 ? <New4Peak /> : slaughter || isDefend4(defend) ? <New1Terrain /> : <Terrain road={!defend && !field} cheap={Boolean(defend)} />}
+      {!defend && !field && !slaughter && !maze && !giant && <Castle level={level} pressure={pressure} gateClosed={Boolean(countdown) || split || climb || Boolean(xxx)} wallFight={climb} />}
       {sortie && (
         <TimedVisible until={DEFEND2_SORTIE + 0.85}>
           <Castle level={level} pressure={pressure} forceGateOpen />
@@ -837,10 +845,11 @@ function SceneContent({
       ) : slaughter ? (
         <New1Foes soldiers={soldiers} duel={duel} swords={blades} bridge={chase} cross={cross} wide={wide} packed={Boolean(new5)} />
       ) : (
-        !roster && !split && !countdown && !vs && !xxx && <SallyRaid soldiers={soldiers} commanders={chiefN} />
+        !roster && !split && !countdown && !vs && !xxx && !giant && <SallyRaid soldiers={soldiers} commanders={chiefN} />
       )}
       {climb && <VsLadders level={level} />}
-      <Army count={soldiers} names={names} commanders={commanders} cinematic={cinematic} duration={duration} skipCommander={hideCmd} roster={roster} discover={discover} countdown={Boolean(countdown)} defend={Boolean(defend)} defend2={sortie} defend3={isDefend3(defend)} blue={isDefend4(defend)} vs={field} vs2={climb} new1={Boolean(new1)} new2={duel} blade={blades || Boolean(maze)} bridge={chase} cross={cross} wide={wide} relief={relief} maze={Boolean(maze)} mix={split} mixSlow={isMix9(mix)} nameHunt={Boolean(xxx)} quiet={Boolean(xxx && xxxQuiet(xxx)) || slaughter || Boolean(maze)} square={Boolean(xxx && xxxSquare(xxx))} readNames={Boolean(xxx && xxxCloseNames(xxx))} scanHunt={Boolean(xxx && xxxScanHunt(xxx))} level={level} rosterIds={rosterIds} />
+      {giant && <Giant soldiers={soldiers} />}
+      <Army count={soldiers} names={names} commanders={commanders} cinematic={cinematic} duration={duration} skipCommander={hideCmd} roster={roster} discover={discover} countdown={Boolean(countdown)} defend={Boolean(defend)} defend2={sortie} defend3={isDefend3(defend)} blue={isDefend4(defend)} vs={field} vs2={climb} new1={Boolean(new1)} new2={duel} blade={blades || Boolean(maze)} bridge={chase} cross={cross} wide={wide} relief={relief} maze={Boolean(maze)} giant={Boolean(giant)} mix={split} mixSlow={isMix9(mix)} nameHunt={Boolean(xxx)} quiet={Boolean(xxx && xxxQuiet(xxx)) || slaughter || Boolean(maze) || Boolean(giant)} square={Boolean(xxx && xxxSquare(xxx))} readNames={Boolean(xxx && xxxCloseNames(xxx))} scanHunt={Boolean(xxx && xxxScanHunt(xxx))} level={level} rosterIds={rosterIds} />
       {Boolean(xxx && xxxSquare(xxx)) && <Catapults soldiers={soldiers} square />}
       {Boolean(xxx && xxxScanHunt(xxx)) && <NameScanBeam soldiers={soldiers} />}
       {cinematic && split ? (
@@ -870,6 +879,7 @@ function SceneContent({
           new62={new62}
           new7={new7}
           maze={maze}
+          giant={giant}
           xxx={xxx}
           rosterIds={rosterIds}
         />
@@ -901,6 +911,7 @@ function SceneContent({
       {cinematic && xxx && xxxHuntSight(xxx) && <HuntSightHud />}
       {cinematic && (duel || chase || cross) && <New2RatioBar soldiers={soldiers} drop={blades ? 64 : 0} bridge={Boolean(new5)} cross={cross} wide={wide} relief={relief} />}
       {cinematic && maze && <LabHealthBar soldiers={Math.min(LAB_N, Math.max(1, soldiers))} />}
+      {cinematic && giant && <DevHealthBar soldiers={Math.max(1, soldiers)} />}
       {cinematic && !split && <ReelVignette />}
       {countdown && <CountdownFlash />}
       {cinematic && !discover && !countdown && !defend && !vs && !slaughter && !split && <ReelFade duration={duration ?? 8} />}
@@ -958,13 +969,14 @@ function BattleSceneInner({
   new62 = null,
   new7 = null,
   maze = null,
+  giant = null,
   mix = null,
   xxx = null,
   rosterIds = null,
   onReady,
 }: BattleSceneProps) {
   const [active, setActive] = useState(() => typeof document === "undefined" || !document.hidden);
-  const hideCmd = skipCommander || Boolean(discover) || Boolean(countdown) || Boolean(defend) || Boolean(vs) || Boolean(new1) || Boolean(new2) || Boolean(new3) || Boolean(new4) || Boolean(new5) || Boolean(new6) || Boolean(new62) || Boolean(new7) || Boolean(maze) || Boolean(xxx && xxxHideCmd(xxx));
+  const hideCmd = skipCommander || Boolean(discover) || Boolean(countdown) || Boolean(defend) || Boolean(vs) || Boolean(new1) || Boolean(new2) || Boolean(new3) || Boolean(new4) || Boolean(new5) || Boolean(new6) || Boolean(new62) || Boolean(new7) || Boolean(maze) || Boolean(giant) || Boolean(xxx && xxxHideCmd(xxx));
 
   useLayoutEffect(() => {
     if (cinematic && (mix || xxx)) {
@@ -973,7 +985,7 @@ function BattleSceneInner({
     } else if (cinematic && roster) {
       setSallyOrigin(80);
       setSwordStart(80);
-    } else if (cinematic && (countdown || defend || vs || new1 || new2 || new3 || new4 || new5 || new6 || new62 || new7 || maze)) {
+    } else if (cinematic && (countdown || defend || vs || new1 || new2 || new3 || new4 || new5 || new6 || new62 || new7 || maze || giant)) {
       setSallyOrigin(SALLY_START_DELAY - 90);
       setSwordStart(80);
     } else if (cinematic && discover) {
@@ -1004,7 +1016,7 @@ function BattleSceneInner({
       setSallyOrigin(0);
       setSwordStart(SWORD_START);
     };
-  }, [cinematic, cinema, duration, hideCmd, roster, saga, discover, countdown, defend, vs, new1, new2, new3, new4, new5, new6, new62, new7, maze, mix, xxx]);
+  }, [cinematic, cinema, duration, hideCmd, roster, saga, discover, countdown, defend, vs, new1, new2, new3, new4, new5, new6, new62, new7, maze, giant, mix, xxx]);
 
   useEffect(() => {
     const onVis = () => setActive(!document.hidden);
@@ -1076,6 +1088,7 @@ function BattleSceneInner({
         new62={new62}
         new7={new7}
         maze={maze}
+        giant={giant}
         mix={mix}
         xxx={xxx}
         rosterIds={rosterIds}
