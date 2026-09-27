@@ -14,7 +14,7 @@ import type { DefendId } from "../defendReel";
 import type { VsId } from "../vsReel";
 import { type New1Id, type New2Id, type New3Id, type New4Id, type New5Id, type New6Id, type New62Id, type New7Id } from "../new1Reel";
 import type { LabId } from "../mazeReel";
-import type { DevId } from "../devReel";
+import type { GiantId } from "../devReel";
 
 type ReelCaptureProps = {
   soldiers: number;
@@ -46,7 +46,7 @@ type ReelCaptureProps = {
   new62?: New62Id | null;
   new7?: New7Id | null;
   maze?: LabId | null;
-  giant?: DevId | null;
+  giant?: GiantId | null;
   mix?: MixId | null;
   xxx?: XxxId | null;
   rosterIds?: number[] | null;

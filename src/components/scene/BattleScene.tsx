@@ -18,7 +18,7 @@ import { DEFEND2_SORTIE, isDefend3, isDefend4, isDefendSortie, sampleDefendCam, 
 import { isVs, isVs2, sampleVsCam, type VsId } from "../../vsReel";
 import { sampleNew1Cam, sampleNew2Cam, sampleNew5Cam, sampleNew6Cam, sampleNew62Cam, sampleNew7Cam, type New1Id, type New2Id, type New3Id, type New4Id, type New5Id, type New6Id, type New62Id, type New7Id } from "../../new1Reel";
 import { LAB_N, sampleLabCam, type LabId } from "../../mazeReel";
-import { DEV_N, sampleDevCam, type DevId } from "../../devReel";
+import { DEV2_ID, DEV2_N, DEV_N, sampleDevCam, type GiantId } from "../../devReel";
 import { Maze } from "./Maze";
 import { DevHealthBar, Giant } from "./Giant";
 import { sampleXxxCam, xxxAdHook, xxxClearHook, xxxCloseNames, xxxDocHook, xxxHasHook, xxxHideCmd, xxxHiRes, xxxHoldHook, xxxHuntHook, xxxHuntSight, xxxInstantHook, xxxQuiet, xxxScanHunt, xxxSpin, xxxSquare, type XxxId } from "../../xxxReel";
@@ -69,7 +69,7 @@ type BattleSceneProps = {
   new62?: New62Id | null;
   new7?: New7Id | null;
   maze?: LabId | null;
-  giant?: DevId | null;
+  giant?: GiantId | null;
   mix?: MixId | null;
   xxx?: XxxId | null;
   rosterIds?: number[] | null;
@@ -142,7 +142,7 @@ function CinematicCam({
   new62?: New62Id | null;
   new7?: New7Id | null;
   maze?: LabId | null;
-  giant?: DevId | null;
+  giant?: GiantId | null;
   xxx?: XxxId | null;
   rosterIds?: number[] | null;
 }) {
@@ -213,7 +213,7 @@ function CinematicCam({
       const pose = xxx
         ? sampleXxxCam(sampleT, ctx, xxx)
         : giant
-        ? sampleDevCam(sampleT)
+        ? sampleDevCam(sampleT, giant === DEV2_ID)
         : maze
         ? sampleLabCam(sampleT)
         : new7
@@ -848,8 +848,8 @@ function SceneContent({
         !roster && !split && !countdown && !vs && !xxx && !giant && <SallyRaid soldiers={soldiers} commanders={chiefN} />
       )}
       {climb && <VsLadders level={level} />}
-      {giant && <Giant soldiers={soldiers} />}
-      <Army count={soldiers} names={names} commanders={commanders} cinematic={cinematic} duration={duration} skipCommander={hideCmd} roster={roster} discover={discover} countdown={Boolean(countdown)} defend={Boolean(defend)} defend2={sortie} defend3={isDefend3(defend)} blue={isDefend4(defend)} vs={field} vs2={climb} new1={Boolean(new1)} new2={duel} blade={blades || Boolean(maze)} bridge={chase} cross={cross} wide={wide} relief={relief} maze={Boolean(maze)} giant={Boolean(giant)} mix={split} mixSlow={isMix9(mix)} nameHunt={Boolean(xxx)} quiet={Boolean(xxx && xxxQuiet(xxx)) || slaughter || Boolean(maze) || Boolean(giant)} square={Boolean(xxx && xxxSquare(xxx))} readNames={Boolean(xxx && xxxCloseNames(xxx))} scanHunt={Boolean(xxx && xxxScanHunt(xxx))} level={level} rosterIds={rosterIds} />
+      {giant && <Giant soldiers={Math.min(giant === DEV2_ID ? DEV2_N : DEV_N, Math.max(1, soldiers))} big={giant === DEV2_ID} />}
+      <Army count={soldiers} names={names} commanders={commanders} cinematic={cinematic} duration={duration} skipCommander={hideCmd} roster={roster} discover={discover} countdown={Boolean(countdown)} defend={Boolean(defend)} defend2={sortie} defend3={isDefend3(defend)} blue={isDefend4(defend)} vs={field} vs2={climb} new1={Boolean(new1)} new2={duel} blade={blades || Boolean(maze)} bridge={chase} cross={cross} wide={wide} relief={relief} maze={Boolean(maze)} giant={Boolean(giant)} giantBig={giant === DEV2_ID} mix={split} mixSlow={isMix9(mix)} nameHunt={Boolean(xxx)} quiet={Boolean(xxx && xxxQuiet(xxx)) || slaughter || Boolean(maze) || Boolean(giant)} square={Boolean(xxx && xxxSquare(xxx))} readNames={Boolean(xxx && xxxCloseNames(xxx))} scanHunt={Boolean(xxx && xxxScanHunt(xxx))} level={level} rosterIds={rosterIds} />
       {Boolean(xxx && xxxSquare(xxx)) && <Catapults soldiers={soldiers} square />}
       {Boolean(xxx && xxxScanHunt(xxx)) && <NameScanBeam soldiers={soldiers} />}
       {cinematic && split ? (
@@ -911,7 +911,7 @@ function SceneContent({
       {cinematic && xxx && xxxHuntSight(xxx) && <HuntSightHud />}
       {cinematic && (duel || chase || cross) && <New2RatioBar soldiers={soldiers} drop={blades ? 64 : 0} bridge={Boolean(new5)} cross={cross} wide={wide} relief={relief} />}
       {cinematic && maze && <LabHealthBar soldiers={Math.min(LAB_N, Math.max(1, soldiers))} />}
-      {cinematic && giant && <DevHealthBar soldiers={Math.min(DEV_N, Math.max(1, soldiers))} />}
+      {cinematic && giant && <DevHealthBar soldiers={Math.min(giant === DEV2_ID ? DEV2_N : DEV_N, Math.max(1, soldiers))} />}
       {cinematic && !split && <ReelVignette />}
       {countdown && <CountdownFlash />}
       {cinematic && !discover && !countdown && !defend && !vs && !slaughter && !split && <ReelFade duration={duration ?? 8} />}

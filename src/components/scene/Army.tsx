@@ -13,7 +13,7 @@ import { DEFEND_CZ, DEFEND2_CX, DEFEND2_CZ, defendSoldierPos, defendYawOut } fro
 import { vsSoldierAt, type VsPose } from "../../vsReel";
 import { NEW6_ARCHERS, NEW62_ARCHERS, new1FriendAt, new2FriendAt, new2VisualFriends, new5FriendAt, new5OnScreen, new6FriendAt, new6SwordPitch, new6VisualFriends, new7FriendAt, new7VisualFriends } from "../../new1Reel";
 import { labFriendAt, labRosterIds } from "../../mazeReel";
-import { DEV_N, devFriendAt, devIsArcher, devIsSpear } from "../../devReel";
+import { DEV2_N, DEV_N, devFriendAt, devIsArcher, devIsSpear } from "../../devReel";
 import { sfxArrowLoose, sfxBowDraw, sfxVolleyPeak } from "../../reelSfx";
 import { raidCount, sallyHunting, sallyLiveIndex, sallyLocal, sallyRaiderAt, swordArmPose, swordStyleAt, swordSwingU } from "../../siegeEvent";
 import { castleFrame } from "../../castleLayout";
@@ -77,6 +77,7 @@ type ArmyProps = {
   relief?: boolean;
   maze?: boolean;
   giant?: boolean;
+  giantBig?: boolean;
   mix?: boolean;
   mixSlow?: boolean;
   nameHunt?: boolean;
@@ -886,7 +887,7 @@ function NameLayers({
 }
 
 
-export function Army({ count, names = [], commanders = [], cinematic, duration = 8, skipCommander = false, roster = null, discover = null, countdown = false, defend = false, defend2 = false, defend3 = false, blue = false, vs = false, vs2 = false, new1 = false, new2 = false, blade = false, bridge = false, cross = false, wide = false, relief = false, maze = false, giant = false, mix = false, mixSlow = false, nameHunt = false, quiet = false, square = false, readNames = false, scanHunt = false, level = 1, rosterIds = null }: ArmyProps) {
+export function Army({ count, names = [], commanders = [], cinematic, duration = 8, skipCommander = false, roster = null, discover = null, countdown = false, defend = false, defend2 = false, defend3 = false, blue = false, vs = false, vs2 = false, new1 = false, new2 = false, blade = false, bridge = false, cross = false, wide = false, relief = false, maze = false, giant = false, giantBig = false, mix = false, mixSlow = false, nameHunt = false, quiet = false, square = false, readNames = false, scanHunt = false, level = 1, rosterIds = null }: ArmyProps) {
   const bodies = useRef<THREE.InstancedMesh>(null);
   const soldierPlumes = useRef<THREE.InstancedMesh>(null);
   const bowHolds = useRef<THREE.InstancedMesh>(null);
@@ -928,7 +929,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
 
   const rosterCap = Math.min(roster ? 80 : MAX_SOLDIERS, Math.max(0, Math.floor(count)));
   const mazeCast = useMemo(() => (maze ? labRosterIds(names, rosterCap) : null), [maze, names, rosterCap]);
-  const visible = giant ? Math.min(rosterCap, DEV_N) : mazeCast ? mazeCast.length : relief ? Math.min(rosterCap, new7VisualFriends(rosterCap)) : cross ? Math.min(rosterCap, new6VisualFriends(rosterCap, wide)) : bridge ? rosterCap : new2 ? Math.min(rosterCap, new2VisualFriends(rosterCap)) : rosterCap;
+  const visible = giant ? Math.min(rosterCap, giantBig ? DEV2_N : DEV_N) : mazeCast ? mazeCast.length : relief ? Math.min(rosterCap, new7VisualFriends(rosterCap)) : cross ? Math.min(rosterCap, new6VisualFriends(rosterCap, wide)) : bridge ? rosterCap : new2 ? Math.min(rosterCap, new2VisualFriends(rosterCap)) : rosterCap;
   const instanceCap = Math.min(MAX_SOLDIERS, Math.max(visible, roster ? 24 : 1, 1));
   const defendOx = defend2 ? DEFEND2_CX : 0;
   const defendOz = defend2 ? DEFEND2_CZ : DEFEND_CZ;
@@ -1059,7 +1060,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
 
   function poseSoldier(soldier: number, t: number) {
     if (giant) {
-      devFriendAt(soldier, layout.rest.length, t - REEL_HOLD, vsPose);
+      devFriendAt(soldier, layout.rest.length, t - REEL_HOLD, vsPose, giantBig);
       pos.set(vsPose.x, vsPose.y, vsPose.z);
       return;
     }
@@ -1277,7 +1278,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
       for (let i = 0; i < n; i++) {
         const soldier = layout.rest[i];
         if (giant) {
-          devFriendAt(i, n, recT, vsPose);
+          devFriendAt(i, n, recT, vsPose, giantBig);
           if ((vsPose.s ?? 1) <= 0) continue;
           dummy.position.set(vsPose.x, vsPose.y, vsPose.z);
           dummy.rotation.set(vsPose.rx, vsPose.ry, vsPose.rz);
@@ -1627,7 +1628,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
       const staggered = Boolean(countdown || defend || vs || vs2 || openField);
       if (countdown) nameScale = 1.12 * crowd;
       else if (defend) nameScale = 1.22 * crowd;
-      else if (giant) nameScale = 0.96;
+      else if (giant) nameScale = giantBig ? 1.58 : 0.96;
       else if (maze) nameScale = 1.05;
       else if (cross) nameScale = 1.112;
       else if (bridge && !relief) nameScale = 1.112 * 0.56;
@@ -1669,7 +1670,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
         ({ row, col } = slotCoord(slot >= 0 ? slot : 0, form.sizes));
         if (defend && staggered) lift = 2.7 + (idx % 5) * 0.22;
         else if (giant) {
-          lift = 1.82;
+          lift = giantBig ? 2.05 : 1.82;
           nx = pos.x;
         } else if (maze) {
           lift = 1.72;
@@ -1703,7 +1704,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
         }
       }
       let sx = (isolate ? Math.min(1.05, cell.sx * nameScale) : cell.sx * nameScale);
-      if (giant) sx = Math.min(sx, 1.72);
+      if (giant) sx = Math.min(sx, giantBig ? 2.7 : 1.72);
       else if (maze) sx = Math.min(sx, 2.15);
       else if (cross) sx = Math.min(sx, 2.357);
       else if (bridge && !relief) sx = Math.min(sx, 2.357 * 0.56);

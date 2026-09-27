@@ -5,12 +5,27 @@ export const DEV_ID = "dev" as const;
 export type DevId = typeof DEV_ID;
 export const DEV_MODE = { id: DEV_ID, label: "DEV" } as const;
 
+export const DEV2_ID = "dev2" as const;
+export type Dev2Id = typeof DEV2_ID;
+export type GiantId = DevId | Dev2Id;
+export const DEV2_MODE = { id: DEV2_ID, label: "DEV2" } as const;
+
 export function isDev(id: string | null | undefined): id is DevId {
   return id === DEV_ID;
 }
 
+export function isDev2(id: string | null | undefined): id is Dev2Id {
+  return id === DEV2_ID;
+}
+
+export function isGiantShot(id: string | null | undefined): id is GiantId {
+  return id === DEV_ID || id === DEV2_ID;
+}
+
 export const DEV_SECONDS = 58;
+export const DEV2_SECONDS = DEV_SECONDS;
 export const DEV_N = 300;
+export const DEV2_N = 450;
 const FIGHT = 3.2;
 const LAST = 52;
 
@@ -79,18 +94,18 @@ export function devIsSpear(i: number, n: number) {
   return !devIsArcher(i, n) && i % 2 === 1;
 }
 
-function ringAt(i: number, n: number, t: number) {
+function ringAt(i: number, n: number, t: number, big = false) {
   const g = devGiantAt(t);
   const archer = devIsArcher(i, n);
   const meleeN = Math.ceil(n / 2);
   const local = archer ? i - meleeN : i;
   const count = Math.max(1, archer ? n - meleeN : meleeN);
-  const per = archer ? 42 : 26;
+  const per = archer ? (big ? 44 : 42) : big ? 28 : 26;
   const ring = Math.floor(local / per);
   const idx = local % per;
   const seats = Math.max(1, Math.min(per, count - ring * per));
   const ang = (idx / seats) * Math.PI * 2 + ring * 0.47 + (archer ? 0.2 : 0);
-  const rad = archer ? 20 + ring * 1.7 : 8.2 + ring * 1.45;
+  const rad = archer ? (big ? 30 + ring * 2.05 : 20 + ring * 1.7) : big ? 13.8 + ring * 1.9 : 8.2 + ring * 1.45;
   const x = g.x + Math.sin(ang) * rad;
   const z = g.z + Math.cos(ang) * rad;
   return { x, z, ry: Math.atan2(g.x - x, g.z - z), ang, g, archer };
@@ -106,7 +121,7 @@ export function devAlive(recT: number, soldiers: number) {
   return alive;
 }
 
-export function devFriendAt(i: number, n: number, recT: number, out: New1Pose) {
+export function devFriendAt(i: number, n: number, recT: number, out: New1Pose, big = false) {
   const count = Math.max(0, Math.floor(n));
   const t = Math.max(0, recT);
   if (i < 0 || i >= count) {
@@ -130,7 +145,7 @@ export function devFriendAt(i: number, n: number, recT: number, out: New1Pose) {
     out.s = 0;
     return;
   }
-  const live = ringAt(i, count, t);
+  const live = ringAt(i, count, t, big);
   const bob = Math.sin(t * 8 + i);
   out.x = live.x;
   out.z = live.z;
@@ -141,21 +156,21 @@ export function devFriendAt(i: number, n: number, recT: number, out: New1Pose) {
   out.s = 1;
 }
 
-export function sampleDevCam(recT: number): ShotPose {
+export function sampleDevCam(recT: number, big = false): ShotPose {
   const t = Math.max(0, recT);
   const g = devGiantAt(t);
   const u = t <= 48 ? 0 : Math.min(1, (t - 48) / 6);
   const e = u * u * (3 - 2 * u);
-  const side = 28 - e * 6;
-  const back = 46 - e * 10;
-  const height = 34 - e * 8;
+  const side = (big ? 30 : 28) - e * (big ? 5 : 6);
+  const back = (big ? 48 : 46) - e * (big ? 8 : 10);
+  const height = (big ? 38 : 34) - e * (big ? 6 : 8);
   return {
     x: g.x + side,
     y: height,
     z: g.z - back,
     lx: g.x,
-    ly: 5.4,
+    ly: big ? 9.2 : 5.4,
     lz: g.z + 2,
-    fov: 42 - e * 4,
+    fov: (big ? 44 : 42) - e * (big ? 3 : 4),
   };
 }

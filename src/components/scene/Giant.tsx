@@ -9,7 +9,7 @@ import { devAlive, devClubHit, devGiantAt } from "../../devReel";
 const dummy = new THREE.Object3D();
 const ARROWS = 18;
 
-function GiantBody({ soldiers }: { soldiers: number }) {
+function GiantBody({ soldiers, big }: { soldiers: number; big: boolean }) {
   const root = useRef<THREE.Group>(null);
   const arm = useRef<THREE.Group>(null);
   const mace = useRef<THREE.Group>(null);
@@ -32,7 +32,7 @@ function GiantBody({ soldiers }: { soldiers: number }) {
   });
   const spikes = [0, 45, 90, 135, 180, 225, 270, 315];
   return (
-    <group ref={root}>
+    <group ref={root} scale={big ? 1.52 : 1}>
       <mesh position={[0, 8.2, -1.15]} material={cape}>
         <planeGeometry args={[7.2, 13.5]} />
       </mesh>
@@ -118,7 +118,7 @@ function GiantBody({ soldiers }: { soldiers: number }) {
   );
 }
 
-function ArrowVolley() {
+function ArrowVolley({ big }: { big: boolean }) {
   const mesh = useRef<THREE.InstancedMesh>(null);
   useFrame(({ clock }) => {
     if (!mesh.current) return;
@@ -127,12 +127,13 @@ function ArrowVolley() {
     for (let i = 0; i < ARROWS; i++) {
       const phase = ((t * 0.8 + i * 0.19) % 1.4) / 1.4;
       const ang = (i / ARROWS) * Math.PI * 2;
-      const rad = 22 + (i % 4) * 1.6;
+      const rad = (big ? 32 : 22) + (i % 4) * 1.6;
       const sx = g.x + Math.sin(ang) * rad;
       const sz = g.z + Math.cos(ang) * rad;
       const u = phase;
-      dummy.position.set(sx + (g.x - sx) * u, 1.6 + (9.2 - 1.6) * u + Math.sin(u * Math.PI) * 2.6, sz + (g.z - sz) * u);
-      dummy.lookAt(g.x, 9.2, g.z);
+      const aimY = big ? 14 : 9.2;
+      dummy.position.set(sx + (g.x - sx) * u, 1.6 + (aimY - 1.6) * u + Math.sin(u * Math.PI) * 2.6, sz + (g.z - sz) * u);
+      dummy.lookAt(g.x, aimY, g.z);
       dummy.rotateX(Math.PI / 2);
       const show = t > 2 && t < LAST_ARROW && u > 0.06 && u < 0.9;
       dummy.scale.set(show ? 0.28 : 0, show ? 1.15 : 0, show ? 0.28 : 0);
@@ -152,11 +153,11 @@ function ArrowVolley() {
 
 const LAST_ARROW = 52.2;
 
-export function Giant({ soldiers }: { soldiers: number }) {
+export function Giant({ soldiers, big = false }: { soldiers: number; big?: boolean }) {
   return (
     <group>
-      <GiantBody soldiers={soldiers} />
-      <ArrowVolley />
+      <GiantBody soldiers={soldiers} big={big} />
+      <ArrowVolley big={big} />
     </group>
   );
 }

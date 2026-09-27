@@ -32,7 +32,7 @@ import { DEFEND_ID, DEFEND2_ID, DEFEND3_ID, DEFEND4_ID, DEFEND_MODE, DEFEND2_MOD
 import { VS_ID, VS2_ID, VS_MODE, VS2_MODE, VS_SECONDS, VS2_SECONDS, isVs, isVs2, isVsMode, type VsId } from "../vsReel";
 import { NEW1_ID, NEW1_MODE, NEW1_SECONDS, NEW2_ID, NEW2_MODE, NEW2_SECONDS, NEW3_ID, NEW3_MODE, NEW3_SECONDS, NEW4_ID, NEW4_MODE, NEW4_SECONDS, NEW5_ID, NEW5_MODE, NEW5_SECONDS, NEW6_ID, NEW6_MODE, NEW6_SECONDS, NEW62_ID, NEW62_MODE, NEW62_SECONDS, NEW7_ID, NEW7_MODE, NEW7_SECONDS, isNew1, isNew2, isNew3, isNew4, isNew5, isNew6, isNew62, isNew7, isNewField, type New1Id, type New2Id, type New3Id, type New4Id, type New5Id, type New6Id, type New62Id, type New7Id } from "../new1Reel";
 import { LAB_ID, LAB_MODE, LAB_SECONDS, isLab, type LabId } from "../mazeReel";
-import { DEV_ID, DEV_MODE, DEV_SECONDS, isDev, type DevId } from "../devReel";
+import { DEV2_ID, DEV2_MODE, DEV2_SECONDS, DEV_ID, DEV_MODE, DEV_SECONDS, isDev, isDev2, isGiantShot, type Dev2Id, type DevId } from "../devReel";
 import { unlockReelSfx } from "../reelSfx";
 
 export function AdminPage() {
@@ -48,7 +48,7 @@ export function AdminPage() {
   const [reelSeconds, setReelSeconds] = useState<number>(7);
   const [reelText, setReelText] = useState(true);
   const [reelSkipCmd, setReelSkipCmd] = useState(false);
-  const [reelShot, setReelShot] = useState<ReelShot | PlanBId | SagaId | DiscoverId | MixId | CountdownId | DefendId | VsId | New1Id | New2Id | New3Id | New4Id | New5Id | New6Id | New62Id | New7Id | LabId | DevId | XxxId | null>(null);
+  const [reelShot, setReelShot] = useState<ReelShot | PlanBId | SagaId | DiscoverId | MixId | CountdownId | DefendId | VsId | New1Id | New2Id | New3Id | New4Id | New5Id | New6Id | New62Id | New7Id | LabId | DevId | Dev2Id | XxxId | null>(null);
   const [reelDay, setReelDay] = useState("1");
   const [capturing, setCapturing] = useState(false);
   const [editIndex, setEditIndex] = useState<number | null>(null);
@@ -523,8 +523,8 @@ export function AdminPage() {
                     ? [RAF2_SECONDS]
                   : isCountdown(reelShot)
                     ? [COUNTDOWN_SECONDS]
-                  : isDev(reelShot)
-                    ? [DEV_SECONDS]
+                  : isGiantShot(reelShot)
+                    ? [isDev2(reelShot) ? DEV2_SECONDS : DEV_SECONDS]
                   : isNewField(reelShot)
                     ? [isLab(reelShot) ? LAB_SECONDS : isNew7(reelShot) ? NEW7_SECONDS : isNew62(reelShot) ? NEW62_SECONDS : isNew6(reelShot) ? NEW6_SECONDS : isNew5(reelShot) ? NEW5_SECONDS : isNew4(reelShot) ? NEW4_SECONDS : isNew3(reelShot) ? NEW3_SECONDS : isNew2(reelShot) ? NEW2_SECONDS : NEW1_SECONDS]
                   : isVsMode(reelShot)
@@ -719,9 +719,24 @@ export function AdminPage() {
             >
               {DEV_MODE.label} — {DEV_SECONDS}s
             </button>
+            <button
+              type="button"
+              className={reelShot === DEV2_ID ? "on" : ""}
+              onClick={() => {
+                setReelShot((cur) => (cur === DEV2_ID ? null : DEV2_ID));
+                setReelSeconds(DEV2_SECONDS);
+                setReelText(false);
+                setReelSkipCmd(true);
+              }}
+            >
+              {DEV2_MODE.label} — {DEV2_SECONDS}s
+            </button>
           </div>
           {isDev(reelShot) && (
             <p className="muted">Boş arazi, 300 asker, isimler üstte. Uzun siyah zırhlı dev. Yarısı kılıç ve mızrak, yarısı yay. Her vuruş 10-20 askeri siler. Üstte sayı düşer.</p>
+          )}
+          {isDev2(reelShot) && (
+            <p className="muted">DEV ile aynı. Dev daha büyük, 450 asker, isimler daha iri. Her vuruş 10-20 askeri siler. Üstte sayı düşer.</p>
           )}
           {isLab(reelShot) && (
             <p className="muted">100 son katılan birlikte girer. Kamera biraz daha yakından bütün kolları gösterir, sonda çıkanlara yaklaşır. Düşman grupları iki kat. Zemin labirentin dışına geniş.</p>
@@ -1216,8 +1231,8 @@ export function AdminPage() {
           maxHp={maxHp}
           seconds={captureSec}
           showTitles={reelText}
-          skipCommander={reelSkipCmd || isDiscover(reelShot) || isCountdown(reelShot) || isDefend(reelShot) || isVsMode(reelShot) || isNewField(reelShot) || isLab(reelShot) || isDev(reelShot) || (isXxx(reelShot) && xxxHideCmd(reelShot))}
-          shotMode={reelShot === CINEMA_ID || isPlanB(reelShot) || isSaga(reelShot) || isDiscover(reelShot) || isCountdown(reelShot) || isDefend(reelShot) || isVsMode(reelShot) || isNewField(reelShot) || isLab(reelShot) || isDev(reelShot) || isMix(reelShot) || isXxx(reelShot) ? null : reelShot}
+          skipCommander={reelSkipCmd || isDiscover(reelShot) || isCountdown(reelShot) || isDefend(reelShot) || isVsMode(reelShot) || isNewField(reelShot) || isLab(reelShot) || isGiantShot(reelShot) || (isXxx(reelShot) && xxxHideCmd(reelShot))}
+          shotMode={reelShot === CINEMA_ID || isPlanB(reelShot) || isSaga(reelShot) || isDiscover(reelShot) || isCountdown(reelShot) || isDefend(reelShot) || isVsMode(reelShot) || isNewField(reelShot) || isLab(reelShot) || isGiantShot(reelShot) || isMix(reelShot) || isXxx(reelShot) ? null : reelShot}
           cinema={reelShot === CINEMA_ID}
           roster={isPlanB(reelShot) ? reelShot : null}
           saga={isSaga(reelShot) ? reelShot : null}
@@ -1234,7 +1249,7 @@ export function AdminPage() {
           new62={isNew62(reelShot) ? reelShot : null}
           new7={isNew7(reelShot) ? reelShot : null}
           maze={isLab(reelShot) ? reelShot : null}
-          giant={isDev(reelShot) ? reelShot : null}
+          giant={isGiantShot(reelShot) ? reelShot : null}
           mix={isMix(reelShot) ? reelShot : null}
           xxx={isXxx(reelShot) ? reelShot : null}
           rosterIds={isJoin(reelShot) ? captureJoinIds.current : null}
