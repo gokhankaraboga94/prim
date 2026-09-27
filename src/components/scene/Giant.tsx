@@ -7,67 +7,109 @@ import { REEL_HOLD } from "../../recordCanvas";
 import { devAlive, devClubHit, devGiantAt } from "../../devReel";
 
 const dummy = new THREE.Object3D();
-const ARROWS = 36;
+const ARROWS = 18;
 
 function GiantBody({ soldiers }: { soldiers: number }) {
   const root = useRef<THREE.Group>(null);
   const arm = useRef<THREE.Group>(null);
-  const club = useRef<THREE.Group>(null);
+  const mace = useRef<THREE.Group>(null);
+  const plate = useMemo(() => new THREE.MeshStandardMaterial({ color: "#121216", metalness: 0.78, roughness: 0.32 }), []);
+  const iron = useMemo(() => new THREE.MeshStandardMaterial({ color: "#2a2a30", metalness: 0.7, roughness: 0.4 }), []);
+  const cape = useMemo(() => new THREE.MeshStandardMaterial({ color: "#07070a", roughness: 0.92, metalness: 0.05, side: THREE.DoubleSide }), []);
+  const slit = useMemo(() => new THREE.MeshStandardMaterial({ color: "#ff2a14", emissive: "#ff1a10", emissiveIntensity: 1.4, roughness: 0.4 }), []);
   useFrame(({ clock }) => {
     const t = Math.max(0, clock.elapsedTime - REEL_HOLD);
     const g = devGiantAt(t);
     const hit = devClubHit(t, soldiers);
     if (root.current) {
-      root.current.position.set(g.x, Math.abs(Math.sin(t * 2.4)) * 0.12, g.z);
+      root.current.position.set(g.x, Math.abs(Math.sin(t * 1.7)) * 0.16, g.z);
       root.current.rotation.y = g.yaw;
     }
-    if (arm.current) arm.current.rotation.z = -0.15 - hit * 0.35;
-    if (club.current) club.current.rotation.x = -0.35 - hit * 1.65;
+    if (arm.current) arm.current.rotation.z = 0.08 - hit * 0.2;
+    if (mace.current) mace.current.rotation.x = -0.25 - hit * 1.55;
   });
+  const spikes = [0, 45, 90, 135, 180, 225, 270, 315];
   return (
     <group ref={root}>
-      <mesh position={[-0.85, 2.3, 0]}>
-        <cylinderGeometry args={[0.62, 0.78, 3.6, 8]} />
-        <meshStandardMaterial color="#7d6a58" roughness={0.84} />
+      <mesh position={[0, 8.2, -1.15]} material={cape}>
+        <planeGeometry args={[7.2, 13.5]} />
       </mesh>
-      <mesh position={[0.85, 2.3, 0]}>
-        <cylinderGeometry args={[0.62, 0.78, 3.6, 8]} />
-        <meshStandardMaterial color="#7d6a58" roughness={0.84} />
+      <mesh position={[-1.15, 3.1, 0.15]} material={plate}>
+        <cylinderGeometry args={[0.72, 0.95, 5.4, 6]} />
       </mesh>
-      <mesh position={[0, 4.55, 0]}>
-        <boxGeometry args={[3.5, 1.15, 2.1]} />
-        <meshStandardMaterial color="#3d2c22" roughness={0.9} />
+      <mesh position={[1.15, 3.1, 0.15]} material={plate}>
+        <cylinderGeometry args={[0.72, 0.95, 5.4, 6]} />
       </mesh>
-      <mesh position={[0, 6.55, 0]}>
-        <boxGeometry args={[3.9, 3.3, 2.15]} />
-        <meshStandardMaterial color="#8d7562" roughness={0.78} />
+      <mesh position={[-1.15, 0.45, 0.35]} material={iron}>
+        <boxGeometry args={[1.35, 0.7, 2.1]} />
       </mesh>
-      <mesh position={[0, 8.55, 0.15]}>
-        <boxGeometry args={[2.5, 1.7, 1.7]} />
-        <meshStandardMaterial color="#947b66" roughness={0.74} />
+      <mesh position={[1.15, 0.45, 0.35]} material={iron}>
+        <boxGeometry args={[1.35, 0.7, 2.1]} />
       </mesh>
-      <mesh position={[-0.48, 8.7, 0.95]}>
-        <sphereGeometry args={[0.16, 8, 8]} />
-        <meshStandardMaterial color="#1a120e" roughness={0.4} />
+      <mesh position={[0, 6.15, 0.05]} material={plate}>
+        <boxGeometry args={[4.4, 1.5, 2.3]} />
       </mesh>
-      <mesh position={[0.48, 8.7, 0.95]}>
-        <sphereGeometry args={[0.16, 8, 8]} />
-        <meshStandardMaterial color="#1a120e" roughness={0.4} />
+      <mesh position={[0, 9.15, 0]} material={plate}>
+        <boxGeometry args={[4.1, 4.6, 2.35]} />
       </mesh>
-      <group ref={arm} position={[-2.15, 7.5, 0.15]}>
-        <mesh position={[-0.15, -1.25, 0.15]} rotation={[0.25, 0, 0.2]}>
-          <cylinderGeometry args={[0.42, 0.5, 2.3, 7]} />
-          <meshStandardMaterial color="#8d7562" roughness={0.8} />
+      <mesh position={[0, 11.7, 0.15]} material={iron}>
+        <boxGeometry args={[3.3, 0.55, 2.5]} />
+      </mesh>
+      <mesh position={[-2.55, 10.7, 0]} rotation={[0, 0, 0.35]} material={plate}>
+        <boxGeometry args={[1.7, 0.55, 2.2]} />
+      </mesh>
+      <mesh position={[2.55, 10.7, 0]} rotation={[0, 0, -0.35]} material={plate}>
+        <boxGeometry args={[1.7, 0.55, 2.2]} />
+      </mesh>
+      <mesh position={[-3.15, 11.15, 0]} rotation={[0, 0, 0.4]} material={iron}>
+        <coneGeometry args={[0.28, 1.15, 5]} />
+      </mesh>
+      <mesh position={[3.15, 11.15, 0]} rotation={[0, 0, -0.4]} material={iron}>
+        <coneGeometry args={[0.28, 1.15, 5]} />
+      </mesh>
+      <mesh position={[0, 13.55, 0.05]} material={plate}>
+        <cylinderGeometry args={[1.25, 1.55, 2.5, 8]} />
+      </mesh>
+      <mesh position={[0, 15.15, 0.05]} material={iron}>
+        <cylinderGeometry args={[0.35, 1.35, 1.15, 8]} />
+      </mesh>
+      {spikes.map((deg) => {
+        const rad = (deg * Math.PI) / 180;
+        return (
+          <mesh key={deg} position={[Math.sin(rad) * 1.2, 14.9, Math.cos(rad) * 1.2]} rotation={[Math.cos(rad) * 0.9, 0, -Math.sin(rad) * 0.9]} material={iron}>
+            <coneGeometry args={[0.16, 1.15, 4]} />
+          </mesh>
+        );
+      })}
+      <mesh position={[0, 13.35, 1.22]} material={slit}>
+        <boxGeometry args={[1.15, 0.12, 0.08]} />
+      </mesh>
+      <group ref={arm} position={[-2.7, 10.4, 0.2]}>
+        <mesh position={[-0.25, -1.7, 0.2]} rotation={[0.2, 0, 0.15]} material={plate}>
+          <cylinderGeometry args={[0.42, 0.55, 3.2, 6]} />
         </mesh>
       </group>
-      <group ref={club} position={[2.15, 7.55, 0.2]}>
-        <mesh position={[0.2, -1.15, 0.35]} rotation={[0.45, 0, -0.15]}>
-          <cylinderGeometry args={[0.48, 0.58, 2.5, 7]} />
-          <meshStandardMaterial color="#8d7562" roughness={0.8} />
+      <group ref={mace} position={[2.7, 10.5, 0.25]}>
+        <mesh position={[0.25, -1.5, 0.55]} rotation={[0.55, 0, -0.1]} material={plate}>
+          <cylinderGeometry args={[0.48, 0.62, 3.1, 6]} />
         </mesh>
-        <mesh position={[0.55, -1.7, 3.15]} rotation={[1.25, 0.1, 0]}>
-          <cylinderGeometry args={[0.34, 0.72, 6.8, 8]} />
-          <meshStandardMaterial color="#6a5038" roughness={0.9} />
+        <mesh position={[0.45, -2.2, 4.6]} rotation={[1.2, 0, 0]} material={iron}>
+          <cylinderGeometry args={[0.22, 0.28, 7.4, 6]} />
+        </mesh>
+        <mesh position={[0.7, -2.7, 8.2]} rotation={[1.2, 0, 0]} material={plate}>
+          <sphereGeometry args={[1.15, 8, 6]} />
+        </mesh>
+        <mesh position={[0.7, -1.5, 8.2]} material={iron}>
+          <coneGeometry args={[0.28, 1.1, 4]} />
+        </mesh>
+        <mesh position={[0.7, -3.9, 8.2]} rotation={[Math.PI, 0, 0]} material={iron}>
+          <coneGeometry args={[0.28, 1.1, 4]} />
+        </mesh>
+        <mesh position={[-0.35, -2.7, 8.2]} rotation={[0, 0, Math.PI / 2]} material={iron}>
+          <coneGeometry args={[0.26, 1.05, 4]} />
+        </mesh>
+        <mesh position={[1.75, -2.7, 8.2]} rotation={[0, 0, -Math.PI / 2]} material={iron}>
+          <coneGeometry args={[0.26, 1.05, 4]} />
         </mesh>
       </group>
     </group>
@@ -83,12 +125,12 @@ function ArrowVolley() {
     for (let i = 0; i < ARROWS; i++) {
       const phase = ((t * 0.8 + i * 0.19) % 1.4) / 1.4;
       const ang = (i / ARROWS) * Math.PI * 2;
-      const rad = 17 + (i % 5) * 1.4;
+      const rad = 22 + (i % 4) * 1.6;
       const sx = g.x + Math.sin(ang) * rad;
       const sz = g.z + Math.cos(ang) * rad;
       const u = phase;
-      dummy.position.set(sx + (g.x - sx) * u, 1.5 + (6.4 - 1.5) * u + Math.sin(u * Math.PI) * 2.4, sz + (g.z - sz) * u);
-      dummy.lookAt(g.x, 6.2, g.z);
+      dummy.position.set(sx + (g.x - sx) * u, 1.6 + (9.2 - 1.6) * u + Math.sin(u * Math.PI) * 2.6, sz + (g.z - sz) * u);
+      dummy.lookAt(g.x, 9.2, g.z);
       dummy.rotateX(Math.PI / 2);
       const show = t > 2 && t < LAST_ARROW && u > 0.06 && u < 0.9;
       dummy.scale.set(show ? 0.28 : 0, show ? 1.15 : 0, show ? 0.28 : 0);

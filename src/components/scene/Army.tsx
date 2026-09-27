@@ -13,7 +13,7 @@ import { DEFEND_CZ, DEFEND2_CX, DEFEND2_CZ, defendSoldierPos, defendYawOut } fro
 import { vsSoldierAt, type VsPose } from "../../vsReel";
 import { NEW6_ARCHERS, NEW62_ARCHERS, new1FriendAt, new2FriendAt, new2VisualFriends, new5FriendAt, new5OnScreen, new6FriendAt, new6SwordPitch, new6VisualFriends, new7FriendAt, new7VisualFriends } from "../../new1Reel";
 import { labFriendAt, labRosterIds } from "../../mazeReel";
-import { devFriendAt, devIsArcher, devIsSpear } from "../../devReel";
+import { DEV_N, devFriendAt, devIsArcher, devIsSpear } from "../../devReel";
 import { sfxArrowLoose, sfxBowDraw, sfxVolleyPeak } from "../../reelSfx";
 import { raidCount, sallyHunting, sallyLiveIndex, sallyLocal, sallyRaiderAt, swordArmPose, swordStyleAt, swordSwingU } from "../../siegeEvent";
 import { castleFrame } from "../../castleLayout";
@@ -893,7 +893,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
 
   const rosterCap = Math.min(roster ? 80 : MAX_SOLDIERS, Math.max(0, Math.floor(count)));
   const mazeCast = useMemo(() => (maze ? labRosterIds(names, rosterCap) : null), [maze, names, rosterCap]);
-  const visible = mazeCast ? mazeCast.length : relief ? Math.min(rosterCap, new7VisualFriends(rosterCap)) : cross ? Math.min(rosterCap, new6VisualFriends(rosterCap, wide)) : bridge ? rosterCap : new2 ? Math.min(rosterCap, new2VisualFriends(rosterCap)) : rosterCap;
+  const visible = giant ? Math.min(rosterCap, DEV_N) : mazeCast ? mazeCast.length : relief ? Math.min(rosterCap, new7VisualFriends(rosterCap)) : cross ? Math.min(rosterCap, new6VisualFriends(rosterCap, wide)) : bridge ? rosterCap : new2 ? Math.min(rosterCap, new2VisualFriends(rosterCap)) : rosterCap;
   const instanceCap = Math.min(MAX_SOLDIERS, Math.max(visible, roster ? 24 : 1, 1));
   const defendOx = defend2 ? DEFEND2_CX : 0;
   const defendOz = defend2 ? DEFEND2_CZ : DEFEND_CZ;

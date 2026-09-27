@@ -18,7 +18,7 @@ import { DEFEND2_SORTIE, isDefend3, isDefend4, isDefendSortie, sampleDefendCam, 
 import { isVs, isVs2, sampleVsCam, type VsId } from "../../vsReel";
 import { sampleNew1Cam, sampleNew2Cam, sampleNew5Cam, sampleNew6Cam, sampleNew62Cam, sampleNew7Cam, type New1Id, type New2Id, type New3Id, type New4Id, type New5Id, type New6Id, type New62Id, type New7Id } from "../../new1Reel";
 import { LAB_N, sampleLabCam, type LabId } from "../../mazeReel";
-import { sampleDevCam, type DevId } from "../../devReel";
+import { DEV_N, sampleDevCam, type DevId } from "../../devReel";
 import { Maze } from "./Maze";
 import { DevHealthBar, Giant } from "./Giant";
 import { sampleXxxCam, xxxAdHook, xxxClearHook, xxxCloseNames, xxxDocHook, xxxHasHook, xxxHideCmd, xxxHiRes, xxxHoldHook, xxxHuntHook, xxxHuntSight, xxxInstantHook, xxxQuiet, xxxScanHunt, xxxSpin, xxxSquare, type XxxId } from "../../xxxReel";
@@ -911,7 +911,7 @@ function SceneContent({
       {cinematic && xxx && xxxHuntSight(xxx) && <HuntSightHud />}
       {cinematic && (duel || chase || cross) && <New2RatioBar soldiers={soldiers} drop={blades ? 64 : 0} bridge={Boolean(new5)} cross={cross} wide={wide} relief={relief} />}
       {cinematic && maze && <LabHealthBar soldiers={Math.min(LAB_N, Math.max(1, soldiers))} />}
-      {cinematic && giant && <DevHealthBar soldiers={Math.max(1, soldiers)} />}
+      {cinematic && giant && <DevHealthBar soldiers={Math.min(DEV_N, Math.max(1, soldiers))} />}
       {cinematic && !split && <ReelVignette />}
       {countdown && <CountdownFlash />}
       {cinematic && !discover && !countdown && !defend && !vs && !slaughter && !split && <ReelFade duration={duration ?? 8} />}

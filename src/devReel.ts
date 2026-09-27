@@ -10,6 +10,7 @@ export function isDev(id: string | null | undefined): id is DevId {
 }
 
 export const DEV_SECONDS = 58;
+export const DEV_N = 300;
 const FIGHT = 3.2;
 const LAST = 52;
 
@@ -81,7 +82,7 @@ function ringAt(i: number, n: number, t: number) {
   const idx = local % per;
   const seats = Math.max(1, Math.min(per, count - ring * per));
   const ang = (idx / seats) * Math.PI * 2 + ring * 0.47 + (archer ? 0.2 : 0);
-  const rad = archer ? 16.5 + ring * 1.55 : 5.5 + ring * 1.2;
+  const rad = archer ? 20 + ring * 1.7 : 8.2 + ring * 1.45;
   const x = g.x + Math.sin(ang) * rad;
   const z = g.z + Math.cos(ang) * rad;
   return { x, z, ry: Math.atan2(g.x - x, g.z - z), ang, g, archer };
@@ -153,16 +154,16 @@ export function sampleDevCam(recT: number): ShotPose {
   const g = devGiantAt(t);
   const u = t <= 48 ? 0 : Math.min(1, (t - 48) / 6);
   const e = u * u * (3 - 2 * u);
-  const side = 16 - e * 6;
-  const back = 28 - e * 12;
-  const height = 24 - e * 8;
+  const side = 42 - e * 8;
+  const back = 68 - e * 12;
+  const height = 52 - e * 10;
   return {
     x: g.x + side,
     y: height,
     z: g.z - back,
     lx: g.x,
-    ly: 5.4 + e * 1.2,
-    lz: g.z + 1.2,
-    fov: 46 - e * 8,
+    ly: 9,
+    lz: g.z + 2,
+    fov: 50 - e * 4,
   };
 }
