@@ -13,7 +13,7 @@ function wallBoxes() {
   const half = 2.2;
   const thick = 0.92;
   const boxes: { x: number; y: number; z: number; w: number; h: number; d: number; ry: number; tone: string }[] = [];
-  const tones = ["#7a7164", "#6a6156", "#857866", "#5e564c"];
+  const tones = ["#c4b5a2", "#b3a38e", "#d2c2ab", "#a89884"];
   LAB_WALLS.forEach(([x1, z1, x2, z2], n) => {
     const dx = x2 - x1;
     const dz = z2 - z1;
@@ -118,11 +118,11 @@ export function Maze() {
     <group>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[6, -0.08, 48]}>
         <planeGeometry args={[90, 130]} />
-        <meshStandardMaterial color="#2a241c" roughness={0.96} />
+        <meshStandardMaterial color="#6d6458" roughness={0.94} />
       </mesh>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[6, 0.02, 48]}>
         <planeGeometry args={[70, 110]} />
-        <meshStandardMaterial color="#4a4034" roughness={0.9} />
+        <meshStandardMaterial color="#8b7358" roughness={0.86} />
       </mesh>
       {boxes.map((box, i) => (
         <mesh key={i} position={[box.x, box.y, box.z]} rotation={[0, box.ry, 0]}>
@@ -130,11 +130,13 @@ export function Maze() {
           <meshStandardMaterial color={box.tone} roughness={0.88} metalness={0.04} />
         </mesh>
       ))}
-      <pointLight position={[0, 4.2, 8]} intensity={18} distance={16} color="#ffb15a" />
-      <pointLight position={[13, 4.2, 28]} intensity={16} distance={14} color="#ffb15a" />
-      <pointLight position={[1, 5.5, 52]} intensity={22} distance={18} color="#ff6a3a" />
-      <pointLight position={[4, 4.2, 90]} intensity={16} distance={16} color="#ffe1a8" />
-      <hemisphereLight args={["#d7c4a2", "#1a140f", 0.55]} />
+      <ambientLight intensity={0.72} color="#fff6ea" />
+      <directionalLight position={[24, 48, 18]} intensity={1.85} color="#fff8ee" />
+      <hemisphereLight args={["#fff4e2", "#6d6256", 0.85]} />
+      <pointLight position={[0, 6, 8]} intensity={30} distance={28} color="#ffd19a" />
+      <pointLight position={[13, 6, 28]} intensity={26} distance={26} color="#ffd19a" />
+      <pointLight position={[1, 8, 52]} intensity={34} distance={30} color="#ffb088" />
+      <pointLight position={[4, 6, 90]} intensity={28} distance={28} color="#fff0cc" />
       <Dragon />
       <Foes />
     </group>

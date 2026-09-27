@@ -5,7 +5,7 @@ import * as THREE from "three";
 import { Army, armyFrame } from "./Army";
 import { Castle } from "./Castle";
 import { SallyRaid } from "./SallyRaid";
-import { CaptureHpHud, CountdownFlash, HuntSightHud, New2RatioBar, ReelFade, ReelTitles, ReelVignette, SpinNameHud, XxxHookHud } from "./CaptureHpHud";
+import { CaptureHpHud, CountdownFlash, HuntSightHud, LabHealthBar, New2RatioBar, ReelFade, ReelTitles, ReelVignette, SpinNameHud, XxxHookHud } from "./CaptureHpHud";
 import { effectiveCommanders } from "../../game";
 import { castleFrame } from "../../castleLayout";
 import { REEL_HEIGHT, REEL_HOLD, REEL_WIDTH, reelBeats } from "../../recordCanvas";
@@ -818,8 +818,8 @@ function SceneContent({
   }
   return (
     <>
-      <color attach="background" args={[maze ? "#120e0c" : slaughter ? "#8f9aa0" : "#7eb6ee"]} />
-      <fog attach="fog" args={maze ? ["#1a1410", 28, 90] : slaughter ? ["#c4b89a", 240, 980] : defend ? (isDefend3(defend) ? ["#9ec8ee", 1100, 3200] : sortie ? ["#9ec8ee", 600, 2200] : ["#9ec8ee", 1400, 4200]) : field ? ["#9ec8ee", 140, 720] : ["#9ec8ee", 380, 1500]} />
+      <color attach="background" args={[maze ? "#9eb0c4" : slaughter ? "#8f9aa0" : "#7eb6ee"]} />
+      <fog attach="fog" args={maze ? ["#c6d0da", 90, 280] : slaughter ? ["#c4b89a", 240, 980] : defend ? (isDefend3(defend) ? ["#9ec8ee", 1100, 3200] : sortie ? ["#9ec8ee", 600, 2200] : ["#9ec8ee", 1400, 4200]) : field ? ["#9ec8ee", 140, 720] : ["#9ec8ee", 380, 1500]} />
       {!maze && <SkyDome cheap={Boolean(defend) && !isDefend3(defend)} />}
       {!maze && <SteelSky />}
       {!maze && <DayLights cinematic={cinematic} slim={Boolean(defend) && !isDefend3(defend)} warm={slaughter} />}
@@ -900,6 +900,7 @@ function SceneContent({
       )}
       {cinematic && xxx && xxxHuntSight(xxx) && <HuntSightHud />}
       {cinematic && (duel || chase || cross) && <New2RatioBar soldiers={soldiers} drop={blades ? 64 : 0} bridge={Boolean(new5)} cross={cross} wide={wide} relief={relief} />}
+      {cinematic && maze && <LabHealthBar />}
       {cinematic && !split && <ReelVignette />}
       {countdown && <CountdownFlash />}
       {cinematic && !discover && !countdown && !defend && !vs && !slaughter && !split && <ReelFade duration={duration ?? 8} />}
@@ -1030,11 +1031,11 @@ function BattleSceneInner({
       style={{ width: "100%", height: "100%", display: "block" }}
       onCreated={({ gl }) => {
         gl.toneMapping = THREE.ACESFilmicToneMapping;
-        gl.toneMappingExposure = cinematic ? (maze ? 1.12 : new1 || new2 || new3 || new4 || new5 || new6 || new62 || new7 ? 1.06 : 1.16) : 1.22;
+        gl.toneMappingExposure = cinematic ? (maze ? 1.28 : new1 || new2 || new3 || new4 || new5 || new6 || new62 || new7 ? 1.06 : 1.16) : 1.22;
         gl.outputColorSpace = THREE.SRGBColorSpace;
         gl.shadowMap.enabled = !cinematic;
         gl.shadowMap.type = THREE.PCFSoftShadowMap;
-        gl.setClearColor(xxx && xxxSpin(xxx) ? "#000000" : maze ? "#120e0c" : new1 || new2 || new3 || new4 || new5 || new6 || new62 || new7 ? "#8f9aa0" : "#7eb6ee", 1);
+        gl.setClearColor(xxx && xxxSpin(xxx) ? "#000000" : maze ? "#9eb0c4" : new1 || new2 || new3 || new4 || new5 || new6 || new62 || new7 ? "#8f9aa0" : "#7eb6ee", 1);
         if (cinematic) {
           const dpr = xxx && xxxHiRes(xxx) ? 2 : 1;
           gl.setPixelRatio(dpr);

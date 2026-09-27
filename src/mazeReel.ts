@@ -174,6 +174,13 @@ export function labDragonFall(recT: number) {
   return { u: 1, gone: true, flap: t };
 }
 
+export function labAlive(recT: number) {
+  const t = Math.max(0, recT);
+  let n = 0;
+  for (let i = 0; i < LAB_N; i++) if (t < labDieAt(i)) n += 1;
+  return n;
+}
+
 export function labLead(recT: number) {
   const t = Math.max(0, recT);
   let i = 0;
