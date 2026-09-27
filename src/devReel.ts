@@ -154,16 +154,16 @@ export function sampleDevCam(recT: number): ShotPose {
   const g = devGiantAt(t);
   const u = t <= 48 ? 0 : Math.min(1, (t - 48) / 6);
   const e = u * u * (3 - 2 * u);
-  const side = 42 - e * 8;
-  const back = 68 - e * 12;
-  const height = 52 - e * 10;
+  const side = 28 - e * 6;
+  const back = 46 - e * 10;
+  const height = 34 - e * 8;
   return {
     x: g.x + side,
     y: height,
     z: g.z - back,
     lx: g.x,
-    ly: 9,
+    ly: 5.4,
     lz: g.z + 2,
-    fov: 50 - e * 4,
+    fov: 42 - e * 4,
   };
 }

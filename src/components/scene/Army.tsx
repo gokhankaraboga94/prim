@@ -1627,7 +1627,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
       const staggered = Boolean(countdown || defend || vs || vs2 || openField);
       if (countdown) nameScale = 1.12 * crowd;
       else if (defend) nameScale = 1.22 * crowd;
-      else if (giant) nameScale = 0.72;
+      else if (giant) nameScale = 1.18;
       else if (maze) nameScale = 1.05;
       else if (cross) nameScale = 1.112;
       else if (bridge && !relief) nameScale = 1.112 * 0.56;
@@ -1669,7 +1669,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
         ({ row, col } = slotCoord(slot >= 0 ? slot : 0, form.sizes));
         if (defend && staggered) lift = 2.7 + (idx % 5) * 0.22;
         else if (giant) {
-          lift = 1.65;
+          lift = 1.82;
           nx = pos.x;
         } else if (maze) {
           lift = 1.72;
@@ -1703,7 +1703,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
         }
       }
       let sx = (isolate ? Math.min(1.05, cell.sx * nameScale) : cell.sx * nameScale);
-      if (giant) sx = Math.min(sx, 1.55);
+      if (giant) sx = Math.min(sx, 2.25);
       else if (maze) sx = Math.min(sx, 2.15);
       else if (cross) sx = Math.min(sx, 2.357);
       else if (bridge && !relief) sx = Math.min(sx, 2.357 * 0.56);
