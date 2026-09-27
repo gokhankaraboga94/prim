@@ -4,7 +4,7 @@ import { useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import { formatCount } from "../../game";
 import { REEL_HOLD } from "../../recordCanvas";
-import { devAlive, devClubHit, devGiantAt } from "../../devReel";
+import { devAlive, devClubHit, devGiantAt, devMaceSwing } from "../../devReel";
 
 const dummy = new THREE.Object3D();
 const ARROWS = 18;
@@ -20,15 +20,37 @@ function GiantBody({ soldiers, big }: { soldiers: number; big: boolean }) {
   useFrame(({ clock }) => {
     const t = Math.max(0, clock.elapsedTime - REEL_HOLD);
     const g = devGiantAt(t);
-    const hit = devClubHit(t, soldiers);
-    const pace = Math.sin(t * 7.2);
-    if (root.current) {
-      root.current.position.set(g.x, Math.abs(Math.sin(t * 5.6)) * 0.32, g.z);
-      root.current.rotation.y = g.yaw;
-      root.current.rotation.z = pace * 0.045;
+    if (big) {
+      const s = devMaceSwing(t, soldiers);
+      const step = Math.abs(Math.sin(t * 5.6)) * 0.18;
+      const fx = Math.sin(g.yaw);
+      const fz = Math.cos(g.yaw);
+      if (root.current) {
+        root.current.position.set(g.x + fx * s.lunge * 1.6, step - s.dip, g.z + fz * s.lunge * 1.6);
+        root.current.rotation.y = g.yaw + s.twist;
+        root.current.rotation.z = s.sweep * 0.07;
+      }
+      if (arm.current) arm.current.rotation.z = 0.16 - s.twist * 0.6;
+      if (mace.current) {
+        mace.current.rotation.x = s.pitch;
+        mace.current.rotation.y = s.sweep * 0.22;
+        mace.current.rotation.z = s.sweep;
+      }
+    } else {
+      const hit = devClubHit(t, soldiers);
+      const pace = Math.sin(t * 7.2);
+      if (root.current) {
+        root.current.position.set(g.x, Math.abs(Math.sin(t * 5.6)) * 0.32, g.z);
+        root.current.rotation.y = g.yaw;
+        root.current.rotation.z = pace * 0.045;
+      }
+      if (arm.current) arm.current.rotation.z = 0.14 + pace * 0.22 - hit * 0.42;
+      if (mace.current) {
+        mace.current.rotation.x = -0.12 - hit * 2.25;
+        mace.current.rotation.y = 0;
+        mace.current.rotation.z = 0;
+      }
     }
-    if (arm.current) arm.current.rotation.z = 0.14 + pace * 0.22 - hit * 0.42;
-    if (mace.current) mace.current.rotation.x = -0.12 - hit * 2.25;
   });
   const spikes = [0, 45, 90, 135, 180, 225, 270, 315];
   return (

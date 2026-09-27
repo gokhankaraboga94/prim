@@ -86,6 +86,56 @@ export function devClubHit(t: number, soldiers: number) {
   return Math.max(burst(0.03, 0.045), burst(0.46, 0.04));
 }
 
+export function devMaceSwing(t: number, soldiers: number) {
+  const period = planOf(Math.max(1, soldiers)).period;
+  const guard = { pitch: -0.18, sweep: 0.04, twist: 0, dip: 0, lunge: 0 };
+  let x: number;
+  if (t < FIGHT) {
+    const lead = 0.26 * period;
+    if (t < FIGHT - lead) return guard;
+    x = (t - FIGHT) / period;
+  } else if (t > LAST + 0.22) {
+    return guard;
+  } else {
+    x = ((t - FIGHT) % period) / period;
+    if (x > 0.55) x -= 1;
+  }
+  if (x < -0.26 || x > 0.22) {
+    const bob = Math.sin(t * 2.6) * 0.04;
+    return { pitch: guard.pitch + bob, sweep: bob, twist: 0, dip: 0, lunge: 0 };
+  }
+  if (x < -0.07) {
+    const u = (x + 0.26) / 0.19;
+    const raise = Math.sin(Math.min(1, u) * Math.PI * 0.5);
+    return {
+      pitch: -0.18 - raise * 1.12,
+      sweep: -raise * 0.48,
+      twist: -raise * 0.36,
+      dip: raise * 0.06,
+      lunge: -raise * 0.2,
+    };
+  }
+  if (x < 0) {
+    const snap = Math.pow((x + 0.07) / 0.07, 1.75);
+    return {
+      pitch: -1.3 + snap * 2.5,
+      sweep: -0.48 + snap * 1.15,
+      twist: -0.36 + snap * 0.78,
+      dip: 0.06 + snap * 0.22,
+      lunge: -0.2 + snap * 1.15,
+    };
+  }
+  const rec = Math.min(1, x / 0.16);
+  const e = rec * rec * (3 - 2 * rec);
+  return {
+    pitch: 1.2 - e * 1.38,
+    sweep: 0.67 - e * 0.63,
+    twist: 0.42 - e * 0.42,
+    dip: 0.28 * (1 - e),
+    lunge: 0.95 * (1 - e),
+  };
+}
+
 export function devIsArcher(i: number, n: number) {
   return i >= Math.ceil(Math.max(1, n) / 2);
 }
