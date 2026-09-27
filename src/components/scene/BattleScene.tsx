@@ -819,7 +819,7 @@ function SceneContent({
   return (
     <>
       <color attach="background" args={[maze ? "#9eb0c4" : slaughter ? "#8f9aa0" : "#7eb6ee"]} />
-      <fog attach="fog" args={maze ? ["#c6d0da", 90, 280] : slaughter ? ["#c4b89a", 240, 980] : defend ? (isDefend3(defend) ? ["#9ec8ee", 1100, 3200] : sortie ? ["#9ec8ee", 600, 2200] : ["#9ec8ee", 1400, 4200]) : field ? ["#9ec8ee", 140, 720] : ["#9ec8ee", 380, 1500]} />
+      <fog attach="fog" args={maze ? ["#c6d0da", 340, 720] : slaughter ? ["#c4b89a", 240, 980] : defend ? (isDefend3(defend) ? ["#9ec8ee", 1100, 3200] : sortie ? ["#9ec8ee", 600, 2200] : ["#9ec8ee", 1400, 4200]) : field ? ["#9ec8ee", 140, 720] : ["#9ec8ee", 380, 1500]} />
       {!maze && <SkyDome cheap={Boolean(defend) && !isDefend3(defend)} />}
       {!maze && <SteelSky />}
       {!maze && <DayLights cinematic={cinematic} slim={Boolean(defend) && !isDefend3(defend)} warm={slaughter} />}

@@ -209,11 +209,31 @@ function branchOf(i: number) {
   return 5;
 }
 
-const FOE_SPOTS: { path: Pt[]; dist: number; n: number; row: number }[] = [
-  ...DEAD.map((pts, k) => ({ path: pts, dist: Math.max(8, DEAD_LEN[k] - 4.4), n: 3, row: 0 })),
-  { path: WIN, dist: WIN_POCKETS[0], n: 4, row: 0 },
-  { path: WIN, dist: WIN_POCKETS[1], n: 4, row: 1 },
-  { path: WIN, dist: WIN_POCKETS[2], n: 4, row: 2 },
+function winLead(dist: number) {
+  if (dist <= WIN_POCKETS[0] + 0.5) return 0;
+  if (dist <= WIN_POCKETS[1] + 0.5) return 1;
+  if (dist <= WIN_POCKETS[2] + 0.5) return 2;
+  return 4;
+}
+
+function packs(path: Pt[], len: number, start: number, gap: number) {
+  const last = Math.max(start, len - 5.2);
+  const spots: { path: Pt[]; dist: number; n: number; row: number }[] = [];
+  for (let d = start; d <= last + 0.01; d += gap) {
+    const dist = Math.min(d, last);
+    spots.push({ path, dist, n: 5, row: path === WIN ? winLead(dist) : 0 });
+  }
+  return spots;
+}
+
+const FOE_SPOTS = [
+  ...packs(DEAD[0], DEAD_LEN[0], 26, 14),
+  ...packs(DEAD[1], DEAD_LEN[1], 28, 16),
+  ...packs(DEAD[2], DEAD_LEN[2], 46, 18),
+  ...packs(DEAD[3], DEAD_LEN[3], 22, 6),
+  ...packs(DEAD[4], DEAD_LEN[4], 48, 16),
+  ...packs(DEAD[5], DEAD_LEN[5], 66, 18),
+  ...packs(WIN, polyLen(WIN), 58, 18),
 ];
 
 export const LAB_FOES = FOE_SPOTS.reduce((n, spot) => n + spot.n, 0);
@@ -316,12 +336,12 @@ export function labFoeAt(i: number, recT: number, out: New1Pose) {
     cursor -= item.n;
   }
   const at = sample(spot.path, spot.dist);
-  const col = cursor % 4;
-  const span = spot.n <= 3 ? col - 1 : col - 1.5;
+  const col = cursor % spot.n;
+  const span = (col - (spot.n - 1) / 2) * 0.46;
   const rx = Math.cos(at.ry);
   const rz = -Math.sin(at.ry);
-  out.x = at.x + rx * span * 0.72;
-  out.z = at.z + rz * span * 0.72;
+  out.x = at.x + rx * span;
+  out.z = at.z + rz * span;
   out.ry = at.ry + Math.PI;
   out.rx = 0.08;
   out.rz = 0;
@@ -340,32 +360,17 @@ export function labFoeAt(i: number, recT: number, out: New1Pose) {
 
 export function sampleLabCam(recT: number): ShotPose {
   const t = Math.max(0, recT);
-  const u = t <= 5 ? 0 : Math.min(1, (t - 5) / 8);
+  const u = t <= 2.2 ? 0 : Math.min(1, (t - 2.2) / 6.8);
   const e = u * u * (3 - 2 * u);
-  let survivor = 44;
-  for (let i = 0; i < LAB_N; i++) {
-    if (PLAN.die[i] > 1e8) {
-      survivor = i;
-      break;
-    }
-  }
-  const lead = poseAt(survivor, t);
-  const lookX = lead.x * e;
-  const lookZ = -3.2 * (1 - e) + lead.z * e;
-  const height = 44 - e * 24;
-  const back = 34 - e * 18;
-  const ahead = 4.5 * e;
-  const fx = Math.sin(lead.ry);
-  const fz = Math.cos(lead.ry);
-  const faceX = fx * e;
-  const faceZ = fz * e + (1 - e);
+  const from = { x: 0, y: 64, z: -46, lx: 0, ly: 1.1, lz: -2, fov: 48 };
+  const to = { x: 0, y: 200, z: -62, lx: 0, ly: 0, lz: 46, fov: 52 };
   return {
-    x: lookX - faceX * back * 0.22 + fx * ahead * e,
-    y: height,
-    z: lookZ - faceZ * back,
-    lx: lookX + fx * ahead,
-    ly: 1.15,
-    lz: lookZ + 1.5 + fz * ahead,
-    fov: 50 - e * 10,
+    x: from.x + (to.x - from.x) * e,
+    y: from.y + (to.y - from.y) * e,
+    z: from.z + (to.z - from.z) * e,
+    lx: from.lx + (to.lx - from.lx) * e,
+    ly: from.ly + (to.ly - from.ly) * e,
+    lz: from.lz + (to.lz - from.lz) * e,
+    fov: from.fov + (to.fov - from.fov) * e,
   };
 }

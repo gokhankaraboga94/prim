@@ -706,7 +706,7 @@ export function AdminPage() {
             </button>
           </div>
           {isLab(reelShot) && (
-            <p className="muted">100 son katılan birlikte girer, labirentte dağılır. Çıkmazlar sonda duvarla biter. Her kolda biraz düşman var. Finale çok azı çıkar. Bar 100'den düşer.</p>
+            <p className="muted">100 son katılan birlikte girer, labirentte dağılır. Kamera geri çekilir, bütün kollar aynı anda görünür. Her koridorda daha fazla düşman var. Bar 100'den düşer.</p>
           )}
           {isNew7(reelShot) && (
             <p className="muted">new5 ile aynı, kamera daha geriden. Kaybedecekken arkadan 24 asker belirir. Yazıyı sen eklersin.</p>
