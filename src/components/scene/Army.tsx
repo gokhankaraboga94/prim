@@ -697,6 +697,41 @@ function getBlueBareGeometry() {
   return blueBareGeo;
 }
 
+let giantSoldierGeo: THREE.BufferGeometry | null = null;
+let giantBowGeo: THREE.BufferGeometry | null = null;
+
+function getGiantSoldierGeometry() {
+  if (!giantSoldierGeo) {
+    giantSoldierGeo = mergeParts(
+      [
+        part(new THREE.BoxGeometry(0.16, 0.46, 0.16), "#0c2f8a", -0.1, 0.28, 0),
+        part(new THREE.BoxGeometry(0.16, 0.46, 0.16), "#0c2f8a", 0.1, 0.28, 0),
+        part(new THREE.BoxGeometry(0.48, 0.56, 0.22), "#1a56e8", 0, 0.96, 0),
+        part(new THREE.BoxGeometry(0.08, 0.5, 0.035), "#4d8cff", 0, 0.96, 0.12),
+        part(new THREE.BoxGeometry(0.14, 0.42, 0.14), "#1a56e8", -0.32, 0.98, 0),
+        part(new THREE.BoxGeometry(0.14, 0.42, 0.14), "#1a56e8", 0.32, 0.98, 0),
+        part(new THREE.BoxGeometry(0.24, 0.22, 0.22), "#d5dde6", 0, 1.42, 0),
+        part(new THREE.ConeGeometry(0.11, 0.2, 5), "#4d8cff", 0, 1.62, 0),
+      ],
+      "#1a56e8"
+    );
+  }
+  return giantSoldierGeo;
+}
+
+function getGiantBowGeometry() {
+  if (!giantBowGeo) {
+    giantBowGeo = mergeParts(
+      [
+        part(new THREE.BoxGeometry(0.03, 0.9, 0.03), "#6a3a18", 0.3, 1.05, 0.32),
+        part(new THREE.BoxGeometry(0.02, 0.72, 0.02), "#d7c39a", 0.36, 1.05, 0.28),
+      ],
+      "#6a3a18"
+    );
+  }
+  return giantBowGeo;
+}
+
 function getBlueSwordGeometry() {
   if (!blueSwordGeo) blueSwordGeo = createBlueSwordGeometry();
   return blueSwordGeo;
@@ -878,18 +913,18 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
   const pos = useMemo(() => new THREE.Vector3(), []);
   const melee = defend || vs || vs2 || new1 || new2 || bridge || cross || maze || giant;
   const openField = new1 || new2 || bridge || cross || maze || giant;
-  const archerGeo = useMemo(() => (cross || giant ? getBlueBareGeometry() : blade ? getBlueSwordGeometry() : blue ? getBlueBareGeometry() : new2 ? getBlueSoldierGeometry() : melee ? getDefendSoldierGeometry() : getArcherGeometry()), [melee, new2, blade, blue, cross, giant]);
+  const archerGeo = useMemo(() => (giant ? getGiantSoldierGeometry() : cross ? getBlueBareGeometry() : blade ? getBlueSwordGeometry() : blue ? getBlueBareGeometry() : new2 ? getBlueSoldierGeometry() : melee ? getDefendSoldierGeometry() : getArcherGeometry()), [melee, new2, blade, blue, cross, giant]);
   const swingGeo = useMemo(() => getSwingSwordGeometry(), []);
   const commanderGeo = useMemo(() => (melee ? archerGeo : getCommanderGeometry()), [melee, archerGeo]);
   const commanderCapeGeo = useMemo(() => (melee ? archerGeo : getCommanderCapeGeometry()), [melee, archerGeo]);
   const soldierPlumeGeo = useMemo(() => (new2 || blue || bridge || cross || maze || giant ? getBluePlumeGeometry() : getSoldierPlumeGeometry()), [new2, blue, bridge, cross, maze, giant]);
   const commanderPlumeGeo = useMemo(() => (melee ? archerGeo : getCommanderPlumeGeometry()), [melee, archerGeo]);
   const commanderFaceGeo = useMemo(() => (melee ? archerGeo : getCommanderFaceGeometry()), [melee, archerGeo]);
-  const bowHoldGeo = useMemo(() => (cross || giant ? getBowHoldGeometry() : melee ? archerGeo : getBowHoldGeometry()), [melee, archerGeo, cross, giant]);
-  const drawArmGeo = useMemo(() => (cross || giant ? getDrawArmGeometry() : melee ? archerGeo : getDrawArmGeometry()), [melee, archerGeo, cross, giant]);
+  const bowHoldGeo = useMemo(() => (giant ? getGiantBowGeometry() : cross ? getBowHoldGeometry() : melee ? archerGeo : getBowHoldGeometry()), [melee, archerGeo, cross, giant]);
+  const drawArmGeo = useMemo(() => (giant ? getGiantBowGeometry() : cross ? getDrawArmGeometry() : melee ? archerGeo : getDrawArmGeometry()), [melee, archerGeo, cross, giant]);
   const swordArmGeo = useMemo(() => (melee ? archerGeo : getSwordArmGeometry()), [melee, archerGeo]);
   const swordGeo = useMemo(() => (melee ? archerGeo : getSwordGeometry()), [melee, archerGeo]);
-  const nockGeo = useMemo(() => (cross || giant ? getNockArrowGeometry() : melee ? archerGeo : getNockArrowGeometry()), [melee, archerGeo, cross, giant]);
+  const nockGeo = useMemo(() => (giant ? getGiantBowGeometry() : cross ? getNockArrowGeometry() : melee ? archerGeo : getNockArrowGeometry()), [melee, archerGeo, cross, giant]);
 
   const rosterCap = Math.min(roster ? 80 : MAX_SOLDIERS, Math.max(0, Math.floor(count)));
   const mazeCast = useMemo(() => (maze ? labRosterIds(names, rosterCap) : null), [maze, names, rosterCap]);
@@ -971,20 +1006,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
       return ids;
     }
     if (giant) {
-      const meleeN = Math.ceil(visible / 2);
-      let meleeNames = 0;
-      let archerNames = 0;
-      for (let i = 0; i < names.length && i < visible; i++) {
-        if (!names[i]?.trim()) continue;
-        if (i < meleeN) {
-          if (meleeNames >= 20) continue;
-          meleeNames += 1;
-        } else {
-          if (archerNames >= 16) continue;
-          archerNames += 1;
-        }
-        ids.push(i);
-      }
+      for (let i = 0; i < names.length && i < visible; i++) if (names[i]?.trim()) ids.push(i);
       return ids;
     }
     if (maze) {
@@ -1185,12 +1207,16 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
       const n = layout.rest.length;
       const packShow = isolate && liveIds ? [...(outIds ?? []), ...liveIds] : [];
       const bodyN = isolate ? Math.min(instanceCap, Math.max(packShow.length, 1)) : n;
+      let giantLive = 0;
+      let giantSwords = 0;
+      let giantSpears = 0;
+      let giantBows = 0;
       bodies.current.count = bodyN;
-      if (soldierPlumes.current) soldierPlumes.current.count = bodyN;
-      if (bowHolds.current) bowHolds.current.count = cross || giant ? n : melee ? 0 : bodyN;
-      if (drawArms.current) drawArms.current.count = cross || giant ? n : melee ? 0 : bodyN;
-      if (nocks.current) nocks.current.count = cross || giant ? n : melee ? 0 : bodyN;
-      if (spears.current) spears.current.count = giant ? n : 0;
+      if (soldierPlumes.current) soldierPlumes.current.count = giant ? 0 : bodyN;
+      if (bowHolds.current) bowHolds.current.count = giant ? 0 : cross ? n : melee ? 0 : bodyN;
+      if (drawArms.current) drawArms.current.count = giant ? 0 : cross ? n : melee ? 0 : bodyN;
+      if (nocks.current) nocks.current.count = giant ? 0 : cross ? n : melee ? 0 : bodyN;
+      if (spears.current) spears.current.count = 0;
       const hideSlot = (i: number) => {
         dummy.scale.setScalar(0);
         dummy.position.set(0, -40, 0);
@@ -1252,70 +1278,35 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
         const soldier = layout.rest[i];
         if (giant) {
           devFriendAt(i, n, recT, vsPose);
-          const alive = (vsPose.s ?? 1) > 0;
+          if ((vsPose.s ?? 1) <= 0) continue;
           dummy.position.set(vsPose.x, vsPose.y, vsPose.z);
           dummy.rotation.set(vsPose.rx, vsPose.ry, vsPose.rz);
-          dummy.scale.setScalar(alive ? scale * 0.96 : 0);
+          dummy.scale.setScalar(scale * 0.96);
           dummy.updateMatrix();
-          stamp(bodies.current, i);
-          stamp(soldierPlumes.current, i);
+          stamp(bodies.current, giantLive);
+          giantLive += 1;
           const archer = devIsArcher(i, n);
           const spear = devIsSpear(i, n);
-          _bodyQ.setFromEuler(_limbEul.set(vsPose.rx, vsPose.ry, vsPose.rz, "XYZ"));
-          if (bladeSwings.current) {
-            if (!alive || archer || spear) {
-              dummy.scale.setScalar(0);
-              dummy.updateMatrix();
-              bladeSwings.current.setMatrixAt(i, dummy.matrix);
-            } else {
-              const pitch = 0.55 + Math.sin(recT * 7 + i) * 0.65;
-              _swingM.makeTranslation(0.48, 1, 0.3);
-              _swingSpin.makeRotationX(-pitch);
-              _swingNeg.makeTranslation(-0.48, -1, -0.3);
-              _swingM.multiply(_swingSpin).multiply(_swingNeg);
-              _swingBody.copy(dummy.matrix).multiply(_swingM);
-              bladeSwings.current.setMatrixAt(i, _swingBody);
-            }
-          }
-          if (spears.current) {
-            if (!alive || !spear) {
-              dummy.scale.setScalar(0);
-              dummy.updateMatrix();
-              spears.current.setMatrixAt(i, dummy.matrix);
-            } else {
-              dummy.position.set(vsPose.x, vsPose.y, vsPose.z);
-              dummy.rotation.set(vsPose.rx, vsPose.ry, vsPose.rz);
-              dummy.scale.setScalar(scale * 0.96);
-              dummy.updateMatrix();
-              _swingM.makeTranslation(0.42, 1.2, 0.2);
-              _swingSpin.makeRotationX(-0.85);
-              _swingNeg.makeTranslation(0, -1.2, 0);
-              _swingM.multiply(_swingSpin).multiply(_swingNeg);
-              _swingBody.copy(dummy.matrix).multiply(_swingM);
-              spears.current.setMatrixAt(i, _swingBody);
-            }
-          }
-          if (archer && alive) {
-            const bodyScale = scale * 0.96;
-            pos.set(vsPose.x, vsPose.y, vsPose.z);
-            stampLimb(bowHolds.current, i, L_SHOULDER, -0.35, 0.05, 0.08, bodyScale);
-            stampLimb(drawArms.current, i, R_SHOULDER, -0.72, 0.28, -0.08, bodyScale);
-            if (nocks.current) {
-              nockOff.set(-0.08, 1.22, 0.28);
-              nockOff.applyQuaternion(_bodyQ);
-              nockOff.multiplyScalar(bodyScale);
-              dummy.position.set(vsPose.x + nockOff.x, vsPose.y + nockOff.y, vsPose.z + nockOff.z);
-              dummy.rotation.set(vsPose.rx, vsPose.ry, vsPose.rz);
-              dummy.scale.setScalar(bodyScale);
-              dummy.updateMatrix();
-              nocks.current.setMatrixAt(i, dummy.matrix);
-            }
-          } else {
-            dummy.scale.setScalar(0);
-            dummy.updateMatrix();
-            if (bowHolds.current) bowHolds.current.setMatrixAt(i, dummy.matrix);
-            if (drawArms.current) drawArms.current.setMatrixAt(i, dummy.matrix);
-            if (nocks.current) nocks.current.setMatrixAt(i, dummy.matrix);
+          if (archer && bowHolds.current) {
+            bowHolds.current.setMatrixAt(giantBows, dummy.matrix);
+            giantBows += 1;
+          } else if (spear && spears.current) {
+            _swingM.makeTranslation(0.42, 1.2, 0.2);
+            _swingSpin.makeRotationX(-0.85);
+            _swingNeg.makeTranslation(0, -1.2, 0);
+            _swingM.multiply(_swingSpin).multiply(_swingNeg);
+            _swingBody.copy(dummy.matrix).multiply(_swingM);
+            spears.current.setMatrixAt(giantSpears, _swingBody);
+            giantSpears += 1;
+          } else if (bladeSwings.current) {
+            const pitch = 0.55 + Math.sin(recT * 12 + i) * 0.7;
+            _swingM.makeTranslation(0.48, 1, 0.3);
+            _swingSpin.makeRotationX(-pitch);
+            _swingNeg.makeTranslation(-0.48, -1, -0.3);
+            _swingM.multiply(_swingSpin).multiply(_swingNeg);
+            _swingBody.copy(dummy.matrix).multiply(_swingM);
+            bladeSwings.current.setMatrixAt(giantSwords, _swingBody);
+            giantSwords += 1;
           }
           continue;
         }
@@ -1475,10 +1466,19 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
         }
       }
       }
+      if (giant) {
+        bodies.current.count = giantLive;
+        if (soldierPlumes.current) soldierPlumes.current.count = 0;
+        if (bladeSwings.current) bladeSwings.current.count = giantSwords;
+        if (spears.current) spears.current.count = giantSpears;
+        if (bowHolds.current) bowHolds.current.count = giantBows;
+        if (drawArms.current) drawArms.current.count = 0;
+        if (nocks.current) nocks.current.count = 0;
+      }
       bodies.current.instanceMatrix.needsUpdate = true;
       if (soldierPlumes.current) soldierPlumes.current.instanceMatrix.needsUpdate = true;
       if (bladeSwings.current) {
-        bladeSwings.current.count = cross || giant ? n : 0;
+        if (!giant) bladeSwings.current.count = cross ? n : 0;
         bladeSwings.current.instanceMatrix.needsUpdate = true;
       }
       if (spears.current) spears.current.instanceMatrix.needsUpdate = true;
@@ -1627,7 +1627,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
       const staggered = Boolean(countdown || defend || vs || vs2 || openField);
       if (countdown) nameScale = 1.12 * crowd;
       else if (defend) nameScale = 1.22 * crowd;
-      else if (giant) nameScale = 1.18;
+      else if (giant) nameScale = 0.96;
       else if (maze) nameScale = 1.05;
       else if (cross) nameScale = 1.112;
       else if (bridge && !relief) nameScale = 1.112 * 0.56;
@@ -1703,7 +1703,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
         }
       }
       let sx = (isolate ? Math.min(1.05, cell.sx * nameScale) : cell.sx * nameScale);
-      if (giant) sx = Math.min(sx, 2.25);
+      if (giant) sx = Math.min(sx, 1.72);
       else if (maze) sx = Math.min(sx, 2.15);
       else if (cross) sx = Math.min(sx, 2.357);
       else if (bridge && !relief) sx = Math.min(sx, 2.357 * 0.56);
@@ -1924,22 +1924,22 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
       {defend || vs || vs2 || openField ? (
         <>
           <instancedMesh key={`archer-v14-defend-${instanceCap}`} ref={bodies} args={[archerGeo, undefined, instanceCap]} frustumCulled={false}>
-            <meshStandardMaterial vertexColors roughness={0.46} metalness={0.72} envMapIntensity={0.9} />
+            {giant ? <meshLambertMaterial vertexColors /> : <meshStandardMaterial vertexColors roughness={0.46} metalness={0.72} envMapIntensity={0.9} />}
           </instancedMesh>
           <instancedMesh ref={soldierPlumes} args={[soldierPlumeGeo, undefined, instanceCap]} frustumCulled={false}>
             <meshStandardMaterial vertexColors roughness={0.86} metalness={0} side={THREE.DoubleSide} />
           </instancedMesh>
           <instancedMesh ref={bladeSwings} args={[swingGeo, undefined, instanceCap]} frustumCulled={false}>
-            <meshStandardMaterial vertexColors roughness={0.35} metalness={0.72} />
+            {giant ? <meshLambertMaterial vertexColors /> : <meshStandardMaterial vertexColors roughness={0.35} metalness={0.72} />}
           </instancedMesh>
           {giant && (
             <instancedMesh ref={spears} args={[undefined, undefined, instanceCap]} frustumCulled={false}>
               <cylinderGeometry args={[0.045, 0.08, 2.35, 5]} />
-              <meshStandardMaterial color="#c5bfb2" roughness={0.42} metalness={0.62} />
+              <meshLambertMaterial color="#c5bfb2" />
             </instancedMesh>
           )}
           <instancedMesh ref={bowHolds} args={[bowHoldGeo, undefined, instanceCap]} frustumCulled={false}>
-            <meshStandardMaterial vertexColors roughness={0.52} metalness={0.28} />
+            {giant ? <meshLambertMaterial vertexColors /> : <meshStandardMaterial vertexColors roughness={0.52} metalness={0.28} />}
           </instancedMesh>
           <instancedMesh ref={drawArms} args={[drawArmGeo, undefined, instanceCap]} frustumCulled={false}>
             <meshStandardMaterial vertexColors roughness={0.48} metalness={0.2} />

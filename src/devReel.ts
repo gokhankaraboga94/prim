@@ -46,21 +46,29 @@ function planOf(soldiers: number): Plan {
   return plan;
 }
 
+const WALK = 0.86;
+
 export function devGiantAt(t: number) {
   const u = Math.max(0, t);
-  const ang = u * 0.36;
+  const ang = u * WALK;
   const x = Math.sin(ang) * 7;
   const z = Math.cos(ang * 0.77) * 5;
-  const dx = Math.cos(ang) * 7 * 0.36;
-  const dz = -Math.sin(ang * 0.77) * 5 * 0.77;
+  const dx = Math.cos(ang) * 7 * WALK;
+  const dz = -Math.sin(ang * 0.77) * 5 * 0.77 * WALK;
   return { x, z, yaw: Math.atan2(dx, dz || 0.001) };
 }
 
 export function devClubHit(t: number, soldiers: number) {
-  if (t < FIGHT || t > LAST + 0.35) return 0;
-  const phase = ((t - FIGHT) % planOf(soldiers).period) / planOf(soldiers).period;
-  if (phase > 0.22) return 0;
-  return Math.sin((phase / 0.22) * Math.PI);
+  if (t < FIGHT) return Math.max(0, Math.sin(t * 5.4)) * 0.28;
+  if (t > LAST + 0.12) return 0;
+  const period = planOf(soldiers).period;
+  const phase = ((t - FIGHT) % period) / period;
+  const burst = (center: number, width: number) => {
+    const d = Math.min(Math.abs(phase - center), Math.abs(phase - center + 1), Math.abs(phase - center - 1));
+    if (d > width) return 0;
+    return Math.sin((1 - d / width) * Math.PI);
+  };
+  return Math.max(burst(0.03, 0.045), burst(0.46, 0.04));
 }
 
 export function devIsArcher(i: number, n: number) {
@@ -112,41 +120,25 @@ export function devFriendAt(i: number, n: number, recT: number, out: New1Pose) {
     return;
   }
   const dieAt = planOf(count).die[i];
-  const live = ringAt(i, count, Math.min(t, dieAt));
-  out.ry = live.ry;
-  out.rz = 0;
-  out.s = 1;
-  if (t < dieAt) {
-    const bob = Math.sin(t * 8 + i);
-    out.x = live.x;
-    out.z = live.z;
-    out.y = Math.abs(bob) * 0.04;
-    out.rx = 0.2 + bob * 0.05;
-    return;
-  }
-  const age = t - dieAt;
-  if (age > 1.55) {
-    out.x = live.x;
-    out.z = live.z;
+  if (t >= dieAt) {
+    out.x = 0;
     out.y = -40;
-    out.rx = 1.4;
+    out.z = 0;
+    out.rx = 0;
+    out.ry = 0;
+    out.rz = 0;
     out.s = 0;
     return;
   }
-  const fly = Math.min(1, age / 0.72);
-  const g = devGiantAt(dieAt);
-  const rx = Math.cos(g.yaw);
-  const rz = -Math.sin(g.yaw);
-  const ox = Math.sin(live.ang);
-  const oz = Math.cos(live.ang);
-  const dirX = live.archer ? ox : rx * 0.86 + ox * 0.28;
-  const dirZ = live.archer ? oz : rz * 0.86 + oz * 0.28;
-  const dist = (live.archer ? 8 : 12) + (i % 8) * 0.85;
-  out.x = live.x + dirX * dist * fly;
-  out.z = live.z + dirZ * dist * fly;
-  out.y = Math.sin(fly * Math.PI) * (3.6 + (i % 5) * 0.45);
-  out.rx = 0.4 + fly * 1.35;
-  out.ry = live.ry + fly * 2.2;
+  const live = ringAt(i, count, t);
+  const bob = Math.sin(t * 8 + i);
+  out.x = live.x;
+  out.z = live.z;
+  out.y = Math.abs(bob) * 0.04;
+  out.rx = 0.2 + bob * 0.05;
+  out.ry = live.ry;
+  out.rz = 0;
+  out.s = 1;
 }
 
 export function sampleDevCam(recT: number): ShotPose {

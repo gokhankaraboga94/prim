@@ -721,7 +721,7 @@ export function AdminPage() {
             </button>
           </div>
           {isDev(reelShot) && (
-            <p className="muted">Boş arazi, 300 asker. Uzun siyah zırhlı dev. Yarısı kılıç ve mızrak, yarısı yay. Her vuruş 10-20 askeri fırlatır. Üstte sayı düşer.</p>
+            <p className="muted">Boş arazi, 300 asker, isimler üstte. Uzun siyah zırhlı dev. Yarısı kılıç ve mızrak, yarısı yay. Her vuruş 10-20 askeri siler. Üstte sayı düşer.</p>
           )}
           {isLab(reelShot) && (
             <p className="muted">100 son katılan birlikte girer. Kamera biraz daha yakından bütün kolları gösterir, sonda çıkanlara yaklaşır. Düşman grupları iki kat. Zemin labirentin dışına geniş.</p>

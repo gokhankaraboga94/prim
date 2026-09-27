@@ -21,12 +21,14 @@ function GiantBody({ soldiers }: { soldiers: number }) {
     const t = Math.max(0, clock.elapsedTime - REEL_HOLD);
     const g = devGiantAt(t);
     const hit = devClubHit(t, soldiers);
+    const pace = Math.sin(t * 7.2);
     if (root.current) {
-      root.current.position.set(g.x, Math.abs(Math.sin(t * 1.7)) * 0.16, g.z);
+      root.current.position.set(g.x, Math.abs(Math.sin(t * 5.6)) * 0.32, g.z);
       root.current.rotation.y = g.yaw;
+      root.current.rotation.z = pace * 0.045;
     }
-    if (arm.current) arm.current.rotation.z = 0.08 - hit * 0.2;
-    if (mace.current) mace.current.rotation.x = -0.25 - hit * 1.55;
+    if (arm.current) arm.current.rotation.z = 0.14 + pace * 0.22 - hit * 0.42;
+    if (mace.current) mace.current.rotation.x = -0.12 - hit * 2.25;
   });
   const spikes = [0, 45, 90, 135, 180, 225, 270, 315];
   return (
