@@ -221,7 +221,7 @@ function packs(path: Pt[], len: number, start: number, gap: number) {
   const spots: { path: Pt[]; dist: number; n: number; row: number }[] = [];
   for (let d = start; d <= last + 0.01; d += gap) {
     const dist = Math.min(d, last);
-    spots.push({ path, dist, n: 5, row: path === WIN ? winLead(dist) : 0 });
+    spots.push({ path, dist, n: 10, row: path === WIN ? winLead(dist) : 0 });
   }
   return spots;
 }
@@ -336,12 +336,16 @@ export function labFoeAt(i: number, recT: number, out: New1Pose) {
     cursor -= item.n;
   }
   const at = sample(spot.path, spot.dist);
-  const col = cursor % spot.n;
-  const span = (col - (spot.n - 1) / 2) * 0.46;
+  const file = 5;
+  const col = cursor % file;
+  const rank = Math.floor(cursor / file);
+  const span = (col - (file - 1) / 2) * 0.46;
   const rx = Math.cos(at.ry);
   const rz = -Math.sin(at.ry);
-  out.x = at.x + rx * span;
-  out.z = at.z + rz * span;
+  const fx = Math.sin(at.ry);
+  const fz = Math.cos(at.ry);
+  out.x = at.x + rx * span - fx * rank * 1.15;
+  out.z = at.z + rz * span - fz * rank * 1.15;
   out.ry = at.ry + Math.PI;
   out.rx = 0.08;
   out.rz = 0;
@@ -360,17 +364,53 @@ export function labFoeAt(i: number, recT: number, out: New1Pose) {
 
 export function sampleLabCam(recT: number): ShotPose {
   const t = Math.max(0, recT);
-  const u = t <= 2.2 ? 0 : Math.min(1, (t - 2.2) / 6.8);
-  const e = u * u * (3 - 2 * u);
-  const from = { x: 0, y: 64, z: -46, lx: 0, ly: 1.1, lz: -2, fov: 48 };
-  const to = { x: 0, y: 200, z: -62, lx: 0, ly: 0, lz: 46, fov: 52 };
+  const pull = t <= 2.2 ? 0 : Math.min(1, (t - 2.2) / 6.2);
+  const e = pull * pull * (3 - 2 * pull);
+  const from = { x: 0, y: 51.4, z: -37.2, lx: 0, ly: 1.1, lz: -2, fov: 48 };
+  const wide = { x: 0, y: 160, z: -40.4, lx: 0, ly: 0, lz: 46, fov: 52 };
+  const mid = {
+    x: from.x + (wide.x - from.x) * e,
+    y: from.y + (wide.y - from.y) * e,
+    z: from.z + (wide.z - from.z) * e,
+    lx: from.lx + (wide.lx - from.lx) * e,
+    ly: from.ly + (wide.ly - from.ly) * e,
+    lz: from.lz + (wide.lz - from.lz) * e,
+    fov: from.fov + (wide.fov - from.fov) * e,
+  };
+  const zoom = t <= 50 ? 0 : Math.min(1, (t - 50) / 7);
+  const u = zoom * zoom * (3 - 2 * zoom);
+  if (u <= 0) return mid;
+  let lead = 44;
+  let tail = 94;
+  let seen = false;
+  for (let i = 0; i < LAB_N; i++) {
+    if (PLAN.die[i] <= 1e8) continue;
+    if (!seen) {
+      lead = i;
+      seen = true;
+    }
+    tail = i;
+  }
+  const front = poseAt(lead, t);
+  const back = poseAt(tail, t);
+  const fx = Math.sin(front.ry);
+  const fz = Math.cos(front.ry);
+  const close = {
+    x: back.x - fx * 8,
+    y: 13,
+    z: back.z - fz * 10,
+    lx: front.x + fx * 2.4,
+    ly: 1.3,
+    lz: front.z + fz * 2.4,
+    fov: 34,
+  };
   return {
-    x: from.x + (to.x - from.x) * e,
-    y: from.y + (to.y - from.y) * e,
-    z: from.z + (to.z - from.z) * e,
-    lx: from.lx + (to.lx - from.lx) * e,
-    ly: from.ly + (to.ly - from.ly) * e,
-    lz: from.lz + (to.lz - from.lz) * e,
-    fov: from.fov + (to.fov - from.fov) * e,
+    x: mid.x + (close.x - mid.x) * u,
+    y: mid.y + (close.y - mid.y) * u,
+    z: mid.z + (close.z - mid.z) * u,
+    lx: mid.lx + (close.lx - mid.lx) * u,
+    ly: mid.ly + (close.ly - mid.ly) * u,
+    lz: mid.lz + (close.lz - mid.lz) * u,
+    fov: mid.fov + (close.fov - mid.fov) * u,
   };
 }

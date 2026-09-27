@@ -77,7 +77,7 @@ function dirtTexture() {
   const tex = new THREE.CanvasTexture(canvas);
   tex.wrapS = THREE.RepeatWrapping;
   tex.wrapT = THREE.RepeatWrapping;
-  tex.repeat.set(8, 10);
+  tex.repeat.set(22, 24);
   tex.colorSpace = THREE.SRGBColorSpace;
   tex.anisotropy = 8;
   return tex;
@@ -118,8 +118,8 @@ export function Maze({ soldiers: _soldiers }: { soldiers: number }) {
   const capMat = useMemo(() => new THREE.MeshStandardMaterial({ color: "#d9cbb8", roughness: 0.78 }), []);
   return (
     <group>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.04, 40]}>
-        <planeGeometry args={[130, 170]} />
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.04, 90]}>
+        <planeGeometry args={[360, 420]} />
         <meshStandardMaterial map={dirt ?? undefined} color={dirt ? "#ffffff" : "#6d5b3e"} roughness={0.94} />
       </mesh>
       {boxes.map((box, i) => (
