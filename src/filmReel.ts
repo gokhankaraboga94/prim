@@ -15,7 +15,6 @@ export const FILM_RELIEF = 150;
 export const FILM_FOES = 100;
 
 const CHARGE = 3;
-const MEET = 8;
 const HOME = 22;
 const FOE_FROM = 8.4;
 const FOE_TO = 22.5;
@@ -52,6 +51,32 @@ export function filmRoster(names: string[], cap: number): number[] {
 export function filmDownCount(n: number) {
   return Math.min(FILM_DOWN, Math.max(0, Math.floor(n)));
 }
+
+function hash(n: number) {
+  const s = Math.sin(n * 127.1 + 311.7) * 43758.5453;
+  return s - Math.floor(s);
+}
+
+const FALLEN: Array<[number, number, number, number, number]> = [
+  [-0.08, -5.76, 1.28, 1.58, 0.19],
+  [1.34, -6.5, 1.41, 0.5, -0.29],
+  [2.76, -5.42, 1.3, -0.22, -0.04],
+  [1.07, 0.57, 1.32, -1.05, 0.06],
+  [0.47, -3.91, 1.31, -0.69, -0.04],
+  [2.89, -2.66, 1.38, 0.33, 0.23],
+  [-2.61, -1.61, 1.33, -0.38, -0.11],
+  [-2.48, -4.61, 1.45, -0.57, -0.31],
+  [-0.95, -3.57, 1.31, 0.11, 0.08],
+  [-1.84, -2.61, 1.39, 0.47, 0.27],
+  [0.07, -1.68, 1.35, 0.89, 0.25],
+  [-1.03, -0.74, 1.31, -0.39, 0.29],
+  [-1.72, -6.07, 1.39, -0.76, 0.27],
+  [2.7, -0.62, 1.29, -0.75, 0.22],
+  [1.96, -3.96, 1.48, 1.54, 0.09],
+  [-1.37, 0.49, 1.45, 0.54, -0.21],
+  [1.45, -2.68, 1.26, -0.24, 0.04],
+  [-0.85, -4.83, 1.24, 0.41, -0.11],
+];
 
 function foeCell(i: number) {
   const col = i % COLS;
@@ -105,46 +130,43 @@ export function filmFriendAt(slot: number, n: number, recT: number, out: New1Pos
     return;
   }
   if (slot < downN) {
-    const cols = 3;
-    const col = slot % cols;
-    const row = Math.floor(slot / cols);
-    out.x = (col - 1) * 2.2;
-    out.z = -row * 1.62;
+    const pose = FALLEN[slot] ?? FALLEN[0];
+    out.x = pose[0];
+    out.z = pose[1];
     out.y = 0.06;
-    out.rx = 1.42;
-    out.ry = (slot % 3 - 1) * 0.04;
-    out.rz = slot % 2 ? 0.1 : -0.08;
+    out.rx = pose[2];
+    out.ry = pose[3];
+    out.rz = pose[4];
     out.s = 1;
     return;
   }
   const r = slot - downN;
   const relief = Math.max(1, count - downN);
-  const leftN = Math.ceil(relief / 2);
-  const side = r < leftN ? -1 : 1;
-  const local = side < 0 ? r : r - leftN;
-  const file = 4;
-  const col = local % file;
-  const row = Math.floor(local / file);
-  const startX = side * (22 + row * 0.04);
-  const startZ = 2.2 + row * 0.78 + (col % 2) * 0.1;
-  const flankX = side * (4.7 + col * 0.12);
-  const flankZ = startZ;
-  const homeCol = side < 0 ? col : col + file;
-  const homeX = (homeCol - 3.5) * 1.02;
-  const homeZ = 2.2 + row * 0.78;
-  const run = t <= CHARGE ? 0 : ease(Math.min(1, (t - CHARGE) / (MEET - CHARGE)));
-  const close = t <= MEET ? 0 : ease(Math.min(1, (t - MEET) / (HOME - MEET)));
-  const midX = startX + (flankX - startX) * run;
-  const midZ = startZ + (flankZ - startZ) * run;
-  out.x = midX + (homeX - midX) * close;
-  out.z = midZ + (homeZ - midZ) * close;
-  const moving = run < 1 || close < 1;
+  const h1 = hash(r * 3 + 1);
+  const h2 = hash(r * 5 + 9);
+  const h3 = hash(r * 7 + 17);
+  const u = Math.max(0, Math.min(1, (r + 0.37 + (h1 - 0.5) * 0.7) / relief));
+  const ang = -1.18 + u * 2.36 + (h2 - 0.5) * 0.1;
+  const wing = ang >= 0 ? 1 : -1;
+  const mag = 0.62 + (Math.abs(ang) / 1.18) * 0.7;
+  const startA = wing * mag;
+  const startR = 18 + h1 * 9;
+  const startX = Math.sin(startA) * startR;
+  const startZ = -1 + h2 * 14 + (1 - Math.cos(startA)) * 4;
+  const band = h3;
+  const homeR = 3.2 + band * 6.4;
+  const homeX = Math.sin(ang) * homeR * (0.88 + h1 * 0.2);
+  const homeZ = Math.max(1.35, 1.7 + (1 - Math.cos(ang)) * (2.1 + band * 3.2) + (h2 - 0.5) * 0.85);
+  const depart = CHARGE + h1 * 1.15;
+  const arrive = HOME - h2 * 2.4;
+  const run = t <= depart ? 0 : ease(Math.min(1, (t - depart) / Math.max(0.8, arrive - depart)));
+  out.x = startX + (homeX - startX) * run;
+  out.z = startZ + (homeZ - startZ) * run;
+  const moving = run < 1;
   const bob = Math.sin(t * 9 + slot);
   out.y = moving ? Math.abs(bob) * 0.05 : 0;
   out.rx = moving ? 0.22 + bob * 0.04 : 0.04;
-  const aimX = run < 1 ? flankX : homeX;
-  const aimZ = run < 1 ? flankZ : homeZ;
-  out.ry = close > 0.94 ? Math.PI : Math.atan2(aimX - out.x, aimZ - out.z || 0.001);
+  out.ry = run > 0.97 ? Math.atan2(-out.x, -2.2 - out.z) : Math.atan2(homeX - startX, homeZ - startZ);
   out.rz = 0;
   out.s = 1;
 }

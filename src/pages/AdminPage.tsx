@@ -769,7 +769,7 @@ export function AdminPage() {
             <p className="muted">DEV2 ile aynı. Bütün takipçiler sahnede, isimler iri. Devin kapattığı askerin adı görünmez. Üstte sayı düşer.</p>
           )}
           {isFilm(reelShot) && (
-            <p className="muted">18 takipçi yerde, adları üstte. Başlarında 100 düşman bekler. 3. saniyede 150 asker iki yandan gelip onları keser, ölüler yerde kalır.</p>
+            <p className="muted">18 takipçi yerde dağınık, adları üstte. Başlarında 100 düşman bekler. 3. saniyede 150 asker hilal gibi, her biri ayrı yerden gelir. Ölüler yerde kalır.</p>
           )}
           {isLab(reelShot) && (
             <p className="muted">100 son katılan birlikte girer. Kamera biraz daha yakından bütün kolları gösterir, sonda çıkanlara yaklaşır. Düşman grupları iki kat. Zemin labirentin dışına geniş.</p>

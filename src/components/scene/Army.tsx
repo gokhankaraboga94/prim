@@ -723,6 +723,12 @@ function getGiantSoldierGeometry() {
   return giantSoldierGeo;
 }
 
+let filmBladeGeo: THREE.BufferGeometry | null = null;
+function getFilmBladeGeometry() {
+  if (!filmBladeGeo) filmBladeGeo = new THREE.BoxGeometry(0.06, 0.08, 0.72);
+  return filmBladeGeo;
+}
+
 function getGiantBowGeometry() {
   if (!giantBowGeo) {
     giantBowGeo = mergeParts(
@@ -917,8 +923,8 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
   const pos = useMemo(() => new THREE.Vector3(), []);
   const melee = defend || vs || vs2 || new1 || new2 || bridge || cross || maze || film || giant;
   const openField = new1 || new2 || bridge || cross || maze || film || giant;
-  const archerGeo = useMemo(() => (giant ? getGiantSoldierGeometry() : cross ? getBlueBareGeometry() : blade ? getBlueSwordGeometry() : blue ? getBlueBareGeometry() : new2 ? getBlueSoldierGeometry() : melee ? getDefendSoldierGeometry() : getArcherGeometry()), [melee, new2, blade, blue, cross, giant]);
-  const swingGeo = useMemo(() => getSwingSwordGeometry(), []);
+  const archerGeo = useMemo(() => (film || giant ? getGiantSoldierGeometry() : cross ? getBlueBareGeometry() : blade ? getBlueSwordGeometry() : blue ? getBlueBareGeometry() : new2 ? getBlueSoldierGeometry() : melee ? getDefendSoldierGeometry() : getArcherGeometry()), [melee, new2, blade, blue, cross, film, giant]);
+  const swingGeo = useMemo(() => (film ? getFilmBladeGeometry() : getSwingSwordGeometry()), [film]);
   const commanderGeo = useMemo(() => (melee ? archerGeo : getCommanderGeometry()), [melee, archerGeo]);
   const commanderCapeGeo = useMemo(() => (melee ? archerGeo : getCommanderCapeGeometry()), [melee, archerGeo]);
   const soldierPlumeGeo = useMemo(() => (new2 || blue || bridge || cross || maze || film || giant ? getBluePlumeGeometry() : getSoldierPlumeGeometry()), [new2, blue, bridge, cross, maze, film, giant]);
@@ -1240,8 +1246,10 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
       let giantSwords = 0;
       let giantSpears = 0;
       let giantBows = 0;
+      let filmLive = 0;
+      let filmSwords = 0;
       bodies.current.count = bodyN;
-      if (soldierPlumes.current) soldierPlumes.current.count = giant ? 0 : bodyN;
+      if (soldierPlumes.current) soldierPlumes.current.count = giant || film ? 0 : bodyN;
       if (bowHolds.current) bowHolds.current.count = giant ? 0 : cross ? n : melee ? 0 : bodyN;
       if (drawArms.current) drawArms.current.count = giant ? 0 : cross ? n : melee ? 0 : bodyN;
       if (nocks.current) nocks.current.count = giant ? 0 : cross ? n : melee ? 0 : bodyN;
@@ -1346,22 +1354,17 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
           dummy.rotation.set(vsPose.rx, vsPose.ry, vsPose.rz);
           dummy.scale.setScalar(scale * 0.96);
           dummy.updateMatrix();
-          stamp(bodies.current, i);
-          stamp(soldierPlumes.current, i);
-          if (bladeSwings.current) {
-            if (down) {
-              dummy.scale.setScalar(0);
-              dummy.updateMatrix();
-              bladeSwings.current.setMatrixAt(i, dummy.matrix);
-            } else {
-              const pitch = 0.35 + Math.sin(recT * 8 + i) * 0.55;
-              _swingM.makeTranslation(0.48, 1, 0.3);
-              _swingSpin.makeRotationX(-pitch);
-              _swingNeg.makeTranslation(-0.48, -1, -0.3);
-              _swingM.multiply(_swingSpin).multiply(_swingNeg);
-              _swingBody.copy(dummy.matrix).multiply(_swingM);
-              bladeSwings.current.setMatrixAt(i, _swingBody);
-            }
+          stamp(bodies.current, filmLive);
+          filmLive += 1;
+          if (!down && bladeSwings.current) {
+            const pitch = 0.35 + Math.sin(recT * 8 + i) * 0.55;
+            _swingM.makeTranslation(0.34, 0.95, 0.42);
+            _swingSpin.makeRotationX(-pitch);
+            _swingNeg.makeTranslation(-0.34, -0.95, -0.42);
+            _swingM.multiply(_swingSpin).multiply(_swingNeg);
+            _swingBody.copy(dummy.matrix).multiply(_swingM);
+            bladeSwings.current.setMatrixAt(filmSwords, _swingBody);
+            filmSwords += 1;
           }
           continue;
         }
@@ -1532,8 +1535,16 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
       }
       bodies.current.instanceMatrix.needsUpdate = true;
       if (soldierPlumes.current) soldierPlumes.current.instanceMatrix.needsUpdate = true;
+      if (film) {
+        bodies.current.count = filmLive;
+        if (soldierPlumes.current) soldierPlumes.current.count = 0;
+        if (bladeSwings.current) bladeSwings.current.count = filmSwords;
+        if (bowHolds.current) bowHolds.current.count = 0;
+        if (drawArms.current) drawArms.current.count = 0;
+        if (nocks.current) nocks.current.count = 0;
+      }
       if (bladeSwings.current) {
-        if (!giant) bladeSwings.current.count = cross || film ? n : 0;
+        if (!giant && !film) bladeSwings.current.count = cross ? n : 0;
         bladeSwings.current.instanceMatrix.needsUpdate = true;
       }
       if (spears.current) spears.current.instanceMatrix.needsUpdate = true;
@@ -1988,13 +1999,13 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
       {defend || vs || vs2 || openField ? (
         <>
           <instancedMesh key={`archer-v14-defend-${instanceCap}`} ref={bodies} args={[archerGeo, undefined, instanceCap]} frustumCulled={false}>
-            {giant ? <meshLambertMaterial vertexColors /> : <meshStandardMaterial vertexColors roughness={0.46} metalness={0.72} envMapIntensity={0.9} />}
+            {film || giant ? <meshLambertMaterial vertexColors /> : <meshStandardMaterial vertexColors roughness={0.46} metalness={0.72} envMapIntensity={0.9} />}
           </instancedMesh>
           <instancedMesh ref={soldierPlumes} args={[soldierPlumeGeo, undefined, instanceCap]} frustumCulled={false}>
             <meshStandardMaterial vertexColors roughness={0.86} metalness={0} side={THREE.DoubleSide} />
           </instancedMesh>
           <instancedMesh ref={bladeSwings} args={[swingGeo, undefined, instanceCap]} frustumCulled={false}>
-            {giant ? <meshLambertMaterial vertexColors /> : <meshStandardMaterial vertexColors roughness={0.35} metalness={0.72} />}
+            {film ? <meshLambertMaterial color="#dfe3ea" /> : giant ? <meshLambertMaterial vertexColors /> : <meshStandardMaterial vertexColors roughness={0.35} metalness={0.72} />}
           </instancedMesh>
           {giant && (
             <instancedMesh ref={spears} args={[undefined, undefined, instanceCap]} frustumCulled={false}>
