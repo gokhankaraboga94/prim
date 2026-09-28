@@ -13,6 +13,7 @@ import { DEFEND_CZ, DEFEND2_CX, DEFEND2_CZ, defendSoldierPos, defendYawOut } fro
 import { vsSoldierAt, type VsPose } from "../../vsReel";
 import { NEW6_ARCHERS, NEW62_ARCHERS, new1FriendAt, new2FriendAt, new2VisualFriends, new5FriendAt, new5OnScreen, new6FriendAt, new6SwordPitch, new6VisualFriends, new7FriendAt, new7VisualFriends } from "../../new1Reel";
 import { labFriendAt, labRosterIds } from "../../mazeReel";
+import { FILM_DOWN, filmFriendAt, filmRoster } from "../../filmReel";
 import { DEV2_N, DEV_N, devFriendAt, devIsArcher, devIsSpear, devNameCovered } from "../../devReel";
 import { sfxArrowLoose, sfxBowDraw, sfxVolleyPeak } from "../../reelSfx";
 import { raidCount, sallyHunting, sallyLiveIndex, sallyLocal, sallyRaiderAt, swordArmPose, swordStyleAt, swordSwingU } from "../../siegeEvent";
@@ -76,6 +77,7 @@ type ArmyProps = {
   wide?: boolean;
   relief?: boolean;
   maze?: boolean;
+  film?: boolean;
   giant?: boolean;
   giantBig?: boolean;
   giantAll?: boolean;
@@ -888,7 +890,7 @@ function NameLayers({
 }
 
 
-export function Army({ count, names = [], commanders = [], cinematic, duration = 8, skipCommander = false, roster = null, discover = null, countdown = false, defend = false, defend2 = false, defend3 = false, blue = false, vs = false, vs2 = false, new1 = false, new2 = false, blade = false, bridge = false, cross = false, wide = false, relief = false, maze = false, giant = false, giantBig = false, giantAll = false, mix = false, mixSlow = false, nameHunt = false, quiet = false, square = false, readNames = false, scanHunt = false, level = 1, rosterIds = null }: ArmyProps) {
+export function Army({ count, names = [], commanders = [], cinematic, duration = 8, skipCommander = false, roster = null, discover = null, countdown = false, defend = false, defend2 = false, defend3 = false, blue = false, vs = false, vs2 = false, new1 = false, new2 = false, blade = false, bridge = false, cross = false, wide = false, relief = false, maze = false, film = false, giant = false, giantBig = false, giantAll = false, mix = false, mixSlow = false, nameHunt = false, quiet = false, square = false, readNames = false, scanHunt = false, level = 1, rosterIds = null }: ArmyProps) {
   const bodies = useRef<THREE.InstancedMesh>(null);
   const soldierPlumes = useRef<THREE.InstancedMesh>(null);
   const bowHolds = useRef<THREE.InstancedMesh>(null);
@@ -913,13 +915,13 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
   const fireSfx = useRef(false);
   const countSfx = useRef("");
   const pos = useMemo(() => new THREE.Vector3(), []);
-  const melee = defend || vs || vs2 || new1 || new2 || bridge || cross || maze || giant;
-  const openField = new1 || new2 || bridge || cross || maze || giant;
+  const melee = defend || vs || vs2 || new1 || new2 || bridge || cross || maze || film || giant;
+  const openField = new1 || new2 || bridge || cross || maze || film || giant;
   const archerGeo = useMemo(() => (giant ? getGiantSoldierGeometry() : cross ? getBlueBareGeometry() : blade ? getBlueSwordGeometry() : blue ? getBlueBareGeometry() : new2 ? getBlueSoldierGeometry() : melee ? getDefendSoldierGeometry() : getArcherGeometry()), [melee, new2, blade, blue, cross, giant]);
   const swingGeo = useMemo(() => getSwingSwordGeometry(), []);
   const commanderGeo = useMemo(() => (melee ? archerGeo : getCommanderGeometry()), [melee, archerGeo]);
   const commanderCapeGeo = useMemo(() => (melee ? archerGeo : getCommanderCapeGeometry()), [melee, archerGeo]);
-  const soldierPlumeGeo = useMemo(() => (new2 || blue || bridge || cross || maze || giant ? getBluePlumeGeometry() : getSoldierPlumeGeometry()), [new2, blue, bridge, cross, maze, giant]);
+  const soldierPlumeGeo = useMemo(() => (new2 || blue || bridge || cross || maze || film || giant ? getBluePlumeGeometry() : getSoldierPlumeGeometry()), [new2, blue, bridge, cross, maze, film, giant]);
   const commanderPlumeGeo = useMemo(() => (melee ? archerGeo : getCommanderPlumeGeometry()), [melee, archerGeo]);
   const commanderFaceGeo = useMemo(() => (melee ? archerGeo : getCommanderFaceGeometry()), [melee, archerGeo]);
   const bowHoldGeo = useMemo(() => (giant ? getGiantBowGeometry() : cross ? getBowHoldGeometry() : melee ? archerGeo : getBowHoldGeometry()), [melee, archerGeo, cross, giant]);
@@ -930,12 +932,23 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
 
   const rosterCap = Math.min(roster ? 80 : MAX_SOLDIERS, Math.max(0, Math.floor(count)));
   const mazeCast = useMemo(() => (maze ? labRosterIds(names, rosterCap) : null), [maze, names, rosterCap]);
-  const visible = giant ? (giantAll ? rosterCap : Math.min(rosterCap, giantBig ? DEV2_N : DEV_N)) : mazeCast ? mazeCast.length : relief ? Math.min(rosterCap, new7VisualFriends(rosterCap)) : cross ? Math.min(rosterCap, new6VisualFriends(rosterCap, wide)) : bridge ? rosterCap : new2 ? Math.min(rosterCap, new2VisualFriends(rosterCap)) : rosterCap;
+  const filmCast = useMemo(() => (film ? filmRoster(names, rosterCap) : null), [film, names, rosterCap]);
+  const visible = filmCast ? filmCast.length : giant ? (giantAll ? rosterCap : Math.min(rosterCap, giantBig ? DEV2_N : DEV_N)) : mazeCast ? mazeCast.length : relief ? Math.min(rosterCap, new7VisualFriends(rosterCap)) : cross ? Math.min(rosterCap, new6VisualFriends(rosterCap, wide)) : bridge ? rosterCap : new2 ? Math.min(rosterCap, new2VisualFriends(rosterCap)) : rosterCap;
   const instanceCap = Math.min(MAX_SOLDIERS, Math.max(visible, roster ? 24 : 1, 1));
   const defendOx = defend2 ? DEFEND2_CX : 0;
   const defendOz = defend2 ? DEFEND2_CZ : DEFEND_CZ;
   const chiefsList = useMemo(() => effectiveCommanders(commanders, names), [commanders, names]);
   const layout = useMemo(() => {
+    if (film && filmCast) {
+      const rest = filmCast;
+      const hi = rest.reduce((m, id) => Math.max(m, id), -1);
+      const slotOf = new Array<number>(Math.max(0, hi) + 1).fill(-1);
+      const cmdOf = new Array<number>(slotOf.length).fill(-1);
+      rest.forEach((soldier, i) => {
+        slotOf[soldier] = i;
+      });
+      return { cmd: [] as number[], rest, slotOf, cmdOf, sizes: rankSizes(rest.length) };
+    }
     if (maze && mazeCast) {
       const rest = mazeCast;
       const hi = rest.reduce((m, id) => Math.max(m, id), -1);
@@ -967,7 +980,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
       return { cmd: [] as number[], rest, slotOf, cmdOf, sizes: squareRankSizes(rest.length) };
     }
     return buildLayout(names, chiefsList, visible);
-  }, [names, chiefsList, visible, defend, vs, vs2, openField, square, maze, mazeCast]);
+  }, [names, chiefsList, visible, defend, vs, vs2, openField, square, maze, mazeCast, film, filmCast]);
   const phantom = !skipCommander && layout.cmd.length === 0 && chiefsList.length > 0;
   const form = useMemo(() => ({ sizes: layout.sizes, scale: 1.28, square }), [layout.sizes, square]);
   const steelRough = useMemo(() => {
@@ -1011,6 +1024,14 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
       for (let i = 0; i < names.length && i < visible; i++) if (names[i]?.trim()) ids.push(i);
       return ids;
     }
+    if (film) {
+      const down = Math.min(FILM_DOWN, layout.rest.length);
+      for (let s = 0; s < down; s++) {
+        const i = layout.rest[s];
+        if (names[i]?.trim()) ids.push(i);
+      }
+      return ids;
+    }
     if (maze) {
       for (const i of layout.rest) if (names[i]?.trim()) ids.push(i);
       return ids;
@@ -1039,17 +1060,17 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
       if (names[i]?.trim()) ids.push(i);
     }
     return ids;
-  }, [names, visible, phantom, defend, vs, vs2, openField, roster, rosterIds, cross, bridge, relief, maze, giant, layout.rest]);
+  }, [names, visible, phantom, defend, vs, vs2, openField, roster, rosterIds, cross, bridge, relief, maze, film, giant, layout.rest]);
   const nameAtlas = useMemo(
     () =>
       buildNameAtlas(
         labeled.map((i) => ({
           text: i < 0 ? DEFAULT_COMMANDER : names[i],
           commander: !defend && !vs && !vs2 && !openField && (i < 0 || isCommander(names[i], chiefsList)),
-          plain: Boolean(countdown || defend || vs || vs2 || openField || roster || square),
+          plain: Boolean(countdown || defend || vs || vs2 || openField || roster || square || film),
         }))
       ),
-    [labeled, names, chiefsList, countdown, defend, vs, vs2, openField, roster, square]
+    [labeled, names, chiefsList, countdown, defend, vs, vs2, openField, roster, square, film]
   );
   useEffect(() => () => nameAtlas.dispose(), [nameAtlas]);
 
@@ -1062,6 +1083,12 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
   function poseSoldier(soldier: number, t: number) {
     if (giant) {
       devFriendAt(soldier, layout.rest.length, t - REEL_HOLD, vsPose, giantBig);
+      pos.set(vsPose.x, vsPose.y, vsPose.z);
+      return;
+    }
+    if (film) {
+      const slot = layout.slotOf[soldier];
+      filmFriendAt(slot >= 0 ? slot : 0, layout.rest.length, t - REEL_HOLD, vsPose);
       pos.set(vsPose.x, vsPose.y, vsPose.z);
       return;
     }
@@ -1312,6 +1339,32 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
           }
           continue;
         }
+        if (film) {
+          filmFriendAt(i, n, recT, vsPose);
+          const down = i < Math.min(FILM_DOWN, n);
+          dummy.position.set(vsPose.x, vsPose.y, vsPose.z);
+          dummy.rotation.set(vsPose.rx, vsPose.ry, vsPose.rz);
+          dummy.scale.setScalar(scale * 0.96);
+          dummy.updateMatrix();
+          stamp(bodies.current, i);
+          stamp(soldierPlumes.current, i);
+          if (bladeSwings.current) {
+            if (down) {
+              dummy.scale.setScalar(0);
+              dummy.updateMatrix();
+              bladeSwings.current.setMatrixAt(i, dummy.matrix);
+            } else {
+              const pitch = 0.35 + Math.sin(recT * 8 + i) * 0.55;
+              _swingM.makeTranslation(0.48, 1, 0.3);
+              _swingSpin.makeRotationX(-pitch);
+              _swingNeg.makeTranslation(-0.48, -1, -0.3);
+              _swingM.multiply(_swingSpin).multiply(_swingNeg);
+              _swingBody.copy(dummy.matrix).multiply(_swingM);
+              bladeSwings.current.setMatrixAt(i, _swingBody);
+            }
+          }
+          continue;
+        }
         if (maze) {
           labFriendAt(i, n, recT, vsPose);
           dummy.position.set(vsPose.x, vsPose.y, vsPose.z);
@@ -1480,7 +1533,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
       bodies.current.instanceMatrix.needsUpdate = true;
       if (soldierPlumes.current) soldierPlumes.current.instanceMatrix.needsUpdate = true;
       if (bladeSwings.current) {
-        if (!giant) bladeSwings.current.count = cross ? n : 0;
+        if (!giant) bladeSwings.current.count = cross || film ? n : 0;
         bladeSwings.current.instanceMatrix.needsUpdate = true;
       }
       if (spears.current) spears.current.instanceMatrix.needsUpdate = true;
@@ -1635,6 +1688,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
       else if (defend) nameScale = 1.22 * crowd;
       else if (giant) nameScale = giantBig ? 1.58 : 0.96;
       else if (maze) nameScale = 1.05;
+      else if (film) nameScale = 1.48;
       else if (cross) nameScale = 1.112;
       else if (bridge && !relief) nameScale = 1.112 * 0.56;
       else if (relief) nameScale = 0.34;
@@ -1680,6 +1734,9 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
         } else if (maze) {
           lift = 1.72;
           nx = pos.x;
+        } else if (film) {
+          lift = 1.32;
+          nx = pos.x;
         } else if (bridge || cross || relief) {
           lift = 1.58;
           nx = pos.x;
@@ -1710,6 +1767,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
       }
       let sx = (isolate ? Math.min(1.05, cell.sx * nameScale) : cell.sx * nameScale);
       if (giant) sx = Math.min(sx, giantBig ? 2.7 : 1.72);
+      else if (film) sx = Math.min(sx, 1.7);
       else if (maze) sx = Math.min(sx, 2.15);
       else if (cross) sx = Math.min(sx, 2.357);
       else if (bridge && !relief) sx = Math.min(sx, 2.357 * 0.56);
@@ -1726,7 +1784,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
       if (cam) {
         nockOff.copy(cam.position).sub(pos);
         const len = nockOff.length() || 1;
-        const pull = giant || maze ? 0.04 : bridge || cross || relief ? 0.08 : new2 ? Math.min(2.4, Math.max(0.4, len * 0.055)) : defend || vs || vs2 || new1 ? Math.min(14, Math.max(7, len * 0.12)) : Math.min(4.5, Math.max(1.2, len * 0.04));
+        const pull = giant || maze || film ? 0.04 : bridge || cross || relief ? 0.08 : new2 ? Math.min(2.4, Math.max(0.4, len * 0.055)) : defend || vs || vs2 || new1 ? Math.min(14, Math.max(7, len * 0.12)) : Math.min(4.5, Math.max(1.2, len * 0.04));
         px = nx + (nockOff.x / len) * pull;
         py = baseY + (nockOff.y / len) * pull;
         pz = pos.z + (nockOff.z / len) * pull;
