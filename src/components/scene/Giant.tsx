@@ -15,7 +15,6 @@ function GiantBody({ soldiers, big }: { soldiers: number; big: boolean }) {
   const mace = useRef<THREE.Group>(null);
   const plate = useMemo(() => new THREE.MeshStandardMaterial({ color: "#121216", metalness: 0.78, roughness: 0.32 }), []);
   const iron = useMemo(() => new THREE.MeshStandardMaterial({ color: "#2a2a30", metalness: 0.7, roughness: 0.4 }), []);
-  const cape = useMemo(() => new THREE.MeshStandardMaterial({ color: "#07070a", roughness: 0.92, metalness: 0.05, side: THREE.DoubleSide }), []);
   const slit = useMemo(() => new THREE.MeshStandardMaterial({ color: "#ff2a14", emissive: "#ff1a10", emissiveIntensity: 1.4, roughness: 0.4 }), []);
   useFrame(({ clock }) => {
     const t = Math.max(0, clock.elapsedTime - REEL_HOLD);
@@ -55,9 +54,6 @@ function GiantBody({ soldiers, big }: { soldiers: number; big: boolean }) {
   const spikes = [0, 45, 90, 135, 180, 225, 270, 315];
   return (
     <group ref={root} scale={big ? 1.52 : 1}>
-      <mesh position={[0, 8.2, -1.15]} material={cape}>
-        <planeGeometry args={[7.2, 13.5]} />
-      </mesh>
       <mesh position={[-1.15, 3.1, 0.15]} material={plate}>
         <cylinderGeometry args={[0.72, 0.95, 5.4, 6]} />
       </mesh>

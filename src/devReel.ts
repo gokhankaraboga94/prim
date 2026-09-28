@@ -90,7 +90,7 @@ export function devNameCovered(sx: number, sz: number, cx: number, cz: number, r
   const fz = vz / vlen;
   const along = (sx - g.x) * fx + (sz - g.z) * fz;
   const side = Math.abs((sx - g.x) * fz - (sz - g.z) * fx);
-  return along > 0.4 && side < (big ? 7.6 : 5);
+  return along > 0.4 && side < (big ? 5.4 : 3.6);
 }
 
 export function devClubHit(t: number, soldiers: number) {
