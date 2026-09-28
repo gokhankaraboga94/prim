@@ -39,11 +39,19 @@ const LAST = 52;
 
 type Plan = { die: Float64Array; period: number };
 
-const plans = new Map<number, Plan>();
+const plans = new Map<string, Plan>();
 
-function planOf(soldiers: number): Plan {
+function screenNear(i: number, n: number, big: boolean) {
+  const live = ringAt(i, n, 0, big);
+  const side = big ? 30 : 28;
+  const back = big ? 48 : 46;
+  return (live.x - live.g.x) * side - (live.z - live.g.z) * back;
+}
+
+function planOf(soldiers: number, big = false): Plan {
   const n = Math.max(1, Math.floor(soldiers));
-  const hit = plans.get(n);
+  const key = `${big ? 1 : 0}:${n}`;
+  const hit = plans.get(key);
   if (hit) return hit;
   const batches: number[] = [];
   let left = n;
@@ -58,14 +66,16 @@ function planOf(soldiers: number): Plan {
     swing += 1;
   }
   const period = batches.length <= 1 ? 1.2 : (LAST - FIGHT) / (batches.length - 1);
+  const order = Array.from({ length: n }, (_, i) => i);
+  order.sort((a, b) => screenNear(b, n, big) - screenNear(a, n, big) || a - b);
   const die = new Float64Array(n);
   let cursor = 0;
   batches.forEach((batch, index) => {
     const t = FIGHT + index * period;
-    for (let k = 0; k < batch; k++) die[cursor++] = t;
+    for (let k = 0; k < batch; k++) die[order[cursor++]] = t;
   });
   const plan = { die, period };
-  plans.set(n, plan);
+  plans.set(key, plan);
   return plan;
 }
 
@@ -208,7 +218,7 @@ export function devFriendAt(i: number, n: number, recT: number, out: New1Pose, b
     out.s = 0;
     return;
   }
-  const dieAt = planOf(count).die[i];
+  const dieAt = planOf(count, big).die[i];
   if (t >= dieAt) {
     out.x = 0;
     out.y = -40;
