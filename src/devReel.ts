@@ -7,8 +7,11 @@ export const DEV_MODE = { id: DEV_ID, label: "DEV" } as const;
 
 export const DEV2_ID = "dev2" as const;
 export type Dev2Id = typeof DEV2_ID;
-export type GiantId = DevId | Dev2Id;
+export const DEV3_ID = "dev3" as const;
+export type Dev3Id = typeof DEV3_ID;
+export type GiantId = DevId | Dev2Id | Dev3Id;
 export const DEV2_MODE = { id: DEV2_ID, label: "DEV2" } as const;
+export const DEV3_MODE = { id: DEV3_ID, label: "DEV3" } as const;
 
 export function isDev(id: string | null | undefined): id is DevId {
   return id === DEV_ID;
@@ -18,12 +21,17 @@ export function isDev2(id: string | null | undefined): id is Dev2Id {
   return id === DEV2_ID;
 }
 
+export function isDev3(id: string | null | undefined): id is Dev3Id {
+  return id === DEV3_ID;
+}
+
 export function isGiantShot(id: string | null | undefined): id is GiantId {
-  return id === DEV_ID || id === DEV2_ID;
+  return id === DEV_ID || id === DEV2_ID || id === DEV3_ID;
 }
 
 export const DEV_SECONDS = 58;
 export const DEV2_SECONDS = DEV_SECONDS;
+export const DEV3_SECONDS = DEV_SECONDS;
 export const DEV_N = 300;
 export const DEV2_N = 450;
 const FIGHT = 3.2;
@@ -73,6 +81,18 @@ export function devGiantAt(t: number) {
   return { x, z, yaw: Math.atan2(dx, dz || 0.001) };
 }
 
+export function devNameCovered(sx: number, sz: number, cx: number, cz: number, recT: number, big: boolean) {
+  const g = devGiantAt(Math.max(0, recT));
+  const vx = g.x - cx;
+  const vz = g.z - cz;
+  const vlen = Math.hypot(vx, vz) || 1;
+  const fx = vx / vlen;
+  const fz = vz / vlen;
+  const along = (sx - g.x) * fx + (sz - g.z) * fz;
+  const side = Math.abs((sx - g.x) * fz - (sz - g.z) * fx);
+  return along > 0.4 && side < (big ? 7.6 : 5);
+}
+
 export function devClubHit(t: number, soldiers: number) {
   if (t < FIGHT) return Math.max(0, Math.sin(t * 5.4)) * 0.28;
   if (t > LAST + 0.12) return 0;
@@ -89,23 +109,27 @@ export function devClubHit(t: number, soldiers: number) {
 export function devMaceSwing(t: number, soldiers: number) {
   const period = planOf(Math.max(1, soldiers)).period;
   const guard = { pitch: -0.18, sweep: 0.04, twist: 0, dip: 0, lunge: 0 };
-  let x: number;
+  const span = 0.808;
+  const fit = period >= span ? 1 : period / span;
+  const windStart = 0.438 * fit;
+  const snapStart = 0.118 * fit;
+  const followEnd = 0.269 * fit;
+  const idleAfter = 0.37 * fit;
+  let dt: number;
   if (t < FIGHT) {
-    const lead = 0.26 * period;
-    if (t < FIGHT - lead) return guard;
-    x = (t - FIGHT) / period;
+    dt = t - FIGHT;
   } else if (t > LAST + 0.22) {
     return guard;
   } else {
-    x = ((t - FIGHT) % period) / period;
-    if (x > 0.55) x -= 1;
+    const into = (t - FIGHT) % period;
+    dt = into > period * 0.55 ? into - period : into;
   }
-  if (x < -0.26 || x > 0.22) {
+  if (dt < -windStart || dt > idleAfter) {
     const bob = Math.sin(t * 2.6) * 0.04;
     return { pitch: guard.pitch + bob, sweep: bob, twist: 0, dip: 0, lunge: 0 };
   }
-  if (x < -0.07) {
-    const u = (x + 0.26) / 0.19;
+  if (dt < -snapStart) {
+    const u = (dt + windStart) / (windStart - snapStart);
     const raise = Math.sin(Math.min(1, u) * Math.PI * 0.5);
     return {
       pitch: -0.18 - raise * 1.12,
@@ -115,8 +139,8 @@ export function devMaceSwing(t: number, soldiers: number) {
       lunge: -raise * 0.2,
     };
   }
-  if (x < 0) {
-    const snap = Math.pow((x + 0.07) / 0.07, 1.75);
+  if (dt < 0) {
+    const snap = Math.pow((dt + snapStart) / snapStart, 1.75);
     return {
       pitch: -1.3 + snap * 2.5,
       sweep: -0.48 + snap * 1.15,
@@ -125,7 +149,7 @@ export function devMaceSwing(t: number, soldiers: number) {
       lunge: -0.2 + snap * 1.15,
     };
   }
-  const rec = Math.min(1, x / 0.16);
+  const rec = Math.min(1, dt / followEnd);
   const e = rec * rec * (3 - 2 * rec);
   return {
     pitch: 1.2 - e * 1.38,
