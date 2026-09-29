@@ -124,14 +124,14 @@ function GiantBody({ soldiers, big, sword }: { soldiers: number; big: boolean; s
         </mesh>
         {sword && (
           <group ref={blade} position={[-0.4, -3.25, 0.45]}>
-            <mesh position={[0, 0, 0.32]} material={iron}>
-              <boxGeometry args={[0.34, 0.34, 0.55]} />
+            <mesh position={[0, 0, 0.28]} material={iron}>
+              <boxGeometry args={[0.46, 0.46, 0.7]} />
             </mesh>
-            <mesh position={[0, 0, 0.72]} material={plate}>
-              <boxGeometry args={[1.25, 0.26, 0.32]} />
+            <mesh position={[0, 0, 0.82]} material={plate}>
+              <boxGeometry args={[1.7, 0.4, 0.42]} />
             </mesh>
-            <mesh position={[0, 0, 2.45]} material={iron}>
-              <boxGeometry args={[0.34, 0.16, 3.3]} />
+            <mesh position={[0, 0, 4.45]} material={iron}>
+              <boxGeometry args={[0.62, 0.32, 6.8]} />
             </mesh>
           </group>
         )}
