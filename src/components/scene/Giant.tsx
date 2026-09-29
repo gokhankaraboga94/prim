@@ -9,7 +9,92 @@ import { devAlive, devClubHit, devGiantAt, devMaceSwing, devSwordPose } from "..
 const dummy = new THREE.Object3D();
 const ARROWS = 18;
 
-function GiantBody({ soldiers, big, sword }: { soldiers: number; big: boolean; sword: boolean }) {
+function DreadShell({ plate, iron, eye, horn }: { plate: THREE.Material; iron: THREE.Material; eye: THREE.Material; horn: THREE.Material }) {
+  return (
+    <group>
+      <mesh position={[-0.95, 2.35, 0.2]} rotation={[0.12, 0, 0.16]} material={plate}>
+        <cylinderGeometry args={[0.48, 0.7, 4.3, 6]} />
+      </mesh>
+      <mesh position={[1.05, 2.35, 0.08]} rotation={[0.08, 0, -0.18]} material={plate}>
+        <cylinderGeometry args={[0.5, 0.74, 4.4, 6]} />
+      </mesh>
+      <mesh position={[-1.15, 0.42, 0.55]} rotation={[0.2, 0.1, 0]} material={iron}>
+        <boxGeometry args={[0.95, 0.42, 1.7]} />
+      </mesh>
+      <mesh position={[1.25, 0.38, 0.42]} rotation={[0.15, -0.15, 0]} material={iron}>
+        <boxGeometry args={[1.05, 0.46, 1.85]} />
+      </mesh>
+      {[-0.35, 0.05, 0.42].map((x) => (
+        <mesh key={`l${x}`} position={[-1.15 + x, 0.22, 1.35]} rotation={[1.15, 0, 0.2]} material={horn}>
+          <coneGeometry args={[0.1, 0.55, 4]} />
+        </mesh>
+      ))}
+      {[-0.28, 0.12, 0.48].map((x) => (
+        <mesh key={`r${x}`} position={[1.2 + x, 0.2, 1.28]} rotation={[1.15, 0, -0.15]} material={horn}>
+          <coneGeometry args={[0.11, 0.62, 4]} />
+        </mesh>
+      ))}
+      <mesh position={[0, 5.55, 0.05]} material={plate}>
+        <boxGeometry args={[2.7, 1.35, 1.85]} />
+      </mesh>
+      <mesh position={[0.15, 8.15, 0.35]} rotation={[0.28, 0, 0]} material={plate}>
+        <boxGeometry args={[3.5, 3.6, 2.05]} />
+      </mesh>
+      <mesh position={[-0.35, 8.7, 1.15]} rotation={[0.42, 0.08, 0.12]} material={iron}>
+        <boxGeometry args={[2.4, 2.2, 0.28]} />
+      </mesh>
+      <mesh position={[0.85, 7.4, 1.05]} rotation={[0.5, -0.2, -0.18]} material={iron}>
+        <boxGeometry args={[1.3, 1.15, 0.22]} />
+      </mesh>
+      <mesh position={[0, 10.55, -0.15]} material={iron}>
+        <boxGeometry args={[4.6, 0.7, 1.7]} />
+      </mesh>
+      <mesh position={[-2.35, 10.85, 0.15]} rotation={[0.15, 0, 0.42]} material={plate}>
+        <boxGeometry args={[1.55, 0.7, 1.9]} />
+      </mesh>
+      <mesh position={[2.55, 10.95, 0.05]} rotation={[-0.1, 0, -0.38]} material={plate}>
+        <boxGeometry args={[1.85, 0.85, 2.15]} />
+      </mesh>
+      <mesh position={[-3.15, 11.55, 0.15]} rotation={[0.2, 0, 0.7]} material={horn}>
+        <coneGeometry args={[0.22, 1.25, 4]} />
+      </mesh>
+      <mesh position={[3.35, 11.85, 0.2]} rotation={[0.35, 0.2, -0.85]} material={horn}>
+        <coneGeometry args={[0.26, 1.55, 4]} />
+      </mesh>
+      <mesh position={[2.7, 11.15, 0.85]} rotation={[0.8, 0, -0.2]} material={horn}>
+        <coneGeometry args={[0.14, 0.7, 4]} />
+      </mesh>
+      {[-0.55, 0.05, 0.65, 1.25].map((y, i) => (
+        <mesh key={y} position={[(i - 1.5) * 0.18, 7.1 + y, -1.05]} rotation={[-0.7, 0, 0]} material={horn}>
+          <coneGeometry args={[0.16, 0.85, 4]} />
+        </mesh>
+      ))}
+      <mesh position={[0, 12.35, 0.05]} material={plate}>
+        <cylinderGeometry args={[0.55, 0.85, 1.15, 6]} />
+      </mesh>
+      <mesh position={[0.05, 13.85, 0.15]} rotation={[0.18, 0, 0]} material={plate}>
+        <cylinderGeometry args={[0.95, 1.25, 2.35, 7]} />
+      </mesh>
+      <mesh position={[0.05, 15.15, 0.05]} material={iron}>
+        <cylinderGeometry args={[0.22, 0.85, 0.85, 6]} />
+      </mesh>
+      <mesh position={[-0.85, 14.7, 0.15]} rotation={[0.35, 0, 0.85]} material={horn}>
+        <coneGeometry args={[0.22, 2.15, 5]} />
+      </mesh>
+      <mesh position={[0.95, 14.85, 0.25]} rotation={[0.45, 0, -0.95]} material={horn}>
+        <coneGeometry args={[0.24, 2.45, 5]} />
+      </mesh>
+      <mesh position={[0.08, 13.55, 1.28]} material={eye}>
+        <boxGeometry args={[1.45, 0.16, 0.1]} />
+      </mesh>
+      <mesh position={[0.08, 12.95, 1.22]} material={iron}>
+        <boxGeometry args={[0.85, 0.22, 0.12]} />
+      </mesh>
+    </group>
+  );
+}
+
+function GiantBody({ soldiers, big, sword, dread }: { soldiers: number; big: boolean; sword: boolean; dread: boolean }) {
   const root = useRef<THREE.Group>(null);
   const arm = useRef<THREE.Group>(null);
   const mace = useRef<THREE.Group>(null);
@@ -17,6 +102,8 @@ function GiantBody({ soldiers, big, sword }: { soldiers: number; big: boolean; s
   const plate = useMemo(() => new THREE.MeshStandardMaterial({ color: "#121216", metalness: 0.78, roughness: 0.32 }), []);
   const iron = useMemo(() => new THREE.MeshStandardMaterial({ color: "#2a2a30", metalness: 0.7, roughness: 0.4 }), []);
   const slit = useMemo(() => new THREE.MeshStandardMaterial({ color: "#ff2a14", emissive: "#ff1a10", emissiveIntensity: 1.4, roughness: 0.4 }), []);
+  const eye = useMemo(() => new THREE.MeshStandardMaterial({ color: "#ff3a18", emissive: "#ff1a08", emissiveIntensity: 2.4, roughness: 0.28 }), []);
+  const horn = useMemo(() => new THREE.MeshStandardMaterial({ color: "#1a1816", metalness: 0.45, roughness: 0.55 }), []);
   useFrame(({ clock }) => {
     const t = Math.max(0, clock.elapsedTime - REEL_HOLD);
     const g = devGiantAt(t);
@@ -68,6 +155,10 @@ function GiantBody({ soldiers, big, sword }: { soldiers: number; big: boolean; s
   const spikes = [0, 45, 90, 135, 180, 225, 270, 315];
   return (
     <group ref={root} scale={big ? 1.52 : 1}>
+      {dread ? (
+        <DreadShell plate={plate} iron={iron} eye={eye} horn={horn} />
+      ) : (
+        <>
       <mesh position={[-1.15, 3.1, 0.15]} material={plate}>
         <cylinderGeometry args={[0.72, 0.95, 5.4, 6]} />
       </mesh>
@@ -118,10 +209,26 @@ function GiantBody({ soldiers, big, sword }: { soldiers: number; big: boolean; s
       <mesh position={[0, 13.35, 1.22]} material={slit}>
         <boxGeometry args={[1.15, 0.12, 0.08]} />
       </mesh>
+        </>
+      )}
       <group ref={arm} position={[-2.7, 10.4, 0.2]}>
-        <mesh position={[-0.25, -1.7, 0.2]} rotation={[0.2, 0, 0.15]} material={plate}>
-          <cylinderGeometry args={[0.42, 0.55, 3.2, 6]} />
-        </mesh>
+        {dread ? (
+          <>
+            <mesh position={[-0.15, -0.95, 0.12]} rotation={[0.15, 0, 0.12]} material={plate}>
+              <cylinderGeometry args={[0.4, 0.52, 1.85, 6]} />
+            </mesh>
+            <mesh position={[-0.32, -2.35, 0.32]} rotation={[0.35, 0, 0.08]} material={iron}>
+              <cylinderGeometry args={[0.32, 0.42, 1.7, 5]} />
+            </mesh>
+            <mesh position={[-0.22, -1.85, 0.55]} rotation={[0.4, 0, 0.6]} material={horn}>
+              <coneGeometry args={[0.12, 0.55, 4]} />
+            </mesh>
+          </>
+        ) : (
+          <mesh position={[-0.25, -1.7, 0.2]} rotation={[0.2, 0, 0.15]} material={plate}>
+            <cylinderGeometry args={[0.42, 0.55, 3.2, 6]} />
+          </mesh>
+        )}
         {sword && (
           <group ref={blade} position={[-0.4, -3.25, 0.45]}>
             <mesh position={[0, 0, 0.28]} material={iron}>
@@ -137,9 +244,20 @@ function GiantBody({ soldiers, big, sword }: { soldiers: number; big: boolean; s
         )}
       </group>
       <group ref={mace} position={[2.7, 10.5, 0.25]}>
-        <mesh position={[0.25, -1.5, 0.55]} rotation={[0.55, 0, -0.1]} material={plate}>
-          <cylinderGeometry args={[0.48, 0.62, 3.1, 6]} />
-        </mesh>
+        {dread ? (
+          <>
+            <mesh position={[0.2, -0.85, 0.2]} rotation={[0.25, 0, -0.1]} material={plate}>
+              <cylinderGeometry args={[0.46, 0.58, 1.7, 6]} />
+            </mesh>
+            <mesh position={[0.35, -2.15, 0.45]} rotation={[0.5, 0, -0.08]} material={iron}>
+              <cylinderGeometry args={[0.36, 0.48, 1.55, 5]} />
+            </mesh>
+          </>
+        ) : (
+          <mesh position={[0.25, -1.5, 0.55]} rotation={[0.55, 0, -0.1]} material={plate}>
+            <cylinderGeometry args={[0.48, 0.62, 3.1, 6]} />
+          </mesh>
+        )}
         <mesh position={[0.45, -2.2, 4.6]} rotation={[1.2, 0, 0]} material={iron}>
           <cylinderGeometry args={[0.22, 0.28, 7.4, 6]} />
         </mesh>
@@ -198,10 +316,10 @@ function ArrowVolley({ big }: { big: boolean }) {
 
 const LAST_ARROW = 52.2;
 
-export function Giant({ soldiers, big = false, sword = false }: { soldiers: number; big?: boolean; sword?: boolean }) {
+export function Giant({ soldiers, big = false, sword = false, dread = false }: { soldiers: number; big?: boolean; sword?: boolean; dread?: boolean }) {
   return (
     <group>
-      <GiantBody soldiers={soldiers} big={big} sword={sword} />
+      <GiantBody soldiers={soldiers} big={big} sword={sword} dread={dread} />
       <ArrowVolley big={big} />
     </group>
   );

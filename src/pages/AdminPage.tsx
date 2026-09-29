@@ -32,7 +32,7 @@ import { DEFEND_ID, DEFEND2_ID, DEFEND3_ID, DEFEND4_ID, DEFEND_MODE, DEFEND2_MOD
 import { VS_ID, VS2_ID, VS_MODE, VS2_MODE, VS_SECONDS, VS2_SECONDS, isVs, isVs2, isVsMode, type VsId } from "../vsReel";
 import { NEW1_ID, NEW1_MODE, NEW1_SECONDS, NEW2_ID, NEW2_MODE, NEW2_SECONDS, NEW3_ID, NEW3_MODE, NEW3_SECONDS, NEW4_ID, NEW4_MODE, NEW4_SECONDS, NEW5_ID, NEW5_MODE, NEW5_SECONDS, NEW6_ID, NEW6_MODE, NEW6_SECONDS, NEW62_ID, NEW62_MODE, NEW62_SECONDS, NEW7_ID, NEW7_MODE, NEW7_SECONDS, isNew1, isNew2, isNew3, isNew4, isNew5, isNew6, isNew62, isNew7, isNewField, type New1Id, type New2Id, type New3Id, type New4Id, type New5Id, type New6Id, type New62Id, type New7Id } from "../new1Reel";
 import { LAB_ID, LAB_MODE, LAB_SECONDS, isLab, type LabId } from "../mazeReel";
-import { DEV2_ID, DEV2_MODE, DEV2_SECONDS, DEV3_ID, DEV3_MODE, DEV3_SECONDS, DEV4_ID, DEV4_MODE, DEV4_SECONDS, DEV_ID, DEV_MODE, DEV_SECONDS, isDev, isDev2, isDev3, isDev4, isGiantShot, type Dev2Id, type Dev3Id, type Dev4Id, type DevId } from "../devReel";
+import { DEV2_ID, DEV2_MODE, DEV2_SECONDS, DEV3_ID, DEV3_MODE, DEV3_SECONDS, DEV4_ID, DEV4_MODE, DEV4_SECONDS, DEV5_ID, DEV5_MODE, DEV5_SECONDS, DEV_ID, DEV_MODE, DEV_SECONDS, isDev, isDev2, isDev3, isDev4, isDev5, isGiantShot, type Dev2Id, type Dev3Id, type Dev4Id, type Dev5Id, type DevId } from "../devReel";
 import { FILM_ID, FILM_MODE, FILM_SECONDS, isFilm, type FilmId } from "../filmReel";
 import { unlockReelSfx } from "../reelSfx";
 
@@ -49,7 +49,7 @@ export function AdminPage() {
   const [reelSeconds, setReelSeconds] = useState<number>(7);
   const [reelText, setReelText] = useState(true);
   const [reelSkipCmd, setReelSkipCmd] = useState(false);
-  const [reelShot, setReelShot] = useState<ReelShot | PlanBId | SagaId | DiscoverId | MixId | CountdownId | DefendId | VsId | New1Id | New2Id | New3Id | New4Id | New5Id | New6Id | New62Id | New7Id | LabId | DevId | Dev2Id | Dev3Id | Dev4Id | FilmId | XxxId | null>(null);
+  const [reelShot, setReelShot] = useState<ReelShot | PlanBId | SagaId | DiscoverId | MixId | CountdownId | DefendId | VsId | New1Id | New2Id | New3Id | New4Id | New5Id | New6Id | New62Id | New7Id | LabId | DevId | Dev2Id | Dev3Id | Dev4Id | Dev5Id | FilmId | XxxId | null>(null);
   const [reelDay, setReelDay] = useState("1");
   const [capturing, setCapturing] = useState(false);
   const [editIndex, setEditIndex] = useState<number | null>(null);
@@ -527,7 +527,7 @@ export function AdminPage() {
                   : isFilm(reelShot)
                     ? [FILM_SECONDS]
                   : isGiantShot(reelShot)
-                    ? [isDev4(reelShot) ? DEV4_SECONDS : isDev3(reelShot) ? DEV3_SECONDS : isDev2(reelShot) ? DEV2_SECONDS : DEV_SECONDS]
+                    ? [isDev5(reelShot) ? DEV5_SECONDS : isDev4(reelShot) ? DEV4_SECONDS : isDev3(reelShot) ? DEV3_SECONDS : isDev2(reelShot) ? DEV2_SECONDS : DEV_SECONDS]
                   : isNewField(reelShot)
                     ? [isLab(reelShot) ? LAB_SECONDS : isNew7(reelShot) ? NEW7_SECONDS : isNew62(reelShot) ? NEW62_SECONDS : isNew6(reelShot) ? NEW6_SECONDS : isNew5(reelShot) ? NEW5_SECONDS : isNew4(reelShot) ? NEW4_SECONDS : isNew3(reelShot) ? NEW3_SECONDS : isNew2(reelShot) ? NEW2_SECONDS : NEW1_SECONDS]
                   : isVsMode(reelShot)
@@ -760,6 +760,18 @@ export function AdminPage() {
             </button>
             <button
               type="button"
+              className={reelShot === DEV5_ID ? "on" : ""}
+              onClick={() => {
+                setReelShot((cur) => (cur === DEV5_ID ? null : DEV5_ID));
+                setReelSeconds(DEV5_SECONDS);
+                setReelText(false);
+                setReelSkipCmd(true);
+              }}
+            >
+              {DEV5_MODE.label} — {DEV5_SECONDS}s
+            </button>
+            <button
+              type="button"
               className={reelShot === FILM_ID ? "on" : ""}
               onClick={() => {
                 setReelShot((cur) => (cur === FILM_ID ? null : FILM_ID));
@@ -782,6 +794,9 @@ export function AdminPage() {
           )}
           {isDev4(reelShot) && (
             <p className="muted">DEV3 ile aynı. Boş elde kılıç var. Her 3 saniyede kılıç 5 askeri fırlatıp öldürür. Üstte sayı düşer.</p>
+          )}
+          {isDev5(reelShot) && (
+            <p className="muted">DEV4 ile aynı. Dev daha eğik, boynuzlu, tek kızıl göz. Kılıç ve gürz aynı. Üstte sayı düşer.</p>
           )}
           {isFilm(reelShot) && (
             <p className="muted">18 takipçi yerde dağınık, adları üstte. Başlarında 100 düşman bekler. 3. saniyede 150 asker hilal gibi, her biri ayrı yerden gelir. Ölüler yerde kalır.</p>

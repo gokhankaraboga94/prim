@@ -11,10 +11,13 @@ export const DEV3_ID = "dev3" as const;
 export type Dev3Id = typeof DEV3_ID;
 export const DEV4_ID = "dev4" as const;
 export type Dev4Id = typeof DEV4_ID;
-export type GiantId = DevId | Dev2Id | Dev3Id | Dev4Id;
+export const DEV5_ID = "dev5" as const;
+export type Dev5Id = typeof DEV5_ID;
+export type GiantId = DevId | Dev2Id | Dev3Id | Dev4Id | Dev5Id;
 export const DEV2_MODE = { id: DEV2_ID, label: "DEV2" } as const;
 export const DEV3_MODE = { id: DEV3_ID, label: "DEV3" } as const;
 export const DEV4_MODE = { id: DEV4_ID, label: "DEV4" } as const;
+export const DEV5_MODE = { id: DEV5_ID, label: "DEV5" } as const;
 
 export function isDev(id: string | null | undefined): id is DevId {
   return id === DEV_ID;
@@ -32,22 +35,31 @@ export function isDev4(id: string | null | undefined): id is Dev4Id {
   return id === DEV4_ID;
 }
 
+export function isDev5(id: string | null | undefined): id is Dev5Id {
+  return id === DEV5_ID;
+}
+
 export function isDevBig(id: string | null | undefined) {
-  return id === DEV2_ID || id === DEV3_ID || id === DEV4_ID;
+  return id === DEV2_ID || id === DEV3_ID || id === DEV4_ID || id === DEV5_ID;
 }
 
 export function isDevAll(id: string | null | undefined) {
-  return id === DEV3_ID || id === DEV4_ID;
+  return id === DEV3_ID || id === DEV4_ID || id === DEV5_ID;
+}
+
+export function isDevSword(id: string | null | undefined) {
+  return id === DEV4_ID || id === DEV5_ID;
 }
 
 export function isGiantShot(id: string | null | undefined): id is GiantId {
-  return id === DEV_ID || id === DEV2_ID || id === DEV3_ID || id === DEV4_ID;
+  return id === DEV_ID || id === DEV2_ID || id === DEV3_ID || id === DEV4_ID || id === DEV5_ID;
 }
 
 export const DEV_SECONDS = 58;
 export const DEV2_SECONDS = DEV_SECONDS;
 export const DEV3_SECONDS = DEV_SECONDS;
 export const DEV4_SECONDS = DEV_SECONDS;
+export const DEV5_SECONDS = DEV_SECONDS;
 export const DEV_N = 300;
 export const DEV2_N = 450;
 const FIGHT = 3.2;
