@@ -9,9 +9,12 @@ export const DEV2_ID = "dev2" as const;
 export type Dev2Id = typeof DEV2_ID;
 export const DEV3_ID = "dev3" as const;
 export type Dev3Id = typeof DEV3_ID;
-export type GiantId = DevId | Dev2Id | Dev3Id;
+export const DEV4_ID = "dev4" as const;
+export type Dev4Id = typeof DEV4_ID;
+export type GiantId = DevId | Dev2Id | Dev3Id | Dev4Id;
 export const DEV2_MODE = { id: DEV2_ID, label: "DEV2" } as const;
 export const DEV3_MODE = { id: DEV3_ID, label: "DEV3" } as const;
+export const DEV4_MODE = { id: DEV4_ID, label: "DEV4" } as const;
 
 export function isDev(id: string | null | undefined): id is DevId {
   return id === DEV_ID;
@@ -25,13 +28,26 @@ export function isDev3(id: string | null | undefined): id is Dev3Id {
   return id === DEV3_ID;
 }
 
+export function isDev4(id: string | null | undefined): id is Dev4Id {
+  return id === DEV4_ID;
+}
+
+export function isDevBig(id: string | null | undefined) {
+  return id === DEV2_ID || id === DEV3_ID || id === DEV4_ID;
+}
+
+export function isDevAll(id: string | null | undefined) {
+  return id === DEV3_ID || id === DEV4_ID;
+}
+
 export function isGiantShot(id: string | null | undefined): id is GiantId {
-  return id === DEV_ID || id === DEV2_ID || id === DEV3_ID;
+  return id === DEV_ID || id === DEV2_ID || id === DEV3_ID || id === DEV4_ID;
 }
 
 export const DEV_SECONDS = 58;
 export const DEV2_SECONDS = DEV_SECONDS;
 export const DEV3_SECONDS = DEV_SECONDS;
+export const DEV4_SECONDS = DEV_SECONDS;
 export const DEV_N = 300;
 export const DEV2_N = 450;
 const FIGHT = 3.2;
@@ -195,17 +211,78 @@ function ringAt(i: number, n: number, t: number, big = false) {
   return { x, z, ry: Math.atan2(g.x - x, g.z - z), ang, g, archer };
 }
 
-export function devAlive(recT: number, soldiers: number) {
+const SWORD_GAP = 3;
+const SWORD_FIRST = 3;
+const SWORD_WIND = 0.46;
+const SWORD_SNAP = 0.14;
+const SWORD_FOLLOW = 0.3;
+const SWORD_PREP = SWORD_WIND + SWORD_SNAP;
+const FLING = 0.86;
+const swordPlans = new Map<string, Float64Array>();
+
+export function devSwordPose(t: number) {
+  const idle = { armX: 0.22, armZ: 0.34, blade: -0.15 };
+  if (t < SWORD_FIRST - SWORD_PREP || t > LAST + SWORD_FOLLOW) return idle;
+  const phase = (t - (SWORD_FIRST - SWORD_PREP)) % SWORD_GAP;
+  if (phase > SWORD_PREP + SWORD_FOLLOW) return idle;
+  if (phase < SWORD_WIND) {
+    const raise = Math.sin((phase / SWORD_WIND) * Math.PI * 0.5);
+    return { armX: 0.22 - raise * 1.25, armZ: 0.34 + raise * 0.72, blade: -0.15 - raise * 0.85 };
+  }
+  if (phase < SWORD_PREP) {
+    const snap = Math.pow((phase - SWORD_WIND) / SWORD_SNAP, 1.6);
+    return { armX: -1.03 + snap * 2.15, armZ: 1.06 - snap * 1.72, blade: -1 + snap * 1.35 };
+  }
+  const rec = (phase - SWORD_PREP) / SWORD_FOLLOW;
+  const e = rec * rec * (3 - 2 * rec);
+  return { armX: 1.12 - e * 0.9, armZ: -0.66 + e * 1, blade: 0.35 - e * 0.5 };
+}
+
+function swordHits(n: number, big: boolean) {
+  const key = `${big ? 1 : 0}:${n}`;
+  const hit = swordPlans.get(key);
+  if (hit) return hit;
+  const die = planOf(n, big).die;
+  const at = new Float64Array(n);
+  at.fill(1e9);
+  const used = new Set<number>();
+  for (let k = 0; ; k++) {
+    const t = SWORD_FIRST + k * SWORD_GAP;
+    if (t > LAST - 0.4) break;
+    const g = devGiantAt(t);
+    const lx = -Math.cos(g.yaw);
+    const lz = Math.sin(g.yaw);
+    const scored: { i: number; s: number }[] = [];
+    for (let i = 0; i < n; i++) {
+      if (used.has(i) || die[i] <= t + 0.12) continue;
+      const live = ringAt(i, n, t, big);
+      scored.push({ i, s: (live.x - g.x) * lx + (live.z - g.z) * lz });
+    }
+    scored.sort((a, b) => b.s - a.s || a.i - b.i);
+    for (let j = 0; j < 5 && j < scored.length; j++) {
+      at[scored[j].i] = t;
+      used.add(scored[j].i);
+    }
+  }
+  swordPlans.set(key, at);
+  return at;
+}
+
+export function devAlive(recT: number, soldiers: number, big = false, sword = false) {
   const n = Math.max(0, Math.floor(soldiers));
   if (n <= 0) return 0;
-  const die = planOf(n).die;
+  const die = planOf(n, big && sword ? big : false).die;
+  const slash = sword ? swordHits(n, big) : null;
   const t = Math.max(0, recT);
   let alive = 0;
-  for (let i = 0; i < n; i++) if (t < die[i]) alive += 1;
+  for (let i = 0; i < n; i++) {
+    const at = slash ? Math.min(die[i], slash[i]) : die[i];
+    if (t < at) alive += 1;
+  }
   return alive;
 }
 
-export function devFriendAt(i: number, n: number, recT: number, out: New1Pose, big = false) {
+export function devFriendAt(i: number, n: number, recT: number, out: New1Pose, big = false, sword = false) {
   const count = Math.max(0, Math.floor(n));
   const t = Math.max(0, recT);
   if (i < 0 || i >= count) {
@@ -219,7 +296,27 @@ export function devFriendAt(i: number, n: number, recT: number, out: New1Pose, b
     return;
   }
   const dieAt = planOf(count, big).die[i];
-  if (t >= dieAt) {
+  const slashAt = sword ? swordHits(count, big)[i] : 1e9;
+  if (sword && t >= slashAt && t < slashAt + FLING) {
+    const live = ringAt(i, count, slashAt, big);
+    const g = live.g;
+    const lx = -Math.cos(g.yaw);
+    const lz = Math.sin(g.yaw);
+    const ox = live.x - g.x;
+    const oz = live.z - g.z;
+    const olen = Math.hypot(ox, oz) || 1;
+    const u = (t - slashAt) / FLING;
+    const dist = u * u * 16;
+    out.x = live.x + (lx * 0.72 + (ox / olen) * 0.5) * dist;
+    out.z = live.z + (lz * 0.72 + (oz / olen) * 0.5) * dist;
+    out.y = Math.sin(u * Math.PI) * 7.2;
+    out.rx = 0.35 + u * 2.6;
+    out.ry = live.ry + u * 4;
+    out.rz = (i % 2 ? 1 : -1) * u * 1.5;
+    out.s = 1;
+    return;
+  }
+  if (t >= dieAt || t >= slashAt) {
     out.x = 0;
     out.y = -40;
     out.z = 0;

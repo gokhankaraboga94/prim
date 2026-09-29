@@ -81,6 +81,7 @@ type ArmyProps = {
   giant?: boolean;
   giantBig?: boolean;
   giantAll?: boolean;
+  giantSword?: boolean;
   mix?: boolean;
   mixSlow?: boolean;
   nameHunt?: boolean;
@@ -896,7 +897,7 @@ function NameLayers({
 }
 
 
-export function Army({ count, names = [], commanders = [], cinematic, duration = 8, skipCommander = false, roster = null, discover = null, countdown = false, defend = false, defend2 = false, defend3 = false, blue = false, vs = false, vs2 = false, new1 = false, new2 = false, blade = false, bridge = false, cross = false, wide = false, relief = false, maze = false, film = false, giant = false, giantBig = false, giantAll = false, mix = false, mixSlow = false, nameHunt = false, quiet = false, square = false, readNames = false, scanHunt = false, level = 1, rosterIds = null }: ArmyProps) {
+export function Army({ count, names = [], commanders = [], cinematic, duration = 8, skipCommander = false, roster = null, discover = null, countdown = false, defend = false, defend2 = false, defend3 = false, blue = false, vs = false, vs2 = false, new1 = false, new2 = false, blade = false, bridge = false, cross = false, wide = false, relief = false, maze = false, film = false, giant = false, giantBig = false, giantAll = false, giantSword = false, mix = false, mixSlow = false, nameHunt = false, quiet = false, square = false, readNames = false, scanHunt = false, level = 1, rosterIds = null }: ArmyProps) {
   const bodies = useRef<THREE.InstancedMesh>(null);
   const soldierPlumes = useRef<THREE.InstancedMesh>(null);
   const bowHolds = useRef<THREE.InstancedMesh>(null);
@@ -1088,7 +1089,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
 
   function poseSoldier(soldier: number, t: number) {
     if (giant) {
-      devFriendAt(soldier, layout.rest.length, t - REEL_HOLD, vsPose, giantBig);
+      devFriendAt(soldier, layout.rest.length, t - REEL_HOLD, vsPose, giantBig, giantSword);
       pos.set(vsPose.x, vsPose.y, vsPose.z);
       return;
     }
@@ -1314,7 +1315,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
       for (let i = 0; i < n; i++) {
         const soldier = layout.rest[i];
         if (giant) {
-          devFriendAt(i, n, recT, vsPose, giantBig);
+          devFriendAt(i, n, recT, vsPose, giantBig, giantSword);
           if ((vsPose.s ?? 1) <= 0) continue;
           dummy.position.set(vsPose.x, vsPose.y, vsPose.z);
           dummy.rotation.set(vsPose.rx, vsPose.ry, vsPose.rz);

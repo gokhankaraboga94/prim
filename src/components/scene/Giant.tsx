@@ -4,15 +4,16 @@ import { useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import { formatCount } from "../../game";
 import { REEL_HOLD } from "../../recordCanvas";
-import { devAlive, devClubHit, devGiantAt, devMaceSwing } from "../../devReel";
+import { devAlive, devClubHit, devGiantAt, devMaceSwing, devSwordPose } from "../../devReel";
 
 const dummy = new THREE.Object3D();
 const ARROWS = 18;
 
-function GiantBody({ soldiers, big }: { soldiers: number; big: boolean }) {
+function GiantBody({ soldiers, big, sword }: { soldiers: number; big: boolean; sword: boolean }) {
   const root = useRef<THREE.Group>(null);
   const arm = useRef<THREE.Group>(null);
   const mace = useRef<THREE.Group>(null);
+  const blade = useRef<THREE.Group>(null);
   const plate = useMemo(() => new THREE.MeshStandardMaterial({ color: "#121216", metalness: 0.78, roughness: 0.32 }), []);
   const iron = useMemo(() => new THREE.MeshStandardMaterial({ color: "#2a2a30", metalness: 0.7, roughness: 0.4 }), []);
   const slit = useMemo(() => new THREE.MeshStandardMaterial({ color: "#ff2a14", emissive: "#ff1a10", emissiveIntensity: 1.4, roughness: 0.4 }), []);
@@ -29,7 +30,17 @@ function GiantBody({ soldiers, big }: { soldiers: number; big: boolean }) {
         root.current.rotation.y = g.yaw + s.twist;
         root.current.rotation.z = s.sweep * 0.07;
       }
-      if (arm.current) arm.current.rotation.z = 0.16 - s.twist * 0.6;
+      if (sword) {
+        const slash = devSwordPose(t);
+        if (arm.current) {
+          arm.current.rotation.x = slash.armX;
+          arm.current.rotation.z = slash.armZ;
+        }
+        if (blade.current) blade.current.rotation.x = slash.blade;
+      } else if (arm.current) {
+        arm.current.rotation.x = 0;
+        arm.current.rotation.z = 0.16 - s.twist * 0.6;
+      }
       if (mace.current) {
         mace.current.rotation.x = s.pitch;
         mace.current.rotation.y = s.sweep * 0.22;
@@ -43,7 +54,10 @@ function GiantBody({ soldiers, big }: { soldiers: number; big: boolean }) {
         root.current.rotation.y = g.yaw;
         root.current.rotation.z = pace * 0.045;
       }
-      if (arm.current) arm.current.rotation.z = 0.14 + pace * 0.22 - hit * 0.42;
+      if (arm.current) {
+        arm.current.rotation.x = 0;
+        arm.current.rotation.z = 0.14 + pace * 0.22 - hit * 0.42;
+      }
       if (mace.current) {
         mace.current.rotation.x = -0.12 - hit * 2.25;
         mace.current.rotation.y = 0;
@@ -108,6 +122,19 @@ function GiantBody({ soldiers, big }: { soldiers: number; big: boolean }) {
         <mesh position={[-0.25, -1.7, 0.2]} rotation={[0.2, 0, 0.15]} material={plate}>
           <cylinderGeometry args={[0.42, 0.55, 3.2, 6]} />
         </mesh>
+        {sword && (
+          <group ref={blade} position={[-0.4, -3.25, 0.45]}>
+            <mesh position={[0, 0, 0.28]} material={iron}>
+              <boxGeometry args={[0.16, 0.16, 0.5]} />
+            </mesh>
+            <mesh position={[0, 0, 0.62]} material={plate}>
+              <boxGeometry args={[0.78, 0.1, 0.14]} />
+            </mesh>
+            <mesh position={[0, 0, 2.35]} material={iron}>
+              <boxGeometry args={[0.1, 0.045, 3.3]} />
+            </mesh>
+          </group>
+        )}
       </group>
       <group ref={mace} position={[2.7, 10.5, 0.25]}>
         <mesh position={[0.25, -1.5, 0.55]} rotation={[0.55, 0, -0.1]} material={plate}>
@@ -171,25 +198,25 @@ function ArrowVolley({ big }: { big: boolean }) {
 
 const LAST_ARROW = 52.2;
 
-export function Giant({ soldiers, big = false }: { soldiers: number; big?: boolean }) {
+export function Giant({ soldiers, big = false, sword = false }: { soldiers: number; big?: boolean; sword?: boolean }) {
   return (
     <group>
-      <GiantBody soldiers={soldiers} big={big} />
+      <GiantBody soldiers={soldiers} big={big} sword={sword} />
       <ArrowVolley big={big} />
     </group>
   );
 }
 
-export function DevHealthBar({ soldiers }: { soldiers: number }) {
+export function DevHealthBar({ soldiers, big = false, sword = false }: { soldiers: number; big?: boolean; sword?: boolean }) {
   return (
     <Hud renderPriority={3}>
       <OrthographicCamera makeDefault position={[0, 0, 10]} />
-      <DevHealthPlate soldiers={soldiers} />
+      <DevHealthPlate soldiers={soldiers} big={big} sword={sword} />
     </Hud>
   );
 }
 
-function DevHealthPlate({ soldiers }: { soldiers: number }) {
+function DevHealthPlate({ soldiers, big, sword }: { soldiers: number; big: boolean; sword: boolean }) {
   const size = useThree((s) => s.size);
   const tex = useMemo(() => {
     const canvas = document.createElement("canvas");
@@ -200,7 +227,7 @@ function DevHealthPlate({ soldiers }: { soldiers: number }) {
     return map;
   }, []);
   useFrame(({ clock }) => {
-    const alive = devAlive(Math.max(0, clock.elapsedTime - REEL_HOLD), soldiers);
+    const alive = devAlive(Math.max(0, clock.elapsedTime - REEL_HOLD), soldiers, big, sword);
     const canvas = tex.image as HTMLCanvasElement;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
