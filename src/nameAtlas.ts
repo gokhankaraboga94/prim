@@ -6,6 +6,7 @@ export type NameItem = {
   text: string;
   commander: boolean;
   plain?: boolean;
+  fill?: string;
 };
 
 export type NameCell = {
@@ -66,7 +67,8 @@ function labelOf(item: NameItem) {
 }
 
 function itemKey(item: NameItem) {
-  return `${item.commander ? "c" : "n"}:${item.plain ? "p" : "a"}:${labelOf(item)}`;
+  const color = item.fill ? `:${item.fill}` : "";
+  return `${item.commander ? "c" : "n"}:${item.plain ? "p" : "a"}${color}:${labelOf(item)}`;
 }
 
 function paintCell(
@@ -78,7 +80,8 @@ function paintCell(
   text: string,
   commander: boolean,
   font: number,
-  cmdFont: number
+  cmdFont: number,
+  fill?: string
 ) {
   ctx.clearRect(x, y, w, h);
   if (!text) return 0;
@@ -96,7 +99,7 @@ function paintCell(
   ctx.miterLimit = 2;
   ctx.lineWidth = Math.max(5, size * 0.22);
   ctx.strokeStyle = commander ? "rgba(4, 22, 40, 0.96)" : "rgba(0,0,0,0.94)";
-  ctx.fillStyle = commander ? "#2eb8d4" : "#fff";
+  ctx.fillStyle = fill || (commander ? "#2eb8d4" : "#fff");
   ctx.strokeText(text, x + w / 2, y + h / 2);
   ctx.fillText(text, x + w / 2, y + h / 2);
   return tw;
@@ -144,7 +147,7 @@ export function buildNameAtlas(items: NameItem[]): NameAtlas {
       const col = i % cols;
       const row = Math.floor(i / cols);
       const text = labelOf(item);
-      const tw = paintCell(ctx, col * cell.w, row * cell.h, cell.w, cell.h, text, item.commander, cell.font, cell.cmd);
+      const tw = paintCell(ctx, col * cell.w, row * cell.h, cell.w, cell.h, text, item.commander, cell.font, cell.cmd, item.fill);
       const sy = item.commander ? syBase * 1.12 : syBase;
       const sx = Math.min(2.9, sy * Math.max(1.15, (tw + 18) / cell.h));
       uniqueCells.push({

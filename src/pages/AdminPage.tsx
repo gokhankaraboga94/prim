@@ -796,7 +796,7 @@ export function AdminPage() {
             <p className="muted">DEV3 ile aynı. Boş elde kılıç var. Her 3 saniyede kılıç 5 askeri fırlatıp öldürür. Üstte sayı düşer.</p>
           )}
           {isDev5(reelShot) && (
-            <p className="muted">DEV4 ile aynı. Dev daha eğik, boynuzlu, tek kızıl göz. Kılıç ve gürz aynı. Üstte sayı düşer.</p>
+            <p className="muted">DEV4 ile aynı. Dev daha kalıplı, boynuzlu, tek kızıl göz. İsimler bar gibi sarı. Üstte sayı düşer.</p>
           )}
           {isFilm(reelShot) && (
             <p className="muted">18 takipçi yerde dağınık, adları üstte. Başlarında 100 düşman bekler. 3. saniyede 150 asker hilal gibi, her biri ayrı yerden gelir. Ölüler yerde kalır.</p>

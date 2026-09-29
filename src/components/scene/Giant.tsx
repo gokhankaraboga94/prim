@@ -12,17 +12,17 @@ const ARROWS = 18;
 function DreadShell({ plate, iron, eye, horn }: { plate: THREE.Material; iron: THREE.Material; eye: THREE.Material; horn: THREE.Material }) {
   return (
     <group>
-      <mesh position={[-0.95, 2.35, 0.2]} rotation={[0.12, 0, 0.16]} material={plate}>
-        <cylinderGeometry args={[0.48, 0.7, 4.3, 6]} />
+      <mesh position={[-1.05, 2.4, 0.15]} rotation={[0.1, 0, 0.1]} material={plate}>
+        <cylinderGeometry args={[0.78, 1.05, 4.2, 6]} />
       </mesh>
-      <mesh position={[1.05, 2.35, 0.08]} rotation={[0.08, 0, -0.18]} material={plate}>
-        <cylinderGeometry args={[0.5, 0.74, 4.4, 6]} />
+      <mesh position={[1.15, 2.4, 0.05]} rotation={[0.08, 0, -0.12]} material={plate}>
+        <cylinderGeometry args={[0.82, 1.08, 4.3, 6]} />
       </mesh>
-      <mesh position={[-1.15, 0.42, 0.55]} rotation={[0.2, 0.1, 0]} material={iron}>
-        <boxGeometry args={[0.95, 0.42, 1.7]} />
+      <mesh position={[-1.2, 0.42, 0.55]} rotation={[0.2, 0.1, 0]} material={iron}>
+        <boxGeometry args={[1.25, 0.5, 1.9]} />
       </mesh>
-      <mesh position={[1.25, 0.38, 0.42]} rotation={[0.15, -0.15, 0]} material={iron}>
-        <boxGeometry args={[1.05, 0.46, 1.85]} />
+      <mesh position={[1.3, 0.38, 0.42]} rotation={[0.15, -0.15, 0]} material={iron}>
+        <boxGeometry args={[1.35, 0.54, 2.05]} />
       </mesh>
       {[-0.35, 0.05, 0.42].map((x) => (
         <mesh key={`l${x}`} position={[-1.15 + x, 0.22, 1.35]} rotation={[1.15, 0, 0.2]} material={horn}>
@@ -34,26 +34,32 @@ function DreadShell({ plate, iron, eye, horn }: { plate: THREE.Material; iron: T
           <coneGeometry args={[0.11, 0.62, 4]} />
         </mesh>
       ))}
-      <mesh position={[0, 5.55, 0.05]} material={plate}>
-        <boxGeometry args={[2.7, 1.35, 1.85]} />
+      <mesh position={[0, 5.7, 0.1]} material={plate}>
+        <boxGeometry args={[3.6, 1.7, 2.15]} />
       </mesh>
-      <mesh position={[0.15, 8.15, 0.35]} rotation={[0.28, 0, 0]} material={plate}>
-        <boxGeometry args={[3.5, 3.6, 2.05]} />
+      <mesh position={[0.1, 8.35, 0.42]} rotation={[0.22, 0, 0]} material={plate}>
+        <boxGeometry args={[4.7, 4.15, 2.7]} />
       </mesh>
-      <mesh position={[-0.35, 8.7, 1.15]} rotation={[0.42, 0.08, 0.12]} material={iron}>
-        <boxGeometry args={[2.4, 2.2, 0.28]} />
+      <mesh position={[-0.2, 9.05, 1.35]} rotation={[0.38, 0.04, 0.06]} material={iron}>
+        <boxGeometry args={[3.3, 2.5, 0.38]} />
       </mesh>
-      <mesh position={[0.85, 7.4, 1.05]} rotation={[0.5, -0.2, -0.18]} material={iron}>
-        <boxGeometry args={[1.3, 1.15, 0.22]} />
+      <mesh position={[1.15, 7.7, 1.25]} rotation={[0.45, -0.15, -0.1]} material={iron}>
+        <boxGeometry args={[1.7, 1.45, 0.32]} />
       </mesh>
-      <mesh position={[0, 10.55, -0.15]} material={iron}>
-        <boxGeometry args={[4.6, 0.7, 1.7]} />
+      <mesh position={[-1.7, 8.6, 0.2]} rotation={[0, 0, 0.35]} material={plate}>
+        <boxGeometry args={[1.1, 2.2, 1.3]} />
       </mesh>
-      <mesh position={[-2.35, 10.85, 0.15]} rotation={[0.15, 0, 0.42]} material={plate}>
-        <boxGeometry args={[1.55, 0.7, 1.9]} />
+      <mesh position={[1.85, 8.55, 0.15]} rotation={[0, 0, -0.32]} material={plate}>
+        <boxGeometry args={[1.15, 2.3, 1.35]} />
       </mesh>
-      <mesh position={[2.55, 10.95, 0.05]} rotation={[-0.1, 0, -0.38]} material={plate}>
-        <boxGeometry args={[1.85, 0.85, 2.15]} />
+      <mesh position={[0, 10.7, -0.05]} material={iron}>
+        <boxGeometry args={[5.8, 1.05, 2.05]} />
+      </mesh>
+      <mesh position={[-2.55, 11.05, 0.15]} rotation={[0.12, 0, 0.28]} material={plate}>
+        <boxGeometry args={[2.05, 1.05, 2.25]} />
+      </mesh>
+      <mesh position={[2.7, 11.15, 0.05]} rotation={[-0.08, 0, -0.26]} material={plate}>
+        <boxGeometry args={[2.25, 1.15, 2.4]} />
       </mesh>
       <mesh position={[-3.15, 11.55, 0.15]} rotation={[0.2, 0, 0.7]} material={horn}>
         <coneGeometry args={[0.22, 1.25, 4]} />
@@ -69,8 +75,8 @@ function DreadShell({ plate, iron, eye, horn }: { plate: THREE.Material; iron: T
           <coneGeometry args={[0.16, 0.85, 4]} />
         </mesh>
       ))}
-      <mesh position={[0, 12.35, 0.05]} material={plate}>
-        <cylinderGeometry args={[0.55, 0.85, 1.15, 6]} />
+      <mesh position={[0, 12.45, 0.05]} material={plate}>
+        <cylinderGeometry args={[0.72, 1.05, 1.2, 6]} />
       </mesh>
       <mesh position={[0.05, 13.85, 0.15]} rotation={[0.18, 0, 0]} material={plate}>
         <cylinderGeometry args={[0.95, 1.25, 2.35, 7]} />
@@ -214,11 +220,11 @@ function GiantBody({ soldiers, big, sword, dread }: { soldiers: number; big: boo
       <group ref={arm} position={[-2.7, 10.4, 0.2]}>
         {dread ? (
           <>
-            <mesh position={[-0.15, -0.95, 0.12]} rotation={[0.15, 0, 0.12]} material={plate}>
-              <cylinderGeometry args={[0.4, 0.52, 1.85, 6]} />
+            <mesh position={[-0.18, -0.95, 0.12]} rotation={[0.12, 0, 0.08]} material={plate}>
+              <cylinderGeometry args={[0.62, 0.82, 1.95, 6]} />
             </mesh>
-            <mesh position={[-0.32, -2.35, 0.32]} rotation={[0.35, 0, 0.08]} material={iron}>
-              <cylinderGeometry args={[0.32, 0.42, 1.7, 5]} />
+            <mesh position={[-0.34, -2.4, 0.32]} rotation={[0.28, 0, 0.06]} material={iron}>
+              <cylinderGeometry args={[0.5, 0.66, 1.8, 5]} />
             </mesh>
             <mesh position={[-0.22, -1.85, 0.55]} rotation={[0.4, 0, 0.6]} material={horn}>
               <coneGeometry args={[0.12, 0.55, 4]} />
@@ -246,11 +252,11 @@ function GiantBody({ soldiers, big, sword, dread }: { soldiers: number; big: boo
       <group ref={mace} position={[2.7, 10.5, 0.25]}>
         {dread ? (
           <>
-            <mesh position={[0.2, -0.85, 0.2]} rotation={[0.25, 0, -0.1]} material={plate}>
-              <cylinderGeometry args={[0.46, 0.58, 1.7, 6]} />
+            <mesh position={[0.22, -0.9, 0.18]} rotation={[0.2, 0, -0.08]} material={plate}>
+              <cylinderGeometry args={[0.68, 0.86, 1.85, 6]} />
             </mesh>
-            <mesh position={[0.35, -2.15, 0.45]} rotation={[0.5, 0, -0.08]} material={iron}>
-              <cylinderGeometry args={[0.36, 0.48, 1.55, 5]} />
+            <mesh position={[0.38, -2.25, 0.42]} rotation={[0.42, 0, -0.06]} material={iron}>
+              <cylinderGeometry args={[0.52, 0.68, 1.7, 5]} />
             </mesh>
           </>
         ) : (
