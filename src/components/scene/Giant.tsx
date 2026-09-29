@@ -124,14 +124,14 @@ function GiantBody({ soldiers, big, sword }: { soldiers: number; big: boolean; s
         </mesh>
         {sword && (
           <group ref={blade} position={[-0.4, -3.25, 0.45]}>
-            <mesh position={[0, 0, 0.28]} material={iron}>
-              <boxGeometry args={[0.16, 0.16, 0.5]} />
+            <mesh position={[0, 0, 0.32]} material={iron}>
+              <boxGeometry args={[0.34, 0.34, 0.55]} />
             </mesh>
-            <mesh position={[0, 0, 0.62]} material={plate}>
-              <boxGeometry args={[0.78, 0.1, 0.14]} />
+            <mesh position={[0, 0, 0.72]} material={plate}>
+              <boxGeometry args={[1.25, 0.26, 0.32]} />
             </mesh>
-            <mesh position={[0, 0, 2.35]} material={iron}>
-              <boxGeometry args={[0.1, 0.045, 3.3]} />
+            <mesh position={[0, 0, 2.45]} material={iron}>
+              <boxGeometry args={[0.34, 0.16, 3.3]} />
             </mesh>
           </group>
         )}
@@ -181,7 +181,7 @@ function ArrowVolley({ big }: { big: boolean }) {
       dummy.lookAt(g.x, aimY, g.z);
       dummy.rotateX(Math.PI / 2);
       const show = t > 2 && t < LAST_ARROW && u > 0.06 && u < 0.9;
-      dummy.scale.set(show ? 0.28 : 0, show ? 1.15 : 0, show ? 0.28 : 0);
+      dummy.scale.set(show ? 0.56 : 0, show ? 1.15 : 0, show ? 0.56 : 0);
       dummy.updateMatrix();
       mesh.current.setMatrixAt(i, dummy.matrix);
     }
