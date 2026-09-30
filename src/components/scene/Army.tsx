@@ -114,6 +114,34 @@ function rankSizes(n: number) {
   return sizes;
 }
 
+function fileRankSizes(n: number, cols = 10) {
+  const count = Math.max(0, n);
+  const sizes: number[] = [];
+  let left = count;
+  while (left > 0) {
+    const take = Math.min(cols, left);
+    sizes.push(take);
+    left -= take;
+  }
+  return sizes;
+}
+
+function liveBands(rows: number) {
+  if (rows <= 1) return { spear: rows, bow: 0 };
+  if (rows === 2) return { spear: 1, bow: 1 };
+  const spear = Math.max(1, Math.round(rows * 0.34));
+  const bow = Math.max(1, Math.round(rows * 0.34));
+  if (spear + bow >= rows) return { spear: Math.max(1, rows - 1), bow: 1 };
+  return { spear, bow };
+}
+
+function liveRole(row: number, rows: number) {
+  const band = liveBands(rows);
+  if (row < band.spear) return "spear" as const;
+  if (row >= rows - band.bow) return "bow" as const;
+  return "sword" as const;
+}
+
 /** Regular block: columns ≈ rows so the army reads as a square. */
 export function squareRankSizes(n: number) {
   const count = Math.max(0, n);
@@ -725,6 +753,20 @@ function getGiantSoldierGeometry() {
   return giantSoldierGeo;
 }
 
+let liveArmGeo: THREE.BufferGeometry | null = null;
+function getLiveArmGeometry() {
+  if (!liveArmGeo) {
+    liveArmGeo = mergeParts(
+      [
+        part(new THREE.CylinderGeometry(0.05, 0.055, 0.62, 5), ARMOR, -0.34, 0.92, 0.08, 0.55, 0, 0.15),
+        part(new THREE.CylinderGeometry(0.05, 0.055, 0.62, 5), ARMOR, 0.36, 0.98, 0.22, 0.7, 0, -0.25),
+      ],
+      ARMOR
+    );
+  }
+  return liveArmGeo;
+}
+
 let filmBladeGeo: THREE.BufferGeometry | null = null;
 function getFilmBladeGeometry() {
   if (!filmBladeGeo) filmBladeGeo = new THREE.BoxGeometry(0.06, 0.08, 0.72);
@@ -911,6 +953,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
   const swords = useRef<THREE.InstancedMesh>(null);
   const bladeSwings = useRef<THREE.InstancedMesh>(null);
   const spears = useRef<THREE.InstancedMesh>(null);
+  const meleeArms = useRef<THREE.InstancedMesh>(null);
   const nocks = useRef<THREE.InstancedMesh>(null);
   const arrows = useRef<THREE.InstancedMesh>(null);
   const nameMeshRefs = useRef<(THREE.InstancedMesh | null)[]>([]);
@@ -927,6 +970,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
   const openField = new1 || new2 || bridge || cross || maze || film || giant;
   const archerGeo = useMemo(() => (film || giant ? getGiantSoldierGeometry() : cross ? getBlueBareGeometry() : blade ? getBlueSwordGeometry() : blue ? getBlueBareGeometry() : new2 ? getBlueSoldierGeometry() : melee ? getDefendSoldierGeometry() : getArcherGeometry()), [melee, new2, blade, blue, cross, film, giant]);
   const swingGeo = useMemo(() => (film ? getFilmBladeGeometry() : getSwingSwordGeometry()), [film]);
+  const liveArmGeo = useMemo(() => getLiveArmGeometry(), []);
   const commanderGeo = useMemo(() => (melee ? archerGeo : getCommanderGeometry()), [melee, archerGeo]);
   const commanderCapeGeo = useMemo(() => (melee ? archerGeo : getCommanderCapeGeometry()), [melee, archerGeo]);
   const soldierPlumeGeo = useMemo(() => (new2 || blue || bridge || cross || maze || film || giant ? getBluePlumeGeometry() : getSoldierPlumeGeometry()), [new2, blue, bridge, cross, maze, film, giant]);
@@ -987,8 +1031,10 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
       });
       return { cmd: [] as number[], rest, slotOf, cmdOf, sizes: squareRankSizes(rest.length) };
     }
-    return buildLayout(names, chiefsList, visible);
-  }, [names, chiefsList, visible, defend, vs, vs2, openField, square, maze, mazeCast, film, filmCast]);
+    const built = buildLayout(names, chiefsList, visible);
+    if (!cinematic) return { ...built, sizes: fileRankSizes(built.rest.length, 10) };
+    return built;
+  }, [names, chiefsList, visible, defend, vs, vs2, openField, square, maze, mazeCast, film, filmCast, cinematic]);
   const phantom = !skipCommander && layout.cmd.length === 0 && chiefsList.length > 0;
   const form = useMemo(() => ({ sizes: layout.sizes, scale: 1.28, square }), [layout.sizes, square]);
   const steelRough = useMemo(() => {
@@ -1251,6 +1297,10 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
       let giantBows = 0;
       let filmLive = 0;
       let filmSwords = 0;
+      let liveBows = 0;
+      let liveSpears = 0;
+      let liveBlades = 0;
+      let liveArms = 0;
       bodies.current.count = bodyN;
       if (soldierPlumes.current) soldierPlumes.current.count = giant || film ? 0 : bodyN;
       if (bowHolds.current) bowHolds.current.count = giant ? 0 : cross ? n : melee ? 0 : bodyN;
@@ -1491,7 +1541,9 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
           continue;
         }
         unitPos(i, t + seeds[soldier], form.sizes, pos);
-        const cycle = bowCycle(soldier, t);
+        const ranked = !cinematic && !defend && !vs && !vs2;
+        const role = ranked ? liveRole(slotCoord(i, form.sizes).row, form.sizes.length) : "bow";
+        const cycle = role === "bow" ? bowCycle(soldier, t) : { raise: 0, draw: 0, loose: 0, rx: 0.06, ry: Math.PI, rz: 0, dz: 0, dy: 0 };
         pos.y += cycle.dy;
         if (!defend) pos.z += cycle.dz;
         dummy.position.copy(pos);
@@ -1501,29 +1553,50 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
         dummy.updateMatrix();
         stamp(bodies.current, i);
         stamp(soldierPlumes.current, i);
-        _bodyQ.setFromEuler(_limbEul.set(cycle.rx, yaw, cycle.rz, "XYZ"));
-        const holdRx = (1 - cycle.raise) * -1.18;
-        const drawRx = (1 - cycle.raise) * -1.08 + (1 - cycle.draw) * cycle.raise * 0.32;
-        const drawRy = (1 - cycle.draw) * cycle.raise * 0.42;
-        const drawRz = (1 - cycle.raise) * -0.18;
-        stampLimb(bowHolds.current, i, L_SHOULDER, holdRx, 0.04 * cycle.raise, 0.08 * cycle.raise, scale);
-        stampLimb(drawArms.current, i, R_SHOULDER, drawRx, drawRy, drawRz, scale);
-        if (nocks.current) {
-          const aim = cycle.raise * (1 - cycle.loose);
-          if (aim > 0.12) {
-            nockOff.set(-0.08, 1.22, 0.36 - cycle.draw * 0.16);
-            nockOff.applyQuaternion(_bodyQ);
-            nockOff.multiplyScalar(scale);
-            dummy.position.set(pos.x + nockOff.x, pos.y + nockOff.y, pos.z + nockOff.z);
-            dummy.rotation.set(cycle.rx, yaw, cycle.rz);
-            dummy.scale.setScalar(scale * (0.92 + aim * 0.1));
-            dummy.updateMatrix();
-            nocks.current.setMatrixAt(i, dummy.matrix);
-          } else {
-            dummy.scale.setScalar(0);
-            dummy.updateMatrix();
-            nocks.current.setMatrixAt(i, dummy.matrix);
+        if (role === "spear" && spears.current) {
+          if (meleeArms.current) {
+            meleeArms.current.setMatrixAt(liveArms, dummy.matrix);
+            liveArms += 1;
           }
+          _swingSpin.makeRotationX(Math.PI / 2);
+          _swingM.makeTranslation(0.22, 1.18, 1.05);
+          _swingM.multiply(_swingSpin);
+          _swingBody.copy(dummy.matrix).multiply(_swingM);
+          spears.current.setMatrixAt(liveSpears, _swingBody);
+          liveSpears += 1;
+        } else if (role === "sword" && bladeSwings.current) {
+          if (meleeArms.current) {
+            meleeArms.current.setMatrixAt(liveArms, dummy.matrix);
+            liveArms += 1;
+          }
+          bladeSwings.current.setMatrixAt(liveBlades, dummy.matrix);
+          liveBlades += 1;
+        } else {
+          _bodyQ.setFromEuler(_limbEul.set(cycle.rx, yaw, cycle.rz, "XYZ"));
+          const holdRx = (1 - cycle.raise) * -1.18;
+          const drawRx = (1 - cycle.raise) * -1.08 + (1 - cycle.draw) * cycle.raise * 0.32;
+          const drawRy = (1 - cycle.draw) * cycle.raise * 0.42;
+          const drawRz = (1 - cycle.raise) * -0.18;
+          stampLimb(bowHolds.current, liveBows, L_SHOULDER, holdRx, 0.04 * cycle.raise, 0.08 * cycle.raise, scale);
+          stampLimb(drawArms.current, liveBows, R_SHOULDER, drawRx, drawRy, drawRz, scale);
+          if (nocks.current) {
+            const aim = cycle.raise * (1 - cycle.loose);
+            if (aim > 0.12) {
+              nockOff.set(-0.08, 1.22, 0.36 - cycle.draw * 0.16);
+              nockOff.applyQuaternion(_bodyQ);
+              nockOff.multiplyScalar(scale);
+              dummy.position.set(pos.x + nockOff.x, pos.y + nockOff.y, pos.z + nockOff.z);
+              dummy.rotation.set(cycle.rx, yaw, cycle.rz);
+              dummy.scale.setScalar(scale * (0.92 + aim * 0.1));
+              dummy.updateMatrix();
+              nocks.current.setMatrixAt(liveBows, dummy.matrix);
+            } else {
+              dummy.scale.setScalar(0);
+              dummy.updateMatrix();
+              nocks.current.setMatrixAt(liveBows, dummy.matrix);
+            }
+          }
+          liveBows += 1;
         }
       }
       }
@@ -1554,6 +1627,14 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
       if (bowHolds.current) bowHolds.current.instanceMatrix.needsUpdate = true;
       if (drawArms.current) drawArms.current.instanceMatrix.needsUpdate = true;
       if (nocks.current) nocks.current.instanceMatrix.needsUpdate = true;
+      if (!cinematic && !openField && !defend && !vs && !vs2) {
+        if (bowHolds.current) bowHolds.current.count = liveBows;
+        if (drawArms.current) drawArms.current.count = liveBows;
+        if (nocks.current) nocks.current.count = liveBows;
+        if (spears.current) spears.current.count = liveSpears;
+        if (bladeSwings.current) bladeSwings.current.count = liveBlades;
+        if (meleeArms.current) meleeArms.current.count = liveArms;
+      }
     }
     if (chiefs.current) {
       const n = skipCommander || isolate ? 0 : Math.min(MAX_COMMANDERS, Math.max(layout.cmd.length, phantom ? 1 : 0));
@@ -1948,7 +2029,14 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
             : 1;
       for (let i = 0; i < burst && shots.current.length < cap; i++) {
         if (layout.rest.length <= 0) break;
-        const soldier = layout.rest[Math.floor(Math.random() * layout.rest.length)];
+        let soldier = layout.rest[Math.floor(Math.random() * layout.rest.length)];
+        if (!cinematic && form.sizes.length > 1) {
+          const band = liveBands(form.sizes.length);
+          let start = 0;
+          for (let r = 0; r < form.sizes.length - band.bow; r++) start += form.sizes[r];
+          const archerSlots = layout.rest.length - start;
+          if (archerSlots > 0) soldier = layout.rest[start + Math.floor(Math.random() * archerSlots)];
+        }
         poseSoldier(soldier, t);
         const cmdN = skipCommander ? 0 : chiefsList.length;
         const idx = hunt ? sallyLiveIndex(sally, enemies, soldier + i * 11, cmdN) : -1;
@@ -2088,6 +2176,16 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
           </instancedMesh>
           <instancedMesh ref={nocks} args={[nockGeo, undefined, instanceCap]} frustumCulled={false}>
             <meshStandardMaterial vertexColors roughness={0.55} metalness={0.28} />
+          </instancedMesh>
+          <instancedMesh ref={spears} args={[undefined, undefined, instanceCap]} frustumCulled={false}>
+            <cylinderGeometry args={[0.04, 0.055, 2.2, 5]} />
+            <meshStandardMaterial color="#c8c2b6" roughness={0.48} metalness={0.28} />
+          </instancedMesh>
+          <instancedMesh ref={bladeSwings} args={[swingGeo, undefined, instanceCap]} frustumCulled={false}>
+            <meshStandardMaterial vertexColors roughness={0.32} metalness={0.62} />
+          </instancedMesh>
+          <instancedMesh ref={meleeArms} args={[liveArmGeo, undefined, instanceCap]} frustumCulled={false}>
+            <meshStandardMaterial vertexColors roughness={0.46} metalness={0.55} />
           </instancedMesh>
           {!quiet && (
             <instancedMesh ref={arrows} args={[undefined, undefined, MAX_ARROWS]} frustumCulled={false}>

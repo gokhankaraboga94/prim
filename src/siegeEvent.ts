@@ -1,6 +1,8 @@
 export const SALLY_CYCLE = 60;
 export const SALLY_LEN = 32;
 export const SALLY_START_DELAY = 3.5;
+/** Live site: raiders show at the gate this many seconds after the page opens. */
+export const LIVE_GATE_AT = 45;
 export const RAID_INSIDE_Z = 18;
 export const RAID_OUT_Z = 47;
 export const MAX_RAIDERS = 10000;

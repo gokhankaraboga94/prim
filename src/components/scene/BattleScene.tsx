@@ -33,6 +33,7 @@ import { Catapults } from "./Catapults";
 import { NameScanBeam } from "./NameScanBeam";
 import {
   SALLY_START_DELAY,
+  LIVE_GATE_AT,
   SWORD_START,
   sallyLocal,
   setSallyOrigin,
@@ -1020,7 +1021,7 @@ function BattleSceneInner({
       setSallyOrigin(SALLY_START_DELAY + atStart - REEL_HOLD);
       setSwordStart(atStart + 0.04);
     } else {
-      setSallyOrigin(0);
+      setSallyOrigin(SALLY_START_DELAY + 2.4 - LIVE_GATE_AT);
       setSwordStart(SWORD_START);
     }
     return () => {
