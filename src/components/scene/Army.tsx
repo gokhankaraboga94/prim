@@ -954,6 +954,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
   const bladeSwings = useRef<THREE.InstancedMesh>(null);
   const spears = useRef<THREE.InstancedMesh>(null);
   const meleeArms = useRef<THREE.InstancedMesh>(null);
+  const rankBows = useRef<THREE.InstancedMesh>(null);
   const nocks = useRef<THREE.InstancedMesh>(null);
   const arrows = useRef<THREE.InstancedMesh>(null);
   const nameMeshRefs = useRef<(THREE.InstancedMesh | null)[]>([]);
@@ -971,6 +972,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
   const archerGeo = useMemo(() => (film || giant ? getGiantSoldierGeometry() : cross ? getBlueBareGeometry() : blade ? getBlueSwordGeometry() : blue ? getBlueBareGeometry() : new2 ? getBlueSoldierGeometry() : melee ? getDefendSoldierGeometry() : getArcherGeometry()), [melee, new2, blade, blue, cross, film, giant]);
   const swingGeo = useMemo(() => (film ? getFilmBladeGeometry() : getSwingSwordGeometry()), [film]);
   const liveArmGeo = useMemo(() => getLiveArmGeometry(), []);
+  const liveBowGeo = useMemo(() => getGiantBowGeometry(), []);
   const commanderGeo = useMemo(() => (melee ? archerGeo : getCommanderGeometry()), [melee, archerGeo]);
   const commanderCapeGeo = useMemo(() => (melee ? archerGeo : getCommanderCapeGeometry()), [melee, archerGeo]);
   const soldierPlumeGeo = useMemo(() => (new2 || blue || bridge || cross || maze || film || giant ? getBluePlumeGeometry() : getSoldierPlumeGeometry()), [new2, blue, bridge, cross, maze, film, giant]);
@@ -1301,12 +1303,14 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
       let liveSpears = 0;
       let liveBlades = 0;
       let liveArms = 0;
+      let liveRankBows = 0;
       bodies.current.count = bodyN;
       if (soldierPlumes.current) soldierPlumes.current.count = giant || film ? 0 : bodyN;
       if (bowHolds.current) bowHolds.current.count = giant ? 0 : cross ? n : melee ? 0 : bodyN;
       if (drawArms.current) drawArms.current.count = giant ? 0 : cross ? n : melee ? 0 : bodyN;
       if (nocks.current) nocks.current.count = giant ? 0 : cross ? n : melee ? 0 : bodyN;
       if (spears.current) spears.current.count = 0;
+      if (rankBows.current) rankBows.current.count = 0;
       const hideSlot = (i: number) => {
         dummy.scale.setScalar(0);
         dummy.position.set(0, -40, 0);
@@ -1542,7 +1546,8 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
         }
         unitPos(i, t + seeds[soldier], form.sizes, pos);
         const ranked = !cinematic && !defend && !vs && !vs2;
-        const role = ranked ? liveRole(slotCoord(i, form.sizes).row, form.sizes.length) : "bow";
+        const slot = ranked ? slotCoord(i, form.sizes) : null;
+        const role = slot ? liveRole(slot.row, form.sizes.length) : "bow";
         const cycle = role === "bow" ? bowCycle(soldier, t) : { raise: 0, draw: 0, loose: 0, rx: 0.06, ry: Math.PI, rz: 0, dz: 0, dy: 0 };
         pos.y += cycle.dy;
         if (!defend) pos.z += cycle.dz;
@@ -1571,6 +1576,9 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
           }
           bladeSwings.current.setMatrixAt(liveBlades, dummy.matrix);
           liveBlades += 1;
+        } else if (ranked && slot && slot.row < form.sizes.length - 2 && rankBows.current) {
+          rankBows.current.setMatrixAt(liveRankBows, dummy.matrix);
+          liveRankBows += 1;
         } else {
           _bodyQ.setFromEuler(_limbEul.set(cycle.rx, yaw, cycle.rz, "XYZ"));
           const holdRx = (1 - cycle.raise) * -1.18;
@@ -1633,7 +1641,14 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
         if (nocks.current) nocks.current.count = liveBows;
         if (spears.current) spears.current.count = liveSpears;
         if (bladeSwings.current) bladeSwings.current.count = liveBlades;
-        if (meleeArms.current) meleeArms.current.count = liveArms;
+        if (meleeArms.current) {
+          meleeArms.current.count = liveArms;
+          meleeArms.current.instanceMatrix.needsUpdate = true;
+        }
+        if (rankBows.current) {
+          rankBows.current.count = liveRankBows;
+          rankBows.current.instanceMatrix.needsUpdate = true;
+        }
       }
     }
     if (chiefs.current) {
@@ -1753,6 +1768,14 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
         continue;
       }
       const cmd = idx < 0 || layout.cmdOf[idx] >= 0;
+      if (!cmd && !cinematic && !defend && !vs && !vs2 && !openField && !roster && !countdown && !mix && !discover) {
+        const ranks = form.sizes.length;
+        const slot = layout.slotOf[idx];
+        if (ranks > 5 && slot >= 0 && slotCoord(slot, form.sizes).row < ranks - 5) {
+          hideName(k, cell);
+          continue;
+        }
+      }
       if (isolate && (idx < 0 || !packSet?.has(idx))) {
         hideName(k, cell);
         continue;
@@ -2120,19 +2143,15 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
             {cinematic ? (
               <meshStandardMaterial vertexColors roughness={0.46} metalness={0.72} envMapIntensity={0.9} />
             ) : (
-              <meshPhysicalMaterial
-                vertexColors
-                roughness={0.42}
-                metalness={0.82}
-                roughnessMap={steelRough ?? undefined}
-                envMapIntensity={1.25}
-                clearcoat={0.28}
-                clearcoatRoughness={0.45}
-              />
+              <meshLambertMaterial vertexColors />
             )}
           </instancedMesh>
           <instancedMesh ref={soldierPlumes} args={[soldierPlumeGeo, undefined, instanceCap]} frustumCulled={false}>
-            <meshStandardMaterial vertexColors roughness={0.86} metalness={0} side={THREE.DoubleSide} />
+            {cinematic ? (
+              <meshStandardMaterial vertexColors roughness={0.86} metalness={0} side={THREE.DoubleSide} />
+            ) : (
+              <meshLambertMaterial vertexColors side={THREE.DoubleSide} />
+            )}
           </instancedMesh>
           <instancedMesh key="bow-v13" ref={bowHolds} args={[bowHoldGeo, undefined, instanceCap]} frustumCulled={false}>
             <meshStandardMaterial vertexColors roughness={0.52} metalness={0.28} envMapIntensity={0.7} />
@@ -2179,13 +2198,16 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
           </instancedMesh>
           <instancedMesh ref={spears} args={[undefined, undefined, instanceCap]} frustumCulled={false}>
             <cylinderGeometry args={[0.04, 0.055, 2.2, 5]} />
-            <meshStandardMaterial color="#c8c2b6" roughness={0.48} metalness={0.28} />
+            <meshLambertMaterial color="#c8c2b6" />
           </instancedMesh>
           <instancedMesh ref={bladeSwings} args={[swingGeo, undefined, instanceCap]} frustumCulled={false}>
             <meshStandardMaterial vertexColors roughness={0.32} metalness={0.62} />
           </instancedMesh>
           <instancedMesh ref={meleeArms} args={[liveArmGeo, undefined, instanceCap]} frustumCulled={false}>
-            <meshStandardMaterial vertexColors roughness={0.46} metalness={0.55} />
+            <meshLambertMaterial vertexColors />
+          </instancedMesh>
+          <instancedMesh ref={rankBows} args={[liveBowGeo, undefined, instanceCap]} frustumCulled={false}>
+            <meshLambertMaterial vertexColors />
           </instancedMesh>
           {!quiet && (
             <instancedMesh ref={arrows} args={[undefined, undefined, MAX_ARROWS]} frustumCulled={false}>
