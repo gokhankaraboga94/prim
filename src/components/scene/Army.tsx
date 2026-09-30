@@ -114,7 +114,7 @@ function rankSizes(n: number) {
   return sizes;
 }
 
-function fileRankSizes(n: number, cols = 10) {
+function fileRankSizes(n: number, cols = 30) {
   const count = Math.max(0, n);
   const sizes: number[] = [];
   let left = count;
@@ -1032,7 +1032,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
       return { cmd: [] as number[], rest, slotOf, cmdOf, sizes: squareRankSizes(rest.length) };
     }
     const built = buildLayout(names, chiefsList, visible);
-    if (!cinematic) return { ...built, sizes: fileRankSizes(built.rest.length, 10) };
+    if (!cinematic) return { ...built, sizes: fileRankSizes(built.rest.length, 30) };
     return built;
   }, [names, chiefsList, visible, defend, vs, vs2, openField, square, maze, mazeCast, film, filmCast, cinematic]);
   const phantom = !skipCommander && layout.cmd.length === 0 && chiefsList.length > 0;
