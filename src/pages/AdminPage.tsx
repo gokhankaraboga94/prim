@@ -36,6 +36,13 @@ import { DEV2_ID, DEV2_MODE, DEV2_SECONDS, DEV3_ID, DEV3_MODE, DEV3_SECONDS, DEV
 import { FILM_ID, FILM_MODE, FILM_SECONDS, isFilm, type FilmId } from "../filmReel";
 import { unlockReelSfx } from "../reelSfx";
 
+function skippedNote(skipped: string[]): string {
+  if (!skipped.length) return "";
+  const shown = skipped.slice(0, 12).map((n) => `@${n}`).join(", ");
+  const more = skipped.length > 12 ? ` ve ${skipped.length - 12} ad daha` : "";
+  return `Listede var, geçildi: ${shown}${more}.`;
+}
+
 export function AdminPage() {
   const { game, recruits, level, power, pressure, target, maxHp } = useGame();
   const [soldiersInput, setSoldiersInput] = useState("");
@@ -118,13 +125,13 @@ export function AdminPage() {
       await set(ref(db, "game"), payload);
       setAddInput("");
       if (incoming.length) setNamesInput("");
-      setMsg(
-        next.named
-          ? `${next.added} asker eklendi, ${next.named} isim verildi.`
-          : next.added
-            ? `Orduya ${next.added} asker eklendi.`
-            : "Bu kullanıcı adları zaten orduda."
-      );
+      const note = skippedNote(next.skipped);
+      const lead = next.named
+        ? `${next.named} yeni asker eklendi.`
+        : next.added
+          ? `Orduya ${next.added} asker eklendi.`
+          : "";
+      setMsg([lead, note].filter(Boolean).join(" ") || "Eklenecek yeni ad yok.");
     } catch {
       setMsg("Asker eklenemedi.");
     } finally {
@@ -142,17 +149,21 @@ export function AdminPage() {
     setBusy(true);
     try {
       const next = enlistWithNames(game.names, game.soldiers, incoming);
+      const note = skippedNote(next.skipped);
       if (!next.added && !next.named) {
         setNamesInput("");
-        setMsg("Bu kullanıcı adları zaten orduda.");
+        setMsg(note || "Bu kullanıcı adları zaten orduda.");
         return;
       }
       await set(ref(db, "game"), toGameRecord(game, Date.now(), { soldiers: next.soldiers, names: next.names }));
       setNamesInput("");
       setMsg(
-        next.added
-          ? `${next.named} asker oluşturuldu ve isimleri verildi.`
-          : `${next.named} isimsiz slota yazıldı.`
+        [
+          next.added ? `${next.named} asker oluşturuldu.` : `${next.named} isimsiz slota yazıldı.`,
+          note,
+        ]
+          .filter(Boolean)
+          .join(" ")
       );
     } catch {
       setMsg("İsimler kaydedilemedi.");
@@ -374,9 +385,8 @@ export function AdminPage() {
         <section className="admin-card">
           <h2>Asker kullanıcı adları</h2>
           <p className="muted">
-            Virgül, boşluk veya alt alta yaz. Önce isimsiz slotlar dolar; isim sayısı
-            ordudan fazlaysa o kadar yeni asker oluşur. Listedeki adlar tekrar eklenmez.
-            Sil, askeri isimsiz bırakmaz; ordudan ve takipçi sayısından düşürür.
+            Virgül, boşluk veya alt alta yaz. Listede olmayan adlar yeni asker olur.
+            Listede olanlar eklenmez, listede var diye geçilir.
           </p>
           <form onSubmit={onAssignNames}>
             <label>@kullanıcıadları</label>

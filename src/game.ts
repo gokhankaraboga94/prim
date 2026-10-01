@@ -150,6 +150,10 @@ export function normalizeHandle(raw: string): string {
   return raw.trim().replace(/^@+/, "").replace(/[^\w.]/g, "");
 }
 
+function nameKey(raw: string): string {
+  return normalizeHandle(raw).replace(/İ/g, "i").toLowerCase().normalize("NFD").replace(/\u0307/g, "");
+}
+
 function coerceNames(v: unknown): string[] {
   if (Array.isArray(v)) return v.map((item) => String(item || ""));
   if (v && typeof v === "object") {
@@ -169,8 +173,8 @@ export function parseNameList(raw: string): string[] {
   const out: string[] = [];
   for (const part of raw.split(/[\s,;]+/)) {
     const name = normalizeHandle(part);
-    if (!name || seen.has(name.toLowerCase())) continue;
-    seen.add(name.toLowerCase());
+    if (!name || seen.has(nameKey(name))) continue;
+    seen.add(nameKey(name));
     out.push(name);
   }
   return out;
@@ -292,11 +296,11 @@ export function retargetCommander(commanders: string[] | undefined, prev: string
 export function assignNames(existing: string[], soldiers: number, incoming: string[]): string[] {
   const cap = Math.max(0, Math.floor(soldiers));
   const names = compactNames(existing, cap);
-  const have = new Set(names.map((n) => n.toLowerCase()));
+  const have = new Set(names.map((n) => nameKey(n)));
   for (const raw of incoming) {
     if (names.length >= cap) break;
     const name = normalizeHandle(raw);
-    const key = name.toLowerCase();
+    const key = nameKey(name);
     if (!name || have.has(key)) continue;
     have.add(key);
     names.push(name);
@@ -309,16 +313,23 @@ export function enlistWithNames(
   soldiers: number,
   incoming: string[],
   extraSoldiers = 0
-): { soldiers: number; names: string[]; added: number; named: number } {
+): { soldiers: number; names: string[]; added: number; named: number; skipped: string[] } {
   const cap = Math.max(0, Math.floor(soldiers));
   const extra = Math.max(0, Math.floor(extraSoldiers));
   const packed = compactNames(existing, Math.max(cap, existing.length));
-  const have = new Set(packed.map((n) => n.toLowerCase()));
+  const have = new Set(packed.map((n) => nameKey(n)));
   const fresh: string[] = [];
+  const skipped: string[] = [];
+  const seenPaste = new Set<string>();
   for (const raw of incoming) {
     const name = normalizeHandle(raw);
-    const key = name.toLowerCase();
-    if (!name || have.has(key)) continue;
+    const key = nameKey(name);
+    if (!name) continue;
+    if (have.has(key) || seenPaste.has(key)) {
+      skipped.push(name);
+      continue;
+    }
+    seenPaste.add(key);
     have.add(key);
     fresh.push(name);
   }
@@ -329,6 +340,7 @@ export function enlistWithNames(
     names: compactNames(names, nextCount),
     added: Math.max(0, nextCount - cap),
     named: fresh.length,
+    skipped,
   };
 }
 
