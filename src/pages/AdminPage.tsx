@@ -444,6 +444,29 @@ export function AdminPage() {
           >
             {listOpen ? "Listeyi gizle" : "Kullanıcı listesini aç"}
           </button>
+          <button
+            type="button"
+            className="btn-ghost"
+            onClick={() => {
+              const lines = game.names.filter(Boolean).map((name) => `@${name.replace(/^@+/, "")}`);
+              if (!lines.length) {
+                setMsg("Dışarı aktarılacak kullanıcı adı yok.");
+                return;
+              }
+              const text = `${lines.join("\n")}\n`;
+              const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement("a");
+              a.href = url;
+              a.download = "kullanici-adlari.txt";
+              a.click();
+              URL.revokeObjectURL(url);
+              void navigator.clipboard?.writeText(text).catch(() => undefined);
+              setMsg(`${lines.length} kullanıcı adı dışarı aktarıldı.`);
+            }}
+          >
+            Kullanıcı adlarını dışarı aktar
+          </button>
           {listOpen && (
           <ul className="name-list">
             {game.names.map((name, index) =>
