@@ -448,7 +448,7 @@ export function AdminPage() {
             type="button"
             className="btn-ghost"
             onClick={() => {
-              const lines = game.names.filter(Boolean).map((name) => `@${name.replace(/^@+/, "")}`);
+              const lines = game.names.filter(Boolean).map((name) => name.replace(/^@+/, ""));
               if (!lines.length) {
                 setMsg("Dışarı aktarılacak kullanıcı adı yok.");
                 return;
