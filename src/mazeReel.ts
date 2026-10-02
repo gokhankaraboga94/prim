@@ -379,19 +379,19 @@ export function sampleLabCam(recT: number): ShotPose {
   const len = polyLen(WIN);
   const travel = Math.min(len - 20, Math.max(0, (t - 3.2) * 2.05));
   const behind = sample(WIN, travel);
-  const ahead = sample(WIN, Math.min(len - 1.2, travel + 14));
-  const sideX = Math.cos(behind.ry);
-  const sideZ = -Math.sin(behind.ry);
+  const ahead = sample(WIN, Math.min(len - 1.2, travel + 24));
+  const bx = Math.sin(behind.ry);
+  const bz = Math.cos(behind.ry);
   const follow = {
-    x: behind.x + sideX * 4.8,
-    y: 11.4,
-    z: behind.z + sideZ * 4.8,
+    x: behind.x - bx * 30,
+    y: 38,
+    z: behind.z - bz * 30,
     lx: ahead.x,
-    ly: 1.45,
+    ly: 1.2,
     lz: ahead.z,
-    fov: 34,
+    fov: 44,
   };
-  const open = { x: 5.2, y: 13.6, z: -13.4, lx: 0.2, ly: 1.2, lz: 6.4, fov: 36 };
+  const open = { x: 0.4, y: 42, z: -52, lx: 0, ly: 1.1, lz: 10, fov: 46 };
   const enter = t <= 2.2 ? 0 : Math.min(1, (t - 2.2) / 4.8);
   const e = enter * enter * (3 - 2 * enter);
   const mid = mixShot(open, follow, e);
@@ -414,13 +414,13 @@ export function sampleLabCam(recT: number): ShotPose {
   const fx = Math.sin(front.ry);
   const fz = Math.cos(front.ry);
   const close = {
-    x: back.x - fx * 4.4,
-    y: 7.8,
-    z: back.z - fz * 5.2,
-    lx: front.x + fx * 1.5,
-    ly: 1.35,
-    lz: front.z + fz * 1.5,
-    fov: 30,
+    x: back.x - fx * 22,
+    y: 28,
+    z: back.z - fz * 24,
+    lx: front.x + fx * 6,
+    ly: 1.4,
+    lz: front.z + fz * 6,
+    fov: 40,
   };
   return {
     x: mid.x + (close.x - mid.x) * u,

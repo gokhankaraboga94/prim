@@ -835,7 +835,7 @@ export function AdminPage() {
             <p className="muted">18 takipçi yerde dağınık, adları üstte. Başlarında 100 düşman bekler. 3. saniyede 150 asker hilal gibi, her biri ayrı yerden gelir. Ölüler yerde kalır.</p>
           )}
           {isLab(reelShot) && (
-            <p className="muted">200 son katılan birlikte girer. Kamera duvarların hemen üstünden, koridor boyunca yakından bakar. Taş duvarlar mazgallı. Sonda çıkanlara yaklaşır.</p>
+            <p className="muted">200 son katılan birlikte girer. Kamera geriden ve uzaktan, askerler görünecek şekilde koridoru takip eder. Taş duvarlar mazgallı. Sonda çıkanlara yaklaşır.</p>
           )}
           {isNew7(reelShot) && (
             <p className="muted">new5 ile aynı, kamera daha geriden. Kaybedecekken arkadan 24 asker belirir. Yazıyı sen eklersin.</p>
