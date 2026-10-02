@@ -368,7 +368,7 @@ function SnakeBody({ soldiers }: { soldiers: number }) {
     const fx = Math.sin(g.yaw);
     const fz = Math.cos(g.yaw);
     if (root.current) {
-      root.current.position.set(g.x + fx * bite * 2.4, 0, g.z + fz * bite * 2.4);
+      root.current.position.set(g.x + fx * bite * 8, 0, g.z + fz * bite * 8);
       root.current.rotation.y = g.yaw;
     }
     const lash = devTailLash(t);
@@ -378,9 +378,9 @@ function SnakeBody({ soldiers }: { soldiers: number }) {
       const neck = i < 5 ? (1 - i / 5) ** 2 : 0;
       const tip = i > 10 ? (i - 10) / (SNAKE_N - 1 - 10) : 0;
       const rad = 1.35 * (1 - u * 0.82) + (i === 0 ? 0.28 : 0);
-      const side = Math.sin(u * Math.PI * 2.6 + t * 1.35) * (1.15 + u * 2.1) + lash * tip * tip * 5.6;
-      const y = rad + neck * (0.15 + bite * 6.4) + curl * tip * 1.7;
-      const z = 5.4 - u * 22 + neck * bite * 3.6 + curl * tip * tip * 6.2;
+      const side = Math.sin(u * Math.PI * 2.6 + t * 1.35) * (1.15 + u * 2.1) + lash * tip * tip * 12;
+      const y = rad + neck * (0.15 + bite * 7.2) + curl * tip * 2.6;
+      const z = 5.4 - u * 22 + neck * bite * 12 + curl * tip * tip * 1.4;
       _snake[i].set(side, y, z);
     }
     for (let i = 0; i < SNAKE_N - 1; i++) {
