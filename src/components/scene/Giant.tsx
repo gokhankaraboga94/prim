@@ -287,12 +287,20 @@ function GiantBody({ soldiers, big, sword, dread }: { soldiers: number; big: boo
   );
 }
 
-function ArrowVolley({ big }: { big: boolean }) {
+const BLOOD = 28;
+const _drop = Array.from({ length: BLOOD }, () => ({ t: -10, x: 0, y: 0, z: 0, vx: 0, vz: 0 }));
+let _dropN = 0;
+
+function ArrowVolley({ big, snake = false }: { big: boolean; snake?: boolean }) {
   const mesh = useRef<THREE.InstancedMesh>(null);
+  const blood = useRef<THREE.InstancedMesh>(null);
+  const lastHit = useRef(new Float32Array(ARROWS));
   useFrame(({ clock }) => {
     if (!mesh.current) return;
     const t = Math.max(0, clock.elapsedTime - REEL_HOLD);
     const g = devGiantAt(t);
+    const cy = Math.cos(g.yaw);
+    const sy = Math.sin(g.yaw);
     for (let i = 0; i < ARROWS; i++) {
       const phase = ((t * 0.8 + i * 0.19) % 1.4) / 1.4;
       const ang = (i / ARROWS) * Math.PI * 2;
@@ -300,23 +308,82 @@ function ArrowVolley({ big }: { big: boolean }) {
       const sx = g.x + Math.sin(ang) * rad;
       const sz = g.z + Math.cos(ang) * rad;
       const u = phase;
-      const aimY = big ? 14 : 9.2;
-      dummy.position.set(sx + (g.x - sx) * u, 1.6 + (aimY - 1.6) * u + Math.sin(u * Math.PI) * 2.6, sz + (g.z - sz) * u);
-      dummy.lookAt(g.x, aimY, g.z);
+      if (!snake) {
+        const aimY = big ? 14 : 9.2;
+        dummy.position.set(sx + (g.x - sx) * u, 1.6 + (aimY - 1.6) * u + Math.sin(u * Math.PI) * 2.6, sz + (g.z - sz) * u);
+        dummy.lookAt(g.x, aimY, g.z);
+        dummy.rotateX(Math.PI / 2);
+        const show = t > 2 && t < LAST_ARROW && u > 0.06 && u < 0.9;
+        dummy.scale.set(show ? 0.56 : 0, show ? 1.15 : 0, show ? 0.56 : 0);
+        dummy.updateMatrix();
+        mesh.current.setMatrixAt(i, dummy.matrix);
+        continue;
+      }
+      const bu = 0.28 + ((i * 5) % 10) / 14;
+      const brad = 1.35 * (1 - bu * 0.82);
+      const bside = Math.sin(bu * Math.PI * 2.6 + t * 1.35) * (1.15 + bu * 2.1);
+      const blz = 5.4 - bu * 22;
+      const sc = 1.52;
+      const hx = g.x + (bside * cy + blz * sy) * sc;
+      const hy = brad * 1.15 * sc;
+      const hz = g.z + (-bside * sy + blz * cy) * sc;
+      const show = t > 2 && t < LAST_ARROW && u > 0.06 && u < 0.98;
+      dummy.position.set(sx + (hx - sx) * u, 1.5 + (hy - 1.5) * u + Math.sin(u * Math.PI) * 0.45, sz + (hz - sz) * u);
+      dummy.lookAt(hx, hy, hz);
       dummy.rotateX(Math.PI / 2);
-      const show = t > 2 && t < LAST_ARROW && u > 0.06 && u < 0.9;
       dummy.scale.set(show ? 0.56 : 0, show ? 1.15 : 0, show ? 0.56 : 0);
       dummy.updateMatrix();
       mesh.current.setMatrixAt(i, dummy.matrix);
+      if (show && u > 0.86 && t - lastHit.current[i] > 0.7) {
+        lastHit.current[i] = t;
+        for (let k = 0; k < 2; k++) {
+          const drop = _drop[_dropN % BLOOD];
+          _dropN += 1;
+          drop.t = t;
+          drop.x = hx + (k - 0.5) * 0.18;
+          drop.y = hy;
+          drop.z = hz;
+          drop.vx = (k - 0.5) * 0.55;
+          drop.vz = (i % 2 ? 0.25 : -0.25);
+        }
+      }
     }
     mesh.current.count = ARROWS;
     mesh.current.instanceMatrix.needsUpdate = true;
+    if (!blood.current) return;
+    for (let i = 0; i < BLOOD; i++) {
+      const drop = _drop[i];
+      const age = t - drop.t;
+      const on = snake && age >= 0 && age < 0.5;
+      if (!on) {
+        dummy.position.set(0, -20, 0);
+        dummy.scale.set(0, 0, 0);
+      } else {
+        const fall = age * age * 6;
+        dummy.position.set(drop.x + drop.vx * age, Math.max(0.05, drop.y - fall), drop.z + drop.vz * age);
+        const s = 0.34 * (1 - age / 0.5);
+        dummy.scale.set(s, s * 1.35, s);
+      }
+      dummy.rotation.set(0, 0, 0);
+      dummy.updateMatrix();
+      blood.current.setMatrixAt(i, dummy.matrix);
+    }
+    blood.current.count = BLOOD;
+    blood.current.instanceMatrix.needsUpdate = true;
   });
   return (
-    <instancedMesh ref={mesh} args={[undefined, undefined, ARROWS]} frustumCulled={false}>
-      <cylinderGeometry args={[0.04, 0.015, 1.35, 5]} />
-      <meshStandardMaterial color="#d7c39a" roughness={0.55} />
-    </instancedMesh>
+    <group>
+      <instancedMesh ref={mesh} args={[undefined, undefined, ARROWS]} frustumCulled={false}>
+        <cylinderGeometry args={[0.04, 0.015, 1.35, 5]} />
+        <meshStandardMaterial color="#d7c39a" roughness={0.55} />
+      </instancedMesh>
+      {snake && (
+        <instancedMesh ref={blood} args={[undefined, undefined, BLOOD]} frustumCulled={false}>
+          <sphereGeometry args={[1, 5, 4]} />
+          <meshLambertMaterial color="#c41616" />
+        </instancedMesh>
+      )}
+    </group>
   );
 }
 
@@ -461,7 +528,7 @@ export function Giant({ soldiers, big = false, sword = false, dread = false, sna
   return (
     <group>
       {snake ? <SnakeBody soldiers={soldiers} /> : <GiantBody soldiers={soldiers} big={big} sword={sword} dread={dread} />}
-      <ArrowVolley big={big} />
+      <ArrowVolley big={big} snake={snake} />
     </group>
   );
 }
