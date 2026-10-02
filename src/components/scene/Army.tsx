@@ -1390,7 +1390,12 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
           const spear = devIsSpear(i, n);
           const striking = (giantSnake || giantDevs) && devSnakeStriking(i, n, recT);
           if (archer && bowHolds.current) {
-            bowHolds.current.setMatrixAt(giantBows, dummy.matrix);
+            if (giantDevs) {
+              const draw = Math.max(0, Math.sin(recT * 3.2 + i));
+              _swingM.makeTranslation(0.02, 0.05 * draw, 0.1 * draw);
+              _swingBody.copy(dummy.matrix).multiply(_swingM);
+              bowHolds.current.setMatrixAt(giantBows, _swingBody);
+            } else bowHolds.current.setMatrixAt(giantBows, dummy.matrix);
             giantBows += 1;
           } else if (spear && spears.current) {
             const poke = striking ? 0.35 + Math.max(0, Math.sin(recT * 9 + i)) * 0.95 : 0;

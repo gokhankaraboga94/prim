@@ -166,7 +166,7 @@ function troopIndex(slot: number, side: number, zone: number) {
 function devsContact(plan: SnakePlan, i: number) {
   if (plan.die[i] > 1e8) return plan.die[i];
   if (plan.far[i] || plan.arrive[i] > 1e8) return Math.max(0.4, plan.die[i] - 1.4);
-  const giant = troopIndex(plan.slot[i], plan.side[i], plan.zone[i]);
+  const giant = devsChargeGiant(plan.die.length, i);
   return plan.arrive[i] + 0.2 + giant * 0.045;
 }
 
@@ -178,7 +178,7 @@ export function devTroopHit(giant: number, n: number, t: number) {
   let bestAbs = 1e9;
   for (let i = 0; i < count; i++) {
     if (plan.far[i] || plan.arrive[i] > 1e8) continue;
-    if (troopIndex(plan.slot[i], plan.side[i], plan.zone[i]) !== giant) continue;
+    if (devsChargeGiant(count, i) !== giant) continue;
     const at = devsContact(plan, i);
     if (t < at - 0.64 || t > at + 0.4) continue;
     const d = Math.abs(t - at);
@@ -190,8 +190,8 @@ export function devTroopHit(giant: number, n: number, t: number) {
   return best;
 }
 
-function devsStrike(slot: number, side: number, zone: number, g: { x: number; z: number; yaw: number }, t: number) {
-  const troop = devTroopSlot(troopIndex(slot, side, zone), g, t);
+function devsStrike(slot: number, side: number, zone: number, g: { x: number; z: number; yaw: number }, t: number, giant = -1) {
+  const troop = devTroopSlot(giant >= 0 ? giant : troopIndex(slot, side, zone), g, t);
   const fx = Math.sin(troop.ry);
   const fz = Math.cos(troop.ry);
   const rx = Math.cos(troop.ry);
@@ -552,6 +552,64 @@ function snakeHold(i: number, n: number, g: { x: number; z: number; yaw: number 
   return snakeRing(i, Math.ceil(n / 2), g, 18, 1.75, 32);
 }
 
+function nearestTroop(x: number, z: number, g: { x: number; z: number }, t: number) {
+  let best = 0;
+  let bestD = Infinity;
+  for (let k = 0; k < TROOP_N; k++) {
+    const troop = devTroopSlot(k, g, t);
+    const dx = troop.x - x;
+    const dz = troop.z - z;
+    const d = dx * dx + dz * dz;
+    if (d < bestD) {
+      bestD = d;
+      best = k;
+    }
+  }
+  return best;
+}
+
+const chargeGiants = new Map<number, Uint8Array>();
+
+function devsChargeGiant(n: number, i: number) {
+  let table = chargeGiants.get(n);
+  if (!table) {
+    const plan = snakePlan(n);
+    const meleeN = Math.ceil(n / 2);
+    table = new Uint8Array(n);
+    for (let k = 0; k < n; k++) {
+      const lock = plan.go[k] < 1e8 ? plan.go[k] : 0;
+      const g = devGiantAt(lock);
+      const at = k < meleeN ? snakeHold(k, n, g) : snakeRing(k - meleeN, n - meleeN, g, 34, 2.05, 44);
+      table[k] = nearestTroop(at.x, at.z, g, lock);
+    }
+    chargeGiants.set(n, table);
+  }
+  return table[i] ?? 0;
+}
+
+export function devWaitArrow(n: number, arrow: number, t: number) {
+  const count = Math.max(0, Math.floor(n));
+  if (count <= 0) return null;
+  const plan = snakePlan(count);
+  const g = devGiantAt(t);
+  const meleeN = Math.ceil(count / 2);
+  for (let step = 0; step < 24; step++) {
+    const idx = (arrow * 29 + step * 7 + Math.floor(t * 1.6)) % count;
+    if (t >= devsContact(plan, idx) || plan.go[idx] <= t) continue;
+    const at = idx < meleeN ? snakeHold(idx, count, g) : snakeRing(idx - meleeN, count - meleeN, g, 34, 2.05, 44);
+    const troop = devTroopSlot(nearestTroop(at.x, at.z, g, t), g, t);
+    return {
+      sx: at.x,
+      sy: 1.45,
+      sz: at.z,
+      hx: troop.x + Math.sin(troop.ry) * 0.35,
+      hy: 1.15 * TROOP_SCALE,
+      hz: troop.z + Math.cos(troop.ry) * 0.35,
+    };
+  }
+  return null;
+}
+
 function snakeStrike(slot: number, _batch: number, side: number, zone: number, g: { x: number; z: number; yaw: number }) {
   const flank = Math.cos(side) >= 0 ? 1 : -1;
   let lx = 0;
@@ -591,7 +649,7 @@ function devsDeath(i: number, n: number, t: number, dieAt: number, plan: SnakePl
     ? i < meleeN
       ? snakeHold(i, n, gg)
       : snakeRing(i - meleeN, n - meleeN, gg, 34, 2.05, 44)
-    : devsStrike(plan.slot[i], plan.side[i], plan.zone[i], gg, dieAt);
+    : devsStrike(plan.slot[i], plan.side[i], plan.zone[i], gg, dieAt, devsChargeGiant(n, i));
   let sx = 0;
   let sz = 1;
   if (far) {
@@ -601,7 +659,7 @@ function devsDeath(i: number, n: number, t: number, dieAt: number, plan: SnakePl
     sx = ox / olen;
     sz = oz / olen;
   } else {
-    const troop = devTroopSlot(troopIndex(plan.slot[i], plan.side[i], plan.zone[i]), gg, dieAt);
+    const troop = devTroopSlot(devsChargeGiant(n, i), gg, dieAt);
     sx = Math.sin(troop.ry);
     sz = Math.cos(troop.ry);
   }
@@ -704,17 +762,22 @@ function snakeFriendAt(i: number, n: number, t: number, out: New1Pose, devs = fa
   if (devIsArcher(i, n)) {
     const meleeN = Math.ceil(n / 2);
     const at = snakeRing(i - meleeN, n - meleeN, g, 34, 2.05, 44);
+    let ry = at.ry;
+    if (devs) {
+      const troop = devTroopSlot(nearestTroop(at.x, at.z, g, t), g, t);
+      ry = Math.atan2(troop.x - at.x, troop.z - at.z);
+    }
     out.x = at.x;
     out.z = at.z;
     out.y = Math.abs(Math.sin(t * 6 + i)) * 0.03;
     out.rx = 0.12;
-    out.ry = at.ry;
+    out.ry = ry;
     out.rz = 0;
     out.s = 1;
     return;
   }
   const hold = snakeHold(i, n, g);
-  const strike = devs ? devsStrike(plan.slot[i], plan.side[i], plan.zone[i], g, t) : snakeStrike(plan.slot[i], Math.max(1, plan.batch[i]), plan.side[i], plan.zone[i], g);
+  const strike = devs ? devsStrike(plan.slot[i], plan.side[i], plan.zone[i], g, t, devsChargeGiant(n, i)) : snakeStrike(plan.slot[i], Math.max(1, plan.batch[i]), plan.side[i], plan.zone[i], g);
   const goAt = plan.go[i];
   const arriveAt = plan.arrive[i];
   let x = hold.x;
@@ -733,6 +796,9 @@ function snakeFriendAt(i: number, n: number, t: number, out: New1Pose, devs = fa
     z = hold.z + (strike.z - hold.z) * e;
     ry = Math.atan2(strike.x - hold.x, strike.z - hold.z);
     rx = 0.62;
+  } else if (devs) {
+    const troop = devTroopSlot(nearestTroop(hold.x, hold.z, g, t), g, t);
+    ry = Math.atan2(troop.x - hold.x, troop.z - hold.z);
   }
   out.x = x;
   out.z = z;

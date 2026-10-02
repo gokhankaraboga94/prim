@@ -5,7 +5,7 @@ import * as THREE from "three";
 import { formatCount } from "../../game";
 import { REEL_HOLD } from "../../recordCanvas";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
-import { devAlive, devClubHit, devGiantAt, devMaceSwing, devSnakeBite, devSwordPose, devTailLash, devTroopHit, devTroopSlot, TROOP_N, TROOP_SCALE } from "../../devReel";
+import { devAlive, devClubHit, devGiantAt, devMaceSwing, devSnakeBite, devSwordPose, devTailLash, devTroopHit, devTroopSlot, devWaitArrow, TROOP_N, TROOP_SCALE } from "../../devReel";
 
 const dummy = new THREE.Object3D();
 const ARROWS = 18;
@@ -292,7 +292,7 @@ const BLOOD = 28;
 const _drop = Array.from({ length: BLOOD }, () => ({ t: -10, x: 0, y: 0, z: 0, vx: 0, vz: 0 }));
 let _dropN = 0;
 
-function ArrowVolley({ big, snake = false, devs = false }: { big: boolean; snake?: boolean; devs?: boolean }) {
+function ArrowVolley({ big, snake = false, devs = false, soldiers = 0 }: { big: boolean; snake?: boolean; devs?: boolean; soldiers?: number }) {
   const mesh = useRef<THREE.InstancedMesh>(null);
   const blood = useRef<THREE.InstancedMesh>(null);
   const lastHit = useRef(new Float32Array(ARROWS));
@@ -302,7 +302,27 @@ function ArrowVolley({ big, snake = false, devs = false }: { big: boolean; snake
     const g = devGiantAt(t);
     const cy = Math.cos(g.yaw);
     const sy = Math.sin(g.yaw);
-    for (let i = 0; i < ARROWS; i++) {
+    const nArrow = devs ? 36 : ARROWS;
+    for (let i = 0; i < nArrow; i++) {
+      if (devs) {
+        const flight = 1.05;
+        const phase = (t * 0.95 + i * 0.23) % flight;
+        const u = phase / flight;
+        const shot = devWaitArrow(soldiers, i, Math.max(0, t - phase));
+        const show = !!shot && t > 1.2 && t < LAST_ARROW && u > 0.04 && u < 0.98;
+        if (!shot || !show) {
+          dummy.position.set(0, -30, 0);
+          dummy.scale.set(0, 0, 0);
+        } else {
+          dummy.position.set(shot.sx + (shot.hx - shot.sx) * u, shot.sy + (shot.hy - shot.sy) * u + Math.sin(u * Math.PI) * 0.7, shot.sz + (shot.hz - shot.sz) * u);
+          dummy.lookAt(shot.hx, shot.hy, shot.hz);
+          dummy.rotateX(Math.PI / 2);
+          dummy.scale.set(0.5, 1.1, 0.5);
+        }
+        dummy.updateMatrix();
+        mesh.current.setMatrixAt(i, dummy.matrix);
+        continue;
+      }
       const phase = ((t * 0.8 + i * 0.19) % 1.4) / 1.4;
       const ang = (i / ARROWS) * Math.PI * 2;
       const rad = (big ? 32 : 22) + (i % 4) * 1.6;
@@ -359,7 +379,7 @@ function ArrowVolley({ big, snake = false, devs = false }: { big: boolean; snake
         }
       }
     }
-    mesh.current.count = ARROWS;
+    mesh.current.count = nArrow;
     mesh.current.instanceMatrix.needsUpdate = true;
     if (!blood.current) return;
     for (let i = 0; i < BLOOD; i++) {
@@ -384,7 +404,7 @@ function ArrowVolley({ big, snake = false, devs = false }: { big: boolean; snake
   });
   return (
     <group>
-      <instancedMesh ref={mesh} args={[undefined, undefined, ARROWS]} frustumCulled={false}>
+      <instancedMesh ref={mesh} args={[undefined, undefined, 36]} frustumCulled={false}>
         <cylinderGeometry args={[0.04, 0.015, 1.35, 5]} />
         <meshStandardMaterial color="#d7c39a" roughness={0.55} />
       </instancedMesh>
@@ -690,7 +710,7 @@ export function Giant({ soldiers, big = false, sword = false, dread = false, sna
   return (
     <group>
       {devs ? <DevTroop soldiers={soldiers} /> : snake ? <SnakeBody soldiers={soldiers} /> : <GiantBody soldiers={soldiers} big={big} sword={sword} dread={dread} />}
-      <ArrowVolley big={big} snake={snake} devs={devs} />
+      <ArrowVolley big={big} snake={snake} devs={devs} soldiers={soldiers} />
     </group>
   );
 }
