@@ -5,7 +5,7 @@ import * as THREE from "three";
 import { formatCount } from "../../game";
 import { REEL_HOLD } from "../../recordCanvas";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
-import { devAlive, devClubHit, devGiantAt, devMaceSwing, devSnakeBite, devSwordPose, devTailLash, devTroopSlot, TROOP_N, TROOP_SCALE } from "../../devReel";
+import { devAlive, devClubHit, devGiantAt, devMaceSwing, devSnakeBite, devSwordPose, devTailLash, devTroopHit, devTroopSlot, TROOP_N, TROOP_SCALE } from "../../devReel";
 
 const dummy = new THREE.Object3D();
 const ARROWS = 18;
@@ -605,53 +605,49 @@ function knightGeos() {
   return { body: body || new THREE.BoxGeometry(0.4, 1.6, 0.3), sword: sword || new THREE.BoxGeometry(0.08, 0.08, 1) };
 }
 
-function troopCut(i: number, t: number) {
-  const period = 2.7 + (i % 4) * 0.38;
-  const phase = (t + i * 0.86) % period;
-  const wind = period * 0.4;
-  const cut = period * 0.13;
-  const follow = period * 0.24;
+function troopCut(i: number, t: number, soldiers: number) {
   const sign = i % 3 === 2 ? -1 : 1;
   const overhead = i % 3 === 0;
-  if (phase < wind) {
-    const u = Math.sin((phase / wind) * Math.PI * 0.5);
-    return {
-      armX: -0.18 - u * (overhead ? 1.4 : 0.9),
-      armY: sign * u * 0.22,
-      armZ: sign * u * 0.08,
-      twist: -sign * u * 0.46,
-      lean: u * 0.07,
-      step: -u * 0.2,
-    };
-  }
-  if (phase < wind + cut) {
-    const snap = Math.pow((phase - wind) / cut, 1.65);
-    return {
-      armX: (overhead ? -1.58 : -1.08) + snap * (overhead ? 2.55 : 2.05),
-      armY: sign * (0.22 - snap * 0.4),
-      armZ: sign * (0.08 - snap * 0.2),
-      twist: -sign * 0.46 + sign * snap * 0.9,
-      lean: 0.07 + snap * 0.16,
-      step: -0.2 + snap * 0.95,
-    };
-  }
-  if (phase < wind + cut + follow) {
-    const e = (phase - wind - cut) / follow;
-    const s = e * e * (3 - 2 * e);
-    return {
-      armX: (overhead ? 0.97 : 0.97) - s * 1.12,
-      armY: sign * (-0.18 + s * 0.24),
-      armZ: sign * (-0.12 + s * 0.18),
-      twist: sign * (0.44 - s * 0.44),
-      lean: 0.23 * (1 - s),
-      step: 0.75 * (1 - s),
-    };
-  }
+  const hit = devTroopHit(i, soldiers, t);
   const idle = Math.sin(t * 1.25 + i * 1.4);
-  return { armX: -0.2 + idle * 0.03, armY: sign * 0.04, armZ: 0.02, twist: idle * 0.05, lean: 0, step: 0 };
+  if (hit < 0) return { armX: -0.2 + idle * 0.03, armY: sign * 0.04, armZ: 0.02, twist: idle * 0.05, lean: 0, step: 0 };
+  const dt = t - hit;
+  if (dt < -0.16) {
+    const u = Math.max(0, Math.min(1, (dt + 0.62) / 0.46));
+    const s = Math.sin(u * Math.PI * 0.5);
+    return {
+      armX: -0.2 - s * (overhead ? 1.35 : 0.95),
+      armY: sign * s * 0.2,
+      armZ: sign * s * 0.08,
+      twist: -sign * s * 0.4,
+      lean: s * 0.06,
+      step: -s * 0.16,
+    };
+  }
+  if (dt < 0.05) {
+    const snap = Math.pow((dt + 0.16) / 0.21, 1.45);
+    return {
+      armX: (overhead ? -1.55 : -1.15) + snap * (overhead ? 2.5 : 2.05),
+      armY: sign * (0.2 - snap * 0.36),
+      armZ: sign * (0.08 - snap * 0.18),
+      twist: -sign * 0.4 + sign * snap * 0.75,
+      lean: 0.06 + snap * 0.2,
+      step: -0.16 + snap * 0.9,
+    };
+  }
+  const e = Math.max(0, Math.min(1, (dt - 0.05) / 0.34));
+  const s = e * e * (3 - 2 * e);
+  return {
+    armX: 0.95 - s * 1.15,
+    armY: sign * (-0.16 + s * 0.2),
+    armZ: sign * (-0.1 + s * 0.12),
+    twist: sign * (0.35 - s * 0.35),
+    lean: 0.26 * (1 - s),
+    step: 0.74 * (1 - s),
+  };
 }
 
-function DevTroop() {
+function DevTroop({ soldiers }: { soldiers: number }) {
   const bodies = useRef<THREE.InstancedMesh>(null);
   const swords = useRef<THREE.InstancedMesh>(null);
   const geos = useMemo(() => knightGeos(), []);
@@ -665,7 +661,7 @@ function DevTroop() {
     if (!bodies.current || !swords.current) return;
     for (let i = 0; i < TROOP_N; i++) {
       const troop = devTroopSlot(i, g, t);
-      const cut = troopCut(i, t);
+      const cut = troopCut(i, t, soldiers);
       const bob = Math.abs(Math.sin(t * 3.1 + i * 1.3)) * 0.05;
       world.position.set(troop.x + Math.sin(troop.ry) * cut.step, bob, troop.z + Math.cos(troop.ry) * cut.step);
       world.rotation.set(cut.lean, troop.ry + cut.twist, 0);
@@ -693,22 +689,22 @@ function DevTroop() {
 export function Giant({ soldiers, big = false, sword = false, dread = false, snake = false, devs = false }: { soldiers: number; big?: boolean; sword?: boolean; dread?: boolean; snake?: boolean; devs?: boolean }) {
   return (
     <group>
-      {devs ? <DevTroop /> : snake ? <SnakeBody soldiers={soldiers} /> : <GiantBody soldiers={soldiers} big={big} sword={sword} dread={dread} />}
+      {devs ? <DevTroop soldiers={soldiers} /> : snake ? <SnakeBody soldiers={soldiers} /> : <GiantBody soldiers={soldiers} big={big} sword={sword} dread={dread} />}
       <ArrowVolley big={big} snake={snake} devs={devs} />
     </group>
   );
 }
 
-export function DevHealthBar({ soldiers, big = false, sword = false, snake = false }: { soldiers: number; big?: boolean; sword?: boolean; snake?: boolean }) {
+export function DevHealthBar({ soldiers, big = false, sword = false, snake = false, devs = false }: { soldiers: number; big?: boolean; sword?: boolean; snake?: boolean; devs?: boolean }) {
   return (
     <Hud renderPriority={3}>
       <OrthographicCamera makeDefault position={[0, 0, 10]} />
-      <DevHealthPlate soldiers={soldiers} big={big} sword={sword} snake={snake} />
+      <DevHealthPlate soldiers={soldiers} big={big} sword={sword} snake={snake} devs={devs} />
     </Hud>
   );
 }
 
-function DevHealthPlate({ soldiers, big, sword, snake }: { soldiers: number; big: boolean; sword: boolean; snake: boolean }) {
+function DevHealthPlate({ soldiers, big, sword, snake, devs }: { soldiers: number; big: boolean; sword: boolean; snake: boolean; devs: boolean }) {
   const size = useThree((s) => s.size);
   const tex = useMemo(() => {
     const canvas = document.createElement("canvas");
@@ -719,7 +715,7 @@ function DevHealthPlate({ soldiers, big, sword, snake }: { soldiers: number; big
     return map;
   }, []);
   useFrame(({ clock }) => {
-    const alive = devAlive(Math.max(0, clock.elapsedTime - REEL_HOLD), soldiers, big, sword, snake);
+    const alive = devAlive(Math.max(0, clock.elapsedTime - REEL_HOLD), soldiers, big, sword, snake, devs);
     const canvas = tex.image as HTMLCanvasElement;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
