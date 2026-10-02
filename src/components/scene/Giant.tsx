@@ -322,16 +322,23 @@ function ArrowVolley({ big }: { big: boolean }) {
 
 const LAST_ARROW = 52.2;
 
-const SNAKE_SEGS = 14;
+const SNAKE_N = 18;
+const _snake: THREE.Vector3[] = Array.from({ length: SNAKE_N }, () => new THREE.Vector3());
+const _up = new THREE.Vector3(0, 1, 0);
+const _dir = new THREE.Vector3();
+const _mid = new THREE.Vector3();
 
 function SnakeBody({ soldiers }: { soldiers: number }) {
   const root = useRef<THREE.Group>(null);
-  const parts = useRef<(THREE.Group | null)[]>([]);
+  const links = useRef<(THREE.Mesh | null)[]>([]);
+  const joints = useRef<(THREE.Mesh | null)[]>([]);
+  const head = useRef<THREE.Group>(null);
   const jaw = useRef<THREE.Group>(null);
-  const hide = useMemo(() => new THREE.MeshStandardMaterial({ color: "#070708", roughness: 0.78, metalness: 0.22 }), []);
-  const belly = useMemo(() => new THREE.MeshStandardMaterial({ color: "#16161a", roughness: 0.86, metalness: 0.06 }), []);
-  const mouth = useMemo(() => new THREE.MeshStandardMaterial({ color: "#4a1010", roughness: 0.5, metalness: 0.05 }), []);
-  const fang = useMemo(() => new THREE.MeshStandardMaterial({ color: "#e6e0d6", roughness: 0.32, metalness: 0.18 }), []);
+  const hide = useMemo(() => new THREE.MeshStandardMaterial({ color: "#050506", roughness: 0.62, metalness: 0.28 }), []);
+  const belly = useMemo(() => new THREE.MeshStandardMaterial({ color: "#1a1a1e", roughness: 0.84, metalness: 0.08 }), []);
+  const mouth = useMemo(() => new THREE.MeshStandardMaterial({ color: "#5c1414", roughness: 0.48 }), []);
+  const fang = useMemo(() => new THREE.MeshStandardMaterial({ color: "#efeae2", roughness: 0.28, metalness: 0.22 }), []);
+  const eye = useMemo(() => new THREE.MeshStandardMaterial({ color: "#c9a24a", emissive: "#6a4a10", emissiveIntensity: 0.35, roughness: 0.4 }), []);
   useFrame(({ clock }) => {
     const t = Math.max(0, clock.elapsedTime - REEL_HOLD);
     const g = devGiantAt(t);
@@ -341,59 +348,86 @@ function SnakeBody({ soldiers }: { soldiers: number }) {
     const fx = Math.sin(g.yaw);
     const fz = Math.cos(g.yaw);
     if (root.current) {
-      root.current.position.set(g.x + fx * bite * 1.8, 0, g.z + fz * bite * 1.8);
-      root.current.rotation.y = g.yaw + s.twist * 0.35;
+      root.current.position.set(g.x + fx * bite * 2.4, 0, g.z + fz * bite * 2.4);
+      root.current.rotation.y = g.yaw;
     }
-    for (let i = 0; i < SNAKE_SEGS; i++) {
-      const node = parts.current[i];
-      if (!node) continue;
-      const u = i / (SNAKE_SEGS - 1);
-      const head = i < 2;
-      const wave = Math.sin(t * 2.4 - i * 0.62);
-      const coil = Math.sin(u * Math.PI * 2.4 + t * 0.7);
-      node.position.set(
-        coil * (1.6 + u * 2.4) + wave * 0.28,
-        1.15 + Math.sin(u * Math.PI) * 5.6 + (head ? 1.4 + bite * 2.2 : 0) + wave * 0.12,
-        7.2 - u * 18 + (head ? bite * 4.4 : 0)
-      );
-      node.scale.setScalar(head ? 1.55 - i * 0.12 : Math.max(0.38, 1.28 * (1 - u * 0.78)));
-      node.rotation.y = coil * 0.35;
+    for (let i = 0; i < SNAKE_N; i++) {
+      const u = i / (SNAKE_N - 1);
+      const neck = i < 5 ? (1 - i / 5) ** 2 : 0;
+      const rad = 1.35 * (1 - u * 0.82) + (i === 0 ? 0.28 : 0);
+      const side = Math.sin(u * Math.PI * 2.6 + t * 1.35) * (1.15 + u * 2.1);
+      _snake[i].set(side, rad + neck * (0.15 + bite * 6.4), 5.4 - u * 22 + neck * bite * 3.6);
     }
-    if (jaw.current) jaw.current.rotation.x = 0.12 + bite * 1.05;
+    for (let i = 0; i < SNAKE_N - 1; i++) {
+      const link = links.current[i];
+      if (!link) continue;
+      const rad = 1.22 * (1 - i / (SNAKE_N - 1) * 0.8);
+      _dir.copy(_snake[i + 1]).sub(_snake[i]);
+      const len = Math.max(0.4, _dir.length());
+      _dir.multiplyScalar(1 / len);
+      _mid.copy(_snake[i]).add(_snake[i + 1]).multiplyScalar(0.5);
+      link.position.copy(_mid);
+      link.quaternion.setFromUnitVectors(_up, _dir);
+      link.scale.set(rad, len * 1.12, rad);
+    }
+    for (let i = 1; i < SNAKE_N; i++) {
+      const joint = joints.current[i];
+      if (!joint) continue;
+      const rad = 1.28 * (1 - i / (SNAKE_N - 1) * 0.82);
+      joint.position.copy(_snake[i]);
+      joint.scale.setScalar(rad);
+    }
+    if (head.current) {
+      head.current.position.copy(_snake[0]);
+      head.current.rotation.set(-0.08 + bite * 0.62, Math.sin(t * 1.35) * 0.08, 0);
+    }
+    if (jaw.current) jaw.current.rotation.x = 0.08 + bite * 0.95;
   });
   return (
     <group ref={root} scale={1.52}>
-      {Array.from({ length: SNAKE_SEGS }, (_, i) => (
-        <group key={i} ref={(el) => { parts.current[i] = el; }}>
-          <mesh material={hide}>
-            <sphereGeometry args={[1, i < 2 ? 8 : 6, i < 2 ? 6 : 5]} />
-          </mesh>
-          <mesh position={[0, -0.32, 0]} scale={[0.7, 0.42, 0.82]} material={belly}>
-            <sphereGeometry args={[1, 6, 4]} />
-          </mesh>
-          {i === 0 && (
-            <>
-              <mesh position={[0, 0.08, 0.85]} material={hide}>
-                <boxGeometry args={[0.85, 0.42, 0.7]} />
-              </mesh>
-              <mesh position={[0, -0.02, 0.72]} material={mouth}>
-                <boxGeometry args={[0.55, 0.16, 0.42]} />
-              </mesh>
-              <group ref={jaw} position={[0, -0.18, 0.55]}>
-                <mesh position={[0, -0.12, 0.38]} material={hide}>
-                  <boxGeometry args={[0.72, 0.22, 0.78]} />
-                </mesh>
-                <mesh position={[-0.18, -0.02, 0.62]} rotation={[1.15, 0, 0.15]} material={fang}>
-                  <coneGeometry args={[0.06, 0.38, 4]} />
-                </mesh>
-                <mesh position={[0.18, -0.02, 0.62]} rotation={[1.15, 0, -0.15]} material={fang}>
-                  <coneGeometry args={[0.06, 0.38, 4]} />
-                </mesh>
-              </group>
-            </>
-          )}
-        </group>
+      {Array.from({ length: SNAKE_N - 1 }, (_, i) => (
+        <mesh key={`l${i}`} ref={(el) => { links.current[i] = el; }} material={hide}>
+          <cylinderGeometry args={[1, 1, 1, 7]} />
+        </mesh>
       ))}
+      {Array.from({ length: SNAKE_N }, (_, i) =>
+        i === 0 ? null : (
+          <mesh key={`j${i}`} ref={(el) => { joints.current[i] = el; }} material={hide}>
+            <sphereGeometry args={[1, 7, 5]} />
+          </mesh>
+        )
+      )}
+      <group ref={head}>
+        <mesh material={hide}>
+          <sphereGeometry args={[1.15, 8, 6]} />
+        </mesh>
+        <mesh position={[0, -0.28, 0.15]} scale={[0.82, 0.55, 0.9]} material={belly}>
+          <sphereGeometry args={[1, 6, 4]} />
+        </mesh>
+        <mesh position={[0, 0.05, 1.05]} material={hide}>
+          <sphereGeometry args={[0.62, 7, 5]} />
+        </mesh>
+        <mesh position={[-0.28, 0.22, 0.72]} material={eye}>
+          <sphereGeometry args={[0.09, 5, 4]} />
+        </mesh>
+        <mesh position={[0.28, 0.22, 0.72]} material={eye}>
+          <sphereGeometry args={[0.09, 5, 4]} />
+        </mesh>
+        <mesh position={[0, -0.08, 0.85]} material={mouth}>
+          <boxGeometry args={[0.55, 0.12, 0.4]} />
+        </mesh>
+        <group ref={jaw} position={[0, -0.22, 0.45]}>
+          <mesh position={[0, -0.08, 0.55]} material={hide}>
+            <boxGeometry args={[0.7, 0.2, 0.85]} />
+          </mesh>
+          <mesh position={[-0.16, 0.02, 0.82]} rotation={[1.2, 0, 0.12]} material={fang}>
+            <coneGeometry args={[0.05, 0.42, 4]} />
+          </mesh>
+          <mesh position={[0.16, 0.02, 0.82]} rotation={[1.2, 0, -0.12]} material={fang}>
+            <coneGeometry args={[0.05, 0.42, 4]} />
+          </mesh>
+        </group>
+      </group>
     </group>
   );
 }
