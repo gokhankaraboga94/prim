@@ -884,9 +884,9 @@ export function sampleDevCam(recT: number, big = false, devs = false): ShotPose 
   const g = devGiantAt(t);
   const u = t <= 48 ? 0 : Math.min(1, (t - 48) / 6);
   const e = u * u * (3 - 2 * u);
-  const side = (devs ? 38 : big ? 30 : 28) - e * (devs ? 2 : big ? 5 : 6);
-  const back = (devs ? 70 : big ? 48 : 46) - e * (devs ? 2 : big ? 8 : 10);
-  const height = (devs ? 42 : big ? 38 : 34) - e * (devs ? 2 : big ? 6 : 8);
+  const side = (devs ? 36 : big ? 30 : 28) - e * (devs ? 1 : big ? 5 : 6);
+  const back = (devs ? 66 : big ? 48 : 46) - e * (devs ? 1 : big ? 8 : 10);
+  const height = (devs ? 41 : big ? 38 : 34) - e * (devs ? 1 : big ? 6 : 8);
   return {
     x: g.x + side,
     y: height,
@@ -894,6 +894,6 @@ export function sampleDevCam(recT: number, big = false, devs = false): ShotPose 
     lx: g.x,
     ly: devs ? 4 : big ? 9.2 : 5.4,
     lz: g.z + 2,
-    fov: (devs ? 48 : big ? 44 : 42) - e * (devs ? 1 : big ? 3 : 4),
+    fov: (devs ? 48 : big ? 44 : 42) - e * (devs ? 0.5 : big ? 3 : 4),
   };
 }
