@@ -4,7 +4,7 @@ import { useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import { formatCount } from "../../game";
 import { REEL_HOLD } from "../../recordCanvas";
-import { devAlive, devClubHit, devGiantAt, devMaceSwing, devSwordPose } from "../../devReel";
+import { devAlive, devClubHit, devGiantAt, devMaceSwing, devSwordPose, devTailLash } from "../../devReel";
 
 const dummy = new THREE.Object3D();
 const ARROWS = 18;
@@ -334,8 +334,30 @@ function SnakeBody({ soldiers }: { soldiers: number }) {
   const joints = useRef<(THREE.Mesh | null)[]>([]);
   const head = useRef<THREE.Group>(null);
   const jaw = useRef<THREE.Group>(null);
-  const hide = useMemo(() => new THREE.MeshStandardMaterial({ color: "#050506", roughness: 0.62, metalness: 0.28 }), []);
-  const belly = useMemo(() => new THREE.MeshStandardMaterial({ color: "#1a1a1e", roughness: 0.84, metalness: 0.08 }), []);
+  const hide = useMemo(() => {
+    const canvas = document.createElement("canvas");
+    canvas.width = 256;
+    canvas.height = 256;
+    const ctx = canvas.getContext("2d");
+    if (ctx) {
+      ctx.fillStyle = "#3f5c2e";
+      ctx.fillRect(0, 0, 256, 256);
+      for (let i = 0; i < 56; i++) {
+        const brown = i % 3 !== 1;
+        ctx.fillStyle = brown ? (i % 2 ? "#6d4a28" : "#4e3218") : "#2a4622";
+        ctx.beginPath();
+        ctx.ellipse((i * 53) % 256, (i * 37) % 256, 16 + (i % 5) * 7, 9 + (i % 4) * 4, i * 0.55, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+    const map = new THREE.CanvasTexture(canvas);
+    map.colorSpace = THREE.SRGBColorSpace;
+    map.wrapS = THREE.RepeatWrapping;
+    map.wrapT = THREE.RepeatWrapping;
+    map.repeat.set(2, 1);
+    return new THREE.MeshStandardMaterial({ map, color: "#ffffff", roughness: 0.78, metalness: 0.04 });
+  }, []);
+  const belly = useMemo(() => new THREE.MeshStandardMaterial({ color: "#8a6a3c", roughness: 0.86, metalness: 0.02 }), []);
   const mouth = useMemo(() => new THREE.MeshStandardMaterial({ color: "#5c1414", roughness: 0.48 }), []);
   const fang = useMemo(() => new THREE.MeshStandardMaterial({ color: "#efeae2", roughness: 0.28, metalness: 0.22 }), []);
   const eye = useMemo(() => new THREE.MeshStandardMaterial({ color: "#c9a24a", emissive: "#6a4a10", emissiveIntensity: 0.35, roughness: 0.4 }), []);
@@ -351,12 +373,17 @@ function SnakeBody({ soldiers }: { soldiers: number }) {
       root.current.position.set(g.x + fx * bite * 2.4, 0, g.z + fz * bite * 2.4);
       root.current.rotation.y = g.yaw;
     }
+    const lash = devTailLash(t);
+    const curl = Math.abs(lash);
     for (let i = 0; i < SNAKE_N; i++) {
       const u = i / (SNAKE_N - 1);
       const neck = i < 5 ? (1 - i / 5) ** 2 : 0;
+      const tip = i > 10 ? (i - 10) / (SNAKE_N - 1 - 10) : 0;
       const rad = 1.35 * (1 - u * 0.82) + (i === 0 ? 0.28 : 0);
-      const side = Math.sin(u * Math.PI * 2.6 + t * 1.35) * (1.15 + u * 2.1);
-      _snake[i].set(side, rad + neck * (0.15 + bite * 6.4), 5.4 - u * 22 + neck * bite * 3.6);
+      const side = Math.sin(u * Math.PI * 2.6 + t * 1.35) * (1.15 + u * 2.1) + lash * tip * tip * 5.6;
+      const y = rad + neck * (0.15 + bite * 6.4) + curl * tip * 1.7;
+      const z = 5.4 - u * 22 + neck * bite * 3.6 + curl * tip * tip * 6.2;
+      _snake[i].set(side, y, z);
     }
     for (let i = 0; i < SNAKE_N - 1; i++) {
       const link = links.current[i];
@@ -441,16 +468,16 @@ export function Giant({ soldiers, big = false, sword = false, dread = false, sna
   );
 }
 
-export function DevHealthBar({ soldiers, big = false, sword = false }: { soldiers: number; big?: boolean; sword?: boolean }) {
+export function DevHealthBar({ soldiers, big = false, sword = false, snake = false }: { soldiers: number; big?: boolean; sword?: boolean; snake?: boolean }) {
   return (
     <Hud renderPriority={3}>
       <OrthographicCamera makeDefault position={[0, 0, 10]} />
-      <DevHealthPlate soldiers={soldiers} big={big} sword={sword} />
+      <DevHealthPlate soldiers={soldiers} big={big} sword={sword} snake={snake} />
     </Hud>
   );
 }
 
-function DevHealthPlate({ soldiers, big, sword }: { soldiers: number; big: boolean; sword: boolean }) {
+function DevHealthPlate({ soldiers, big, sword, snake }: { soldiers: number; big: boolean; sword: boolean; snake: boolean }) {
   const size = useThree((s) => s.size);
   const tex = useMemo(() => {
     const canvas = document.createElement("canvas");
@@ -461,7 +488,7 @@ function DevHealthPlate({ soldiers, big, sword }: { soldiers: number; big: boole
     return map;
   }, []);
   useFrame(({ clock }) => {
-    const alive = devAlive(Math.max(0, clock.elapsedTime - REEL_HOLD), soldiers, big, sword);
+    const alive = devAlive(Math.max(0, clock.elapsedTime - REEL_HOLD), soldiers, big, sword, snake);
     const canvas = tex.image as HTMLCanvasElement;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;

@@ -214,7 +214,7 @@ export function devIsSpear(i: number, n: number) {
   return !devIsArcher(i, n) && i % 2 === 1;
 }
 
-function ringAt(i: number, n: number, t: number, big = false) {
+function ringAt(i: number, n: number, t: number, big = false, snake = false) {
   const g = devGiantAt(t);
   const archer = devIsArcher(i, n);
   const meleeN = Math.ceil(n / 2);
@@ -225,6 +225,22 @@ function ringAt(i: number, n: number, t: number, big = false) {
   const idx = local % per;
   const seats = Math.max(1, Math.min(per, count - ring * per));
   const ang = (idx / seats) * Math.PI * 2 + ring * 0.47 + (archer ? 0.2 : 0);
+  if (snake && !archer) {
+    const flank = idx % 2 === 0 ? 1 : -1;
+    const slots = Math.max(1, Math.ceil(seats / 2));
+    const along = slots <= 1 ? 0.5 : Math.floor(idx / 2) / (slots - 1);
+    const localZ = 3.6 - along * 17.4;
+    const bodyR = 1.35 * (1 - Math.min(1, Math.max(0, (5.4 - localZ) / 22)) * 0.82);
+    const localX = flank * (bodyR + 0.55 + ring * 0.62);
+    const sc = 1.52;
+    const cy = Math.cos(g.yaw);
+    const sy = Math.sin(g.yaw);
+    const x = g.x + (localX * cy + localZ * sy) * sc;
+    const z = g.z + (-localX * sy + localZ * cy) * sc;
+    const ax = g.x + localZ * sy * sc;
+    const az = g.z + localZ * cy * sc;
+    return { x, z, ry: Math.atan2(ax - x, az - z), ang, g, archer };
+  }
   const rad = archer ? (big ? 30 + ring * 2.05 : 20 + ring * 1.7) : big ? 13.8 + ring * 1.9 : 8.2 + ring * 1.45;
   const x = g.x + Math.sin(ang) * rad;
   const z = g.z + Math.cos(ang) * rad;
@@ -258,8 +274,8 @@ export function devSwordPose(t: number) {
   return { armX: 1.12 - e * 0.9, armZ: -0.66 + e * 1, blade: 0.35 - e * 0.5 };
 }
 
-function swordHits(n: number, big: boolean) {
-  const key = `${big ? 1 : 0}:${n}`;
+function swordHits(n: number, big: boolean, snake = false) {
+  const key = `${big ? 1 : 0}:${snake ? 1 : 0}:${n}`;
   const hit = swordPlans.get(key);
   if (hit) return hit;
   const die = planOf(n, big).die;
@@ -275,7 +291,7 @@ function swordHits(n: number, big: boolean) {
     const scored: { i: number; s: number }[] = [];
     for (let i = 0; i < n; i++) {
       if (used.has(i) || die[i] <= t + 0.12) continue;
-      const live = ringAt(i, n, t, big);
+      const live = ringAt(i, n, t, big, snake);
       scored.push({ i, s: (live.x - g.x) * lx + (live.z - g.z) * lz });
     }
     scored.sort((a, b) => b.s - a.s || a.i - b.i);
@@ -288,21 +304,70 @@ function swordHits(n: number, big: boolean) {
   return at;
 }
 
-export function devAlive(recT: number, soldiers: number, big = false, sword = false) {
+const TAIL_GAP = 3.2;
+const TAIL_FIRST = 4.6;
+const tailPlans = new Map<string, Float64Array>();
+
+export function devTailLash(t: number) {
+  if (t < TAIL_FIRST - 0.45 || t > LAST) return 0;
+  const since = t - (TAIL_FIRST - 0.45);
+  const phase = since % TAIL_GAP;
+  if (phase > 0.7) return 0;
+  const mag = phase < 0.45 ? Math.sin((phase / 0.45) * Math.PI * 0.5) : Math.sin(((0.7 - phase) / 0.25) * Math.PI * 0.5);
+  return mag * (Math.floor(since / TAIL_GAP) % 2 === 0 ? 1 : -1);
+}
+
+function tailHits(n: number) {
+  const key = String(n);
+  const hit = tailPlans.get(key);
+  if (hit) return hit;
+  const die = planOf(n, true).die;
+  const slash = swordHits(n, true, true);
+  const at = new Float64Array(n);
+  at.fill(1e9);
+  const used = new Set<number>();
+  for (let k = 0; ; k++) {
+    const t = TAIL_FIRST + k * TAIL_GAP;
+    if (t > LAST - 0.4) break;
+    const g = devGiantAt(t);
+    const tx = -Math.sin(g.yaw);
+    const tz = -Math.cos(g.yaw);
+    const batch = 5 + (k % 6);
+    const scored: { i: number; s: number }[] = [];
+    for (let i = 0; i < n; i++) {
+      if (used.has(i) || die[i] <= t + 0.12 || slash[i] <= t + 0.12) continue;
+      if (devIsArcher(i, n)) continue;
+      const live = ringAt(i, n, t, true, true);
+      scored.push({ i, s: (live.x - g.x) * tx + (live.z - g.z) * tz });
+    }
+    scored.sort((a, b) => b.s - a.s || a.i - b.i);
+    for (let j = 0; j < batch && j < scored.length; j++) {
+      at[scored[j].i] = t;
+      used.add(scored[j].i);
+    }
+  }
+  tailPlans.set(key, at);
+  return at;
+}
+
+export function devAlive(recT: number, soldiers: number, big = false, sword = false, snake = false) {
   const n = Math.max(0, Math.floor(soldiers));
   if (n <= 0) return 0;
   const die = planOf(n, big && sword ? big : false).die;
-  const slash = sword ? swordHits(n, big) : null;
+  const slash = sword ? swordHits(n, big, snake) : null;
+  const tail = snake ? tailHits(n) : null;
   const t = Math.max(0, recT);
   let alive = 0;
   for (let i = 0; i < n; i++) {
-    const at = slash ? Math.min(die[i], slash[i]) : die[i];
+    let at = die[i];
+    if (slash) at = Math.min(at, slash[i]);
+    if (tail) at = Math.min(at, tail[i]);
     if (t < at) alive += 1;
   }
   return alive;
 }
 
-export function devFriendAt(i: number, n: number, recT: number, out: New1Pose, big = false, sword = false) {
+export function devFriendAt(i: number, n: number, recT: number, out: New1Pose, big = false, sword = false, snake = false) {
   const count = Math.max(0, Math.floor(n));
   const t = Math.max(0, recT);
   if (i < 0 || i >= count) {
@@ -316,9 +381,29 @@ export function devFriendAt(i: number, n: number, recT: number, out: New1Pose, b
     return;
   }
   const dieAt = planOf(count, big).die[i];
-  const slashAt = sword ? swordHits(count, big)[i] : 1e9;
+  const slashAt = sword ? swordHits(count, big, snake)[i] : 1e9;
+  const tailAt = snake ? tailHits(count)[i] : 1e9;
+  if (snake && t >= tailAt && t < tailAt + FLING) {
+    const live = ringAt(i, count, tailAt, big, true);
+    const g = live.g;
+    const tx = -Math.sin(g.yaw);
+    const tz = -Math.cos(g.yaw);
+    const dir = Math.sign(devTailLash(tailAt + 0.02)) || 1;
+    const sx = Math.cos(g.yaw) * dir;
+    const sz = -Math.sin(g.yaw) * dir;
+    const u = (t - tailAt) / FLING;
+    const dist = u * u * 18;
+    out.x = live.x + (sx * 0.78 + tx * 0.45) * dist;
+    out.z = live.z + (sz * 0.78 + tz * 0.45) * dist;
+    out.y = Math.sin(u * Math.PI) * 6.6;
+    out.rx = 0.4 + u * 2.4;
+    out.ry = live.ry + u * 5;
+    out.rz = (i % 2 ? 1 : -1) * u * 1.6;
+    out.s = 1;
+    return;
+  }
   if (sword && t >= slashAt && t < slashAt + FLING) {
-    const live = ringAt(i, count, slashAt, big);
+    const live = ringAt(i, count, slashAt, big, snake);
     const g = live.g;
     const lx = -Math.cos(g.yaw);
     const lz = Math.sin(g.yaw);
@@ -336,7 +421,7 @@ export function devFriendAt(i: number, n: number, recT: number, out: New1Pose, b
     out.s = 1;
     return;
   }
-  if (t >= dieAt || t >= slashAt) {
+  if (t >= dieAt || t >= slashAt || t >= tailAt) {
     out.x = 0;
     out.y = -40;
     out.z = 0;
@@ -346,12 +431,12 @@ export function devFriendAt(i: number, n: number, recT: number, out: New1Pose, b
     out.s = 0;
     return;
   }
-  const live = ringAt(i, count, t, big);
+  const live = ringAt(i, count, t, big, snake);
   const bob = Math.sin(t * 8 + i);
   out.x = live.x;
   out.z = live.z;
   out.y = Math.abs(bob) * 0.04;
-  out.rx = 0.2 + bob * 0.05;
+  out.rx = snake && !live.archer ? 0.35 + Math.max(0, Math.sin(t * 10 + i)) * 0.28 : 0.2 + bob * 0.05;
   out.ry = live.ry;
   out.rz = 0;
   out.s = 1;
