@@ -844,7 +844,7 @@ export function AdminPage() {
             <p className="muted">DEV4 ile aynı. Dev daha kalıplı, boynuzlu, tek kızıl göz. İsimler bar gibi sarı. Üstte sayı düşer.</p>
           )}
           {isSnake(reelShot) && (
-            <p className="muted">DEV5 ile aynı kadro ve kamera. Yeşil-kahverengi yılan. Bekleyenler ve okçular etrafında daire. Kılıç ve mızrak 10-20 kişilik gruplar halinde dibe girer, 1-2 saniyede ölür. Yılan ölmez.</p>
+            <p className="muted">DEV5 ile aynı kadro ve kamera. Yeşil-kahverengi yılan. Bekleyenler ve okçular etrafında daire. Saldıran grup tek yandan asimetrik girer ve ölür. Yılan ölmez.</p>
           )}
           {isFilm(reelShot) && (
             <p className="muted">18 takipçi yerde dağınık, adları üstte. Başlarında 100 düşman bekler. 3. saniyede 150 asker hilal gibi, her biri ayrı yerden gelir. Ölüler yerde kalır.</p>
