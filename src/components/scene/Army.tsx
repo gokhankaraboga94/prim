@@ -83,6 +83,7 @@ type ArmyProps = {
   giantAll?: boolean;
   giantSword?: boolean;
   giantSnake?: boolean;
+  giantDevs?: boolean;
   nameGold?: boolean;
   mix?: boolean;
   mixSlow?: boolean;
@@ -941,7 +942,7 @@ function NameLayers({
 }
 
 
-export function Army({ count, names = [], commanders = [], cinematic, duration = 8, skipCommander = false, roster = null, discover = null, countdown = false, defend = false, defend2 = false, defend3 = false, blue = false, vs = false, vs2 = false, new1 = false, new2 = false, blade = false, bridge = false, cross = false, wide = false, relief = false, maze = false, film = false, giant = false, giantBig = false, giantAll = false, giantSword = false, giantSnake = false, nameGold = false, mix = false, mixSlow = false, nameHunt = false, quiet = false, square = false, readNames = false, scanHunt = false, level = 1, rosterIds = null }: ArmyProps) {
+export function Army({ count, names = [], commanders = [], cinematic, duration = 8, skipCommander = false, roster = null, discover = null, countdown = false, defend = false, defend2 = false, defend3 = false, blue = false, vs = false, vs2 = false, new1 = false, new2 = false, blade = false, bridge = false, cross = false, wide = false, relief = false, maze = false, film = false, giant = false, giantBig = false, giantAll = false, giantSword = false, giantSnake = false, giantDevs = false, nameGold = false, mix = false, mixSlow = false, nameHunt = false, quiet = false, square = false, readNames = false, scanHunt = false, level = 1, rosterIds = null }: ArmyProps) {
   const bodies = useRef<THREE.InstancedMesh>(null);
   const soldierPlumes = useRef<THREE.InstancedMesh>(null);
   const bowHolds = useRef<THREE.InstancedMesh>(null);
@@ -1140,7 +1141,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
 
   function poseSoldier(soldier: number, t: number) {
     if (giant) {
-      devFriendAt(soldier, layout.rest.length, t - REEL_HOLD, vsPose, giantBig, giantSword, giantSnake);
+      devFriendAt(soldier, layout.rest.length, t - REEL_HOLD, vsPose, giantBig, giantSword, giantSnake || giantDevs, giantDevs);
       pos.set(vsPose.x, vsPose.y, vsPose.z);
       return;
     }
@@ -1372,7 +1373,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
       for (let i = 0; i < n; i++) {
         const soldier = layout.rest[i];
         if (giant) {
-          devFriendAt(i, n, recT, vsPose, giantBig, giantSword, giantSnake);
+          devFriendAt(i, n, recT, vsPose, giantBig, giantSword, giantSnake || giantDevs, giantDevs);
           if ((vsPose.s ?? 1) <= 0) continue;
           dummy.position.set(vsPose.x, vsPose.y, vsPose.z);
           dummy.rotation.set(vsPose.rx, vsPose.ry, vsPose.rz);
@@ -1382,7 +1383,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
           giantLive += 1;
           const archer = devIsArcher(i, n);
           const spear = devIsSpear(i, n);
-          const striking = giantSnake && devSnakeStriking(i, n, recT);
+          const striking = (giantSnake || giantDevs) && devSnakeStriking(i, n, recT);
           if (archer && bowHolds.current) {
             bowHolds.current.setMatrixAt(giantBows, dummy.matrix);
             giantBows += 1;
@@ -1396,7 +1397,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
             spears.current.setMatrixAt(giantSpears, _swingBody);
             giantSpears += 1;
           } else if (bladeSwings.current) {
-            const pitch = striking ? 0.15 + Math.max(0, Math.sin(recT * 10 + i)) * 1.45 : giantSnake ? 0.35 : 0.55 + Math.sin(recT * 12 + i) * 0.7;
+            const pitch = striking ? 0.15 + Math.max(0, Math.sin(recT * 10 + i)) * 1.45 : giantSnake || giantDevs ? 0.35 : 0.55 + Math.sin(recT * 12 + i) * 0.7;
             _swingM.makeTranslation(0.48, 1, striking ? 0.85 : 0.3);
             _swingSpin.makeRotationX(-pitch);
             _swingNeg.makeTranslation(-0.48, -1, -0.3);
@@ -1795,7 +1796,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
         hideName(k, cell);
         continue;
       }
-      if (giant && !giantSnake && cam && devNameCovered(pos.x, pos.z, cam.position.x, cam.position.z, recT, giantBig)) {
+      if (giant && !giantSnake && !giantDevs && cam && devNameCovered(pos.x, pos.z, cam.position.x, cam.position.z, recT, giantBig)) {
         hideName(k, cell);
         continue;
       }

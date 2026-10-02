@@ -4,7 +4,8 @@ import { useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import { formatCount } from "../../game";
 import { REEL_HOLD } from "../../recordCanvas";
-import { devAlive, devClubHit, devGiantAt, devMaceSwing, devSnakeBite, devSwordPose, devTailLash } from "../../devReel";
+import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
+import { devAlive, devClubHit, devGiantAt, devMaceSwing, devSnakeBite, devSwordPose, devTailLash, devTroopSlot, TROOP_N, TROOP_SCALE } from "../../devReel";
 
 const dummy = new THREE.Object3D();
 const ARROWS = 18;
@@ -291,7 +292,7 @@ const BLOOD = 28;
 const _drop = Array.from({ length: BLOOD }, () => ({ t: -10, x: 0, y: 0, z: 0, vx: 0, vz: 0 }));
 let _dropN = 0;
 
-function ArrowVolley({ big, snake = false }: { big: boolean; snake?: boolean }) {
+function ArrowVolley({ big, snake = false, devs = false }: { big: boolean; snake?: boolean; devs?: boolean }) {
   const mesh = useRef<THREE.InstancedMesh>(null);
   const blood = useRef<THREE.InstancedMesh>(null);
   const lastHit = useRef(new Float32Array(ARROWS));
@@ -308,7 +309,7 @@ function ArrowVolley({ big, snake = false }: { big: boolean; snake?: boolean }) 
       const sx = g.x + Math.sin(ang) * rad;
       const sz = g.z + Math.cos(ang) * rad;
       const u = phase;
-      if (!snake) {
+      if (!snake && !devs) {
         const aimY = big ? 14 : 9.2;
         dummy.position.set(sx + (g.x - sx) * u, 1.6 + (aimY - 1.6) * u + Math.sin(u * Math.PI) * 2.6, sz + (g.z - sz) * u);
         dummy.lookAt(g.x, aimY, g.z);
@@ -319,14 +320,24 @@ function ArrowVolley({ big, snake = false }: { big: boolean; snake?: boolean }) 
         mesh.current.setMatrixAt(i, dummy.matrix);
         continue;
       }
-      const bu = 0.28 + ((i * 5) % 10) / 14;
-      const brad = 1.35 * (1 - bu * 0.82);
-      const bside = Math.sin(bu * Math.PI * 2.6 + t * 1.35) * (1.15 + bu * 2.1);
-      const blz = 5.4 - bu * 22;
-      const sc = 1.52;
-      const hx = g.x + (bside * cy + blz * sy) * sc;
-      const hy = brad * 1.15 * sc;
-      const hz = g.z + (-bside * sy + blz * cy) * sc;
+      let hx = g.x;
+      let hy = 2;
+      let hz = g.z;
+      if (devs) {
+        const troop = devTroopSlot(i % TROOP_N, g);
+        hx = troop.x + Math.sin(troop.ry) * 1.1;
+        hy = 1.2 * TROOP_SCALE;
+        hz = troop.z + Math.cos(troop.ry) * 1.1;
+      } else {
+        const bu = 0.28 + ((i * 5) % 10) / 14;
+        const brad = 1.35 * (1 - bu * 0.82);
+        const bside = Math.sin(bu * Math.PI * 2.6 + t * 1.35) * (1.15 + bu * 2.1);
+        const blz = 5.4 - bu * 22;
+        const sc = 1.52;
+        hx = g.x + (bside * cy + blz * sy) * sc;
+        hy = brad * 1.15 * sc;
+        hz = g.z + (-bside * sy + blz * cy) * sc;
+      }
       const show = t > 2 && t < LAST_ARROW && u > 0.06 && u < 0.98;
       dummy.position.set(sx + (hx - sx) * u, 1.5 + (hy - 1.5) * u + Math.sin(u * Math.PI) * 0.45, sz + (hz - sz) * u);
       dummy.lookAt(hx, hy, hz);
@@ -354,14 +365,14 @@ function ArrowVolley({ big, snake = false }: { big: boolean; snake?: boolean }) 
     for (let i = 0; i < BLOOD; i++) {
       const drop = _drop[i];
       const age = t - drop.t;
-      const on = snake && age >= 0 && age < 0.5;
+      const on = (snake || devs) && age >= 0 && age < 0.5;
       if (!on) {
         dummy.position.set(0, -20, 0);
         dummy.scale.set(0, 0, 0);
       } else {
         const fall = age * age * 6;
         dummy.position.set(drop.x + drop.vx * age, Math.max(0.05, drop.y - fall), drop.z + drop.vz * age);
-        const s = 0.34 * (1 - age / 0.5);
+        const s = (devs ? 0.85 : 0.34) * (1 - age / 0.5);
         dummy.scale.set(s, s * 1.35, s);
       }
       dummy.rotation.set(0, 0, 0);
@@ -377,7 +388,7 @@ function ArrowVolley({ big, snake = false }: { big: boolean; snake?: boolean }) 
         <cylinderGeometry args={[0.04, 0.015, 1.35, 5]} />
         <meshStandardMaterial color="#d7c39a" roughness={0.55} />
       </instancedMesh>
-      {snake && (
+      {(snake || devs) && (
         <instancedMesh ref={blood} args={[undefined, undefined, BLOOD]} frustumCulled={false}>
           <sphereGeometry args={[1, 5, 4]} />
           <meshLambertMaterial color="#c41616" />
@@ -524,11 +535,114 @@ function SnakeBody({ soldiers }: { soldiers: number }) {
   );
 }
 
-export function Giant({ soldiers, big = false, sword = false, dread = false, snake = false }: { soldiers: number; big?: boolean; sword?: boolean; dread?: boolean; snake?: boolean }) {
+const _knightColor = new THREE.Color();
+
+function knightPiece(geo: THREE.BufferGeometry, x: number, y: number, z: number, color: string, rx = 0, ry = 0, rz = 0) {
+  geo.applyMatrix4(new THREE.Matrix4().compose(new THREE.Vector3(x, y, z), new THREE.Quaternion().setFromEuler(new THREE.Euler(rx, ry, rz)), new THREE.Vector3(1, 1, 1)));
+  const n = geo.getAttribute("position").count;
+  const colors = new Float32Array(n * 3);
+  _knightColor.set(color);
+  for (let i = 0; i < n; i++) {
+    colors[i * 3] = _knightColor.r;
+    colors[i * 3 + 1] = _knightColor.g;
+    colors[i * 3 + 2] = _knightColor.b;
+  }
+  geo.setAttribute("color", new THREE.BufferAttribute(colors, 3));
+  return geo;
+}
+
+function knightGeos() {
+  const plate = "#b7c0c8";
+  const hi = "#e2e8ee";
+  const dk = "#667078";
+  const leather = "#3a322b";
+  const steel = "#f2f5f8";
+  const visor = "#121416";
+  const body = mergeGeometries(
+    [
+      knightPiece(new THREE.BoxGeometry(0.18, 0.1, 0.3), -0.13, 0.06, 0.05, dk),
+      knightPiece(new THREE.BoxGeometry(0.18, 0.1, 0.3), 0.13, 0.06, 0.05, dk),
+      knightPiece(new THREE.CylinderGeometry(0.075, 0.09, 0.46, 8), -0.13, 0.34, 0.02, plate),
+      knightPiece(new THREE.CylinderGeometry(0.075, 0.09, 0.46, 8), 0.13, 0.34, 0.02, plate),
+      knightPiece(new THREE.SphereGeometry(0.095, 8, 6), -0.13, 0.56, 0.03, hi),
+      knightPiece(new THREE.SphereGeometry(0.095, 8, 6), 0.13, 0.56, 0.03, hi),
+      knightPiece(new THREE.CylinderGeometry(0.095, 0.11, 0.42, 8), -0.13, 0.78, 0, plate),
+      knightPiece(new THREE.CylinderGeometry(0.095, 0.11, 0.42, 8), 0.13, 0.78, 0, plate),
+      knightPiece(new THREE.BoxGeometry(0.5, 0.18, 0.28), 0, 1.02, 0, dk),
+      knightPiece(new THREE.BoxGeometry(0.34, 0.16, 0.16), 0, 0.98, 0.02, leather),
+      knightPiece(new THREE.BoxGeometry(0.52, 0.46, 0.3), 0, 1.28, 0, plate),
+      knightPiece(new THREE.BoxGeometry(0.34, 0.3, 0.08), 0, 1.32, 0.17, hi, 0.18),
+      knightPiece(new THREE.BoxGeometry(0.06, 0.38, 0.03), 0, 1.28, 0.2, dk),
+      knightPiece(new THREE.SphereGeometry(0.17, 8, 6), -0.34, 1.42, 0, plate),
+      knightPiece(new THREE.SphereGeometry(0.17, 8, 6), 0.34, 1.42, 0, plate),
+      knightPiece(new THREE.CylinderGeometry(0.075, 0.085, 0.34, 7), -0.46, 1.16, 0.04, plate, 0, 0, 0.4),
+      knightPiece(new THREE.CylinderGeometry(0.055, 0.065, 0.28, 7), -0.58, 0.9, 0.1, dk, 0.2, 0, 0.55),
+      knightPiece(new THREE.SphereGeometry(0.2, 10, 8), 0, 1.66, 0.02, plate),
+      knightPiece(new THREE.CylinderGeometry(0.17, 0.22, 0.1, 8), 0, 1.5, 0, dk),
+      knightPiece(new THREE.BoxGeometry(0.24, 0.1, 0.06), 0, 1.56, 0.16, visor),
+      knightPiece(new THREE.BoxGeometry(0.16, 0.02, 0.02), 0, 1.58, 0.2, "#9aa3ab"),
+    ],
+    false
+  );
+  const sword = mergeGeometries(
+    [
+      knightPiece(new THREE.CylinderGeometry(0.07, 0.085, 0.36, 7), 0, -0.18, 0.02, plate),
+      knightPiece(new THREE.CylinderGeometry(0.055, 0.06, 0.32, 7), 0.02, -0.46, 0.1, dk, 0.45),
+      knightPiece(new THREE.BoxGeometry(0.09, 0.08, 0.1), 0.05, -0.62, 0.18, leather),
+      knightPiece(new THREE.BoxGeometry(0.32, 0.045, 0.07), 0.06, -0.78, 0.32, hi, 0.7),
+      knightPiece(new THREE.BoxGeometry(0.075, 0.055, 1.25), 0.1, -1.2, 0.82, steel, 0.95),
+      knightPiece(new THREE.BoxGeometry(0.02, 0.018, 0.95), 0.1, -1.16, 0.86, "#ffffff", 0.95),
+      knightPiece(new THREE.ConeGeometry(0.055, 0.24, 5), 0.14, -1.72, 1.32, steel, 0.95),
+    ],
+    false
+  );
+  return { body: body || new THREE.BoxGeometry(0.4, 1.6, 0.3), sword: sword || new THREE.BoxGeometry(0.08, 0.08, 1) };
+}
+
+function DevTroop() {
+  const bodies = useRef<THREE.InstancedMesh>(null);
+  const swords = useRef<THREE.InstancedMesh>(null);
+  const geos = useMemo(() => knightGeos(), []);
+  const plate = useMemo(() => new THREE.MeshStandardMaterial({ vertexColors: true, metalness: 0.8, roughness: 0.32 }), []);
+  const world = useMemo(() => new THREE.Object3D(), []);
+  const swing = useMemo(() => new THREE.Object3D(), []);
+  useFrame(({ clock }) => {
+    const t = Math.max(0, clock.elapsedTime - REEL_HOLD);
+    const g = devGiantAt(t);
+    const bite = devSnakeBite(t);
+    if (!bodies.current || !swords.current) return;
+    for (let i = 0; i < TROOP_N; i++) {
+      const troop = devTroopSlot(i, g);
+      const step = Math.abs(Math.sin(t * 2.2 + i)) * 0.035;
+      world.position.set(troop.x + Math.sin(troop.ry) * bite * 1.8, step, troop.z + Math.cos(troop.ry) * bite * 1.8);
+      world.rotation.set(0, troop.ry, 0);
+      world.scale.setScalar(TROOP_SCALE);
+      world.updateMatrix();
+      bodies.current.setMatrixAt(i, world.matrix);
+      const chop = -0.22 - Math.max(0, Math.sin(t * 1.7 + i * 0.8)) * 0.32 - bite * 1.5;
+      swing.position.set(0.38, 1.36, 0.04);
+      swing.rotation.set(chop, 0.12, -0.18);
+      swing.scale.set(1, 1, 1);
+      swing.updateMatrix();
+      swing.matrix.premultiply(world.matrix);
+      swords.current.setMatrixAt(i, swing.matrix);
+    }
+    bodies.current.instanceMatrix.needsUpdate = true;
+    swords.current.instanceMatrix.needsUpdate = true;
+  });
   return (
     <group>
-      {snake ? <SnakeBody soldiers={soldiers} /> : <GiantBody soldiers={soldiers} big={big} sword={sword} dread={dread} />}
-      <ArrowVolley big={big} snake={snake} />
+      <instancedMesh ref={bodies} args={[geos.body, plate, TROOP_N]} frustumCulled={false} />
+      <instancedMesh ref={swords} args={[geos.sword, plate, TROOP_N]} frustumCulled={false} />
+    </group>
+  );
+}
+
+export function Giant({ soldiers, big = false, sword = false, dread = false, snake = false, devs = false }: { soldiers: number; big?: boolean; sword?: boolean; dread?: boolean; snake?: boolean; devs?: boolean }) {
+  return (
+    <group>
+      {devs ? <DevTroop /> : snake ? <SnakeBody soldiers={soldiers} /> : <GiantBody soldiers={soldiers} big={big} sword={sword} dread={dread} />}
+      <ArrowVolley big={big} snake={snake} devs={devs} />
     </group>
   );
 }

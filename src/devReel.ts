@@ -15,12 +15,15 @@ export const DEV5_ID = "dev5" as const;
 export type Dev5Id = typeof DEV5_ID;
 export const SNAKE_ID = "yilan1" as const;
 export type SnakeId = typeof SNAKE_ID;
-export type GiantId = DevId | Dev2Id | Dev3Id | Dev4Id | Dev5Id | SnakeId;
+export const DEVS_ID = "devler" as const;
+export type DevsId = typeof DEVS_ID;
+export type GiantId = DevId | Dev2Id | Dev3Id | Dev4Id | Dev5Id | SnakeId | DevsId;
 export const DEV2_MODE = { id: DEV2_ID, label: "DEV2" } as const;
 export const DEV3_MODE = { id: DEV3_ID, label: "DEV3" } as const;
 export const DEV4_MODE = { id: DEV4_ID, label: "DEV4" } as const;
 export const DEV5_MODE = { id: DEV5_ID, label: "DEV5" } as const;
 export const SNAKE_MODE = { id: SNAKE_ID, label: "yılan1" } as const;
+export const DEVS_MODE = { id: DEVS_ID, label: "devler" } as const;
 
 export function isDev(id: string | null | undefined): id is DevId {
   return id === DEV_ID;
@@ -46,20 +49,24 @@ export function isSnake(id: string | null | undefined): id is SnakeId {
   return id === SNAKE_ID;
 }
 
+export function isDevs(id: string | null | undefined): id is DevsId {
+  return id === DEVS_ID;
+}
+
 export function isDevBig(id: string | null | undefined) {
-  return id === DEV2_ID || id === DEV3_ID || id === DEV4_ID || id === DEV5_ID || id === SNAKE_ID;
+  return id === DEV2_ID || id === DEV3_ID || id === DEV4_ID || id === DEV5_ID || id === SNAKE_ID || id === DEVS_ID;
 }
 
 export function isDevAll(id: string | null | undefined) {
-  return id === DEV3_ID || id === DEV4_ID || id === DEV5_ID || id === SNAKE_ID;
+  return id === DEV3_ID || id === DEV4_ID || id === DEV5_ID || id === SNAKE_ID || id === DEVS_ID;
 }
 
 export function isDevSword(id: string | null | undefined) {
-  return id === DEV4_ID || id === DEV5_ID || id === SNAKE_ID;
+  return id === DEV4_ID || id === DEV5_ID || id === SNAKE_ID || id === DEVS_ID;
 }
 
 export function isGiantShot(id: string | null | undefined): id is GiantId {
-  return id === DEV_ID || id === DEV2_ID || id === DEV3_ID || id === DEV4_ID || id === DEV5_ID || id === SNAKE_ID;
+  return id === DEV_ID || id === DEV2_ID || id === DEV3_ID || id === DEV4_ID || id === DEV5_ID || id === SNAKE_ID || id === DEVS_ID;
 }
 
 export const DEV_SECONDS = 58;
@@ -68,6 +75,7 @@ export const DEV3_SECONDS = DEV_SECONDS;
 export const DEV4_SECONDS = DEV_SECONDS;
 export const DEV5_SECONDS = DEV_SECONDS;
 export const SNAKE_SECONDS = DEV_SECONDS;
+export const DEVS_SECONDS = DEV_SECONDS;
 export const DEV_N = 300;
 export const DEV2_N = 450;
 const FIGHT = 3.2;
@@ -116,6 +124,36 @@ function planOf(soldiers: number, big = false): Plan {
 }
 
 const WALK = 0.86;
+
+export const TROOP_N = 10;
+export const TROOP_SCALE = 1.2288 * 10;
+const TROOP_FACE = Math.atan2(0.62, -1);
+
+export function devTroopSlot(i: number, g: { x: number; z: number }) {
+  const idx = ((Math.floor(i) % TROOP_N) + TROOP_N) % TROOP_N;
+  const ang = TROOP_FACE + (idx / TROOP_N) * Math.PI * 2;
+  const rad = 11;
+  return { x: g.x + Math.sin(ang) * rad, z: g.z + Math.cos(ang) * rad, ry: ang, i: idx };
+}
+
+function troopIndex(slot: number, side: number, zone: number) {
+  if (zone === 2) return 5;
+  if (zone === 1) return Math.cos(side) >= 0 ? 3 : 8;
+  return [0, 0, 0, 1, 1, 2, 4][slot % 7];
+}
+
+function devsStrike(slot: number, side: number, zone: number, g: { x: number; z: number; yaw: number }) {
+  const troop = devTroopSlot(troopIndex(slot, side, zone), g);
+  const fx = Math.sin(troop.ry);
+  const fz = Math.cos(troop.ry);
+  const rx = Math.cos(troop.ry);
+  const rz = -Math.sin(troop.ry);
+  const reach = 3.15 + (slot % 3) * 0.42;
+  const spread = ((slot * 3) % 5) - 2;
+  const x = troop.x + fx * reach + rx * spread * 0.55;
+  const z = troop.z + fz * reach + rz * spread * 0.55;
+  return { x, z, ry: Math.atan2(troop.x - x, troop.z - z) };
+}
 
 export function devGiantAt(t: number) {
   const u = Math.max(0, t);
@@ -497,7 +535,7 @@ export function devSnakeStriking(i: number, n: number, recT: number) {
   return t >= plan.arrive[i] && t < plan.die[i];
 }
 
-function snakeFriendAt(i: number, n: number, t: number, out: New1Pose) {
+function snakeFriendAt(i: number, n: number, t: number, out: New1Pose, devs = false) {
   const g = devGiantAt(t);
   const plan = snakePlan(n);
   const dieAt = plan.die[i];
@@ -520,13 +558,18 @@ function snakeFriendAt(i: number, n: number, t: number, out: New1Pose) {
       out.s = 1;
       return;
     }
-    const live = snakeStrike(plan.slot[i], plan.batch[i], plan.side[i], plan.zone[i], gg);
+    const live = devs ? devsStrike(plan.slot[i], plan.side[i], plan.zone[i], gg) : snakeStrike(plan.slot[i], plan.batch[i], plan.side[i], plan.zone[i], gg);
     const flank = Math.cos(plan.side[i]) >= 0 ? 1 : -1;
     const fx = Math.sin(gg.yaw);
     const fz = Math.cos(gg.yaw);
     const zone = plan.zone[i];
-    const sx = zone === 0 ? fx : zone === 2 ? -fx + Math.cos(gg.yaw) * flank * 0.8 : Math.cos(gg.yaw) * -flank;
-    const sz = zone === 0 ? fz : zone === 2 ? -fz - Math.sin(gg.yaw) * flank * 0.8 : -Math.sin(gg.yaw) * -flank;
+    let sx = zone === 0 ? fx : zone === 2 ? -fx + Math.cos(gg.yaw) * flank * 0.8 : Math.cos(gg.yaw) * -flank;
+    let sz = zone === 0 ? fz : zone === 2 ? -fz - Math.sin(gg.yaw) * flank * 0.8 : -Math.sin(gg.yaw) * -flank;
+    if (devs) {
+      const troop = devTroopSlot(troopIndex(plan.slot[i], plan.side[i], zone), gg);
+      sx = Math.sin(troop.ry);
+      sz = Math.cos(troop.ry);
+    }
     out.x = live.x + sx * dist;
     out.z = live.z + sz * dist;
     out.y = Math.sin(u * Math.PI) * 6.2;
@@ -559,7 +602,7 @@ function snakeFriendAt(i: number, n: number, t: number, out: New1Pose) {
     return;
   }
   const hold = snakeHold(i, n, g);
-  const strike = snakeStrike(plan.slot[i], Math.max(1, plan.batch[i]), plan.side[i], plan.zone[i], g);
+  const strike = devs ? devsStrike(plan.slot[i], plan.side[i], plan.zone[i], g) : snakeStrike(plan.slot[i], Math.max(1, plan.batch[i]), plan.side[i], plan.zone[i], g);
   const goAt = plan.go[i];
   const arriveAt = plan.arrive[i];
   let x = hold.x;
@@ -645,7 +688,7 @@ export function devAlive(recT: number, soldiers: number, big = false, sword = fa
   return alive;
 }
 
-export function devFriendAt(i: number, n: number, recT: number, out: New1Pose, big = false, sword = false, snake = false) {
+export function devFriendAt(i: number, n: number, recT: number, out: New1Pose, big = false, sword = false, snake = false, devs = false) {
   const count = Math.max(0, Math.floor(n));
   const t = Math.max(0, recT);
   if (i < 0 || i >= count) {
@@ -658,8 +701,8 @@ export function devFriendAt(i: number, n: number, recT: number, out: New1Pose, b
     out.s = 0;
     return;
   }
-  if (snake) {
-    snakeFriendAt(i, count, t, out);
+  if (snake || devs) {
+    snakeFriendAt(i, count, t, out, devs);
     return;
   }
   const dieAt = planOf(count, big).die[i];
