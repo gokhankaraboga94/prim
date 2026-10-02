@@ -308,13 +308,194 @@ const TAIL_GAP = 3.2;
 const TAIL_FIRST = 4.6;
 const tailPlans = new Map<string, Float64Array>();
 
+const WAVE_RUN = 1.15;
+const WAVE_START = 0.35;
+
+function waveStep(k: number) {
+  let go = WAVE_START;
+  for (let i = 0; i <= k; i++) {
+    const batch = 10 + ((i * 3) % 11);
+    const fight = 1.35 + (i % 4) * 0.2;
+    const arrive = go + WAVE_RUN;
+    const die = arrive + fight;
+    if (i === k) return { go, arrive, die, batch, tail: i % 2 === 0 };
+    go = die;
+  }
+  return { go: 1e9, arrive: 1e9, die: 1e9, batch: 0, tail: true };
+}
+
 export function devTailLash(t: number) {
-  if (t < TAIL_FIRST - 0.45 || t > LAST) return 0;
-  const since = t - (TAIL_FIRST - 0.45);
-  const phase = since % TAIL_GAP;
-  if (phase > 0.7) return 0;
-  const mag = phase < 0.45 ? Math.sin((phase / 0.45) * Math.PI * 0.5) : Math.sin(((0.7 - phase) / 0.25) * Math.PI * 0.5);
-  return mag * (Math.floor(since / TAIL_GAP) % 2 === 0 ? 1 : -1);
+  if (t < WAVE_START || t > LAST + 0.4) return 0;
+  for (let i = 0; ; i++) {
+    const w = waveStep(i);
+    if (w.go > LAST) return 0;
+    if (!w.tail) continue;
+    const phase = t - (w.die - 0.42);
+    if (phase < 0 || phase > 0.72) continue;
+    const mag = phase < 0.42 ? Math.sin((phase / 0.42) * Math.PI * 0.5) : Math.sin(((0.72 - phase) / 0.3) * Math.PI * 0.5);
+    return mag * (Math.floor(i / 2) % 2 === 0 ? 1 : -1);
+  }
+}
+
+export function devSnakeBite(t: number) {
+  if (t < WAVE_START || t > LAST + 0.4) return 0;
+  for (let i = 0; ; i++) {
+    const w = waveStep(i);
+    if (w.go > LAST) return 0;
+    if (w.tail) continue;
+    const phase = t - (w.die - 0.34);
+    if (phase < 0 || phase > 0.58) continue;
+    if (phase < 0.34) return Math.sin((phase / 0.34) * Math.PI * 0.5);
+    return Math.max(0, 1 - (phase - 0.34) / 0.24);
+  }
+}
+
+type SnakePlan = { go: Float64Array; arrive: Float64Array; die: Float64Array; slot: Uint16Array; batch: Uint8Array; tail: Uint8Array };
+const snakePlans = new Map<number, SnakePlan>();
+
+function snakePlan(n: number) {
+  const hit = snakePlans.get(n);
+  if (hit) return hit;
+  const meleeN = Math.ceil(n / 2);
+  const go = new Float64Array(n);
+  const arrive = new Float64Array(n);
+  const die = new Float64Array(n);
+  const slot = new Uint16Array(n);
+  const batchOf = new Uint8Array(n);
+  const tail = new Uint8Array(n);
+  go.fill(1e9);
+  arrive.fill(1e9);
+  die.fill(1e9);
+  let cursor = 0;
+  for (let k = 0; cursor < meleeN; k++) {
+    const w = waveStep(k);
+    if (w.go > LAST - 0.6) break;
+    const batch = Math.min(w.batch, meleeN - cursor);
+    for (let j = 0; j < batch; j++) {
+      const i = cursor + j;
+      go[i] = w.go;
+      arrive[i] = w.arrive;
+      die[i] = w.die;
+      slot[i] = j;
+      batchOf[i] = batch;
+      tail[i] = w.tail ? 1 : 0;
+    }
+    cursor += batch;
+  }
+  const plan = { go, arrive, die, slot, batch: batchOf, tail };
+  snakePlans.set(n, plan);
+  return plan;
+}
+
+function snakeWorld(g: { x: number; z: number; yaw: number }, lx: number, lz: number) {
+  const sc = 1.52;
+  const cy = Math.cos(g.yaw);
+  const sy = Math.sin(g.yaw);
+  return { x: g.x + (lx * cy + lz * sy) * sc, z: g.z + (-lx * sy + lz * cy) * sc };
+}
+
+function snakeHold(i: number, g: { x: number; z: number; yaw: number }) {
+  const cols = 8;
+  const col = i % cols;
+  const row = Math.floor(i / cols);
+  return { x: g.x - 16 - row * 1.35, z: g.z + 4 + (col - (cols - 1) / 2) * 1.25 };
+}
+
+function snakeStrike(slot: number, batch: number, g: { x: number; z: number; yaw: number }) {
+  const flank = slot % 2 === 0 ? 1 : -1;
+  const sideCount = Math.max(1, Math.ceil(batch / 2));
+  const along = sideCount <= 1 ? 0.5 : Math.floor(slot / 2) / (sideCount - 1);
+  const localZ = 3.1 - along * 15.5;
+  const bodyR = 1.35 * (1 - Math.min(1, Math.max(0, (5.4 - localZ) / 22)) * 0.82);
+  const at = snakeWorld(g, flank * (bodyR + 0.5), localZ);
+  const axis = snakeWorld(g, 0, localZ);
+  return { ...at, ry: Math.atan2(axis.x - at.x, axis.z - at.z) };
+}
+
+export function devSnakeStriking(i: number, n: number, recT: number) {
+  const count = Math.max(0, Math.floor(n));
+  if (i < 0 || i >= count || devIsArcher(i, count)) return false;
+  const plan = snakePlan(count);
+  const t = Math.max(0, recT);
+  return t >= plan.arrive[i] && t < plan.die[i];
+}
+
+function snakeFriendAt(i: number, n: number, t: number, out: New1Pose) {
+  const g = devGiantAt(t);
+  if (devIsArcher(i, n)) {
+    const meleeN = Math.ceil(n / 2);
+    const a = i - meleeN;
+    const cols = 12;
+    const col = a % cols;
+    const row = Math.floor(a / cols);
+    const x = g.x + (col - (cols - 1) / 2) * 1.3;
+    const z = g.z + 24 + row * 1.25;
+    out.x = x;
+    out.z = z;
+    out.y = Math.abs(Math.sin(t * 6 + i)) * 0.03;
+    out.rx = 0.12;
+    out.ry = Math.atan2(g.x - x, g.z - z);
+    out.rz = 0;
+    out.s = 1;
+    return;
+  }
+  const plan = snakePlan(n);
+  const dieAt = plan.die[i];
+  if (t >= dieAt && t < dieAt + FLING) {
+    const gg = devGiantAt(dieAt);
+    const live = snakeStrike(plan.slot[i], plan.batch[i], gg);
+    const u = (t - dieAt) / FLING;
+    const dist = u * u * 16;
+    const dir = plan.tail[i] ? (Math.floor(plan.slot[i] / 2) % 2 === 0 ? 1 : -1) : 1;
+    const sx = plan.tail[i] ? Math.cos(gg.yaw) * dir : Math.sin(gg.yaw);
+    const sz = plan.tail[i] ? -Math.sin(gg.yaw) * dir : Math.cos(gg.yaw);
+    out.x = live.x + sx * dist;
+    out.z = live.z + sz * dist;
+    out.y = Math.sin(u * Math.PI) * 6.2;
+    out.rx = 0.4 + u * 2.2;
+    out.ry = live.ry + u * 4;
+    out.rz = dir * u * 1.3;
+    out.s = 1;
+    return;
+  }
+  if (t >= dieAt) {
+    out.x = 0;
+    out.y = -40;
+    out.z = 0;
+    out.rx = 0;
+    out.ry = 0;
+    out.rz = 0;
+    out.s = 0;
+    return;
+  }
+  const hold = snakeHold(i, g);
+  const strike = snakeStrike(plan.slot[i], Math.max(1, plan.batch[i]), g);
+  const goAt = plan.go[i];
+  const arriveAt = plan.arrive[i];
+  let x = hold.x;
+  let z = hold.z;
+  let rx = 0.12 + Math.abs(Math.sin(t * 8 + i)) * 0.05;
+  let ry = Math.atan2(g.x - hold.x, g.z - hold.z);
+  if (t >= arriveAt) {
+    x = strike.x;
+    z = strike.z;
+    ry = strike.ry;
+    rx = 0.42 + Math.max(0, Math.sin(t * 11 + i)) * 0.22;
+  } else if (t >= goAt) {
+    const u = (t - goAt) / Math.max(0.2, arriveAt - goAt);
+    const e = u * u * (3 - 2 * u);
+    x = hold.x + (strike.x - hold.x) * e;
+    z = hold.z + (strike.z - hold.z) * e;
+    ry = Math.atan2(strike.x - hold.x, strike.z - hold.z);
+    rx = 0.62;
+  }
+  out.x = x;
+  out.z = z;
+  out.y = t >= goAt && t < arriveAt ? Math.abs(Math.sin(t * 16 + i)) * 0.16 : Math.abs(Math.sin(t * 8 + i)) * 0.04;
+  out.rx = rx;
+  out.ry = ry;
+  out.rz = 0;
+  out.s = 1;
 }
 
 function tailHits(n: number) {
@@ -353,6 +534,13 @@ function tailHits(n: number) {
 export function devAlive(recT: number, soldiers: number, big = false, sword = false, snake = false) {
   const n = Math.max(0, Math.floor(soldiers));
   if (n <= 0) return 0;
+  if (snake) {
+    const plan = snakePlan(n);
+    const t = Math.max(0, recT);
+    let alive = 0;
+    for (let i = 0; i < n; i++) if (t < plan.die[i]) alive += 1;
+    return alive;
+  }
   const die = planOf(n, big && sword ? big : false).die;
   const slash = sword ? swordHits(n, big, snake) : null;
   const tail = snake ? tailHits(n) : null;
@@ -378,6 +566,10 @@ export function devFriendAt(i: number, n: number, recT: number, out: New1Pose, b
     out.ry = 0;
     out.rz = 0;
     out.s = 0;
+    return;
+  }
+  if (snake) {
+    snakeFriendAt(i, count, t, out);
     return;
   }
   const dieAt = planOf(count, big).die[i];

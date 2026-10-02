@@ -14,7 +14,7 @@ import { vsSoldierAt, type VsPose } from "../../vsReel";
 import { NEW6_ARCHERS, NEW62_ARCHERS, new1FriendAt, new2FriendAt, new2VisualFriends, new5FriendAt, new5OnScreen, new6FriendAt, new6SwordPitch, new6VisualFriends, new7FriendAt, new7VisualFriends } from "../../new1Reel";
 import { labFriendAt, labRosterIds } from "../../mazeReel";
 import { FILM_DOWN, filmFriendAt, filmRoster } from "../../filmReel";
-import { DEV2_N, DEV_N, devFriendAt, devIsArcher, devIsSpear, devNameCovered } from "../../devReel";
+import { DEV2_N, DEV_N, devFriendAt, devIsArcher, devIsSpear, devNameCovered, devSnakeStriking } from "../../devReel";
 import { sfxArrowLoose, sfxBowDraw, sfxVolleyPeak } from "../../reelSfx";
 import { raidCount, sallyHunting, sallyLiveIndex, sallyLocal, sallyRaiderAt, swordArmPose, swordStyleAt, swordSwingU } from "../../siegeEvent";
 import { castleFrame } from "../../castleLayout";
@@ -1382,21 +1382,22 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
           giantLive += 1;
           const archer = devIsArcher(i, n);
           const spear = devIsSpear(i, n);
+          const striking = giantSnake && devSnakeStriking(i, n, recT);
           if (archer && bowHolds.current) {
             bowHolds.current.setMatrixAt(giantBows, dummy.matrix);
             giantBows += 1;
           } else if (spear && spears.current) {
-            const poke = giantSnake ? 0.35 + Math.max(0, Math.sin(recT * 9 + i)) * 0.95 : 0;
+            const poke = striking ? 0.35 + Math.max(0, Math.sin(recT * 9 + i)) * 0.95 : 0;
             _swingM.makeTranslation(0.42, 1.2, 0.2 + poke);
-            _swingSpin.makeRotationX(giantSnake ? -1.05 : -0.85);
+            _swingSpin.makeRotationX(striking ? -1.05 : -0.85);
             _swingNeg.makeTranslation(0, -1.2, 0);
             _swingM.multiply(_swingSpin).multiply(_swingNeg);
             _swingBody.copy(dummy.matrix).multiply(_swingM);
             spears.current.setMatrixAt(giantSpears, _swingBody);
             giantSpears += 1;
           } else if (bladeSwings.current) {
-            const pitch = giantSnake ? 0.15 + Math.max(0, Math.sin(recT * 10 + i)) * 1.45 : 0.55 + Math.sin(recT * 12 + i) * 0.7;
-            _swingM.makeTranslation(0.48, 1, giantSnake ? 0.85 : 0.3);
+            const pitch = striking ? 0.15 + Math.max(0, Math.sin(recT * 10 + i)) * 1.45 : giantSnake ? 0.35 : 0.55 + Math.sin(recT * 12 + i) * 0.7;
+            _swingM.makeTranslation(0.48, 1, striking ? 0.85 : 0.3);
             _swingSpin.makeRotationX(-pitch);
             _swingNeg.makeTranslation(-0.48, -1, -0.3);
             _swingM.multiply(_swingSpin).multiply(_swingNeg);

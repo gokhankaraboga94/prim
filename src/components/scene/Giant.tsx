@@ -4,7 +4,7 @@ import { useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import { formatCount } from "../../game";
 import { REEL_HOLD } from "../../recordCanvas";
-import { devAlive, devClubHit, devGiantAt, devMaceSwing, devSwordPose, devTailLash } from "../../devReel";
+import { devAlive, devClubHit, devGiantAt, devMaceSwing, devSnakeBite, devSwordPose, devTailLash } from "../../devReel";
 
 const dummy = new THREE.Object3D();
 const ARROWS = 18;
@@ -364,9 +364,7 @@ function SnakeBody({ soldiers }: { soldiers: number }) {
   useFrame(({ clock }) => {
     const t = Math.max(0, clock.elapsedTime - REEL_HOLD);
     const g = devGiantAt(t);
-    const s = devMaceSwing(t, soldiers);
-    const slash = devSwordPose(t);
-    const bite = Math.max(0, s.lunge, Math.min(1, Math.max(0, slash.armX - 0.15) / 0.95));
+    const bite = devSnakeBite(t);
     const fx = Math.sin(g.yaw);
     const fz = Math.cos(g.yaw);
     if (root.current) {
