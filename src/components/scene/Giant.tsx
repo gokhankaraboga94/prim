@@ -345,7 +345,7 @@ function ArrowVolley({ big, snake = false, devs = false }: { big: boolean; snake
       dummy.scale.set(show ? 0.56 : 0, show ? 1.15 : 0, show ? 0.56 : 0);
       dummy.updateMatrix();
       mesh.current.setMatrixAt(i, dummy.matrix);
-      if (show && u > 0.86 && t - lastHit.current[i] > 0.7) {
+      if (snake && show && u > 0.86 && t - lastHit.current[i] > 0.7) {
         lastHit.current[i] = t;
         for (let k = 0; k < 2; k++) {
           const drop = _drop[_dropN % BLOOD];
@@ -365,14 +365,14 @@ function ArrowVolley({ big, snake = false, devs = false }: { big: boolean; snake
     for (let i = 0; i < BLOOD; i++) {
       const drop = _drop[i];
       const age = t - drop.t;
-      const on = (snake || devs) && age >= 0 && age < 0.5;
+      const on = snake && age >= 0 && age < 0.5;
       if (!on) {
         dummy.position.set(0, -20, 0);
         dummy.scale.set(0, 0, 0);
       } else {
         const fall = age * age * 6;
         dummy.position.set(drop.x + drop.vx * age, Math.max(0.05, drop.y - fall), drop.z + drop.vz * age);
-        const s = (devs ? 0.85 : 0.34) * (1 - age / 0.5);
+        const s = 0.34 * (1 - age / 0.5);
         dummy.scale.set(s, s * 1.35, s);
       }
       dummy.rotation.set(0, 0, 0);
@@ -388,7 +388,7 @@ function ArrowVolley({ big, snake = false, devs = false }: { big: boolean; snake
         <cylinderGeometry args={[0.04, 0.015, 1.35, 5]} />
         <meshStandardMaterial color="#d7c39a" roughness={0.55} />
       </instancedMesh>
-      {(snake || devs) && (
+      {snake && (
         <instancedMesh ref={blood} args={[undefined, undefined, BLOOD]} frustumCulled={false}>
           <sphereGeometry args={[1, 5, 4]} />
           <meshLambertMaterial color="#c41616" />
