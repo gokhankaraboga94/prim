@@ -324,7 +324,7 @@ function ArrowVolley({ big, snake = false, devs = false }: { big: boolean; snake
       let hy = 2;
       let hz = g.z;
       if (devs) {
-        const troop = devTroopSlot(i % TROOP_N, g);
+        const troop = devTroopSlot(i % TROOP_N, g, t);
         hx = troop.x + Math.sin(troop.ry) * 1.1;
         hy = 1.2 * TROOP_SCALE;
         hz = troop.z + Math.cos(troop.ry) * 1.1;
@@ -599,6 +599,52 @@ function knightGeos() {
   return { body: body || new THREE.BoxGeometry(0.4, 1.6, 0.3), sword: sword || new THREE.BoxGeometry(0.08, 0.08, 1) };
 }
 
+function troopCut(i: number, t: number) {
+  const period = 2.7 + (i % 4) * 0.38;
+  const phase = (t + i * 0.86) % period;
+  const wind = period * 0.4;
+  const cut = period * 0.13;
+  const follow = period * 0.24;
+  const sign = i % 3 === 2 ? -1 : 1;
+  const overhead = i % 3 === 0;
+  if (phase < wind) {
+    const u = Math.sin((phase / wind) * Math.PI * 0.5);
+    return {
+      armX: -0.18 - u * (overhead ? 1.4 : 0.9),
+      armY: sign * u * 0.62,
+      armZ: 0.16 + sign * u * 0.4,
+      twist: -sign * u * 0.46,
+      lean: u * 0.07,
+      step: -u * 0.2,
+    };
+  }
+  if (phase < wind + cut) {
+    const snap = Math.pow((phase - wind) / cut, 1.65);
+    return {
+      armX: (overhead ? -1.58 : -1.08) + snap * (overhead ? 2.55 : 2.05),
+      armY: sign * (0.62 - snap * 1.25),
+      armZ: sign * (0.56 - snap * 1.2),
+      twist: -sign * 0.46 + sign * snap * 0.9,
+      lean: 0.07 + snap * 0.16,
+      step: -0.2 + snap * 0.95,
+    };
+  }
+  if (phase < wind + cut + follow) {
+    const e = (phase - wind - cut) / follow;
+    const s = e * e * (3 - 2 * e);
+    return {
+      armX: (overhead ? 0.97 : 0.97) - s * 1.12,
+      armY: sign * (-0.63 + s * 0.5),
+      armZ: sign * (-0.64 + s * 0.72),
+      twist: sign * (0.44 - s * 0.44),
+      lean: 0.23 * (1 - s),
+      step: 0.75 * (1 - s),
+    };
+  }
+  const idle = Math.sin(t * 1.25 + i * 1.4);
+  return { armX: -0.16 + idle * 0.04, armY: sign * 0.06, armZ: 0.1, twist: idle * 0.05, lean: 0, step: 0 };
+}
+
 function DevTroop() {
   const bodies = useRef<THREE.InstancedMesh>(null);
   const swords = useRef<THREE.InstancedMesh>(null);
@@ -609,19 +655,18 @@ function DevTroop() {
   useFrame(({ clock }) => {
     const t = Math.max(0, clock.elapsedTime - REEL_HOLD);
     const g = devGiantAt(t);
-    const bite = devSnakeBite(t);
     if (!bodies.current || !swords.current) return;
     for (let i = 0; i < TROOP_N; i++) {
-      const troop = devTroopSlot(i, g);
-      const step = Math.abs(Math.sin(t * 2.2 + i)) * 0.035;
-      world.position.set(troop.x + Math.sin(troop.ry) * bite * 1.8, step, troop.z + Math.cos(troop.ry) * bite * 1.8);
-      world.rotation.set(0, troop.ry, 0);
+      const troop = devTroopSlot(i, g, t);
+      const cut = troopCut(i, t);
+      const bob = Math.abs(Math.sin(t * 3.1 + i * 1.3)) * 0.05;
+      world.position.set(troop.x + Math.sin(troop.ry) * cut.step, bob, troop.z + Math.cos(troop.ry) * cut.step);
+      world.rotation.set(cut.lean, troop.ry + cut.twist, 0);
       world.scale.setScalar(TROOP_SCALE);
       world.updateMatrix();
       bodies.current.setMatrixAt(i, world.matrix);
-      const chop = -0.22 - Math.max(0, Math.sin(t * 1.7 + i * 0.8)) * 0.32 - bite * 1.5;
       swing.position.set(0.38, 1.36, 0.04);
-      swing.rotation.set(chop, 0.12, -0.18);
+      swing.rotation.set(cut.armX, cut.armY, cut.armZ);
       swing.scale.set(1, 1, 1);
       swing.updateMatrix();
       swing.matrix.premultiply(world.matrix);

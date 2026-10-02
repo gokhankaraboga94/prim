@@ -126,14 +126,35 @@ function planOf(soldiers: number, big = false): Plan {
 const WALK = 0.86;
 
 export const TROOP_N = 10;
-export const TROOP_SCALE = 1.2288 * 10;
-const TROOP_FACE = Math.atan2(0.62, -1);
+export const TROOP_SCALE = 1.2288 * 3;
+const TROOP_HOME: { x: number; z: number }[] = [
+  { x: -2.4, z: 1.6 },
+  { x: 3.8, z: -0.7 },
+  { x: -0.6, z: -4.2 },
+  { x: 5.4, z: 2.9 },
+  { x: -5.1, z: -1.8 },
+  { x: 1.2, z: 4.8 },
+  { x: 4.1, z: -3.6 },
+  { x: -3.7, z: 4.1 },
+  { x: 0.4, z: -1.5 },
+  { x: -1.8, z: -2.9 },
+];
 
-export function devTroopSlot(i: number, g: { x: number; z: number }) {
+export function devTroopSlot(i: number, g: { x: number; z: number }, t = 0) {
   const idx = ((Math.floor(i) % TROOP_N) + TROOP_N) % TROOP_N;
-  const ang = TROOP_FACE + (idx / TROOP_N) * Math.PI * 2;
-  const rad = 11;
-  return { x: g.x + Math.sin(ang) * rad, z: g.z + Math.cos(ang) * rad, ry: ang, i: idx };
+  const home = TROOP_HOME[idx];
+  const wob = t * (0.42 + (idx % 5) * 0.07) + idx * 1.7;
+  const ax = 1.35 + (idx % 3) * 0.4;
+  const az = 1.05 + (idx % 4) * 0.32;
+  const ox = Math.sin(wob) * ax;
+  const oz = Math.cos(wob * 0.77 + 0.6) * az;
+  const x = g.x + home.x + ox;
+  const z = g.z + home.z + oz;
+  const vx = Math.cos(wob) * ax * (0.42 + (idx % 5) * 0.07);
+  const vz = -Math.sin(wob * 0.77 + 0.6) * az * (0.42 + (idx % 5) * 0.07) * 0.77;
+  const moving = Math.hypot(vx, vz) > 0.15;
+  const ry = moving ? Math.atan2(vx, vz) : Math.atan2(-home.x, -home.z);
+  return { x, z, ry, i: idx };
 }
 
 function troopIndex(slot: number, side: number, zone: number) {
@@ -142,16 +163,16 @@ function troopIndex(slot: number, side: number, zone: number) {
   return [0, 0, 0, 1, 1, 2, 4][slot % 7];
 }
 
-function devsStrike(slot: number, side: number, zone: number, g: { x: number; z: number; yaw: number }) {
-  const troop = devTroopSlot(troopIndex(slot, side, zone), g);
+function devsStrike(slot: number, side: number, zone: number, g: { x: number; z: number; yaw: number }, t: number) {
+  const troop = devTroopSlot(troopIndex(slot, side, zone), g, t);
   const fx = Math.sin(troop.ry);
   const fz = Math.cos(troop.ry);
   const rx = Math.cos(troop.ry);
   const rz = -Math.sin(troop.ry);
-  const reach = 3.15 + (slot % 3) * 0.42;
+  const reach = 1.7 + (slot % 3) * 0.32;
   const spread = ((slot * 3) % 5) - 2;
-  const x = troop.x + fx * reach + rx * spread * 0.55;
-  const z = troop.z + fz * reach + rz * spread * 0.55;
+  const x = troop.x + fx * reach + rx * spread * 0.38;
+  const z = troop.z + fz * reach + rz * spread * 0.38;
   return { x, z, ry: Math.atan2(troop.x - x, troop.z - z) };
 }
 
@@ -558,7 +579,7 @@ function snakeFriendAt(i: number, n: number, t: number, out: New1Pose, devs = fa
       out.s = 1;
       return;
     }
-    const live = devs ? devsStrike(plan.slot[i], plan.side[i], plan.zone[i], gg) : snakeStrike(plan.slot[i], plan.batch[i], plan.side[i], plan.zone[i], gg);
+    const live = devs ? devsStrike(plan.slot[i], plan.side[i], plan.zone[i], gg, dieAt) : snakeStrike(plan.slot[i], plan.batch[i], plan.side[i], plan.zone[i], gg);
     const flank = Math.cos(plan.side[i]) >= 0 ? 1 : -1;
     const fx = Math.sin(gg.yaw);
     const fz = Math.cos(gg.yaw);
@@ -566,7 +587,7 @@ function snakeFriendAt(i: number, n: number, t: number, out: New1Pose, devs = fa
     let sx = zone === 0 ? fx : zone === 2 ? -fx + Math.cos(gg.yaw) * flank * 0.8 : Math.cos(gg.yaw) * -flank;
     let sz = zone === 0 ? fz : zone === 2 ? -fz - Math.sin(gg.yaw) * flank * 0.8 : -Math.sin(gg.yaw) * -flank;
     if (devs) {
-      const troop = devTroopSlot(troopIndex(plan.slot[i], plan.side[i], zone), gg);
+      const troop = devTroopSlot(troopIndex(plan.slot[i], plan.side[i], zone), gg, dieAt);
       sx = Math.sin(troop.ry);
       sz = Math.cos(troop.ry);
     }
@@ -602,7 +623,7 @@ function snakeFriendAt(i: number, n: number, t: number, out: New1Pose, devs = fa
     return;
   }
   const hold = snakeHold(i, n, g);
-  const strike = devs ? devsStrike(plan.slot[i], plan.side[i], plan.zone[i], g) : snakeStrike(plan.slot[i], Math.max(1, plan.batch[i]), plan.side[i], plan.zone[i], g);
+  const strike = devs ? devsStrike(plan.slot[i], plan.side[i], plan.zone[i], g, t) : snakeStrike(plan.slot[i], Math.max(1, plan.batch[i]), plan.side[i], plan.zone[i], g);
   const goAt = plan.go[i];
   const arriveAt = plan.arrive[i];
   let x = hold.x;
