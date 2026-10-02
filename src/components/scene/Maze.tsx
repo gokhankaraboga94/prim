@@ -1,8 +1,9 @@
 import { useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
+import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import { REEL_HOLD } from "../../recordCanvas";
-import { LAB_FOES, LAB_WALLS, labFoeAt } from "../../mazeReel";
+import { LAB_FOES, LAB_WALLS, labFoeAt, type LabWall } from "../../mazeReel";
 import type { New1Pose } from "../../new1Reel";
 import { getSwordRaiderGeometry } from "./SallyRaid";
 
@@ -107,34 +108,63 @@ function Foes() {
   );
 }
 
+function tileUv(geo: THREE.BufferGeometry, sx: number, sy: number) {
+  const uv = geo.getAttribute("uv");
+  const s = 0.38;
+  for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * sx * s, uv.getY(i) * sy * s);
+}
+
+function mazeStone(boxes: LabWall[]) {
+  const stone: THREE.BufferGeometry[] = [];
+  const caps: THREE.BufferGeometry[] = [];
+  for (const box of boxes) {
+    const body = new THREE.BoxGeometry(box.w, box.h, box.d);
+    tileUv(body, Math.max(box.w, box.d), box.h);
+    body.translate(box.x, box.y, box.z);
+    stone.push(body);
+    const lip = new THREE.BoxGeometry(box.w + 0.22, 0.22, box.d + 0.22);
+    lip.translate(box.x, box.y + box.h / 2 + 0.1, box.z);
+    caps.push(lip);
+    const alongX = box.w >= box.d;
+    const span = alongX ? box.w : box.d;
+    const n = Math.max(2, Math.floor(span / 1.15));
+    for (let i = 0; i < n; i += 2) {
+      const u = (i + 0.5) / n - 0.5;
+      const mw = alongX ? Math.min(0.64, span / n) : Math.max(0.42, box.w * 0.78);
+      const md = alongX ? Math.max(0.42, box.d * 0.78) : Math.min(0.64, span / n);
+      const merlon = new THREE.BoxGeometry(mw, 0.78, md);
+      merlon.translate(box.x + (alongX ? u * box.w : 0), box.y + box.h / 2 + 0.5, box.z + (alongX ? 0 : u * box.d));
+      caps.push(merlon);
+    }
+  }
+  return {
+    stone: mergeGeometries(stone, false) ?? new THREE.BoxGeometry(1, 1, 1),
+    caps: mergeGeometries(caps, false) ?? new THREE.BoxGeometry(1, 1, 1),
+  };
+}
+
 export function Maze({ soldiers: _soldiers }: { soldiers: number }) {
   const boxes = useMemo(() => LAB_WALLS, []);
+  const geos = useMemo(() => mazeStone(boxes), [boxes]);
   const stone = useMemo(() => stoneTexture(), []);
   const dirt = useMemo(() => dirtTexture(), []);
   const stoneMat = useMemo(
-    () => new THREE.MeshStandardMaterial({ map: stone ?? undefined, color: stone ? "#ffffff" : "#8d8172", roughness: 0.86, metalness: 0.05 }),
+    () => new THREE.MeshStandardMaterial({ map: stone ?? undefined, color: stone ? "#ffffff" : "#8d8172", roughness: 0.9, metalness: 0.04 }),
     [stone]
   );
-  const capMat = useMemo(() => new THREE.MeshStandardMaterial({ color: "#d9cbb8", roughness: 0.78 }), []);
+  const capMat = useMemo(() => new THREE.MeshStandardMaterial({ color: "#cbbba6", roughness: 0.82 }), []);
   return (
     <group>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.04, 90]}>
         <planeGeometry args={[360, 420]} />
         <meshStandardMaterial map={dirt ?? undefined} color={dirt ? "#ffffff" : "#6d5b3e"} roughness={0.94} />
       </mesh>
-      {boxes.map((box, i) => (
-        <group key={i} position={[box.x, box.y, box.z]} rotation={[0, box.ry, 0]}>
-          <mesh material={stoneMat}>
-            <boxGeometry args={[box.w, box.h, box.d]} />
-          </mesh>
-          <mesh position={[0, box.h / 2 + 0.08, 0]} material={capMat}>
-            <boxGeometry args={[box.w + 0.18, 0.16, box.d]} />
-          </mesh>
-        </group>
-      ))}
-      <ambientLight intensity={0.7} color="#fff6ea" />
-      <directionalLight position={[30, 52, 16]} intensity={1.7} color="#fff8ee" />
-      <hemisphereLight args={["#fff4e2", "#6a5c4c", 0.75]} />
+      <mesh geometry={geos.stone} material={stoneMat} />
+      <mesh geometry={geos.caps} material={capMat} />
+      <ambientLight intensity={0.46} color="#f3eadc" />
+      <directionalLight position={[36, 28, -18]} intensity={2.35} color="#fff1dc" />
+      <directionalLight position={[-22, 14, 40]} intensity={0.45} color="#c4b49a" />
+      <hemisphereLight args={["#fff4e2", "#5c4e3e", 0.55]} />
       <Foes />
     </group>
   );

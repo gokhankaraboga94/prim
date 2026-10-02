@@ -10,7 +10,7 @@ export function isLab(id: string | null | undefined): id is LabId {
 }
 
 export const LAB_SECONDS = 60;
-export const LAB_N = 100;
+export const LAB_N = 200;
 
 const COLS = 10;
 const BURST = 3.4;
@@ -147,8 +147,7 @@ function buildWalls(): LabWall[] {
   }
   cells.sort((a, b) => a[1] - b[1] || a[0] - b[0]);
   const boxes: LabWall[] = [];
-  const wallH = 4;
-  for (const [ix, iz] of cells) {
+    for (const [ix, iz] of cells) {
     const origin = cellKey(ix, iz);
     if (used.has(origin)) continue;
     let w = 1;
@@ -169,6 +168,7 @@ function buildWalls(): LabWall[] {
     for (let dz = 0; dz < d; dz++) for (let dxn = 0; dxn < w; dxn++) used.add(cellKey(ix + dxn, iz + dz));
     const x0 = ix * RES;
     const z0 = iz * RES;
+    const wallH = 5.7 + ((ix * 3 + iz) % 4) * 0.28;
     boxes.push({
       x: (x0 + (ix + w) * RES) / 2,
       y: wallH / 2 - 0.04,
@@ -195,7 +195,7 @@ export function labRosterIds(names: string[], soldiers: number) {
 function home(i: number) {
   const col = i % COLS;
   const row = Math.floor(i / COLS);
-  return { x: (col - (COLS - 1) / 2) * 1.16, z: -1.1 - row * 0.74 };
+  return { x: (col - (COLS - 1) / 2) * 1.12, z: -0.55 - row * 0.62 };
 }
 
 function branchOf(i: number) {
@@ -362,22 +362,40 @@ export function labFoeAt(i: number, recT: number, out: New1Pose) {
   }
 }
 
+function mixShot(a: ShotPose, b: ShotPose, u: number): ShotPose {
+  return {
+    x: a.x + (b.x - a.x) * u,
+    y: a.y + (b.y - a.y) * u,
+    z: a.z + (b.z - a.z) * u,
+    lx: a.lx + (b.lx - a.lx) * u,
+    ly: a.ly + (b.ly - a.ly) * u,
+    lz: a.lz + (b.lz - a.lz) * u,
+    fov: a.fov + (b.fov - a.fov) * u,
+  };
+}
+
 export function sampleLabCam(recT: number): ShotPose {
   const t = Math.max(0, recT);
-  const pull = t <= 2.2 ? 0 : Math.min(1, (t - 2.2) / 6.2);
-  const e = pull * pull * (3 - 2 * pull);
-  const from = { x: 0, y: 51.4, z: -37.2, lx: 0, ly: 1.1, lz: -2, fov: 48 };
-  const wide = { x: 0, y: 160, z: -40.4, lx: 0, ly: 0, lz: 46, fov: 52 };
-  const mid = {
-    x: from.x + (wide.x - from.x) * e,
-    y: from.y + (wide.y - from.y) * e,
-    z: from.z + (wide.z - from.z) * e,
-    lx: from.lx + (wide.lx - from.lx) * e,
-    ly: from.ly + (wide.ly - from.ly) * e,
-    lz: from.lz + (wide.lz - from.lz) * e,
-    fov: from.fov + (wide.fov - from.fov) * e,
+  const len = polyLen(WIN);
+  const travel = Math.min(len - 20, Math.max(0, (t - 3.2) * 2.05));
+  const behind = sample(WIN, travel);
+  const ahead = sample(WIN, Math.min(len - 1.2, travel + 14));
+  const sideX = Math.cos(behind.ry);
+  const sideZ = -Math.sin(behind.ry);
+  const follow = {
+    x: behind.x + sideX * 4.8,
+    y: 11.4,
+    z: behind.z + sideZ * 4.8,
+    lx: ahead.x,
+    ly: 1.45,
+    lz: ahead.z,
+    fov: 34,
   };
-  const zoom = t <= 50 ? 0 : Math.min(1, (t - 50) / 7);
+  const open = { x: 5.2, y: 13.6, z: -13.4, lx: 0.2, ly: 1.2, lz: 6.4, fov: 36 };
+  const enter = t <= 2.2 ? 0 : Math.min(1, (t - 2.2) / 4.8);
+  const e = enter * enter * (3 - 2 * enter);
+  const mid = mixShot(open, follow, e);
+  const zoom = t <= 46 ? 0 : Math.min(1, (t - 46) / 8);
   const u = zoom * zoom * (3 - 2 * zoom);
   if (u <= 0) return mid;
   let lead = 44;
@@ -396,13 +414,13 @@ export function sampleLabCam(recT: number): ShotPose {
   const fx = Math.sin(front.ry);
   const fz = Math.cos(front.ry);
   const close = {
-    x: back.x - fx * 8,
-    y: 13,
-    z: back.z - fz * 10,
-    lx: front.x + fx * 2.4,
-    ly: 1.3,
-    lz: front.z + fz * 2.4,
-    fov: 34,
+    x: back.x - fx * 4.4,
+    y: 7.8,
+    z: back.z - fz * 5.2,
+    lx: front.x + fx * 1.5,
+    ly: 1.35,
+    lz: front.z + fz * 1.5,
+    fov: 30,
   };
   return {
     x: mid.x + (close.x - mid.x) * u,
