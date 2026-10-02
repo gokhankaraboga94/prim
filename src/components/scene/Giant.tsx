@@ -586,13 +586,19 @@ function knightGeos() {
   );
   const sword = mergeGeometries(
     [
-      knightPiece(new THREE.CylinderGeometry(0.07, 0.085, 0.36, 7), 0, -0.18, 0.02, plate),
-      knightPiece(new THREE.CylinderGeometry(0.055, 0.06, 0.32, 7), 0.02, -0.46, 0.1, dk, 0.45),
-      knightPiece(new THREE.BoxGeometry(0.09, 0.08, 0.1), 0.05, -0.62, 0.18, leather),
-      knightPiece(new THREE.BoxGeometry(0.32, 0.045, 0.07), 0.06, -0.78, 0.32, hi, 0.7),
-      knightPiece(new THREE.BoxGeometry(0.075, 0.055, 1.25), 0.1, -1.2, 0.82, steel, 0.95),
-      knightPiece(new THREE.BoxGeometry(0.02, 0.018, 0.95), 0.1, -1.16, 0.86, "#ffffff", 0.95),
-      knightPiece(new THREE.ConeGeometry(0.055, 0.24, 5), 0.14, -1.72, 1.32, steel, 0.95),
+      knightPiece(new THREE.CylinderGeometry(0.07, 0.078, 0.38, 8), 0, -0.19, 0.02, plate),
+      knightPiece(new THREE.SphereGeometry(0.08, 8, 6), 0, -0.38, 0.04, hi),
+      knightPiece(new THREE.CylinderGeometry(0.052, 0.06, 0.35, 8), 0.01, -0.45, 0.2, dk, 1.98),
+      knightPiece(new THREE.BoxGeometry(0.11, 0.09, 0.14), 0.02, -0.52, 0.36, plate),
+      knightPiece(new THREE.BoxGeometry(0.1, 0.032, 0.1), 0.02, -0.478, 0.38, hi),
+      knightPiece(new THREE.SphereGeometry(0.042, 8, 6), 0.02, -0.53, 0.31, dk),
+      knightPiece(new THREE.CylinderGeometry(0.024, 0.026, 0.16, 8), 0.02, -0.54, 0.44, leather, Math.PI / 2),
+      knightPiece(new THREE.BoxGeometry(0.44, 0.028, 0.038), 0.02, -0.54, 0.54, hi),
+      knightPiece(new THREE.BoxGeometry(0.036, 0.062, 0.032), 0.02, -0.54, 0.54, hi),
+      knightPiece(new THREE.BoxGeometry(0.046, 0.012, 0.7), 0.02, -0.555, 0.91, steel),
+      knightPiece(new THREE.BoxGeometry(0.028, 0.009, 0.42), 0.02, -0.568, 1.45, steel),
+      knightPiece(new THREE.BoxGeometry(0.012, 0.004, 0.78), 0.02, -0.546, 1.02, "#e7eef6"),
+      knightPiece(new THREE.ConeGeometry(0.016, 0.16, 6), 0.02, -0.575, 1.72, steel, Math.PI / 2),
     ],
     false
   );
@@ -611,8 +617,8 @@ function troopCut(i: number, t: number) {
     const u = Math.sin((phase / wind) * Math.PI * 0.5);
     return {
       armX: -0.18 - u * (overhead ? 1.4 : 0.9),
-      armY: sign * u * 0.62,
-      armZ: 0.16 + sign * u * 0.4,
+      armY: sign * u * 0.22,
+      armZ: sign * u * 0.08,
       twist: -sign * u * 0.46,
       lean: u * 0.07,
       step: -u * 0.2,
@@ -622,8 +628,8 @@ function troopCut(i: number, t: number) {
     const snap = Math.pow((phase - wind) / cut, 1.65);
     return {
       armX: (overhead ? -1.58 : -1.08) + snap * (overhead ? 2.55 : 2.05),
-      armY: sign * (0.62 - snap * 1.25),
-      armZ: sign * (0.56 - snap * 1.2),
+      armY: sign * (0.22 - snap * 0.4),
+      armZ: sign * (0.08 - snap * 0.2),
       twist: -sign * 0.46 + sign * snap * 0.9,
       lean: 0.07 + snap * 0.16,
       step: -0.2 + snap * 0.95,
@@ -634,15 +640,15 @@ function troopCut(i: number, t: number) {
     const s = e * e * (3 - 2 * e);
     return {
       armX: (overhead ? 0.97 : 0.97) - s * 1.12,
-      armY: sign * (-0.63 + s * 0.5),
-      armZ: sign * (-0.64 + s * 0.72),
+      armY: sign * (-0.18 + s * 0.24),
+      armZ: sign * (-0.12 + s * 0.18),
       twist: sign * (0.44 - s * 0.44),
       lean: 0.23 * (1 - s),
       step: 0.75 * (1 - s),
     };
   }
   const idle = Math.sin(t * 1.25 + i * 1.4);
-  return { armX: -0.16 + idle * 0.04, armY: sign * 0.06, armZ: 0.1, twist: idle * 0.05, lean: 0, step: 0 };
+  return { armX: -0.2 + idle * 0.03, armY: sign * 0.04, armZ: 0.02, twist: idle * 0.05, lean: 0, step: 0 };
 }
 
 function DevTroop() {
@@ -650,6 +656,7 @@ function DevTroop() {
   const swords = useRef<THREE.InstancedMesh>(null);
   const geos = useMemo(() => knightGeos(), []);
   const plate = useMemo(() => new THREE.MeshStandardMaterial({ vertexColors: true, metalness: 0.8, roughness: 0.32 }), []);
+  const steel = useMemo(() => new THREE.MeshStandardMaterial({ vertexColors: true, metalness: 0.92, roughness: 0.16 }), []);
   const world = useMemo(() => new THREE.Object3D(), []);
   const swing = useMemo(() => new THREE.Object3D(), []);
   useFrame(({ clock }) => {
@@ -678,7 +685,7 @@ function DevTroop() {
   return (
     <group>
       <instancedMesh ref={bodies} args={[geos.body, plate, TROOP_N]} frustumCulled={false} />
-      <instancedMesh ref={swords} args={[geos.sword, plate, TROOP_N]} frustumCulled={false} />
+      <instancedMesh ref={swords} args={[geos.sword, steel, TROOP_N]} frustumCulled={false} />
     </group>
   );
 }
