@@ -322,10 +322,86 @@ function ArrowVolley({ big }: { big: boolean }) {
 
 const LAST_ARROW = 52.2;
 
-export function Giant({ soldiers, big = false, sword = false, dread = false }: { soldiers: number; big?: boolean; sword?: boolean; dread?: boolean }) {
+const SNAKE_SEGS = 14;
+
+function SnakeBody({ soldiers }: { soldiers: number }) {
+  const root = useRef<THREE.Group>(null);
+  const parts = useRef<(THREE.Group | null)[]>([]);
+  const jaw = useRef<THREE.Group>(null);
+  const hide = useMemo(() => new THREE.MeshStandardMaterial({ color: "#070708", roughness: 0.78, metalness: 0.22 }), []);
+  const belly = useMemo(() => new THREE.MeshStandardMaterial({ color: "#16161a", roughness: 0.86, metalness: 0.06 }), []);
+  const mouth = useMemo(() => new THREE.MeshStandardMaterial({ color: "#4a1010", roughness: 0.5, metalness: 0.05 }), []);
+  const fang = useMemo(() => new THREE.MeshStandardMaterial({ color: "#e6e0d6", roughness: 0.32, metalness: 0.18 }), []);
+  useFrame(({ clock }) => {
+    const t = Math.max(0, clock.elapsedTime - REEL_HOLD);
+    const g = devGiantAt(t);
+    const s = devMaceSwing(t, soldiers);
+    const slash = devSwordPose(t);
+    const bite = Math.max(0, s.lunge, Math.min(1, Math.max(0, slash.armX - 0.15) / 0.95));
+    const fx = Math.sin(g.yaw);
+    const fz = Math.cos(g.yaw);
+    if (root.current) {
+      root.current.position.set(g.x + fx * bite * 1.8, 0, g.z + fz * bite * 1.8);
+      root.current.rotation.y = g.yaw + s.twist * 0.35;
+    }
+    for (let i = 0; i < SNAKE_SEGS; i++) {
+      const node = parts.current[i];
+      if (!node) continue;
+      const u = i / (SNAKE_SEGS - 1);
+      const head = i < 2;
+      const wave = Math.sin(t * 2.4 - i * 0.62);
+      const coil = Math.sin(u * Math.PI * 2.4 + t * 0.7);
+      node.position.set(
+        coil * (1.6 + u * 2.4) + wave * 0.28,
+        1.15 + Math.sin(u * Math.PI) * 5.6 + (head ? 1.4 + bite * 2.2 : 0) + wave * 0.12,
+        7.2 - u * 18 + (head ? bite * 4.4 : 0)
+      );
+      node.scale.setScalar(head ? 1.55 - i * 0.12 : Math.max(0.38, 1.28 * (1 - u * 0.78)));
+      node.rotation.y = coil * 0.35;
+    }
+    if (jaw.current) jaw.current.rotation.x = 0.12 + bite * 1.05;
+  });
+  return (
+    <group ref={root} scale={1.52}>
+      {Array.from({ length: SNAKE_SEGS }, (_, i) => (
+        <group key={i} ref={(el) => { parts.current[i] = el; }}>
+          <mesh material={hide}>
+            <sphereGeometry args={[1, i < 2 ? 8 : 6, i < 2 ? 6 : 5]} />
+          </mesh>
+          <mesh position={[0, -0.32, 0]} scale={[0.7, 0.42, 0.82]} material={belly}>
+            <sphereGeometry args={[1, 6, 4]} />
+          </mesh>
+          {i === 0 && (
+            <>
+              <mesh position={[0, 0.08, 0.85]} material={hide}>
+                <boxGeometry args={[0.85, 0.42, 0.7]} />
+              </mesh>
+              <mesh position={[0, -0.02, 0.72]} material={mouth}>
+                <boxGeometry args={[0.55, 0.16, 0.42]} />
+              </mesh>
+              <group ref={jaw} position={[0, -0.18, 0.55]}>
+                <mesh position={[0, -0.12, 0.38]} material={hide}>
+                  <boxGeometry args={[0.72, 0.22, 0.78]} />
+                </mesh>
+                <mesh position={[-0.18, -0.02, 0.62]} rotation={[1.15, 0, 0.15]} material={fang}>
+                  <coneGeometry args={[0.06, 0.38, 4]} />
+                </mesh>
+                <mesh position={[0.18, -0.02, 0.62]} rotation={[1.15, 0, -0.15]} material={fang}>
+                  <coneGeometry args={[0.06, 0.38, 4]} />
+                </mesh>
+              </group>
+            </>
+          )}
+        </group>
+      ))}
+    </group>
+  );
+}
+
+export function Giant({ soldiers, big = false, sword = false, dread = false, snake = false }: { soldiers: number; big?: boolean; sword?: boolean; dread?: boolean; snake?: boolean }) {
   return (
     <group>
-      <GiantBody soldiers={soldiers} big={big} sword={sword} dread={dread} />
+      {snake ? <SnakeBody soldiers={soldiers} /> : <GiantBody soldiers={soldiers} big={big} sword={sword} dread={dread} />}
       <ArrowVolley big={big} />
     </group>
   );
