@@ -394,11 +394,20 @@ function snakeWorld(g: { x: number; z: number; yaw: number }, lx: number, lz: nu
   return { x: g.x + (lx * cy + lz * sy) * sc, z: g.z + (-lx * sy + lz * cy) * sc };
 }
 
-function snakeHold(i: number, g: { x: number; z: number; yaw: number }) {
-  const cols = 8;
-  const col = i % cols;
-  const row = Math.floor(i / cols);
-  return { x: g.x - 16 - row * 1.35, z: g.z + 4 + (col - (cols - 1) / 2) * 1.25 };
+function snakeRing(local: number, count: number, g: { x: number; z: number }, base: number, gap: number, per: number) {
+  const n = Math.max(1, count);
+  const ring = Math.floor(local / per);
+  const idx = local % per;
+  const seats = Math.max(1, Math.min(per, n - ring * per));
+  const ang = (idx / seats) * Math.PI * 2 + ring * 0.47;
+  const rad = base + ring * gap;
+  const x = g.x + Math.sin(ang) * rad;
+  const z = g.z + Math.cos(ang) * rad;
+  return { x, z, ry: Math.atan2(g.x - x, g.z - z) };
+}
+
+function snakeHold(i: number, n: number, g: { x: number; z: number; yaw: number }) {
+  return snakeRing(i, Math.ceil(n / 2), g, 18, 1.75, 32);
 }
 
 function snakeStrike(slot: number, batch: number, g: { x: number; z: number; yaw: number }) {
@@ -424,17 +433,12 @@ function snakeFriendAt(i: number, n: number, t: number, out: New1Pose) {
   const g = devGiantAt(t);
   if (devIsArcher(i, n)) {
     const meleeN = Math.ceil(n / 2);
-    const a = i - meleeN;
-    const cols = 12;
-    const col = a % cols;
-    const row = Math.floor(a / cols);
-    const x = g.x + (col - (cols - 1) / 2) * 1.3;
-    const z = g.z + 24 + row * 1.25;
-    out.x = x;
-    out.z = z;
+    const at = snakeRing(i - meleeN, n - meleeN, g, 34, 2.05, 44);
+    out.x = at.x;
+    out.z = at.z;
     out.y = Math.abs(Math.sin(t * 6 + i)) * 0.03;
     out.rx = 0.12;
-    out.ry = Math.atan2(g.x - x, g.z - z);
+    out.ry = at.ry;
     out.rz = 0;
     out.s = 1;
     return;
@@ -468,14 +472,14 @@ function snakeFriendAt(i: number, n: number, t: number, out: New1Pose) {
     out.s = 0;
     return;
   }
-  const hold = snakeHold(i, g);
+  const hold = snakeHold(i, n, g);
   const strike = snakeStrike(plan.slot[i], Math.max(1, plan.batch[i]), g);
   const goAt = plan.go[i];
   const arriveAt = plan.arrive[i];
   let x = hold.x;
   let z = hold.z;
   let rx = 0.12 + Math.abs(Math.sin(t * 8 + i)) * 0.05;
-  let ry = Math.atan2(g.x - hold.x, g.z - hold.z);
+  let ry = hold.ry;
   if (t >= arriveAt) {
     x = strike.x;
     z = strike.z;
