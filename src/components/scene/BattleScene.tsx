@@ -221,7 +221,7 @@ function CinematicCam({
         : film
         ? sampleFilmCam(sampleT)
         : giant
-        ? sampleDevCam(sampleT, isDevBig(giant))
+        ? sampleDevCam(sampleT, isDevBig(giant), isDevs(giant))
         : maze
         ? sampleLabCam(sampleT)
         : new7

@@ -1129,9 +1129,10 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
           commander: !defend && !vs && !vs2 && !openField && (i < 0 || isCommander(names[i], chiefsList)),
           plain: Boolean(countdown || defend || vs || vs2 || openField || roster || square || film),
           fill: nameGold ? "#ffe14a" : undefined,
-        }))
+        })),
+        giantDevs
       ),
-    [labeled, names, chiefsList, countdown, defend, vs, vs2, openField, roster, square, film, nameGold]
+    [labeled, names, chiefsList, countdown, defend, vs, vs2, openField, roster, square, film, nameGold, giantDevs]
   );
   useEffect(() => () => nameAtlas.dispose(), [nameAtlas]);
 
@@ -1813,7 +1814,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
       const staggered = Boolean(countdown || defend || vs || vs2 || openField);
       if (countdown) nameScale = 1.12 * crowd;
       else if (defend) nameScale = 1.22 * crowd;
-      else if (giant) nameScale = giantBig ? 1.58 : 0.96;
+      else if (giant) nameScale = giantDevs ? 2.02 : giantBig ? 1.58 : 0.96;
       else if (maze) nameScale = 1.05;
       else if (film) nameScale = 1.48;
       else if (cross) nameScale = 1.112;
@@ -1893,7 +1894,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
         }
       }
       let sx = (isolate ? Math.min(1.05, cell.sx * nameScale) : cell.sx * nameScale);
-      if (giant) sx = Math.min(sx, giantBig ? 2.7 : 1.72);
+      if (giant) sx = Math.min(sx, giantDevs ? 3.46 : giantBig ? 2.7 : 1.72);
       else if (film) sx = Math.min(sx, 1.7);
       else if (maze) sx = Math.min(sx, 2.15);
       else if (cross) sx = Math.min(sx, 2.357);

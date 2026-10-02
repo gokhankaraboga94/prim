@@ -859,7 +859,7 @@ export function AdminPage() {
             <p className="muted">DEV5 ile aynı kadro ve kamera. Yeşil-kahverengi yılan. Bekleyenler dairede. Çoğunluk başa, birkaç kişi gövdeye ve kuyruğa gider. Yılan hem onlara hem dairedeki bekleyen ve okçulara saldırır.</p>
           )}
           {isDevs(reelShot) && (
-            <p className="muted">Yılan ile aynı kadro, kamera ve saldırı. Ortada yılan yok. Askerden 3 kat büyük, gri zırhlı 10 dev. Daha dağınık durur, gezer, kılıçları sırayla iner. Ölenlerin bir kısmı yerde kanlı kalır, sonra kaybolur. Devler ölmez.</p>
+            <p className="muted">Yılan ile aynı kadro ve saldırı. Kamera biraz daha geniş, alttaki askerler de kadrajda, isimler net. Ortada yılan yok. Askerden 3 kat büyük, gri zırhlı 10 dev. Daha dağınık durur, gezer, kılıçları sırayla iner. Ölenlerin bir kısmı yerde kanlı kalır, sonra kaybolur. Devler ölmez.</p>
           )}
           {isFilm(reelShot) && (
             <p className="muted">18 takipçi yerde dağınık, adları üstte. Başlarında 100 düşman bekler. 3. saniyede 150 asker hilal gibi, her biri ayrı yerden gelir. Ölüler yerde kalır.</p>

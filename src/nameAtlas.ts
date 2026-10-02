@@ -53,7 +53,12 @@ void main() {
 }
 `;
 
-function pickCell(unique: number) {
+function pickCell(unique: number, crisp: boolean) {
+  if (crisp) {
+    if (unique <= 500) return { w: 512, h: 128, font: 78, cmd: 88 };
+    if (unique <= 1200) return { w: 384, h: 96, font: 58, cmd: 66 };
+    return { w: 256, h: 72, font: 44, cmd: 50 };
+  }
   if (unique <= 400) return { w: 256, h: 64, font: 36, cmd: 42 };
   if (unique <= 1200) return { w: 192, h: 48, font: 26, cmd: 32 };
   return { w: 160, h: 40, font: 22, cmd: 26 };
@@ -105,7 +110,7 @@ function paintCell(
   return tw;
 }
 
-export function buildNameAtlas(items: NameItem[]): NameAtlas {
+export function buildNameAtlas(items: NameItem[], crisp = false): NameAtlas {
   if (!items.length) {
     return { sheets: [], cells: [], dispose() {} };
   }
@@ -120,7 +125,7 @@ export function buildNameAtlas(items: NameItem[]): NameAtlas {
     }
   }
 
-  const cell = pickCell(unique.length);
+  const cell = pickCell(unique.length, crisp);
   const cols = Math.max(1, Math.floor(ATLAS / cell.w));
   const rowsMax = Math.max(1, Math.floor(ATLAS / cell.h));
   const per = cols * rowsMax;
@@ -136,12 +141,19 @@ export function buildNameAtlas(items: NameItem[]): NameAtlas {
     const usedRows = Math.max(1, Math.ceil(Math.max(1, uCount) / cols));
     const texW = usedCols * cell.w;
     const texH = usedRows * cell.h;
+    const pot = (n: number) => {
+      let p = 1;
+      while (p < n) p <<= 1;
+      return p;
+    };
+    const canvasW = crisp ? pot(texW) : texW;
+    const canvasH = crisp ? pot(texH) : texH;
     const canvas = document.createElement("canvas");
-    canvas.width = texW;
-    canvas.height = texH;
+    canvas.width = canvasW;
+    canvas.height = canvasH;
     const ctx = canvas.getContext("2d");
     if (!ctx) continue;
-    ctx.clearRect(0, 0, texW, texH);
+    ctx.clearRect(0, 0, canvasW, canvasH);
     for (let i = 0; i < uCount; i++) {
       const item = unique[start + i];
       const col = i % cols;
@@ -152,19 +164,20 @@ export function buildNameAtlas(items: NameItem[]): NameAtlas {
       const sx = Math.min(2.9, sy * Math.max(1.15, (tw + 18) / cell.h));
       uniqueCells.push({
         sheet: s,
-        u: (col * cell.w) / texW,
-        v: 1 - ((row + 1) * cell.h) / texH,
-        su: cell.w / texW,
-        sv: cell.h / texH,
+        u: (col * cell.w) / canvasW,
+        v: 1 - ((row + 1) * cell.h) / canvasH,
+        su: cell.w / canvasW,
+        sv: cell.h / canvasH,
         sx: item.commander ? sx * 1.06 : sx,
         sy,
       });
     }
     const map = new THREE.CanvasTexture(canvas);
     map.colorSpace = THREE.NoColorSpace;
-    map.generateMipmaps = false;
-    map.minFilter = THREE.LinearFilter;
+    map.generateMipmaps = crisp;
+    map.minFilter = crisp ? THREE.LinearMipmapLinearFilter : THREE.LinearFilter;
     map.magFilter = THREE.LinearFilter;
+    map.anisotropy = crisp ? 8 : 1;
     map.wrapS = THREE.ClampToEdgeWrapping;
     map.wrapT = THREE.ClampToEdgeWrapping;
     map.flipY = true;
