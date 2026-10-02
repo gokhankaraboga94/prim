@@ -1794,7 +1794,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
         hideName(k, cell);
         continue;
       }
-      if (giant && cam && devNameCovered(pos.x, pos.z, cam.position.x, cam.position.z, recT, giantBig)) {
+      if (giant && !giantSnake && cam && devNameCovered(pos.x, pos.z, cam.position.x, cam.position.z, recT, giantBig)) {
         hideName(k, cell);
         continue;
       }
