@@ -19,6 +19,7 @@ export type VsPose = {
   ry: number;
   rz: number;
   s?: number;
+  blood?: number;
 };
 
 export function isVs(id: string | null | undefined): id is typeof VS_ID {

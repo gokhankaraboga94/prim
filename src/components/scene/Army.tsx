@@ -30,6 +30,8 @@ const _swingM = new THREE.Matrix4();
 const _swingSpin = new THREE.Matrix4();
 const _swingNeg = new THREE.Matrix4();
 const vsPose: VsPose = { x: 0, y: 0, z: 0, rx: 0, ry: 0, rz: 0 };
+const _plainTint = new THREE.Color("#ffffff");
+const _bloodTint = new THREE.Color("#6a100e");
 const ARROW_FLIGHT = 3.2;
 const FRONT_Z = 52;
 const FILE = 2.55;
@@ -1380,7 +1382,9 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
           dummy.scale.setScalar(scale * 0.96);
           dummy.updateMatrix();
           stamp(bodies.current, giantLive);
+          if (giantDevs) bodies.current.setColorAt(giantLive, vsPose.blood ? _bloodTint : _plainTint);
           giantLive += 1;
+          if (vsPose.blood) continue;
           const archer = devIsArcher(i, n);
           const spear = devIsSpear(i, n);
           const striking = (giantSnake || giantDevs) && devSnakeStriking(i, n, recT);
@@ -1614,6 +1618,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
       }
       if (giant) {
         bodies.current.count = giantLive;
+        if (giantDevs && bodies.current.instanceColor) bodies.current.instanceColor.needsUpdate = true;
         if (soldierPlumes.current) soldierPlumes.current.count = 0;
         if (bladeSwings.current) bladeSwings.current.count = giantSwords;
         if (spears.current) spears.current.count = giantSpears;
@@ -1792,7 +1797,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
         pos.set(rosterPose.x, rosterPose.y, rosterPose.z);
       }       else if (idx < 0) commanderPos(t, 0, pos);
       else poseSoldier(cross ? k : idx, t);
-      if ((new2 || bridge || cross || relief || maze || giant) && pos.y < -8) {
+      if ((new2 || bridge || cross || relief || maze || giant) && (pos.y < -8 || (giantDevs && idx >= 0 && vsPose.blood))) {
         hideName(k, cell);
         continue;
       }

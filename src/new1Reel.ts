@@ -13,6 +13,7 @@ export type New1Pose = {
   ry: number;
   rz: number;
   s?: number;
+  blood?: number;
 };
 
 export const NEW2_ID = "new2" as const;

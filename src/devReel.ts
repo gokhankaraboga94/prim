@@ -128,16 +128,16 @@ const WALK = 0.86;
 export const TROOP_N = 10;
 export const TROOP_SCALE = 1.2288 * 3;
 const TROOP_HOME: { x: number; z: number }[] = [
-  { x: -2.4, z: 1.6 },
-  { x: 3.8, z: -0.7 },
-  { x: -0.6, z: -4.2 },
-  { x: 5.4, z: 2.9 },
-  { x: -5.1, z: -1.8 },
-  { x: 1.2, z: 4.8 },
-  { x: 4.1, z: -3.6 },
-  { x: -3.7, z: 4.1 },
-  { x: 0.4, z: -1.5 },
-  { x: -1.8, z: -2.9 },
+  { x: -11.4, z: 4.2 },
+  { x: 12.6, z: -3.1 },
+  { x: -2.2, z: -13.4 },
+  { x: 8.8, z: 11.6 },
+  { x: -13.2, z: -7.4 },
+  { x: 3.4, z: 14.2 },
+  { x: 14.1, z: -9.6 },
+  { x: -9.6, z: 12.8 },
+  { x: 6.2, z: -6.4 },
+  { x: -5.4, z: -9.8 },
 ];
 
 export function devTroopSlot(i: number, g: { x: number; z: number }, t = 0) {
@@ -557,6 +557,7 @@ export function devSnakeStriking(i: number, n: number, recT: number) {
 }
 
 function snakeFriendAt(i: number, n: number, t: number, out: New1Pose, devs = false) {
+  out.blood = 0;
   const g = devGiantAt(t);
   const plan = snakePlan(n);
   const dieAt = plan.die[i];
@@ -598,6 +599,37 @@ function snakeFriendAt(i: number, n: number, t: number, out: New1Pose, devs = fa
     out.ry = live.ry + u * 4;
     out.rz = flank * u * 1.3;
     out.s = 1;
+    return;
+  }
+  if (devs && i % 3 === 0 && t >= dieAt + FLING && t < dieAt + FLING + 2.6 + (i % 4) * 0.45) {
+    const gg = devGiantAt(dieAt);
+    const meleeN = Math.ceil(n / 2);
+    const live = plan.far[i]
+      ? i < meleeN
+        ? snakeHold(i, n, gg)
+        : snakeRing(i - meleeN, n - meleeN, gg, 34, 2.05, 44)
+      : devsStrike(plan.slot[i], plan.side[i], plan.zone[i], gg, dieAt);
+    let sx = 0;
+    let sz = 1;
+    if (plan.far[i]) {
+      const ox = live.x - gg.x;
+      const oz = live.z - gg.z;
+      const olen = Math.hypot(ox, oz) || 1;
+      sx = ox / olen;
+      sz = oz / olen;
+    } else {
+      const troop = devTroopSlot(troopIndex(plan.slot[i], plan.side[i], plan.zone[i]), gg, dieAt);
+      sx = Math.sin(troop.ry);
+      sz = Math.cos(troop.ry);
+    }
+    out.x = live.x + sx * 16;
+    out.z = live.z + sz * 16;
+    out.y = 0.15;
+    out.rx = 1.5 + (i % 2 ? 0.18 : -0.12);
+    out.ry = Math.atan2(sx, sz) + (i % 2 ? 0.5 : -0.7);
+    out.rz = i % 2 ? 0.4 : -0.55;
+    out.s = 1;
+    out.blood = 1;
     return;
   }
   if (t >= dieAt) {
