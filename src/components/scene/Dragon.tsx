@@ -3,7 +3,7 @@ import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import { REEL_HOLD } from "../../recordCanvas";
-import { FIRE_R, breathSlots, dragonAt, dragonBreathIndex, dragonBreaths } from "../../dragonReel";
+import { dragonAt, dragonBreathIndex, dragonBreaths } from "../../dragonReel";
 
 const DORSAL = new THREE.Color("#3c4632");
 const BELLY = new THREE.Color("#c2a06a");
@@ -302,19 +302,19 @@ function makeFlameMaterial(seed: number, wideAt = 0) {
   });
 }
 
-function GroundFire({ ax, az, t0, dur, armed }: { ax: number; az: number; t0: number; dur: number; armed: boolean }) {
+function GroundFire({ ax, az, t0, dur, armed, radius }: { ax: number; az: number; t0: number; dur: number; armed: boolean; radius: number }) {
   const scorch = useRef<THREE.MeshBasicMaterial>(null);
   const mat = useMemo(() => makeFlameMaterial(ax * 0.17 + az), [ax, az]);
   const tongues = useMemo(
     () =>
       Array.from({ length: 7 }, (_, i) => ({
-        x: Math.sin(i * 1.7) * (0.28 + (i % 3) * 0.22),
-        z: Math.cos(i * 1.3) * (0.24 + (i % 4) * 0.16),
+        x: Math.sin(i * 1.7) * radius * (0.22 + (i % 3) * 0.1),
+        z: Math.cos(i * 1.3) * radius * (0.18 + (i % 4) * 0.08),
         yaw: i * 0.9,
-        h: 0.7 + (i % 3) * 0.45,
-        w: 0.35 + (i % 2) * 0.2,
+        h: radius * (0.42 + (i % 3) * 0.22),
+        w: radius * (0.22 + (i % 2) * 0.1),
       })),
-    []
+    [radius]
   );
   useFrame(({ clock }) => {
     const t = Math.max(0, clock.elapsedTime - REEL_HOLD);
@@ -331,7 +331,7 @@ function GroundFire({ ax, az, t0, dur, armed }: { ax: number; az: number; t0: nu
   return (
     <group position={[ax, 0.05, az]}>
       <mesh rotation={[-Math.PI / 2, 0, 0]}>
-        <circleGeometry args={[FIRE_R, 22]} />
+        <circleGeometry args={[radius, 22]} />
         <meshBasicMaterial ref={scorch} color="#120c08" transparent opacity={0} depthWrite={false} />
       </mesh>
       {tongues.map((tongue, i) => (
@@ -343,7 +343,23 @@ function GroundFire({ ax, az, t0, dur, armed }: { ax: number; az: number; t0: nu
   );
 }
 
-export function Dragon({ soldiers }: { soldiers: number }) {
+const EMBER_N = 40;
+
+function Drake({
+  index,
+  soldiers,
+  body,
+  jawGeo,
+  wings,
+  bodyMat,
+}: {
+  index: number;
+  soldiers: number;
+  body: THREE.BufferGeometry | null;
+  jawGeo: THREE.BufferGeometry | null;
+  wings: readonly [THREE.BufferGeometry, THREE.BufferGeometry];
+  bodyMat: THREE.Material;
+}) {
   const root = useRef<THREE.Group>(null);
   const left = useRef<THREE.Group>(null);
   const right = useRef<THREE.Group>(null);
@@ -355,68 +371,43 @@ export function Dragon({ soldiers }: { soldiers: number }) {
   const smoke = useRef<THREE.InstancedMesh>(null);
   const mouth = useRef<THREE.PointLight>(null);
   const ground = useRef<THREE.PointLight>(null);
-  const timeU = useRef<THREE.IUniform | null>(null);
-  const body = useMemo(() => buildBody(), []);
-  const jawGeo = useMemo(() => buildJaw(), []);
-  const wings = useMemo(() => [wingGeo(1), wingGeo(-1)] as const, []);
   const emberDummy = useMemo(() => new THREE.Object3D(), []);
-  const flameMat = useMemo(() => makeFlameMaterial(1.7, 1), []);
+  const flameMat = useMemo(() => makeFlameMaterial(1.4 + index * 0.7, 1), [index]);
   const mouthPos = useMemo(() => new THREE.Vector3(), []);
   const aimPos = useMemo(() => new THREE.Vector3(), []);
   const aimDir = useMemo(() => new THREE.Vector3(), []);
   const aimUp = useMemo(() => new THREE.Vector3(0, 1, 0), []);
-  const slots = breathSlots(Math.max(1, soldiers));
-  const bodyMat = useMemo(() => {
-    const m = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.58, metalness: 0.14 });
-    m.onBeforeCompile = (shader) => {
-      shader.uniforms.uTime = { value: 0 };
-      shader.vertexShader = `uniform float uTime;\n${shader.vertexShader}`;
-      shader.vertexShader = shader.vertexShader.replace(
-        "#include <begin_vertex>",
-        `#include <begin_vertex>
-        float tailW = smoothstep(-1.2, -5.1, transformed.z);
-        float neckW = smoothstep(1.8, 3.4, transformed.z);
-        transformed.x += sin(uTime * 2.5 + transformed.z * 1.2) * tailW * 0.62;
-        transformed.y += cos(uTime * 1.9 + transformed.z * 0.7) * tailW * 0.18;
-        transformed.x += sin(uTime * 1.25) * neckW * 0.07;
-        transformed.y += sin(uTime * 1.6 + 0.4) * neckW * 0.05;`
-      );
-      timeU.current = shader.uniforms.uTime;
-    };
-    return m;
-  }, []);
+  const scale = index === 1 ? 2.02 : index === 2 ? 1.72 : 1.88;
 
   useFrame(({ clock }) => {
     const t = Math.max(0, clock.elapsedTime - REEL_HOLD);
-    const p = dragonAt(t);
-    const idx = dragonBreathIndex(t);
-    const breath = idx >= 0 && idx < slots ? p.breath : 0;
-    if (timeU.current) timeU.current.value = t;
+    const p = dragonAt(t, index, soldiers);
+    const idx = dragonBreathIndex(t, index, soldiers);
+    const breath = idx >= 0 ? p.breath : 0;
     flameMat.uniforms.uTime.value = t;
     flameMat.uniforms.uStrength.value = breath;
     if (root.current) {
-      root.current.position.set(p.x, p.y + Math.sin(t * 2.1) * 0.22 * (1 - breath), p.z);
-      root.current.rotation.set(p.pitch, p.yaw, p.roll + Math.sin(t * 1.4) * 0.04 * (1 - breath));
+      root.current.position.set(p.x, p.y + Math.sin(t * 2.1 + index) * 0.18 * (1 - breath), p.z);
+      root.current.rotation.set(p.pitch, p.yaw, p.roll);
       root.current.updateMatrixWorld(true);
     }
     const gliding = breath > 0.25;
-    const phase = t * (gliding ? 1.8 : 5.2);
+    const phase = t * (gliding ? 1.7 : 4.8) + index;
     const wave = Math.sin(phase);
     const flap = wave < 0 ? wave * 1.15 : wave * 0.72;
-    const amp = gliding ? 0.14 : 0.42;
+    const amp = gliding ? 0.12 : 0.4;
     if (left.current) {
-      left.current.rotation.z = 0.62 + flap * amp;
-      left.current.rotation.x = -0.18 + flap * 0.08;
+      left.current.rotation.z = 0.58 + flap * amp;
+      left.current.rotation.x = -0.16;
     }
     if (right.current) {
-      right.current.rotation.z = -0.62 - flap * amp;
-      right.current.rotation.x = -0.18 + flap * 0.08;
+      right.current.rotation.z = -0.58 - flap * amp;
+      right.current.rotation.x = -0.16;
     }
-    const neck = Math.sin(t * 1.25) * 0.06;
+    const neck = Math.sin(t * 1.25 + index) * 0.05;
     if (jaw.current) {
-      jaw.current.rotation.x = -0.22 - breath * 0.85;
+      jaw.current.rotation.x = -0.2 - breath * 0.82;
       jaw.current.position.x = neck;
-      jaw.current.position.y = 0.66 + Math.sin(t * 1.6) * 0.04;
     }
     if (eyes.current) eyes.current.position.x = neck;
     if (flame.current && mouthAnchor.current) {
@@ -428,17 +419,17 @@ export function Dragon({ soldiers }: { soldiers: number }) {
       flame.current.visible = breath > 0.04;
       flame.current.position.copy(mouthPos);
       flame.current.quaternion.setFromUnitVectors(aimUp, aimDir);
-      const width = FIRE_R * 2.2;
+      const width = p.aimR * 2.15;
       flame.current.scale.set(width, dist, width);
     }
-    if (mouth.current) mouth.current.intensity = breath * 24;
+    if (mouth.current) mouth.current.intensity = breath * 18;
     if (ground.current) {
-      ground.current.intensity = breath * 28;
-      ground.current.position.set(p.aimX, 1.6, p.aimZ);
+      ground.current.intensity = breath * 22;
+      ground.current.position.set(p.aimX, 1.4, p.aimZ);
     }
     const mesh = embers.current;
     if (mesh) {
-      for (let i = 0; i < 64; i++) {
+      for (let i = 0; i < EMBER_N; i++) {
         const speed = 1.35 + (i % 7) * 0.16;
         const u = (t * speed + i * 0.137) % 1;
         if (breath < 0.04) emberDummy.scale.setScalar(0);
@@ -454,7 +445,7 @@ export function Dragon({ soldiers }: { soldiers: number }) {
         mesh.setMatrixAt(i, emberDummy.matrix);
       }
       if (!mesh.userData.painted) {
-        for (let i = 0; i < 64; i++) {
+        for (let i = 0; i < EMBER_N; i++) {
           const hot = 1 - (i % 10) / 10;
           mesh.setColorAt(i, new THREE.Color().setRGB(1, 0.45 + hot * 0.5, 0.15 * hot));
         }
@@ -465,7 +456,7 @@ export function Dragon({ soldiers }: { soldiers: number }) {
     }
     const sm = smoke.current;
     if (sm) {
-      for (let i = 0; i < 18; i++) {
+      for (let i = 0; i < 12; i++) {
         const u = (t * (0.55 + (i % 4) * 0.08) + i * 0.2) % 1;
         if (breath < 0.05) emberDummy.scale.setScalar(0);
         else {
@@ -482,10 +473,8 @@ export function Dragon({ soldiers }: { soldiers: number }) {
 
   return (
     <group>
-      <group ref={root} scale={1.92}>
-        {body && (
-          <mesh geometry={body} material={bodyMat} />
-        )}
+      <group ref={root} scale={scale}>
+        {body && <mesh geometry={body} material={bodyMat} />}
         <group ref={eyes}>
           <mesh position={[0.13, 1.02, 2.78]}>
             <sphereGeometry args={[0.055, 8, 6]} />
@@ -532,7 +521,7 @@ export function Dragon({ soldiers }: { soldiers: number }) {
         </group>
       </group>
       <group ref={flame}>
-          {[0, 0.55, -0.55, 1.15, -1.15].map((spin) => (
+        {[0, 0.55, -0.55, 1.15, -1.15].map((spin) => (
           <mesh key={spin} material={flameMat} position={[0, 0.5, 0]} rotation={[0, spin, 0]}>
             <planeGeometry args={[1, 1]} />
           </mesh>
@@ -540,22 +529,55 @@ export function Dragon({ soldiers }: { soldiers: number }) {
         <mesh material={flameMat} position={[0, 0.38, 0]} rotation={[0, 0.3, 0]}>
           <planeGeometry args={[0.34, 0.62]} />
         </mesh>
-        <mesh material={flameMat} position={[0, 0.9, 0]} rotation={[Math.PI / 2, 0, 0]}>
-          <circleGeometry args={[0.46, 18]} />
-        </mesh>
-        <instancedMesh ref={embers} args={[undefined, undefined, 64]}>
+        <instancedMesh ref={embers} args={[undefined, undefined, EMBER_N]}>
           <sphereGeometry args={[0.16, 5, 4]} />
           <meshBasicMaterial color="#ffb020" transparent opacity={0.9} depthWrite={false} blending={THREE.AdditiveBlending} />
         </instancedMesh>
-        <instancedMesh ref={smoke} args={[undefined, undefined, 18]}>
+        <instancedMesh ref={smoke} args={[undefined, undefined, 12]}>
           <sphereGeometry args={[0.45, 6, 5]} />
           <meshBasicMaterial color="#2a241e" transparent opacity={0.22} depthWrite={false} />
         </instancedMesh>
-        <pointLight ref={mouth} color="#ff8a32" intensity={0} distance={18} decay={2} />
+        <pointLight ref={mouth} color="#ff8a32" intensity={0} distance={16} decay={2} />
       </group>
-      <pointLight ref={ground} color="#ff5a12" intensity={0} distance={12} decay={2} />
-      {dragonBreaths().map((b, i) => (
-        <GroundFire key={i} ax={b.ax} az={b.az} t0={b.t0} dur={b.dur} armed={i < slots} />
+      <pointLight ref={ground} color="#ff5a12" intensity={0} distance={14} decay={2} />
+    </group>
+  );
+}
+
+export function Dragon({ soldiers }: { soldiers: number }) {
+  const n = Math.max(1, Math.floor(soldiers));
+  const body = useMemo(() => buildBody(), []);
+  const jawGeo = useMemo(() => buildJaw(), []);
+  const wings = useMemo(() => [wingGeo(1), wingGeo(-1)] as const, []);
+  const timeU = useRef<THREE.IUniform | null>(null);
+  const bodyMat = useMemo(() => {
+    const m = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.58, metalness: 0.14 });
+    m.onBeforeCompile = (shader) => {
+      shader.uniforms.uTime = { value: 0 };
+      timeU.current = shader.uniforms.uTime;
+      shader.vertexShader = shader.vertexShader.replace(
+        "#include <begin_vertex>",
+        `#include <begin_vertex>
+  float wag = sin(uTime * 2.1 + position.z * 0.55) * smoothstep(2.0, 10.0, position.z);
+  transformed.x += wag * 0.85;
+  float neck = sin(uTime * 1.4) * smoothstep(-1.0, -6.0, position.z);
+  transformed.y += neck * 0.18;`,
+      );
+    };
+    return m;
+  }, []);
+
+  useFrame(({ clock }) => {
+    if (timeU.current) timeU.current.value = Math.max(0, clock.elapsedTime - REEL_HOLD);
+  });
+
+  return (
+    <group>
+      {[0, 1, 2].map((i) => (
+        <Drake key={i} index={i} soldiers={n} body={body} jawGeo={jawGeo} wings={wings} bodyMat={bodyMat} />
+      ))}
+      {dragonBreaths(n).map((b, i) => (
+        <GroundFire key={i} ax={b.ax} az={b.az} t0={b.t0} dur={b.dur} armed radius={b.r} />
       ))}
     </group>
   );
