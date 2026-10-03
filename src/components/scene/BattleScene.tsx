@@ -348,8 +348,10 @@ function MixSplitCam({
 }) {
   const topCam = useMemo(() => new THREE.PerspectiveCamera(30, 1.125, 0.35, 2400), []);
   const botCam = useMemo(() => new THREE.PerspectiveCamera(34, 1.125, 0.35, 2400), []);
-  useFrame(({ gl, scene, size, clock }) => {
-    const aspect = size.width / Math.max(1, size.height * 0.5);
+  useFrame(({ gl, scene, clock }) => {
+    const w = gl.domElement.width;
+    const h = gl.domElement.height;
+    const aspect = w / Math.max(1, h * 0.5);
     const recT = Math.max(0, clock.elapsedTime - REEL_HOLD);
     const sampleT = recT;
     const form = armyFrame(soldiers, commanders);
@@ -366,9 +368,7 @@ function MixSplitCam({
     const upperCam = swap ? botCam : topCam;
     const lowerTags = swap ? "top" : "bottom";
     const upperTags = swap ? "bottom" : "top";
-    const w = size.width;
-    const h = size.height;
-    const gap = 3;
+    const gap = Math.max(4, Math.round(h * 0.006));
     const half = Math.floor(h / 2);
     const elapsed = clock.elapsedTime;
     const rec = Math.max(0, elapsed - REEL_HOLD);
@@ -390,6 +390,8 @@ function MixSplitCam({
     if (slow) mixBodyPass.apply(upperTags, elapsed, upperCam);
     mixTagPass.apply(upperTags, upperCam.position.x, upperCam);
     gl.render(scene, upperCam);
+    gl.setViewport(0, 0, w, h);
+    gl.setScissor(0, 0, w, h);
     gl.setScissorTest(false);
     gl.autoClear = true;
     gl.setClearColor("#7eb6ee", 1);
@@ -944,6 +946,7 @@ function LockReelBuffer({ dpr = 1 }: { dpr?: number }) {
     if (gl.domElement.width !== w || gl.domElement.height !== h) {
       gl.setPixelRatio(dpr);
       gl.setSize(REEL_WIDTH, REEL_HEIGHT, false);
+      set({ size: { width: REEL_WIDTH, height: REEL_HEIGHT, top: 0, left: 0 } });
     }
   });
   return null;
