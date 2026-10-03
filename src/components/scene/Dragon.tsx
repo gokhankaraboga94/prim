@@ -3,7 +3,7 @@ import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import { REEL_HOLD } from "../../recordCanvas";
-import { breathSlots, dragonAt, dragonBreathIndex, dragonBreaths } from "../../dragonReel";
+import { FIRE_R, breathSlots, dragonAt, dragonBreathIndex, dragonBreaths } from "../../dragonReel";
 
 const DORSAL = new THREE.Color("#3c4632");
 const BELLY = new THREE.Color("#c2a06a");
@@ -248,6 +248,7 @@ const flameFrag = `
   uniform float uTime;
   uniform float uStrength;
   uniform float uSeed;
+  uniform float uWideAt;
   float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
   float noise(vec2 p){
     vec2 i = floor(p);
@@ -261,19 +262,20 @@ const flameFrag = `
   }
   void main() {
     vec2 uv = vUv;
+    float along = mix(uv.y, 1.0 - uv.y, uWideAt);
     float t = uTime * 3.1 + uSeed;
-    float n = noise(vec2(uv.x * 3.5 + uSeed, uv.y * 2.4 - t));
-    float n2 = noise(vec2(uv.x * 8.0 - t * 0.4, uv.y * 7.0 - t * 1.8));
-    float n3 = noise(vec2(uv.x * 16.0, uv.y * 12.0 - t * 2.6));
+    float n = noise(vec2(uv.x * 3.5 + uSeed, along * 2.4 - t));
+    float n2 = noise(vec2(uv.x * 8.0 - t * 0.4, along * 7.0 - t * 1.8));
+    float n3 = noise(vec2(uv.x * 16.0, along * 12.0 - t * 2.6));
     float x = uv.x - 0.5;
-    float pinch = mix(0.46, 0.05, pow(uv.y, 0.85));
-    pinch += (n - 0.5) * 0.22 * (1.0 - uv.y * 0.65);
+    float pinch = mix(0.46, 0.07, pow(along, 0.8));
+    pinch += (n - 0.5) * 0.22 * (1.0 - along * 0.65);
     float edge = smoothstep(pinch, pinch * 0.28, abs(x));
-    float tongues = smoothstep(0.42, 0.92, n2) * (1.0 - uv.y);
-    float body = edge * smoothstep(0.0, 0.05, uv.y) * (1.0 - smoothstep(0.62, 0.98, uv.y + (n3 - 0.5) * 0.12));
+    float tongues = smoothstep(0.42, 0.92, n2) * (1.0 - along);
+    float body = edge * smoothstep(0.0, 0.05, along) * (1.0 - smoothstep(0.62, 0.98, along + (n3 - 0.5) * 0.12));
     body = max(body, tongues * edge * 0.65);
-    float core = smoothstep(pinch, 0.0, abs(x)) * (1.0 - smoothstep(0.0, 0.72, uv.y));
-    vec3 col = mix(vec3(1.0, 0.42, 0.05), vec3(0.55, 0.08, 0.015), smoothstep(0.15, 0.9, uv.y));
+    float core = smoothstep(pinch, 0.0, abs(x)) * (1.0 - smoothstep(0.0, 0.72, along));
+    vec3 col = mix(vec3(1.0, 0.42, 0.05), vec3(0.55, 0.08, 0.015), smoothstep(0.15, 0.9, along));
     col = mix(col, vec3(1.0, 0.93, 0.72), clamp(core * 1.35, 0.0, 1.0));
     col = mix(col, vec3(1.0, 0.72, 0.2), n * 0.35 * (1.0 - uv.y));
     float alpha = body * uStrength * (0.45 + 0.55 * n2);
@@ -282,7 +284,7 @@ const flameFrag = `
   }
 `;
 
-function makeFlameMaterial(seed: number) {
+function makeFlameMaterial(seed: number, wideAt = 0) {
   return new THREE.ShaderMaterial({
     transparent: true,
     depthWrite: false,
@@ -292,6 +294,7 @@ function makeFlameMaterial(seed: number) {
       uTime: { value: 0 },
       uStrength: { value: 0 },
       uSeed: { value: seed },
+      uWideAt: { value: wideAt },
     },
     vertexShader: flameVert,
     fragmentShader: flameFrag,
@@ -304,8 +307,8 @@ function GroundFire({ ax, az, t0, dur, armed }: { ax: number; az: number; t0: nu
   const tongues = useMemo(
     () =>
       Array.from({ length: 7 }, (_, i) => ({
-        x: Math.sin(i * 1.7) * (0.8 + (i % 3) * 0.55),
-        z: Math.cos(i * 1.3) * (0.7 + (i % 4) * 0.4),
+        x: Math.sin(i * 1.7) * (0.28 + (i % 3) * 0.22),
+        z: Math.cos(i * 1.3) * (0.24 + (i % 4) * 0.16),
         yaw: i * 0.9,
         h: 0.7 + (i % 3) * 0.45,
         w: 0.35 + (i % 2) * 0.2,
@@ -327,7 +330,7 @@ function GroundFire({ ax, az, t0, dur, armed }: { ax: number; az: number; t0: nu
   return (
     <group position={[ax, 0.05, az]}>
       <mesh rotation={[-Math.PI / 2, 0, 0]}>
-        <circleGeometry args={[6.4, 24]} />
+        <circleGeometry args={[FIRE_R, 22]} />
         <meshBasicMaterial ref={scorch} color="#120c08" transparent opacity={0} depthWrite={false} />
       </mesh>
       {tongues.map((tongue, i) => (
@@ -345,6 +348,7 @@ export function Dragon({ soldiers }: { soldiers: number }) {
   const right = useRef<THREE.Group>(null);
   const jaw = useRef<THREE.Group>(null);
   const eyes = useRef<THREE.Group>(null);
+  const mouthAnchor = useRef<THREE.Object3D>(null);
   const flame = useRef<THREE.Group>(null);
   const embers = useRef<THREE.InstancedMesh>(null);
   const smoke = useRef<THREE.InstancedMesh>(null);
@@ -355,7 +359,11 @@ export function Dragon({ soldiers }: { soldiers: number }) {
   const jawGeo = useMemo(() => buildJaw(), []);
   const wings = useMemo(() => [wingGeo(1), wingGeo(-1)] as const, []);
   const emberDummy = useMemo(() => new THREE.Object3D(), []);
-  const flameMat = useMemo(() => makeFlameMaterial(1.7), []);
+  const flameMat = useMemo(() => makeFlameMaterial(1.7, 1), []);
+  const mouthPos = useMemo(() => new THREE.Vector3(), []);
+  const aimPos = useMemo(() => new THREE.Vector3(), []);
+  const aimDir = useMemo(() => new THREE.Vector3(), []);
+  const aimUp = useMemo(() => new THREE.Vector3(0, 1, 0), []);
   const slots = breathSlots(Math.max(1, soldiers));
   const bodyMat = useMemo(() => {
     const m = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.58, metalness: 0.14 });
@@ -386,8 +394,9 @@ export function Dragon({ soldiers }: { soldiers: number }) {
     flameMat.uniforms.uTime.value = t;
     flameMat.uniforms.uStrength.value = breath;
     if (root.current) {
-      root.current.position.set(p.x, p.y + Math.sin(t * 2.1) * 0.22, p.z);
-      root.current.rotation.set(p.pitch, p.yaw, p.roll + Math.sin(t * 1.4) * 0.04);
+      root.current.position.set(p.x, p.y + Math.sin(t * 2.1) * 0.22 * (1 - breath), p.z);
+      root.current.rotation.set(p.pitch, p.yaw, p.roll + Math.sin(t * 1.4) * 0.04 * (1 - breath));
+      root.current.updateMatrixWorld(true);
     }
     const gliding = breath > 0.25;
     const phase = t * (gliding ? 1.8 : 5.2);
@@ -409,12 +418,17 @@ export function Dragon({ soldiers }: { soldiers: number }) {
       jaw.current.position.y = 0.66 + Math.sin(t * 1.6) * 0.04;
     }
     if (eyes.current) eyes.current.position.x = neck;
-    if (flame.current) {
-      const flick = 0.92 + Math.sin(t * 23) * 0.06 + Math.sin(t * 11) * 0.05;
-      const s = breath * flick;
+    if (flame.current && mouthAnchor.current) {
+      mouthAnchor.current.getWorldPosition(mouthPos);
+      aimPos.set(p.aimX, 0.15, p.aimZ);
+      aimDir.copy(aimPos).sub(mouthPos);
+      const dist = Math.max(0.5, aimDir.length());
+      aimDir.multiplyScalar(1 / dist);
       flame.current.visible = breath > 0.04;
-      flame.current.scale.set(0.45 + s * 0.85, 0.45 + s * 0.85, 0.35 + s);
-      flame.current.position.x = neck;
+      flame.current.position.copy(mouthPos);
+      flame.current.quaternion.setFromUnitVectors(aimUp, aimDir);
+      const width = FIRE_R * 2.2;
+      flame.current.scale.set(width, dist, width);
     }
     if (mouth.current) mouth.current.intensity = breath * 24;
     if (ground.current) {
@@ -428,12 +442,12 @@ export function Dragon({ soldiers }: { soldiers: number }) {
         const u = (t * speed + i * 0.137) % 1;
         if (breath < 0.04) emberDummy.scale.setScalar(0);
         else {
-          const spread = (((i * 17) % 11) - 5) * (0.04 + u * 0.16);
-          const lift = Math.sin(t * 9 + i) * 0.12 * u - u * 0.85;
-          emberDummy.position.set(spread, lift, 0.15 + u * 6.6);
-          emberDummy.rotation.set(0, 0, u * 3);
-          const w = (1 - u) * (0.12 + (i % 5) * 0.035) * (0.4 + breath);
-          emberDummy.scale.set(w * 0.65, w * 0.65, w * (2.4 + u * 4));
+          const spread = (((i * 17) % 11) - 5) * (0.012 + u * 0.05);
+          const side = Math.sin(t * 9 + i) * 0.03 * u;
+          emberDummy.position.set(spread, 0.04 + u * 0.92, side);
+          emberDummy.rotation.set(u * 2, 0, 0);
+          const w = (1 - u * 0.35) * (0.05 + (i % 5) * 0.012) * (0.35 + breath);
+          emberDummy.scale.set(w, w * 0.12, w);
         }
         emberDummy.updateMatrix();
         mesh.setMatrixAt(i, emberDummy.matrix);
@@ -454,9 +468,9 @@ export function Dragon({ soldiers }: { soldiers: number }) {
         const u = (t * (0.55 + (i % 4) * 0.08) + i * 0.2) % 1;
         if (breath < 0.05) emberDummy.scale.setScalar(0);
         else {
-          emberDummy.position.set((((i * 5) % 7) - 3) * 0.22 * u, 0.2 + u * 1.4, 1.2 + u * 4.2);
-          const w = u * (0.35 + breath * 0.8) * (1 - u * 0.3);
-          emberDummy.scale.setScalar(Math.max(0, w));
+          emberDummy.position.set((((i * 5) % 7) - 3) * 0.08 * u, 0.15 + u * 0.8, (((i * 3) % 5) - 2) * 0.05);
+          const w = u * (0.12 + breath * 0.16) * (1 - u * 0.25);
+          emberDummy.scale.set(Math.max(0, w), Math.max(0, w * 0.15), Math.max(0, w));
         }
         emberDummy.updateMatrix();
         sm.setMatrixAt(i, emberDummy.matrix);
@@ -489,6 +503,7 @@ export function Dragon({ soldiers }: { soldiers: number }) {
             <meshBasicMaterial color="#140c08" />
           </mesh>
         </group>
+        <object3D ref={mouthAnchor} position={[0, 0.74, 3.5]} />
         <group ref={jaw} position={[0, 0.66, 2.62]}>
           {jawGeo && (
             <mesh geometry={jawGeo}>
@@ -514,27 +529,27 @@ export function Dragon({ soldiers }: { soldiers: number }) {
             </mesh>
           )}
         </group>
-        <group ref={flame} position={[0, 0.7, 3.15]} rotation={[-0.35, 0, 0]}>
-          {[0, Math.PI / 3, -Math.PI / 3].map((spin) => (
-            <mesh key={spin} material={flameMat} position={[0, 0, 3.5]} rotation={[-Math.PI / 2, 0, spin]}>
-              <planeGeometry args={[2.1, 7]} />
-            </mesh>
-          ))}
-          <mesh material={flameMat} position={[0, 0, 2.2]} rotation={[-Math.PI / 2, 0, 0.4]}>
-            <planeGeometry args={[0.7, 4.2]} />
-          </mesh>
-          <instancedMesh ref={embers} args={[undefined, undefined, 64]}>
-            <sphereGeometry args={[0.16, 5, 4]} />
-            <meshBasicMaterial color="#ffb020" transparent opacity={0.9} depthWrite={false} blending={THREE.AdditiveBlending} />
-          </instancedMesh>
-          <instancedMesh ref={smoke} args={[undefined, undefined, 18]}>
-            <sphereGeometry args={[0.45, 6, 5]} />
-            <meshBasicMaterial color="#2a241e" transparent opacity={0.22} depthWrite={false} />
-          </instancedMesh>
-          <pointLight ref={mouth} color="#ff8a32" intensity={0} distance={18} decay={2} />
-        </group>
       </group>
-      <pointLight ref={ground} color="#ff5a12" intensity={0} distance={18} decay={2} />
+      <group ref={flame}>
+        {[0, Math.PI / 3, -Math.PI / 3].map((spin) => (
+          <mesh key={spin} material={flameMat} position={[0, 0.5, 0]} rotation={[0, spin, 0]}>
+            <planeGeometry args={[1, 1]} />
+          </mesh>
+        ))}
+        <mesh material={flameMat} position={[0, 0.42, 0]} rotation={[0, 0.4, 0]}>
+          <planeGeometry args={[0.42, 0.7]} />
+        </mesh>
+        <instancedMesh ref={embers} args={[undefined, undefined, 64]}>
+          <sphereGeometry args={[0.16, 5, 4]} />
+          <meshBasicMaterial color="#ffb020" transparent opacity={0.9} depthWrite={false} blending={THREE.AdditiveBlending} />
+        </instancedMesh>
+        <instancedMesh ref={smoke} args={[undefined, undefined, 18]}>
+          <sphereGeometry args={[0.45, 6, 5]} />
+          <meshBasicMaterial color="#2a241e" transparent opacity={0.22} depthWrite={false} />
+        </instancedMesh>
+        <pointLight ref={mouth} color="#ff8a32" intensity={0} distance={18} decay={2} />
+      </group>
+      <pointLight ref={ground} color="#ff5a12" intensity={0} distance={12} decay={2} />
       {dragonBreaths().map((b, i) => (
         <GroundFire key={i} ax={b.ax} az={b.az} t0={b.t0} dur={b.dur} armed={i < slots} />
       ))}
