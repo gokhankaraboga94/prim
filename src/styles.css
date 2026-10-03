@@ -890,7 +890,7 @@ select:focus {
 }
 
 .reel-capture-hud,
-.reel-capture-done {
+.reel-capture-actions {
   position: absolute;
   left: 0;
   right: 0;
@@ -903,6 +903,15 @@ select:focus {
   text-align: center;
 }
 
+.reel-capture-done {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  background: #000;
+}
+
 .reel-capture-hud p,
 .reel-capture-done p {
   margin: 0;
@@ -911,11 +920,9 @@ select:focus {
 }
 
 .reel-capture-done video {
-  width: min(270px, 38vw);
-  aspect-ratio: 9 / 16;
-  height: auto;
-  object-fit: contain;
-  border-radius: 12px;
+  width: min(100vw, calc(100vh * 9 / 16));
+  height: min(100vh, calc(100vw * 16 / 9));
+  object-fit: cover;
   background: #000;
 }
 

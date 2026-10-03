@@ -198,13 +198,15 @@ export function ReelCapture({ soldiers, names, commanders = [], level, pressure,
       {phase === "done" && (
         <div className="reel-capture-done">
           {preview && <video src={preview} playsInline controls />}
-          <p>Kayıt hazır. iPhone’da Kaydet ile Fotoğraflar’a at.</p>
-          <button type="button" className="btn-gold" onClick={() => void onSave()} disabled={busy}>
-            Kaydet / Paylaş
-          </button>
-          <button type="button" className="btn-ghost" onClick={onClose}>
-            Kapat
-          </button>
+          <div className="reel-capture-actions">
+            <p>Kayıt hazır. iPhone’da Kaydet ile Fotoğraflar’a at.</p>
+            <button type="button" className="btn-gold" onClick={() => void onSave()} disabled={busy}>
+              Kaydet / Paylaş
+            </button>
+            <button type="button" className="btn-ghost" onClick={onClose}>
+              Kapat
+            </button>
+          </div>
         </div>
       )}
 

@@ -57,7 +57,21 @@ export function wait(ms: number) {
 export async function recordCanvas(canvas: HTMLCanvasElement, seconds: number, audio?: MediaStream | null, bitsPerSecond = 8_000_000, steady = false) {
   const mime = pickMime(Boolean(audio));
   if (!mime) throw new Error("Bu tarayıcı video kaydını desteklemiyor. Safari veya Chrome dene.");
-  const video = canvas.captureStream(steady ? 20 : 30);
+  const reel = document.createElement("canvas");
+  reel.width = REEL_WIDTH;
+  reel.height = REEL_HEIGHT;
+  const flat = reel.getContext("2d", { alpha: false });
+  if (!flat) throw new Error("Bu tarayıcı video kaydını desteklemiyor. Safari veya Chrome dene.");
+  let copying = true;
+  const copyFrame = () => {
+    if (!copying) return;
+    const sw = canvas.width;
+    const sh = canvas.height;
+    if (sw > 0 && sh > 0) flat.drawImage(canvas, 0, 0, sw, sh, 0, 0, REEL_WIDTH, REEL_HEIGHT);
+    requestAnimationFrame(copyFrame);
+  };
+  copyFrame();
+  const video = reel.captureStream(steady ? 20 : 30);
   const tracks: MediaStreamTrack[] = [...video.getVideoTracks()];
   if (audio) {
     for (const track of audio.getAudioTracks()) tracks.push(track.clone());
@@ -83,20 +97,24 @@ export async function recordCanvas(canvas: HTMLCanvasElement, seconds: number, a
     };
   });
   rec.start(steady ? 1000 : 250);
-  await wait(Math.max(1000, seconds * 1000));
-  if (rec.state === "recording") {
-    try {
-      rec.requestData();
-    } catch {
-      /* some browsers only flush on stop */
+  try {
+    await wait(Math.max(1000, seconds * 1000));
+    if (rec.state === "recording") {
+      try {
+        rec.requestData();
+      } catch {
+        /* some browsers only flush on stop */
+      }
+      rec.stop();
     }
-    rec.stop();
+    const blob = await done;
+    if (!blob.size) throw new Error("Kayıt boş geldi. Sayfayı yenileyip tekrar dene.");
+    return blob;
+  } finally {
+    copying = false;
+    stream.getTracks().forEach((track) => track.stop());
+    video.getTracks().forEach((track) => track.stop());
   }
-  const blob = await done;
-  stream.getTracks().forEach((track) => track.stop());
-  video.getTracks().forEach((track) => track.stop());
-  if (!blob.size) throw new Error("Kayıt boş geldi. Sayfayı yenileyip tekrar dene.");
-  return blob;
 }
 
 export async function saveReelBlob(blob: Blob, seconds: number) {
