@@ -34,6 +34,7 @@ import { NEW1_ID, NEW1_MODE, NEW1_SECONDS, NEW2_ID, NEW2_MODE, NEW2_SECONDS, NEW
 import { LAB_ID, LAB_MODE, LAB_SECONDS, isLab, type LabId } from "../mazeReel";
 import { DEV2_ID, DEV2_MODE, DEV2_SECONDS, DEV3_ID, DEV3_MODE, DEV3_SECONDS, DEV4_ID, DEV4_MODE, DEV4_SECONDS, DEV5_ID, DEV5_MODE, DEV5_SECONDS, DEV_ID, DEV_MODE, DEV_SECONDS, DEVS_ID, DEVS_MODE, DEVS_SECONDS, SNAKE_ID, SNAKE_MODE, SNAKE_SECONDS, isDev, isDev2, isDev3, isDev4, isDev5, isDevs, isGiantShot, isSnake, type Dev2Id, type Dev3Id, type Dev4Id, type Dev5Id, type DevId, type DevsId, type SnakeId } from "../devReel";
 import { FILM_ID, FILM_MODE, FILM_SECONDS, isFilm, type FilmId } from "../filmReel";
+import { DRAGON_ID, DRAGON_MODE, DRAGON_SECONDS, isDragon, type DragonId } from "../dragonReel";
 import { unlockReelSfx } from "../reelSfx";
 
 function skippedNote(skipped: string[]): string {
@@ -56,7 +57,7 @@ export function AdminPage() {
   const [reelSeconds, setReelSeconds] = useState<number>(7);
   const [reelText, setReelText] = useState(true);
   const [reelSkipCmd, setReelSkipCmd] = useState(false);
-  const [reelShot, setReelShot] = useState<ReelShot | PlanBId | SagaId | DiscoverId | MixId | CountdownId | DefendId | VsId | New1Id | New2Id | New3Id | New4Id | New5Id | New6Id | New62Id | New7Id | LabId | DevId | Dev2Id | Dev3Id | Dev4Id | Dev5Id | SnakeId | DevsId | FilmId | XxxId | null>(null);
+  const [reelShot, setReelShot] = useState<ReelShot | PlanBId | SagaId | DiscoverId | MixId | CountdownId | DefendId | VsId | New1Id | New2Id | New3Id | New4Id | New5Id | New6Id | New62Id | New7Id | LabId | DevId | Dev2Id | Dev3Id | Dev4Id | Dev5Id | SnakeId | DevsId | FilmId | DragonId | XxxId | null>(null);
   const [reelDay, setReelDay] = useState("1");
   const [capturing, setCapturing] = useState(false);
   const [editIndex, setEditIndex] = useState<number | null>(null);
@@ -557,6 +558,8 @@ export function AdminPage() {
                     ? [RAF2_SECONDS]
                   : isCountdown(reelShot)
                     ? [COUNTDOWN_SECONDS]
+                  : isDragon(reelShot)
+                    ? [DRAGON_SECONDS]
                   : isFilm(reelShot)
                     ? [FILM_SECONDS]
                   : isGiantShot(reelShot)
@@ -829,6 +832,18 @@ export function AdminPage() {
             </button>
             <button
               type="button"
+              className={reelShot === DRAGON_ID ? "on" : ""}
+              onClick={() => {
+                setReelShot((cur) => (cur === DRAGON_ID ? null : DRAGON_ID));
+                setReelSeconds(DRAGON_SECONDS);
+                setReelText(false);
+                setReelSkipCmd(true);
+              }}
+            >
+              {DRAGON_MODE.label} — {DRAGON_SECONDS}s
+            </button>
+            <button
+              type="button"
               className={reelShot === FILM_ID ? "on" : ""}
               onClick={() => {
                 setReelShot((cur) => (cur === FILM_ID ? null : FILM_ID));
@@ -860,6 +875,9 @@ export function AdminPage() {
           )}
           {isDevs(reelShot) && (
             <p className="muted">Yılan ile aynı kadro ve saldırı. Kamera biraz daha geniş, alttaki askerler de kadrajda, isimler net. Ortada yılan yok. Askerden 3 kat büyük, gri zırhlı 10 dev. Daha dağınık durur, gezer. Bekleyenler en yakındaki deve ok atar, saldırınca da en yakındakine gider. Kılıç değdiği an ölürler; asker yere düşer, kanlı kalır, sonra kaybolur. Devler ölmez.</p>
+          )}
+          {isDragon(reelShot) && (
+            <p className="muted">Boş arazide askerler bekler. Gökten ejder iner, her ateşte onlarca asker yanar. Kadronun yaklaşık %80'i ölür, kalanlar ayakta kalır.</p>
           )}
           {isFilm(reelShot) && (
             <p className="muted">18 takipçi yerde dağınık, adları üstte. Başlarında 100 düşman bekler. 3. saniyede 150 asker hilal gibi, her biri ayrı yerden gelir. Ölüler yerde kalır.</p>
@@ -1357,8 +1375,8 @@ export function AdminPage() {
           maxHp={maxHp}
           seconds={captureSec}
           showTitles={reelText}
-          skipCommander={reelSkipCmd || isDiscover(reelShot) || isCountdown(reelShot) || isDefend(reelShot) || isVsMode(reelShot) || isNewField(reelShot) || isLab(reelShot) || isGiantShot(reelShot) || isFilm(reelShot) || (isXxx(reelShot) && xxxHideCmd(reelShot))}
-          shotMode={reelShot === CINEMA_ID || isPlanB(reelShot) || isSaga(reelShot) || isDiscover(reelShot) || isCountdown(reelShot) || isDefend(reelShot) || isVsMode(reelShot) || isNewField(reelShot) || isLab(reelShot) || isGiantShot(reelShot) || isFilm(reelShot) || isMix(reelShot) || isXxx(reelShot) ? null : reelShot}
+          skipCommander={reelSkipCmd || isDiscover(reelShot) || isCountdown(reelShot) || isDefend(reelShot) || isVsMode(reelShot) || isNewField(reelShot) || isLab(reelShot) || isGiantShot(reelShot) || isFilm(reelShot) || isDragon(reelShot) || (isXxx(reelShot) && xxxHideCmd(reelShot))}
+          shotMode={reelShot === CINEMA_ID || isPlanB(reelShot) || isSaga(reelShot) || isDiscover(reelShot) || isCountdown(reelShot) || isDefend(reelShot) || isVsMode(reelShot) || isNewField(reelShot) || isLab(reelShot) || isGiantShot(reelShot) || isFilm(reelShot) || isDragon(reelShot) || isMix(reelShot) || isXxx(reelShot) ? null : reelShot}
           cinema={reelShot === CINEMA_ID}
           roster={isPlanB(reelShot) ? reelShot : null}
           saga={isSaga(reelShot) ? reelShot : null}
@@ -1376,6 +1394,7 @@ export function AdminPage() {
           new7={isNew7(reelShot) ? reelShot : null}
           maze={isLab(reelShot) ? reelShot : null}
           film={isFilm(reelShot) ? reelShot : null}
+          dragon={isDragon(reelShot) ? reelShot : null}
           giant={isGiantShot(reelShot) ? reelShot : null}
           mix={isMix(reelShot) ? reelShot : null}
           xxx={isXxx(reelShot) ? reelShot : null}

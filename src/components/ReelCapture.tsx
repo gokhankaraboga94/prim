@@ -15,6 +15,7 @@ import type { VsId } from "../vsReel";
 import { type New1Id, type New2Id, type New3Id, type New4Id, type New5Id, type New6Id, type New62Id, type New7Id } from "../new1Reel";
 import type { LabId } from "../mazeReel";
 import type { FilmId } from "../filmReel";
+import type { DragonId } from "../dragonReel";
 import type { GiantId } from "../devReel";
 
 type ReelCaptureProps = {
@@ -48,6 +49,7 @@ type ReelCaptureProps = {
   new7?: New7Id | null;
   maze?: LabId | null;
   film?: FilmId | null;
+  dragon?: DragonId | null;
   giant?: GiantId | null;
   mix?: MixId | null;
   xxx?: XxxId | null;
@@ -56,7 +58,7 @@ type ReelCaptureProps = {
   onClose: () => void;
 };
 
-export function ReelCapture({ soldiers, names, commanders = [], level, pressure, hp, maxHp, seconds, showTitles = true, warLook = false, day = 0, skipCommander = false, shotMode = null, cinema = false, roster = null, saga = null, discover = null, countdown = null, defend = null, vs = null, new1 = null, new2 = null, new3 = null, new4 = null, new5 = null, new6 = null, new62 = null, new7 = null, maze = null, film = null, giant = null, mix = null, xxx = null, rosterIds = null, onRecorded, onClose }: ReelCaptureProps) {
+export function ReelCapture({ soldiers, names, commanders = [], level, pressure, hp, maxHp, seconds, showTitles = true, warLook = false, day = 0, skipCommander = false, shotMode = null, cinema = false, roster = null, saga = null, discover = null, countdown = null, defend = null, vs = null, new1 = null, new2 = null, new3 = null, new4 = null, new5 = null, new6 = null, new62 = null, new7 = null, maze = null, film = null, dragon = null, giant = null, mix = null, xxx = null, rosterIds = null, onRecorded, onClose }: ReelCaptureProps) {
   const clip = roster && isJoin(roster) && rosterIds?.length ? rosterDuration(roster, rosterIds.length) : seconds;
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [phase, setPhase] = useState<"boot" | "rec" | "done" | "err">("boot");
@@ -169,10 +171,11 @@ export function ReelCapture({ soldiers, names, commanders = [], level, pressure,
             new7={new7}
             maze={maze}
             film={film}
+            dragon={dragon}
             giant={giant}
             mix={mix}
             xxx={xxx}
-            showTitles={showTitles && !mix && !xxx && !new1 && !new2 && !new3 && !new4 && !new5 && !new6 && !new62 && !new7 && !maze && !film && !giant}
+            showTitles={showTitles && !mix && !xxx && !new1 && !new2 && !new3 && !new4 && !new5 && !new6 && !new62 && !new7 && !maze && !film && !dragon && !giant}
             rosterIds={rosterIds}
             onReady={(canvas) => {
               canvasRef.current = canvas;
