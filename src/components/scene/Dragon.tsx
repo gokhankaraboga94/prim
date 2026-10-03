@@ -555,13 +555,18 @@ export function Dragon({ soldiers }: { soldiers: number }) {
     m.onBeforeCompile = (shader) => {
       shader.uniforms.uTime = { value: 0 };
       timeU.current = shader.uniforms.uTime;
+      if (!shader.vertexShader.includes("uniform float uTime")) {
+        shader.vertexShader = `uniform float uTime;\n${shader.vertexShader}`;
+      }
       shader.vertexShader = shader.vertexShader.replace(
         "#include <begin_vertex>",
         `#include <begin_vertex>
-  float wag = sin(uTime * 2.1 + position.z * 0.55) * smoothstep(2.0, 10.0, position.z);
-  transformed.x += wag * 0.85;
-  float neck = sin(uTime * 1.4) * smoothstep(-1.0, -6.0, position.z);
-  transformed.y += neck * 0.18;`,
+  float tailW = smoothstep(-1.2, -5.1, transformed.z);
+  float neckW = smoothstep(1.8, 3.4, transformed.z);
+  transformed.x += sin(uTime * 2.5 + transformed.z * 1.2) * tailW * 0.62;
+  transformed.y += cos(uTime * 1.9 + transformed.z * 0.7) * tailW * 0.18;
+  transformed.x += sin(uTime * 1.25) * neckW * 0.07;
+  transformed.y += sin(uTime * 1.6 + 0.4) * neckW * 0.05;`,
       );
     };
     return m;
