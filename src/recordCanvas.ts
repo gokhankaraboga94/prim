@@ -54,37 +54,47 @@ export function wait(ms: number) {
   return new Promise((resolve) => window.setTimeout(resolve, ms));
 }
 
-export async function recordCanvas(canvas: HTMLCanvasElement, seconds: number, audio?: MediaStream | null, bitsPerSecond = 8_000_000) {
+export async function recordCanvas(canvas: HTMLCanvasElement, seconds: number, audio?: MediaStream | null, bitsPerSecond = 8_000_000, steady = false) {
   const mime = pickMime(Boolean(audio));
   if (!mime) throw new Error("Bu tarayıcı video kaydını desteklemiyor. Safari veya Chrome dene.");
-  const video = canvas.captureStream(30);
+  const video = canvas.captureStream(steady ? 20 : 30);
   const tracks: MediaStreamTrack[] = [...video.getVideoTracks()];
   if (audio) {
     for (const track of audio.getAudioTracks()) tracks.push(track.clone());
   }
   const stream = new MediaStream(tracks);
-  const opts: MediaRecorderOptions = { mimeType: mime, videoBitsPerSecond: bitsPerSecond };
-  if (audio) opts.audioBitsPerSecond = 192_000;
+  const rate = steady ? Math.min(bitsPerSecond, 2_500_000) : bitsPerSecond;
+  const opts: MediaRecorderOptions = { mimeType: mime, videoBitsPerSecond: rate };
+  if (audio) opts.audioBitsPerSecond = 128_000;
   let rec: MediaRecorder;
   try {
     rec = new MediaRecorder(stream, opts);
   } catch {
-    rec = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: bitsPerSecond });
+    rec = new MediaRecorder(stream);
   }
   const chunks: BlobPart[] = [];
   rec.ondataavailable = (e) => {
-    if (e.data.size) chunks.push(e.data);
+    if (e.data && e.data.size) chunks.push(e.data);
   };
   const done = new Promise<Blob>((resolve, reject) => {
     rec.onerror = () => reject(new Error("Kayıt hata verdi."));
-    rec.onstop = () => resolve(new Blob(chunks, { type: rec.mimeType || mime }));
+    rec.onstop = () => {
+      window.setTimeout(() => resolve(new Blob(chunks, { type: rec.mimeType || mime })), 60);
+    };
   });
-  rec.start(250);
+  rec.start(steady ? 1000 : 250);
   await wait(Math.max(1000, seconds * 1000));
-  if (rec.state !== "inactive") rec.stop();
+  if (rec.state === "recording") {
+    try {
+      rec.requestData();
+    } catch {
+      /* some browsers only flush on stop */
+    }
+    rec.stop();
+  }
+  const blob = await done;
   stream.getTracks().forEach((track) => track.stop());
   video.getTracks().forEach((track) => track.stop());
-  const blob = await done;
   if (!blob.size) throw new Error("Kayıt boş geldi. Sayfayı yenileyip tekrar dene.");
   return blob;
 }

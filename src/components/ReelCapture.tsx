@@ -8,7 +8,7 @@ import type { ShotId } from "../shotModes";
 import { isJoin, rosterDuration, type PlanBId } from "../rosterReel";
 import type { SagaId } from "../sagaReel";
 import type { DiscoverId } from "../discoverReel";
-import type { MixId } from "../mixReel";
+import { isMix9, type MixId } from "../mixReel";
 import type { CountdownId } from "../countdownReel";
 import type { DefendId } from "../defendReel";
 import type { VsId } from "../vsReel";
@@ -85,8 +85,9 @@ export function ReelCapture({ soldiers, names, commanders = [], level, pressure,
       try {
         await Promise.race([unlockReelSfx(), wait(1200)]);
         if (stop) return;
-        const bits = xxx && xxxHiRes(xxx) ? 24_000_000 : 8_000_000;
-        const recorded = await recordCanvas(canvas, clip, reelSfxStream(), bits);
+        const heavy = isMix9(mix);
+        const bits = heavy ? 2_500_000 : xxx && xxxHiRes(xxx) ? 24_000_000 : 8_000_000;
+        const recorded = await recordCanvas(canvas, clip, reelSfxStream(), bits, heavy);
         if (stop) return;
         setBlob(recorded);
         setPreview(URL.createObjectURL(recorded));
