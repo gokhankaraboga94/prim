@@ -263,23 +263,24 @@ const flameFrag = `
   void main() {
     vec2 uv = vUv;
     float along = mix(uv.y, 1.0 - uv.y, uWideAt);
-    float t = uTime * 3.1 + uSeed;
-    float n = noise(vec2(uv.x * 3.5 + uSeed, along * 2.4 - t));
-    float n2 = noise(vec2(uv.x * 8.0 - t * 0.4, along * 7.0 - t * 1.8));
-    float n3 = noise(vec2(uv.x * 16.0, along * 12.0 - t * 2.6));
-    float x = uv.x - 0.5;
-    float pinch = mix(0.46, 0.07, pow(along, 0.8));
-    pinch += (n - 0.5) * 0.22 * (1.0 - along * 0.65);
-    float edge = smoothstep(pinch, pinch * 0.28, abs(x));
-    float tongues = smoothstep(0.42, 0.92, n2) * (1.0 - along);
-    float body = edge * smoothstep(0.0, 0.05, along) * (1.0 - smoothstep(0.62, 0.98, along + (n3 - 0.5) * 0.12));
-    body = max(body, tongues * edge * 0.65);
-    float core = smoothstep(pinch, 0.0, abs(x)) * (1.0 - smoothstep(0.0, 0.72, along));
-    vec3 col = mix(vec3(1.0, 0.42, 0.05), vec3(0.55, 0.08, 0.015), smoothstep(0.15, 0.9, along));
-    col = mix(col, vec3(1.0, 0.93, 0.72), clamp(core * 1.35, 0.0, 1.0));
-    col = mix(col, vec3(1.0, 0.72, 0.2), n * 0.35 * (1.0 - uv.y));
-    float alpha = body * uStrength * (0.45 + 0.55 * n2);
-    if (alpha < 0.015) discard;
+    float heat = along;
+    float t = uTime * 3.4 + uSeed;
+    float n = noise(vec2(uv.x * 4.0 + uSeed, heat * 3.2 - t));
+    float n2 = noise(vec2(uv.x * 9.0 - t * 0.35, heat * 8.0 - t * 2.1));
+    float n3 = noise(vec2(uv.x * 18.0 + t, heat * 14.0 - t * 3.2));
+    float x = uv.x - 0.5 + (n - 0.5) * 0.08 * (1.0 - heat);
+    float pinch = mix(0.5, 0.045, pow(heat, 0.55));
+    pinch *= 0.72 + n2 * 0.55;
+    float edge = smoothstep(pinch, pinch * 0.22, abs(x));
+    float tongue = smoothstep(0.55, 0.95, n3);
+    float body = edge * (0.55 + 0.45 * tongue);
+    body *= 1.0 - smoothstep(0.82, 1.0, heat) * 0.25;
+    float core = smoothstep(pinch * 0.45, 0.0, abs(x)) * smoothstep(0.05, 0.85, heat);
+    vec3 col = mix(vec3(0.55, 0.08, 0.015), vec3(1.0, 0.45, 0.05), smoothstep(0.0, 0.55, heat));
+    col = mix(col, vec3(1.0, 0.96, 0.82), core * smoothstep(0.4, 1.0, heat));
+    col = mix(col, vec3(0.35, 0.06, 0.02), (1.0 - heat) * (1.0 - edge) * 0.65);
+    float alpha = body * uStrength * (0.55 + 0.45 * n2);
+    if (alpha < 0.02) discard;
     gl_FragColor = vec4(col, alpha);
   }
 `;
@@ -442,9 +443,9 @@ export function Dragon({ soldiers }: { soldiers: number }) {
         const u = (t * speed + i * 0.137) % 1;
         if (breath < 0.04) emberDummy.scale.setScalar(0);
         else {
-          const spread = (((i * 17) % 11) - 5) * (0.012 + u * 0.05);
-          const side = Math.sin(t * 9 + i) * 0.03 * u;
-          emberDummy.position.set(spread, 0.04 + u * 0.92, side);
+          const spread = (((i * 17) % 11) - 5) * (0.008 + u * u * 0.07);
+          const side = Math.sin(t * 11 + i * 1.3) * (0.01 + u * 0.045);
+          emberDummy.position.set(spread, 0.03 + u * 0.94, side);
           emberDummy.rotation.set(u * 2, 0, 0);
           const w = (1 - u * 0.35) * (0.05 + (i % 5) * 0.012) * (0.35 + breath);
           emberDummy.scale.set(w, w * 0.12, w);
@@ -531,13 +532,16 @@ export function Dragon({ soldiers }: { soldiers: number }) {
         </group>
       </group>
       <group ref={flame}>
-        {[0, Math.PI / 3, -Math.PI / 3].map((spin) => (
+          {[0, 0.55, -0.55, 1.15, -1.15].map((spin) => (
           <mesh key={spin} material={flameMat} position={[0, 0.5, 0]} rotation={[0, spin, 0]}>
             <planeGeometry args={[1, 1]} />
           </mesh>
         ))}
-        <mesh material={flameMat} position={[0, 0.42, 0]} rotation={[0, 0.4, 0]}>
-          <planeGeometry args={[0.42, 0.7]} />
+        <mesh material={flameMat} position={[0, 0.38, 0]} rotation={[0, 0.3, 0]}>
+          <planeGeometry args={[0.34, 0.62]} />
+        </mesh>
+        <mesh material={flameMat} position={[0, 0.9, 0]} rotation={[Math.PI / 2, 0, 0]}>
+          <circleGeometry args={[0.46, 18]} />
         </mesh>
         <instancedMesh ref={embers} args={[undefined, undefined, 64]}>
           <sphereGeometry args={[0.16, 5, 4]} />

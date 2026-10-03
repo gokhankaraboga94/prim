@@ -877,7 +877,7 @@ export function AdminPage() {
             <p className="muted">Yılan ile aynı kadro ve saldırı. Kamera biraz daha geniş, alttaki askerler de kadrajda, isimler net. Ortada yılan yok. Askerden 3 kat büyük, gri zırhlı 10 dev. Daha dağınık durur, gezer. Bekleyenler en yakındaki deve ok atar, saldırınca da en yakındakine gider. Kılıç değdiği an ölürler; asker yere düşer, kanlı kalır, sonra kaybolur. Devler ölmez.</p>
           )}
           {isDragon(reelShot) && (
-            <p className="muted">Askerler boş arazide dağınık ve asimetrik durur. Ejder her ateşi bir grubun üstüne kilitler. Sadece alevin değdiği askerler ölür.</p>
+            <p className="muted">Askerler boş arazide düzenli ama asimetrik durur. Ejder yüksekten alev indirir. Sadece alevin değdiği askerler ölür.</p>
           )}
           {isFilm(reelShot) && (
             <p className="muted">18 takipçi yerde dağınık, adları üstte. Başlarında 100 düşman bekler. 3. saniyede 150 asker hilal gibi, her biri ayrı yerden gelir. Ölüler yerde kalır.</p>

@@ -13,25 +13,44 @@ export const DRAGON_SECONDS = 36;
 
 export const FIRE_R = 1.5;
 
-type Clump = { x: number; z: number; spread: number; ex: number; ez: number; rot: number; w: number };
-
-const CLUMPS: Clump[] = [
-  { x: -9.2, z: 2.2, spread: 4.2, ex: 0.9, ez: 1.15, rot: 0.6, w: 0.22 },
-  { x: 8.1, z: 1.4, spread: 3.8, ex: 1.15, ez: 0.8, rot: -0.7, w: 0.18 },
-  { x: -1.2, z: 8.4, spread: 2.8, ex: 0.85, ez: 1.2, rot: 0.2, w: 0.12 },
-  { x: 4.4, z: 14.2, spread: 4.6, ex: 1.1, ez: 0.75, rot: 1.0, w: 0.2 },
-  { x: -7.4, z: 15.6, spread: 4.0, ex: 0.8, ez: 1.2, rot: -0.35, w: 0.16 },
-  { x: 11.0, z: 8.6, spread: 3.0, ex: 1.25, ez: 0.7, rot: 0.5, w: 0.12 },
+const FILE = 1.4;
+const RANK = 1.52;
+const RANKS = [
+  { n: 8, ox: -2.6 },
+  { n: 12, ox: 0.9 },
+  { n: 10, ox: -3.5 },
+  { n: 14, ox: 1.7 },
+  { n: 11, ox: -0.4 },
+  { n: 13, ox: 2.5 },
+  { n: 9, ox: -2.1 },
+  { n: 12, ox: 0.5 },
+  { n: 7, ox: 1.9 },
 ];
+
+function rankOrigin(row: number) {
+  const spec = RANKS[row % RANKS.length];
+  const cycle = Math.floor(row / RANKS.length);
+  return {
+    n: spec.n,
+    ox: spec.ox + (cycle % 2 === 0 ? 0 : 1.15),
+    z: 1.7 + row * RANK,
+  };
+}
+
+function place(row: number, col: number) {
+  const spec = rankOrigin(row);
+  const stagger = row % 2 === 1 ? FILE * 0.48 : 0;
+  return { x: col * FILE + spec.ox + stagger, z: spec.z };
+}
 
 type Breath = { t0: number; dur: number; ax: number; az: number };
 
 const BREATHS: Breath[] = [
-  { t0: 7.4, dur: 1.7, ax: CLUMPS[0].x, az: CLUMPS[0].z },
-  { t0: 12.2, dur: 1.7, ax: CLUMPS[1].x, az: CLUMPS[1].z },
-  { t0: 17.0, dur: 1.75, ax: CLUMPS[4].x, az: CLUMPS[4].z },
-  { t0: 21.8, dur: 1.7, ax: CLUMPS[3].x, az: CLUMPS[3].z },
-  { t0: 26.6, dur: 1.85, ax: CLUMPS[2].x, az: CLUMPS[2].z },
+  { t0: 7.4, dur: 1.7, ax: place(1, -1.5).x, az: place(1, -1.5).z },
+  { t0: 12.2, dur: 1.7, ax: place(2, 2.5).x, az: place(2, 2.5).z },
+  { t0: 17.0, dur: 1.75, ax: place(5, -2).x, az: place(5, -2).z },
+  { t0: 21.8, dur: 1.7, ax: place(7, 1.5).x, az: place(7, 1.5).z },
+  { t0: 26.6, dur: 1.85, ax: place(4, 0).x, az: place(4, 0).z },
 ];
 
 type Key = { t: number; x: number; y: number; z: number; pitch: number };
@@ -42,10 +61,10 @@ const KEYS: Key[] = [
 ];
 
 for (const b of BREATHS) {
-  KEYS.push({ t: b.t0 - 0.85, x: b.ax - 1.4, y: 12.6, z: b.az + 9.2, pitch: -0.48 });
-  KEYS.push({ t: b.t0, x: b.ax, y: 6.8, z: b.az + 5.4, pitch: -0.92 });
-  KEYS.push({ t: b.t0 + b.dur, x: b.ax + 0.35, y: 6.8, z: b.az + 5.4, pitch: -0.92 });
-  KEYS.push({ t: b.t0 + b.dur + 0.35, x: b.ax + 1.6, y: 11.2, z: b.az + 8.4, pitch: -0.36 });
+  KEYS.push({ t: b.t0 - 0.9, x: b.ax - 2.4, y: 26, z: b.az + 14, pitch: -0.7 });
+  KEYS.push({ t: b.t0, x: b.ax + 0.3, y: 18.5, z: b.az + 9.2, pitch: -1.12 });
+  KEYS.push({ t: b.t0 + b.dur, x: b.ax + 0.55, y: 17.8, z: b.az + 8.6, pitch: -1.12 });
+  KEYS.push({ t: b.t0 + b.dur + 0.4, x: b.ax + 2.6, y: 23, z: b.az + 13, pitch: -0.55 });
 }
 KEYS.push({ t: 32.4, x: 6, y: 22, z: 32, pitch: -0.22 });
 KEYS.push({ t: 36, x: 14, y: 30, z: 46, pitch: -0.12 });
@@ -76,26 +95,26 @@ function hash01(n: number) {
 }
 
 function cell(i: number) {
-  const pick = hash01(i + 3);
-  let acc = 0;
-  let cl = CLUMPS[CLUMPS.length - 1];
-  for (const c of CLUMPS) {
-    acc += c.w;
-    if (pick <= acc) {
-      cl = c;
+  const per = RANKS.reduce((sum, r) => sum + r.n, 0);
+  const cycle = Math.floor(i / per);
+  let rem = i % per;
+  let local = 0;
+  for (let r = 0; r < RANKS.length; r++) {
+    if (rem < RANKS[r].n) {
+      local = r;
       break;
     }
+    rem -= RANKS[r].n;
   }
-  const ang = hash01(i + 9) * Math.PI * 2;
-  const rad = Math.sqrt(hash01(i + 17)) * cl.spread;
-  const ex = Math.cos(ang) * rad * cl.ex;
-  const ez = Math.sin(ang) * rad * cl.ez;
-  const co = Math.cos(cl.rot);
-  const si = Math.sin(cl.rot);
+  const row = cycle * RANKS.length + local;
+  const spec = rankOrigin(row);
+  const stagger = row % 2 === 1 ? FILE * 0.48 : 0;
+  const jx = (hash01(i + 4) - 0.5) * 0.16;
+  const jz = (hash01(i + 9) - 0.5) * 0.12;
   return {
-    x: cl.x + ex * co - ez * si,
-    z: cl.z + ex * si + ez * co,
-    face: (hash01(i + 11) - 0.5) * 1.6,
+    x: (rem - (spec.n - 1) / 2) * FILE + spec.ox + stagger + jx,
+    z: spec.z + jz,
+    face: (hash01(i + 2) - 0.5) * 0.16,
   };
 }
 
@@ -189,13 +208,13 @@ export function sampleDragonCam(recT: number): ShotPose {
   const arrive = clamp01(t / 6.2);
   const e = arrive * arrive * (3 - 2 * arrive);
   return {
-    x: 14 - e * 3,
-    y: 20 - e * 5,
-    z: -36,
-    lx: d.x * 0.22,
-    ly: 2.4 + (1 - e) * Math.min(12, d.y * 0.42) + e * 2.2,
-    lz: 8,
-    fov: 62,
+    x: 13 - e * 2,
+    y: 18 - e * 3,
+    z: -34,
+    lx: d.x * 0.16,
+    ly: 4.2 + Math.min(6.5, d.y * 0.2),
+    lz: 7,
+    fov: 58,
   };
 }
 
@@ -231,10 +250,8 @@ export function dragonFriendAt(i: number, n: number, t: number, out: New1Pose) {
   const fly = dragonAt(t);
   out.s = 1;
   out.blood = 0;
-  out.rz = (hash01(i + 5) - 0.5) * 0.12;
-  const look = Math.atan2(fly.x - home.x, fly.z - home.z);
-  const watch = clamp01((16 - fly.y) / 12);
-  out.ry = lerp(home.face, look, 0.25 + watch * 0.75);
+  out.rz = (hash01(i + 5) - 0.5) * 0.04;
+  out.ry = home.face;
   const bob = Math.sin(t * 2.1 + i * 0.7) * 0.025;
   if (t < dieAt) {
     out.x = home.x;
