@@ -187,52 +187,72 @@ function buildJaw() {
   return merged ?? new THREE.BufferGeometry();
 }
 
-function wingGeo(sign: number) {
+type WingParts = { skin: THREE.BufferGeometry; bone: THREE.BufferGeometry };
+
+function wingGeo(sign: number): WingParts {
   const fingers = [
     [[0, 0.02, 0.05], [sign * 1.05, 0.42, 1.25], [sign * 2.15, 0.22, 2.05], [sign * 3.05, -0.05, 2.45]],
     [[0, 0.02, 0.05], [sign * 1.7, 0.72, 0.45], [sign * 3.6, 0.48, 0.05], [sign * 5.6, 0.05, -0.7]],
     [[0, 0.02, 0.05], [sign * 1.55, 0.42, -0.35], [sign * 3.35, 0.12, -1.15], [sign * 5.15, -0.22, -2.15]],
     [[0, 0.02, 0.05], [sign * 1.05, 0.12, -0.75], [sign * 2.15, -0.12, -1.55], [sign * 3.05, -0.32, -2.25]],
   ];
+  const steps = 6;
+  const chains = fingers.map((finger) => {
+    const pts: number[][] = [];
+    for (let i = 0; i < finger.length - 1; i++) {
+      for (let s = 0; s < steps; s++) {
+        const u = s / steps;
+        const a = finger[i];
+        const b = finger[i + 1];
+        pts.push([a[0] + (b[0] - a[0]) * u, a[1] + (b[1] - a[1]) * u, a[2] + (b[2] - a[2]) * u]);
+      }
+    }
+    pts.push(finger[finger.length - 1]);
+    return pts;
+  });
+  const between = 3;
+  const cols = chains[0].length;
+  const rowCount = (chains.length - 1) * between + 1;
   const pos: number[] = [];
-  const col: number[] = [];
   const idx: number[] = [];
-  const leather = new THREE.Color("#5a3028");
-  const edge = new THREE.Color("#8a4636");
-  const push = (p: number[], along: number) => {
-    const c = leather.clone().lerp(edge, along);
-    pos.push(p[0], p[1], p[2]);
-    col.push(c.r, c.g, c.b);
-    return pos.length / 3 - 1;
-  };
-  for (let f = 0; f < fingers.length - 1; f++) {
-    for (let i = 0; i < 3; i++) {
-      const along = i / 3;
-      const a = push(fingers[f][i], along);
-      const b = push(fingers[f][i + 1], (i + 1) / 3);
-      const c = push(fingers[f + 1][i], along);
-      const d = push(fingers[f + 1][i + 1], (i + 1) / 3);
+  for (let row = 0; row < rowCount; row++) {
+    const span = row / (rowCount - 1);
+    const f = span * (chains.length - 1);
+    const f0 = Math.min(chains.length - 2, Math.floor(f));
+    const v = f - f0;
+    for (let i = 0; i < cols; i++) {
+      const u = i / (cols - 1);
+      const a = chains[f0][i];
+      const b = chains[f0 + 1][i];
+      const sag = Math.sin(v * Math.PI) * Math.sin(u * Math.PI) * 0.22;
+      pos.push(a[0] + (b[0] - a[0]) * v, a[1] + (b[1] - a[1]) * v - sag, a[2] + (b[2] - a[2]) * v);
+    }
+  }
+  for (let row = 0; row < rowCount - 1; row++) {
+    for (let i = 0; i < cols - 1; i++) {
+      const a = row * cols + i;
+      const b = a + 1;
+      const c = a + cols;
+      const d = c + 1;
       if (sign > 0) idx.push(a, c, b, b, c, d);
       else idx.push(a, b, c, b, d, c);
     }
   }
-  const membrane = new THREE.BufferGeometry();
-  membrane.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
-  membrane.setAttribute("color", new THREE.Float32BufferAttribute(col, 3));
-  membrane.setIndex(idx);
-  membrane.computeVertexNormals();
-  const bone = new THREE.CylinderGeometry(0.035, 0.055, 1, 5);
+  const skin = new THREE.BufferGeometry();
+  skin.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
+  skin.setIndex(idx);
+  skin.computeVertexNormals();
+  const rod = new THREE.CylinderGeometry(0.018, 0.026, 1, 5);
   const spars = [
-    placed(bone, BONE, sign * 1.7, 0.28, 0.95, 0.15, 0, sign * 0.55, 1, 3.4, 1),
-    placed(bone, BONE, sign * 2.5, 0.22, -0.15, 0.35, 0, sign * 0.72, 1, 4.2, 1),
-    placed(bone, BONE, sign * 2.15, 0.02, -1.05, 0.7, 0, sign * 0.62, 1, 3.6, 1),
-    placed(bone, new THREE.Color("#3a3228"), sign * 0.7, 0.18, 0.15, 0.2, 0, sign * 1.05, 1.4, 1.6, 1.4),
+    placed(rod, BONE, sign * 1.7, 0.28, 0.95, 0.15, 0, sign * 0.55, 1, 3.4, 1),
+    placed(rod, BONE, sign * 2.5, 0.22, -0.15, 0.35, 0, sign * 0.72, 1, 4.2, 1),
+    placed(rod, BONE, sign * 2.15, 0.02, -1.05, 0.7, 0, sign * 0.62, 1, 3.6, 1),
+    placed(rod, BONE, sign * 0.55, 0.16, 0.12, 0.2, 0, sign * 1.05, 0.85, 1.15, 0.85),
   ];
-  bone.dispose();
-  const parts = [membrane, ...spars];
-  const merged = prepMerge(parts);
-  if (merged) parts.forEach((g) => g.dispose());
-  return merged ?? new THREE.BufferGeometry();
+  rod.dispose();
+  const bone = prepMerge(spars) ?? new THREE.BufferGeometry();
+  if (bone !== spars[0]) spars.forEach((g) => g.dispose());
+  return { skin, bone };
 }
 
 const flameVert = `
@@ -357,7 +377,7 @@ function Drake({
   soldiers: number;
   body: THREE.BufferGeometry | null;
   jawGeo: THREE.BufferGeometry | null;
-  wings: readonly [THREE.BufferGeometry, THREE.BufferGeometry];
+  wings: readonly [WingParts, WingParts];
   bodyMat: THREE.Material;
 }) {
   const root = useRef<THREE.Group>(null);
@@ -378,6 +398,23 @@ function Drake({
   const aimDir = useMemo(() => new THREE.Vector3(), []);
   const aimUp = useMemo(() => new THREE.Vector3(0, 1, 0), []);
   const scale = index === 1 ? 2.02 : index === 2 ? 1.72 : 1.88;
+  const skinMat = useMemo(
+    () =>
+      new THREE.MeshStandardMaterial({
+        color: "#d7a08c",
+        transparent: true,
+        opacity: 0.26,
+        roughness: 0.42,
+        metalness: 0,
+        side: THREE.DoubleSide,
+        depthWrite: false,
+      }),
+    []
+  );
+  const boneMat = useMemo(
+    () => new THREE.MeshStandardMaterial({ color: "#5c5144", roughness: 0.62, metalness: 0.08 }),
+    []
+  );
 
   useFrame(({ clock }) => {
     const t = Math.max(0, clock.elapsedTime - REEL_HOLD);
@@ -506,18 +543,12 @@ function Drake({
           </mesh>
         </group>
         <group ref={left} position={[0.42, 0.38, 0.85]}>
-          {wings[0] && (
-            <mesh geometry={wings[0]}>
-              <meshStandardMaterial vertexColors roughness={0.78} metalness={0.02} side={THREE.DoubleSide} />
-            </mesh>
-          )}
+          <mesh geometry={wings[0].bone} material={boneMat} />
+          <mesh geometry={wings[0].skin} material={skinMat} renderOrder={2} />
         </group>
         <group ref={right} position={[-0.42, 0.38, 0.85]}>
-          {wings[1] && (
-            <mesh geometry={wings[1]}>
-              <meshStandardMaterial vertexColors roughness={0.78} metalness={0.02} side={THREE.DoubleSide} />
-            </mesh>
-          )}
+          <mesh geometry={wings[1].bone} material={boneMat} />
+          <mesh geometry={wings[1].skin} material={skinMat} renderOrder={2} />
         </group>
       </group>
       <group ref={flame}>
