@@ -12,7 +12,7 @@ const BONE = new THREE.Color("#3a332b");
 
 type Station = { x: number; y: number; z: number; rx: number; ry: number };
 
-function skinTube(stations: Station[], sides = 16) {
+function skinTube(stations: Station[], sides = 16, dorsal: THREE.Color = DORSAL, belly: THREE.Color = BELLY, ridgeAmt = 0.35, bumpAmt = 1) {
   const pos: number[] = [];
   const col: number[] = [];
   const idx: number[] = [];
@@ -30,10 +30,10 @@ function skinTube(stations: Station[], sides = 16) {
       const a = (k / sides) * Math.PI * 2;
       const ca = Math.cos(a);
       const sa = Math.sin(a);
-      const ridge = Math.pow(Math.max(0, sa), 5) * f.s.ry * 0.35;
-      const belly = Math.max(0, -sa);
+      const ridge = Math.pow(Math.max(0, sa), 5) * f.s.ry * ridgeAmt;
+      const bellyMix = Math.max(0, -sa);
       const scaleCell = Math.abs(Math.sin(i * 2.15 + k * 0.37)) * (0.35 + 0.65 * Math.abs(Math.cos((k / sides) * Math.PI * 6)));
-      const bump = f.s.rx * (0.05 + 0.035 * (1 - belly)) * scaleCell;
+      const bump = f.s.rx * (0.05 + 0.035 * (1 - bellyMix)) * scaleCell * bumpAmt;
       const ox = f.right.x * ca + f.up.x * sa;
       const oy = f.right.y * ca + f.up.y * sa;
       const oz = f.right.z * ca + f.up.z * sa;
@@ -42,8 +42,8 @@ function skinTube(stations: Station[], sides = 16) {
         f.s.y + f.right.y * ca * f.s.rx + f.up.y * (sa * f.s.ry + ridge) + oy * bump,
         f.s.z + f.right.z * ca * f.s.rx + f.up.z * (sa * f.s.ry + ridge) + oz * bump
       );
-      const c = DORSAL.clone().lerp(BELLY, belly * belly * 0.92);
-      c.multiplyScalar(0.74 + 0.32 * (1 - scaleCell * (sa > 0 ? 1 : 0.3)));
+      const c = dorsal.clone().lerp(belly, bellyMix * bellyMix * 0.92);
+      c.multiplyScalar(0.74 + 0.32 * (1 - scaleCell * bumpAmt * (sa > 0 ? 1 : 0.3)));
       if (sa > 0.72) c.multiplyScalar(0.68);
       col.push(c.r, c.g, c.b);
     }
@@ -62,7 +62,7 @@ function skinTube(stations: Station[], sides = 16) {
     const s = stations[ring];
     const center = pos.length / 3;
     pos.push(s.x, s.y, s.z);
-    col.push(BELLY.r * 0.7, BELLY.g * 0.7, BELLY.b * 0.7);
+    col.push(belly.r * 0.7, belly.g * 0.7, belly.b * 0.7);
     for (let k = 0; k < sides; k++) {
       const k2 = (k + 1) % sides;
       if (outward > 0) idx.push(center, ring * sides + k, ring * sides + k2);
@@ -695,42 +695,59 @@ function Reply({ soldiers }: { soldiers: number }) {
   );
 }
 
+const HORSE_SCALE = 1.32;
+
 function buildHorseBody() {
-  const coat = new THREE.Color("#7a4a2c");
-  const dark = new THREE.Color("#2c1810");
-  const blaze = new THREE.Color("#f0e2cc");
-  const barrel = new THREE.CylinderGeometry(0.34, 0.38, 1.35, 8);
-  barrel.rotateX(Math.PI / 2);
-  const ball = new THREE.SphereGeometry(0.3, 8, 6);
-  const neck = new THREE.CylinderGeometry(0.1, 0.15, 0.58, 6);
-  const head = new THREE.SphereGeometry(0.16, 8, 6);
-  const muzzle = new THREE.CylinderGeometry(0.065, 0.085, 0.26, 6);
-  const ear = new THREE.ConeGeometry(0.035, 0.14, 4);
-  const mane = new THREE.BoxGeometry(0.045, 0.1, 0.42);
-  const tail = new THREE.ConeGeometry(0.055, 0.62, 5);
-  const parts = [
-    placed(barrel, coat, 0, 1.22, 0, Math.PI / 2, 0, 0),
-    placed(ball, coat, 0, 1.2, 0.42, 0, 0, 0, 0.85, 0.9, 0.7),
-    placed(ball, coat, 0, 1.22, -0.42, 0, 0, 0, 0.9, 0.95, 0.72),
-    placed(neck, coat, 0, 1.55, 0.72, 0.7, 0, 0),
-    placed(head, coat, 0, 1.86, 0.98, 0, 0, 0, 0.7, 0.75, 1.05),
-    placed(muzzle, coat, 0, 1.78, 1.18, Math.PI / 2, 0, 0),
-    placed(ball, blaze, 0, 1.9, 1.08, 0, 0, 0, 0.12, 0.28, 0.08),
-    placed(ear, dark, -0.07, 2.02, 0.96, -0.2, 0, -0.3),
-    placed(ear, dark, 0.07, 2.02, 0.96, -0.2, 0, 0.3),
-    placed(mane, dark, 0, 1.68, 0.78, 0.7, 0, 0),
-    placed(tail, dark, 0, 1.05, -0.72, 0.5, 0, 0),
-    placed(ball, dark, 0, 1.46, -0.05, 0, 0, 0, 0.35, 0.12, 0.28),
+  const coat = new THREE.Color("#6b4228");
+  const belly = new THREE.Color("#8d5e3c");
+  const dark = new THREE.Color("#24160e");
+  const blaze = new THREE.Color("#f4e7d4");
+  const stations: Station[] = [
+    { x: 0, y: 1.16, z: -1.02, rx: 0.06, ry: 0.05 },
+    { x: 0, y: 1.26, z: -0.68, rx: 0.2, ry: 0.17 },
+    { x: 0, y: 1.14, z: -0.22, rx: 0.26, ry: 0.21 },
+    { x: 0, y: 1.08, z: 0.22, rx: 0.23, ry: 0.25 },
+    { x: 0, y: 1.18, z: 0.52, rx: 0.17, ry: 0.18 },
+    { x: 0, y: 1.36, z: 0.66, rx: 0.11, ry: 0.1 },
+    { x: 0, y: 1.56, z: 0.8, rx: 0.085, ry: 0.078 },
+    { x: 0, y: 1.76, z: 0.94, rx: 0.072, ry: 0.068 },
+    { x: 0, y: 1.64, z: 1.14, rx: 0.062, ry: 0.078 },
+    { x: 0, y: 1.46, z: 1.32, rx: 0.048, ry: 0.05 },
+    { x: 0, y: 1.34, z: 1.46, rx: 0.038, ry: 0.032 },
   ];
+  const tube = skinTube(stations, 10, coat, belly, 0, 0.15);
+  const ear = new THREE.ConeGeometry(0.028, 0.15, 5);
+  const mane = new THREE.ConeGeometry(0.03, 0.14, 4);
+  const hair = new THREE.ConeGeometry(0.035, 0.48, 5);
+  const eye = new THREE.SphereGeometry(0.026, 8, 6);
+  const pad = new THREE.BoxGeometry(0.34, 0.05, 0.46);
+  const parts: THREE.BufferGeometry[] = [tube];
+  (
+    [
+      [1.3, 0.6],
+      [1.48, 0.74],
+      [1.66, 0.88],
+      [1.82, 0.98],
+    ] as const
+  ).forEach(([y, z], i) => {
+    parts.push(placed(mane, dark, 0, y + 0.06, z, -0.35, 0, 0, 0.65, 0.75 + i * 0.12, 0.45));
+  });
+  parts.push(placed(ear, dark, -0.04, 1.9, 0.96, -0.4, 0, -0.28));
+  parts.push(placed(ear, dark, 0.04, 1.9, 0.96, -0.4, 0, 0.28));
+  parts.push(placed(eye, new THREE.Color("#120c08"), -0.062, 1.66, 1.12));
+  parts.push(placed(eye, new THREE.Color("#120c08"), 0.062, 1.66, 1.12));
+  parts.push(placed(eye, blaze, 0, 1.62, 1.2, 0, 0, 0, 0.28, 1.1, 0.22));
+  parts.push(placed(eye, new THREE.Color("#1a100c"), -0.018, 1.36, 1.48, 0, 0, 0, 0.45, 0.35, 0.4));
+  parts.push(placed(eye, new THREE.Color("#1a100c"), 0.018, 1.36, 1.48, 0, 0, 0, 0.45, 0.35, 0.4));
+  parts.push(placed(hair, dark, 0, 0.92, -0.98, 0.25, 0, 0));
+  parts.push(placed(hair, dark, 0.02, 0.72, -0.96, 0.08, 0.15, 0, 0.65, 0.9, 0.55));
+  parts.push(placed(pad, new THREE.Color("#3a2416"), 0, 1.38, -0.02));
   const merged = prepMerge(parts);
-  barrel.dispose();
-  ball.dispose();
-  neck.dispose();
-  head.dispose();
-  muzzle.dispose();
   ear.dispose();
   mane.dispose();
-  tail.dispose();
+  hair.dispose();
+  eye.dispose();
+  pad.dispose();
   if (merged) parts.forEach((g) => g.dispose());
   return merged ?? new THREE.BufferGeometry();
 }
@@ -774,7 +791,7 @@ function Lancer({ soldiers }: { soldiers: number }) {
         locked.current = false;
         const wind = Math.max(0, Math.min(1, (t - (SPEAR_LOOSE - 0.45)) / 0.45));
         euler.set(0, ride.yaw, 0);
-        from.set(0.42, 2.2, 0.5).multiplyScalar(1.42).applyEuler(euler);
+        from.set(0.46, 1.92, 0.38).multiplyScalar(HORSE_SCALE).applyEuler(euler);
         from.x += ride.x;
         from.y += bob;
         from.z += ride.z;
@@ -803,34 +820,34 @@ function Lancer({ soldiers }: { soldiers: number }) {
 
   return (
     <group>
-      <group ref={horse} scale={1.42}>
+      <group ref={horse} scale={HORSE_SCALE}>
         <mesh geometry={horseBody}>
           <meshLambertMaterial vertexColors />
         </mesh>
         {(
           [
-            [fl, -0.16, 0.42],
-            [fr, 0.16, 0.42],
-            [hl, -0.16, -0.46],
-            [hr, 0.16, -0.46],
+            [fl, -0.1, 0.4, 0.82],
+            [fr, 0.1, 0.4, 0.82],
+            [hl, -0.1, -0.48, 0.9],
+            [hr, 0.1, -0.48, 0.9],
           ] as const
-        ).map(([ref, x, z]) => (
-          <group key={`${x}-${z}`} ref={ref} position={[x, 1.08, z]}>
-            <mesh position={[0, -0.28, 0]}>
-              <cylinderGeometry args={[0.06, 0.075, 0.54, 6]} />
-              <meshLambertMaterial color="#5c3a24" />
+        ).map(([ref, x, z, y]) => (
+          <group key={`${x}-${z}`} ref={ref} position={[x, y, z]}>
+            <mesh position={[0, -0.2, 0]}>
+              <cylinderGeometry args={[0.055, 0.07, 0.4, 7]} />
+              <meshLambertMaterial color="#6b4228" />
             </mesh>
-            <mesh position={[0, -0.72, 0.03]}>
-              <cylinderGeometry args={[0.045, 0.055, 0.46, 5]} />
-              <meshLambertMaterial color="#4a2e1c" />
+            <mesh position={[0, -0.52, 0.02]} rotation={[0.12, 0, 0]}>
+              <cylinderGeometry args={[0.038, 0.048, 0.36, 6]} />
+              <meshLambertMaterial color="#5a3824" />
             </mesh>
-            <mesh position={[0, -0.98, 0.05]}>
-              <boxGeometry args={[0.08, 0.055, 0.13]} />
-              <meshLambertMaterial color="#1c140e" />
+            <mesh position={[0, -0.74, 0.05]}>
+              <boxGeometry args={[0.07, 0.055, 0.12]} />
+              <meshLambertMaterial color="#1a120c" />
             </mesh>
           </group>
         ))}
-        <group position={[0, 1.72, -0.02]}>
+        <group position={[0, 1.4, -0.04]}>
           <mesh position={[0, 0.08, -0.16]} rotation={[0.18, 0, 0]}>
             <boxGeometry args={[0.5, 0.72, 0.04]} />
             <meshLambertMaterial color="#6e1018" />
