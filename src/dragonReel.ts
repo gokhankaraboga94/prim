@@ -437,7 +437,26 @@ export function dragonFriendAt(i: number, n: number, t: number, out: New1Pose) {
     out.x = live.x;
     out.z = live.z;
     out.y = live.moving ? Math.abs(Math.sin(t * 11 + i)) * 0.14 : Math.sin(t * 2.1 + i) * 0.02;
-    out.rx = live.moving ? 0.42 : -0.24;
+    if (!live.moving && t > 2.4 && n > 0) {
+      let aimX = live.x;
+      let aimZ = live.z + 8;
+      let best = 1e12;
+      for (let d = 0; d < 3; d++) {
+        const drake = dragonAt(t, d, n);
+        const dx = drake.x - live.x;
+        const dz = drake.z - live.z;
+        const dist = dx * dx + dz * dz;
+        if (dist < best) {
+          best = dist;
+          aimX = drake.x;
+          aimZ = drake.z;
+        }
+      }
+      out.ry = Math.atan2(aimX - live.x, aimZ - live.z);
+    }
+    const shot = ((t * 0.95 + hash01(i + 3) * 1.7) % 2.05) / 2.05;
+    const drawing = !live.moving && t > 3.2 && shot > 0.16 && shot < 0.58;
+    out.rx = live.moving ? 0.36 : drawing ? -0.86 : -0.62;
     return;
   }
   const age = t - dieAt;

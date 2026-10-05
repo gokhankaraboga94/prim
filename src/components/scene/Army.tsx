@@ -1397,16 +1397,6 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
           stamp(bodies.current, dragonLive);
           bodies.current.setColorAt(dragonLive, vsPose.blood ? (vsPose.rx < 1.15 ? _fireTint : _charTint) : _plainTint);
           dragonLive += 1;
-          if (!vsPose.blood && bladeSwings.current) {
-            const pitch = 0.28 + Math.sin(recT * 6 + i) * 0.35;
-            _swingM.makeTranslation(0.34, 0.95, 0.42);
-            _swingSpin.makeRotationX(-pitch);
-            _swingNeg.makeTranslation(-0.34, -0.95, -0.42);
-            _swingM.multiply(_swingSpin).multiply(_swingNeg);
-            _swingBody.copy(dummy.matrix).multiply(_swingM);
-            bladeSwings.current.setMatrixAt(dragonSwords, _swingBody);
-            dragonSwords += 1;
-          }
           continue;
         }
         if (giant) {
