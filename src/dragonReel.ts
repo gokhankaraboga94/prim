@@ -68,30 +68,18 @@ function fleeStep(x: number, z: number, t: number, seed: number) {
 
 type Key = { t: number; x: number; y: number; z: number; pitch: number };
 
+export const SPEAR_LOOSE = 16.4;
+export const SPEAR_HIT = 17.65;
+
 const PATHS: Key[][] = [
   [
-    { t: 0, x: -26, y: 28, z: 2, pitch: -0.35 },
-    { t: 5.2, x: -12, y: 19, z: 7, pitch: -0.82 },
-    { t: 11, x: -5, y: 16.5, z: 5, pitch: -1.02 },
-    { t: 18, x: -2, y: 16, z: 0, pitch: -0.96 },
-    { t: 26, x: 4, y: 17, z: -6, pitch: -0.72 },
-    { t: 36, x: 14, y: 23, z: -10, pitch: -0.4 },
-  ],
-  [
-    { t: 0, x: 24, y: 30, z: 18, pitch: -0.32 },
-    { t: 6.4, x: 12, y: 18, z: 11, pitch: -0.88 },
-    { t: 13, x: 7, y: 15.8, z: 3, pitch: -1.05 },
-    { t: 20, x: 3, y: 16, z: -3, pitch: -0.98 },
-    { t: 28, x: -4, y: 17.5, z: -8, pitch: -0.7 },
-    { t: 36, x: -12, y: 22, z: -4, pitch: -0.38 },
-  ],
-  [
-    { t: 0, x: 1, y: 34, z: 38, pitch: -0.48 },
-    { t: 5.4, x: 0, y: 21, z: 16, pitch: -0.92 },
-    { t: 12, x: -1, y: 17, z: 7, pitch: -1.08 },
-    { t: 19, x: 1, y: 16.2, z: -1, pitch: -1.05 },
-    { t: 27, x: 2, y: 16.8, z: -9, pitch: -0.86 },
-    { t: 36, x: 5, y: 22, z: -16, pitch: -0.42 },
+    { t: 0, x: -18, y: 24, z: 14, pitch: -0.42 },
+    { t: 5.5, x: -4, y: 17.5, z: 9, pitch: -0.95 },
+    { t: 11, x: 2, y: 15.6, z: 5, pitch: -1.05 },
+    { t: 16.2, x: 3.4, y: 14.6, z: 2.4, pitch: -0.86 },
+    { t: 18.5, x: 8, y: 19, z: -1.5, pitch: -0.15 },
+    { t: 24, x: 20, y: 32, z: -4, pitch: 0.16 },
+    { t: 36, x: 46, y: 48, z: 10, pitch: 0.04 },
   ],
 ];
 
@@ -224,9 +212,9 @@ function buildPlan(n: number): Plan {
   const right = place(2, 4.5);
   const rear = place(4, 0);
   const open = [
-    { t0: 6.15, dur: 1.55, dragon: 0, r: 2.45, ax: left.x, az: left.z },
-    { t0: 7.9, dur: 1.5, dragon: 1, r: 2.45, ax: right.x, az: right.z },
-    { t0: 9.65, dur: 1.55, dragon: 2, r: 2.55, ax: rear.x, az: rear.z },
+    { t0: 6.1, dur: 1.5, dragon: 0, r: 2.45, ax: left.x, az: left.z },
+    { t0: 8.3, dur: 1.5, dragon: 0, r: 2.5, ax: right.x, az: right.z },
+    { t0: 10.5, dur: 1.5, dragon: 0, r: 2.55, ax: rear.x, az: rear.z },
   ];
   for (const shot of open) {
     const when = shot.t0 + 0.22;
@@ -251,55 +239,17 @@ function buildPlan(n: number): Plan {
     breaths.push({ t0: shot.t0, dur: shot.dur, dragon: shot.dragon, r: shot.r, ax, az });
     burn(pts, ax, az, shot.r, when, die);
   }
-  const sides: Side[] = ["left", "right", "front"];
-  for (let t0 = 12.4; t0 <= 33.6; t0 += 1.7) {
-    const when = t0 + 0.2;
-    let pts = aliveAt(n, when, die);
+  const sweeps: { t0: number; dur: number; r: number; side: Side }[] = [
+    { t0: 12.6, dur: 1.45, r: 2.9, side: "left" },
+    { t0: 14.5, dur: 1.35, r: 2.8, side: "front" },
+  ];
+  for (const shot of sweeps) {
+    const when = shot.t0 + 0.2;
+    const pts = aliveAt(n, when, die);
     if (!pts.length) break;
-    const reach = Math.min(5.6, 2.85 + Math.sqrt(pts.length) * 0.11);
-    for (let d = 0; d < 3 && pts.length; d++) {
-      const aim = pickAim(pts, sides[d], reach);
-      const dists = pts.map((p) => Math.hypot(p.x - aim.x, p.z - aim.z)).sort((a, b) => a - b);
-      const share = Math.max(3, Math.ceil(pts.length / 3));
-      const want = dists[Math.min(dists.length - 1, share - 1)] ?? reach;
-      const r = Math.min(5.8, Math.max(2.5, want + 0.28));
-      breaths.push({ t0, dur: 1.45, dragon: d, r, ax: aim.x, az: aim.z });
-      const killed = burn(pts, aim.x, aim.z, r, when, die);
-      if (!killed) {
-        breaths.pop();
-        continue;
-      }
-      pts = pts.filter((p) => {
-        const dx = p.x - aim.x;
-        const dz = p.z - aim.z;
-        return dx * dx + dz * dz > r * r;
-      });
-    }
-  }
-  let extraT = 34.15;
-  let guard = 0;
-  while (die.some((v) => v > 1e8) && extraT < 35 && guard < 3) {
-    const when = extraT + 0.12;
-    let pts = aliveAt(n, when, die);
-    if (!pts.length) break;
-    for (let d = 0; d < 3 && pts.length; d++) {
-      const aim = pickAim(pts, "all", 3.2);
-      const dists = pts.map((p) => Math.hypot(p.x - aim.x, p.z - aim.z)).sort((a, b) => a - b);
-      let r = 2.3;
-      for (const dist of dists) {
-        if (dist > 6.4) break;
-        r = dist + 0.3;
-      }
-      breaths.push({ t0: extraT, dur: 1.2, dragon: d, r, ax: aim.x, az: aim.z });
-      const killed = burn(pts, aim.x, aim.z, r, when, die);
-      if (!killed) {
-        breaths.pop();
-        continue;
-      }
-      pts = pts.filter((p) => Math.hypot(p.x - aim.x, p.z - aim.z) > r);
-    }
-    extraT += 0.35;
-    guard += 1;
+    const aim = pickAim(pts, shot.side, shot.r);
+    breaths.push({ t0: shot.t0, dur: shot.dur, dragon: 0, r: shot.r, ax: aim.x, az: aim.z });
+    burn(pts, aim.x, aim.z, shot.r, when, die);
   }
   return { breaths, die };
 }
@@ -385,39 +335,67 @@ function atKey(path: Key[], t: number) {
 }
 
 export function dragonAt(t: number, which = 0, n = 0): DragonPose {
-  const path = PATHS[which] ?? PATHS[0];
+  const path = PATHS[0];
   const k = atKey(path, t);
   const k2 = atKey(path, t + 0.12);
-  const env = n > 0 ? breathEnv(t, which, n) : { breath: 0, ax: k.x, az: k.z + 6, r: FIRE_R };
-  const yaw = Math.atan2(env.ax - k.x, env.az - k.z);
-  const roll = Math.max(-0.4, Math.min(0.4, (k2.x - k.x) * -0.45));
+  const fleeing = t >= SPEAR_LOOSE;
+  const env = !fleeing && n > 0 ? breathEnv(t, which, n) : { breath: 0, ax: k.x, az: k.z + 6, r: FIRE_R };
+  const yaw = fleeing ? Math.atan2(k2.x - k.x, k2.z - k.z) : Math.atan2(env.ax - k.x, env.az - k.z);
+  let roll = Math.max(-0.45, Math.min(0.45, (k2.x - k.x) * -0.45));
+  let pitch = k.pitch;
+  if (t >= SPEAR_HIT) {
+    const flinch = Math.exp(-(t - SPEAR_HIT) * 1.5);
+    roll += flinch * 0.75;
+    pitch += flinch * 0.4;
+  }
   return {
     x: k.x,
     y: k.y,
     z: k.z,
     yaw,
-    pitch: k.pitch,
+    pitch,
     roll,
-    breath: env.breath,
+    breath: fleeing ? 0 : env.breath,
     aimX: env.ax,
     aimZ: env.az,
     aimR: env.r,
   };
 }
 
+export function riderAt(t: number) {
+  const keys = [
+    { t: 0, x: -16, z: -6 },
+    { t: 9, x: -6, z: -1 },
+    { t: 16.2, x: 0.2, z: 3.4 },
+    { t: 23, x: 10, z: 6.5 },
+    { t: 36, x: 22, z: 9 },
+  ];
+  let i = 0;
+  while (i < keys.length - 2 && t > keys[i + 1].t) i += 1;
+  const a = keys[i];
+  const b = keys[Math.min(keys.length - 1, i + 1)];
+  const u = clamp01((t - a.t) / Math.max(0.001, b.t - a.t));
+  const e = u * u * (3 - 2 * u);
+  return {
+    x: lerp(a.x, b.x, e),
+    z: lerp(a.z, b.z, e),
+    yaw: Math.atan2(b.x - a.x, b.z - a.z),
+    gallop: t < 26 ? 1 : 0.15,
+  };
+}
+
 export function sampleDragonCam(recT: number): ShotPose {
   const t = Math.max(0, recT);
   const a = dragonAt(t, 0);
-  const b = dragonAt(t, 1);
-  const c = dragonAt(t, 2);
+  const ride = riderAt(t);
   return {
-    x: 10,
-    y: 24,
-    z: -42,
-    lx: (a.x + b.x + c.x) / 9,
-    ly: 8,
-    lz: 5,
-    fov: 64,
+    x: 7,
+    y: t < SPEAR_HIT ? 15 : 18,
+    z: -30,
+    lx: a.x * 0.4 + ride.x * 0.2,
+    ly: t < SPEAR_HIT ? 7 : 14,
+    lz: 3.5,
+    fov: 55,
   };
 }
 
@@ -441,7 +419,7 @@ export function dragonFriendAt(i: number, n: number, t: number, out: New1Pose) {
       let aimX = live.x;
       let aimZ = live.z + 8;
       let best = 1e12;
-      for (let d = 0; d < 3; d++) {
+      for (let d = 0; d < 1; d++) {
         const drake = dragonAt(t, d, n);
         const dx = drake.x - live.x;
         const dz = drake.z - live.z;

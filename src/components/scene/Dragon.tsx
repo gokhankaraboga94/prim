@@ -3,7 +3,7 @@ import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import { REEL_HOLD } from "../../recordCanvas";
-import { dragonAt, dragonBreathIndex, dragonBreaths, dragonFriendAt } from "../../dragonReel";
+import { SPEAR_HIT, SPEAR_LOOSE, dragonAt, dragonBreathIndex, dragonBreaths, dragonFriendAt, riderAt } from "../../dragonReel";
 
 const DORSAL = new THREE.Color("#2a2620");
 const BELLY = new THREE.Color("#9c8b74");
@@ -110,25 +110,22 @@ function prepMerge(geos: THREE.BufferGeometry[]) {
 
 function buildBody() {
   const stations: Station[] = [
-    { x: 0, y: 0.22, z: -5.15, rx: 0.035, ry: 0.028 },
-    { x: 0, y: 0.16, z: -4.35, rx: 0.09, ry: 0.07 },
-    { x: 0, y: 0.1, z: -3.5, rx: 0.15, ry: 0.12 },
-    { x: 0, y: 0.05, z: -2.65, rx: 0.24, ry: 0.18 },
-    { x: 0, y: 0.02, z: -1.8, rx: 0.36, ry: 0.26 },
-    { x: 0, y: 0, z: -0.95, rx: 0.5, ry: 0.34 },
+    { x: 0.05, y: 0.36, z: -8.15, rx: 0.012, ry: 0.01 },
+    { x: -0.04, y: 0.32, z: -7.15, rx: 0.03, ry: 0.022 },
+    { x: 0.03, y: 0.27, z: -6.15, rx: 0.055, ry: 0.04 },
+    { x: 0, y: 0.22, z: -5.15, rx: 0.09, ry: 0.07 },
+    { x: 0, y: 0.14, z: -4.1, rx: 0.15, ry: 0.11 },
+    { x: 0, y: 0.08, z: -3.1, rx: 0.24, ry: 0.17 },
+    { x: 0, y: 0.03, z: -2.1, rx: 0.36, ry: 0.26 },
+    { x: 0, y: 0, z: -1.05, rx: 0.5, ry: 0.34 },
     { x: 0, y: -0.02, z: -0.1, rx: 0.62, ry: 0.4 },
-    { x: 0, y: 0.04, z: 0.65, rx: 0.54, ry: 0.42 },
-    { x: 0, y: 0.18, z: 1.25, rx: 0.44, ry: 0.4 },
-    { x: 0, y: 0.4, z: 1.7, rx: 0.34, ry: 0.32 },
-    { x: 0, y: 0.7, z: 2.12, rx: 0.3, ry: 0.3 },
-    { x: 0, y: 1.02, z: 2.52, rx: 0.44, ry: 0.36 },
-    { x: 0, y: 1.06, z: 2.92, rx: 0.36, ry: 0.28 },
-    { x: 0, y: 0.9, z: 3.32, rx: 0.16, ry: 0.12 },
-    { x: 0, y: 0.76, z: 3.66, rx: 0.055, ry: 0.04 },
+    { x: 0, y: 0.04, z: 0.7, rx: 0.52, ry: 0.4 },
+    { x: 0, y: 0.22, z: 1.35, rx: 0.4, ry: 0.34 },
+    { x: 0, y: 0.5, z: 1.85, rx: 0.3, ry: 0.28 },
+    { x: 0, y: 0.72, z: 2.22, rx: 0.24, ry: 0.22 },
   ];
-  const tube = skinTube(stations, 18);
+  const tube = skinTube(stations, 12);
   const cone = new THREE.ConeGeometry(0.08, 0.42, 5);
-  const sphere = new THREE.SphereGeometry(0.5, 10, 8);
   const extras: THREE.BufferGeometry[] = [tube];
   const onBack = (z: number) => {
     let best = stations[0];
@@ -142,25 +139,17 @@ function buildBody() {
     }
     return best;
   };
-  const spine = [-3.4, -2.55, -1.7, -0.9, -0.15, 0.55, 1.2, 1.75];
+  const spine = [-6.4, -5.2, -4.0, -2.8, -1.6, -0.4, 0.7, 1.5];
   spine.forEach((z, i) => {
     const s = onBack(z);
-    const h = 0.16 + (i % 3) * 0.035;
-    extras.push(placed(cone, new THREE.Color("#16130f"), 0, s.y + s.ry * 0.92 + h * 0.25, z, -0.62, 0, 0, 0.38, h / 0.42, 0.28));
+    const h = 0.1 + (1 - i / spine.length) * 0.12;
+    extras.push(placed(cone, new THREE.Color("#16130f"), 0, s.y + s.ry * 0.9 + h * 0.2, z, -0.7, 0, 0, 0.32, h / 0.42, 0.22));
   });
-  extras.push(placed(cone, HORN, -0.24, 1.42, 2.42, 0.55, 0.15, 0.55, 0.55, 1.05, 0.55));
-  extras.push(placed(cone, HORN, 0.24, 1.42, 2.42, 0.55, -0.15, -0.55, 0.55, 1.05, 0.55));
-  extras.push(placed(cone, new THREE.Color("#5c4c38"), -0.16, 1.16, 3.05, 0.85, 0, 0.7, 0.4, 0.55, 0.4));
-  extras.push(placed(cone, new THREE.Color("#5c4c38"), 0.16, 1.16, 3.05, 0.85, 0, -0.7, 0.4, 0.55, 0.4));
-  extras.push(placed(sphere, new THREE.Color("#1a120e"), -0.05, 0.86, 3.48, 0, 0, 0, 0.055, 0.04, 0.07));
-  extras.push(placed(sphere, new THREE.Color("#1a120e"), 0.05, 0.86, 3.48, 0, 0, 0, 0.055, 0.04, 0.07));
-  const tooth = new THREE.ConeGeometry(0.025, 0.11, 4);
-  for (let i = 0; i < 7; i++) {
-    const z = 3.02 + i * 0.07;
-    const x = 0.04 + (i % 2) * 0.025;
-    extras.push(placed(tooth, new THREE.Color("#efe6d4"), -x, 0.84, z, Math.PI, 0, 0));
-    extras.push(placed(tooth, new THREE.Color("#efe6d4"), x, 0.84, z, Math.PI, 0, 0));
-  }
+  const fin = new THREE.BoxGeometry(0.55, 0.018, 0.34);
+  const tip = onBack(-8.15);
+  extras.push(placed(fin, new THREE.Color("#241c16"), 0.16, tip.y, tip.z + 0.02, 0.15, 0.4, 0.7));
+  extras.push(placed(fin, new THREE.Color("#241c16"), -0.16, tip.y, tip.z + 0.02, 0.15, -0.4, -0.7));
+  fin.dispose();
   const leg = new THREE.CylinderGeometry(0.11, 0.14, 0.5, 7);
   const claw = new THREE.ConeGeometry(0.03, 0.16, 4);
   const hips: Array<[number, number, number]> = [
@@ -177,11 +166,32 @@ function buildBody() {
   });
   const merged = prepMerge(extras);
   cone.dispose();
-  sphere.dispose();
-  tooth.dispose();
   leg.dispose();
   claw.dispose();
   if (merged) extras.forEach((g) => g.dispose());
+  return merged ?? new THREE.BufferGeometry();
+}
+
+function buildSkull() {
+  const ball = new THREE.SphereGeometry(0.32, 12, 9);
+  const ridge = new THREE.BoxGeometry(0.52, 0.06, 0.14);
+  const horn = new THREE.ConeGeometry(0.055, 0.36, 5);
+  const parts = [
+    placed(ball, DORSAL, 0, 0.1, 0.02, 0, 0, 0, 1.2, 0.88, 1.15),
+    placed(ball, DORSAL, 0, -0.02, 0.58, 0.2, 0, 0, 0.58, 0.42, 1.3),
+    placed(ball, new THREE.Color("#120e0c"), -0.2, 0.06, 0.24, 0, 0, 0, 0.26, 0.2, 0.18),
+    placed(ball, new THREE.Color("#120e0c"), 0.2, 0.06, 0.24, 0, 0, 0, 0.26, 0.2, 0.18),
+    placed(ridge, new THREE.Color("#1c1814"), 0, 0.26, 0.2),
+    placed(horn, HORN, -0.14, 0.4, -0.02, 0.35, 0, 0.45, 1, 1.15, 1),
+    placed(horn, HORN, 0.14, 0.4, -0.02, 0.35, 0, -0.45, 1, 1.15, 1),
+    placed(ball, new THREE.Color("#140e0c"), -0.055, -0.05, 0.98, 0, 0, 0, 0.1, 0.07, 0.09),
+    placed(ball, new THREE.Color("#140e0c"), 0.055, -0.05, 0.98, 0, 0, 0, 0.1, 0.07, 0.09),
+  ];
+  const merged = prepMerge(parts);
+  ball.dispose();
+  ridge.dispose();
+  horn.dispose();
+  if (merged) parts.forEach((g) => g.dispose());
   return merged ?? new THREE.BufferGeometry();
 }
 
@@ -215,7 +225,7 @@ function wingGeo(sign: number): WingParts {
     [[0, 0.02, 0.05], [sign * 1.55, 0.42, -0.35], [sign * 3.35, 0.12, -1.15], [sign * 5.15, -0.22, -2.15]],
     [[0, 0.02, 0.05], [sign * 1.05, 0.12, -0.75], [sign * 2.15, -0.12, -1.55], [sign * 3.05, -0.32, -2.25]],
   ];
-  const steps = 6;
+  const steps = 4;
   const chains = fingers.map((finger) => {
     const pts: number[][] = [];
     for (let i = 0; i < finger.length - 1; i++) {
@@ -229,7 +239,7 @@ function wingGeo(sign: number): WingParts {
     pts.push(finger[finger.length - 1]);
     return pts;
   });
-  const between = 3;
+  const between = 2;
   const cols = chains[0].length;
   const rowCount = (chains.length - 1) * between + 1;
   const pos: number[] = [];
@@ -382,7 +392,7 @@ function GroundFire({ ax, az, t0, dur, armed, radius }: { ax: number; az: number
   );
 }
 
-const EMBER_N = 40;
+const EMBER_N = 20;
 
 function Drake({
   index,
@@ -416,7 +426,8 @@ function Drake({
   const aimPos = useMemo(() => new THREE.Vector3(), []);
   const aimDir = useMemo(() => new THREE.Vector3(), []);
   const aimUp = useMemo(() => new THREE.Vector3(0, 1, 0), []);
-  const scale = index === 1 ? 2.02 : index === 2 ? 1.72 : 1.88;
+  const scale = 1.88;
+  const skull = useMemo(() => buildSkull(), []);
   const skinMat = useMemo(
     () =>
       new THREE.MeshStandardMaterial({
@@ -447,11 +458,12 @@ function Drake({
       root.current.rotation.set(p.pitch, p.yaw, p.roll);
       root.current.updateMatrixWorld(true);
     }
-    const gliding = breath > 0.25;
-    const phase = t * (gliding ? 1.7 : 4.8) + index;
+    const hurt = t > SPEAR_HIT;
+    const gliding = breath > 0.25 && !hurt;
+    const phase = t * (hurt ? 7.4 : gliding ? 1.6 : 4.2) + index;
     const wave = Math.sin(phase);
     const flap = wave < 0 ? wave * 1.15 : wave * 0.72;
-    const amp = gliding ? 0.12 : 0.4;
+    const amp = hurt ? 0.58 : gliding ? 0.1 : 0.32;
     if (left.current) {
       left.current.rotation.z = 0.58 + flap * amp;
       left.current.rotation.x = -0.16;
@@ -461,10 +473,7 @@ function Drake({
       right.current.rotation.x = -0.16;
     }
     const neck = Math.sin(t * 1.25 + index) * 0.05;
-    if (jaw.current) {
-      jaw.current.rotation.x = -0.2 - breath * 0.82;
-      jaw.current.position.x = neck;
-    }
+    if (jaw.current) jaw.current.rotation.x = -0.16 - breath * 0.72;
     if (eyes.current) eyes.current.position.x = neck;
     if (flame.current && mouthAnchor.current) {
       mouthAnchor.current.getWorldPosition(mouthPos);
@@ -512,7 +521,7 @@ function Drake({
     }
     const sm = smoke.current;
     if (sm) {
-      for (let i = 0; i < 12; i++) {
+      for (let i = 0; i < 8; i++) {
         const u = (t * (0.55 + (i % 4) * 0.08) + i * 0.2) % 1;
         if (breath < 0.05) emberDummy.scale.setScalar(0);
         else {
@@ -531,36 +540,33 @@ function Drake({
     <group>
       <group ref={root} scale={scale}>
         {body && <mesh geometry={body} material={bodyMat} />}
-        <group ref={eyes}>
-          <mesh position={[0.2, 1.16, 2.78]}>
-            <sphereGeometry args={[0.042, 8, 6]} />
-            <meshStandardMaterial color="#8a3a18" roughness={0.45} metalness={0.05} />
-          </mesh>
-          <mesh position={[-0.2, 1.16, 2.78]}>
-            <sphereGeometry args={[0.042, 8, 6]} />
-            <meshStandardMaterial color="#8a3a18" roughness={0.45} metalness={0.05} />
-          </mesh>
-          <mesh position={[0.2, 1.16, 2.81]} scale={[0.28, 1.15, 0.35]}>
-            <sphereGeometry args={[0.02, 6, 4]} />
-            <meshBasicMaterial color="#140c08" />
-          </mesh>
-          <mesh position={[-0.2, 1.16, 2.81]} scale={[0.28, 1.15, 0.35]}>
-            <sphereGeometry args={[0.02, 6, 4]} />
-            <meshBasicMaterial color="#140c08" />
-          </mesh>
-        </group>
-        <object3D ref={mouthAnchor} position={[0, 0.78, 3.58]} />
-        <group ref={jaw} position={[0, 0.78, 2.7]}>
-          {jawGeo && (
-            <mesh geometry={jawGeo}>
-              <meshStandardMaterial vertexColors roughness={0.86} metalness={0.02} />
+        <group ref={eyes} position={[0, 0.7, 2.08]}>
+          {skull && <mesh geometry={skull} material={bodyMat} />}
+          {([-1, 1] as const).map((side) => (
+            <group key={side} position={[side * 0.2, 0.07, 0.32]}>
+              <mesh>
+                <sphereGeometry args={[0.048, 10, 8]} />
+                <meshStandardMaterial color="#c6a15a" roughness={0.28} metalness={0.12} />
+              </mesh>
+              <mesh position={[0, 0, 0.03]} scale={[0.7, 0.22, 0.35]}>
+                <sphereGeometry args={[0.028, 6, 4]} />
+                <meshBasicMaterial color="#140c08" />
+              </mesh>
+            </group>
+          ))}
+          <group ref={jaw} position={[0, -0.12, 0.42]}>
+            {jawGeo && (
+              <mesh geometry={jawGeo}>
+                <meshStandardMaterial vertexColors roughness={0.88} metalness={0.02} />
+              </mesh>
+            )}
+            <mesh position={[0, 0.02, 0.2]}>
+              <boxGeometry args={[0.18, 0.06, 0.4]} />
+              <meshBasicMaterial color="#14080a" />
             </mesh>
-          )}
-          <mesh position={[0, 0.02, 0.2]}>
-            <boxGeometry args={[0.22, 0.08, 0.45]} />
-            <meshBasicMaterial color="#14080a" />
-          </mesh>
+          </group>
         </group>
+        <object3D ref={mouthAnchor} position={[0, 0.58, 3.12]} />
         <group ref={left} position={[0.42, 0.38, 0.85]}>
           <mesh geometry={wings[0].bone} material={boneMat} />
           <mesh geometry={wings[0].skin} material={skinMat} renderOrder={2} />
@@ -583,7 +589,7 @@ function Drake({
           <sphereGeometry args={[0.16, 5, 4]} />
           <meshBasicMaterial color="#ffb020" transparent opacity={0.9} depthWrite={false} blending={THREE.AdditiveBlending} />
         </instancedMesh>
-        <instancedMesh ref={smoke} args={[undefined, undefined, 12]}>
+        <instancedMesh ref={smoke} args={[undefined, undefined, 8]}>
           <sphereGeometry args={[0.45, 6, 5]} />
           <meshBasicMaterial color="#2a241e" transparent opacity={0.22} depthWrite={false} />
         </instancedMesh>
@@ -594,11 +600,11 @@ function Drake({
   );
 }
 
-const REPLY_BOWS = 420;
-const REPLY_ARROWS = 150;
+const REPLY_BOWS = 160;
+const REPLY_ARROWS = 64;
 
 function makeReplyBow() {
-  const arc = new THREE.TorusGeometry(0.36, 0.014, 5, 18, Math.PI * 1.25);
+  const arc = new THREE.TorusGeometry(0.36, 0.014, 4, 10, Math.PI * 1.25);
   arc.rotateY(Math.PI / 2);
   arc.translate(0.08, 1.16, 0.28);
   return arc;
@@ -665,7 +671,7 @@ function Reply({ soldiers }: { soldiers: number }) {
       let aimX = pose.x;
       let aimY = 16;
       let aimZ = pose.z + 6;
-      for (let d = 0; d < 3; d++) {
+      for (let d = 0; d < 1; d++) {
         const drake = dragonAt(arrive, d, n);
         const dx = drake.x - pose.x;
         const dz = drake.z - pose.z;
@@ -709,6 +715,143 @@ function Reply({ soldiers }: { soldiers: number }) {
   );
 }
 
+function Lancer({ soldiers }: { soldiers: number }) {
+  const horse = useRef<THREE.Group>(null);
+  const fl = useRef<THREE.Group>(null);
+  const fr = useRef<THREE.Group>(null);
+  const hl = useRef<THREE.Group>(null);
+  const hr = useRef<THREE.Group>(null);
+  const spear = useRef<THREE.Group>(null);
+  const wound = useRef<THREE.Mesh>(null);
+  const from = useMemo(() => new THREE.Vector3(), []);
+  const hit = useMemo(() => new THREE.Vector3(), []);
+  const euler = useMemo(() => new THREE.Euler(), []);
+  const locked = useRef(false);
+
+  useFrame(({ clock }) => {
+    const t = Math.max(0, clock.elapsedTime - REEL_HOLD);
+    const ride = riderAt(t);
+    const bob = Math.abs(Math.sin(t * 13)) * 0.06 * ride.gallop;
+    if (horse.current) {
+      horse.current.position.set(ride.x, bob, ride.z);
+      horse.current.rotation.y = ride.yaw;
+    }
+    const swing = Math.sin(t * 13) * 0.72 * ride.gallop;
+    if (fl.current) fl.current.rotation.x = swing;
+    if (fr.current) fr.current.rotation.x = -swing;
+    if (hl.current) hl.current.rotation.x = -swing * 0.8;
+    if (hr.current) hr.current.rotation.x = swing * 0.8;
+
+    const drake = dragonAt(t, 0, soldiers);
+    euler.set(drake.pitch, drake.yaw, drake.roll);
+    hit.set(-1.15, 0.2, 0.1).multiplyScalar(1.88).applyEuler(euler);
+    hit.x += drake.x;
+    hit.y += drake.y;
+    hit.z += drake.z;
+    if (spear.current) {
+      if (t < SPEAR_LOOSE) {
+        locked.current = false;
+        const wind = Math.max(0, Math.min(1, (t - (SPEAR_LOOSE - 0.8)) / 0.8));
+        euler.set(0, ride.yaw, 0);
+        from.set(0.42, 1.9, 0.5).applyEuler(euler);
+        from.x += ride.x;
+        from.y += bob;
+        from.z += ride.z;
+        spear.current.position.copy(from);
+        spear.current.rotation.set(-0.55 - wind * 1.15, ride.yaw, 0.2);
+      } else if (t < SPEAR_HIT) {
+        if (!locked.current) {
+          locked.current = true;
+          from.copy(spear.current.position);
+        }
+        const u = (t - SPEAR_LOOSE) / (SPEAR_HIT - SPEAR_LOOSE);
+        const e = u * u * (3 - 2 * u);
+        spear.current.position.lerpVectors(from, hit, e);
+        spear.current.lookAt(hit.x, hit.y, hit.z);
+        spear.current.rotateX(Math.PI / 2);
+      } else {
+        spear.current.position.copy(hit);
+        spear.current.rotation.set(drake.pitch, drake.yaw, drake.roll + 1.2);
+      }
+    }
+    if (wound.current) {
+      wound.current.visible = t >= SPEAR_HIT;
+      wound.current.position.copy(hit);
+    }
+  });
+
+  return (
+    <group>
+      <group ref={horse}>
+        <mesh position={[0, 1.15, 0]}>
+          <boxGeometry args={[0.38, 0.46, 1.5]} />
+          <meshLambertMaterial color="#5c4030" />
+        </mesh>
+        <mesh position={[0, 1.48, 0.78]} rotation={[0.65, 0, 0]}>
+          <boxGeometry args={[0.2, 0.5, 0.2]} />
+          <meshLambertMaterial color="#4e3628" />
+        </mesh>
+        <mesh position={[0, 1.82, 1.02]}>
+          <boxGeometry args={[0.18, 0.2, 0.4]} />
+          <meshLambertMaterial color="#4e3628" />
+        </mesh>
+        <group ref={fl} position={[-0.14, 1.05, 0.48]}>
+          <mesh position={[0, -0.4, 0]}>
+            <boxGeometry args={[0.09, 0.8, 0.1]} />
+            <meshLambertMaterial color="#3d2a1c" />
+          </mesh>
+        </group>
+        <group ref={fr} position={[0.14, 1.05, 0.48]}>
+          <mesh position={[0, -0.4, 0]}>
+            <boxGeometry args={[0.09, 0.8, 0.1]} />
+            <meshLambertMaterial color="#3d2a1c" />
+          </mesh>
+        </group>
+        <group ref={hl} position={[-0.14, 1.05, -0.48]}>
+          <mesh position={[0, -0.4, 0]}>
+            <boxGeometry args={[0.09, 0.8, 0.1]} />
+            <meshLambertMaterial color="#3d2a1c" />
+          </mesh>
+        </group>
+        <group ref={hr} position={[0.14, 1.05, -0.48]}>
+          <mesh position={[0, -0.4, 0]}>
+            <boxGeometry args={[0.09, 0.8, 0.1]} />
+            <meshLambertMaterial color="#3d2a1c" />
+          </mesh>
+        </group>
+        <group position={[0, 1.62, -0.02]}>
+          <mesh position={[0, 0.28, 0]}>
+            <boxGeometry args={[0.36, 0.42, 0.22]} />
+            <meshLambertMaterial color="#1a56e8" />
+          </mesh>
+          <mesh position={[0, 0.62, 0]}>
+            <boxGeometry args={[0.18, 0.18, 0.18]} />
+            <meshLambertMaterial color="#d5dde6" />
+          </mesh>
+          <mesh position={[0.2, 0.32, 0.16]} rotation={[0.8, 0, -0.3]}>
+            <boxGeometry args={[0.08, 0.42, 0.08]} />
+            <meshLambertMaterial color="#1a56e8" />
+          </mesh>
+        </group>
+      </group>
+      <group ref={spear}>
+        <mesh>
+          <cylinderGeometry args={[0.03, 0.035, 2.35, 5]} />
+          <meshLambertMaterial color="#c4a56a" />
+        </mesh>
+        <mesh position={[0, 1.2, 0]}>
+          <coneGeometry args={[0.07, 0.26, 5]} />
+          <meshLambertMaterial color="#d5dbe2" />
+        </mesh>
+      </group>
+      <mesh ref={wound} visible={false}>
+        <sphereGeometry args={[0.28, 8, 6]} />
+        <meshBasicMaterial color="#6e120e" />
+      </mesh>
+    </group>
+  );
+}
+
 export function Dragon({ soldiers }: { soldiers: number }) {
   const n = Math.max(1, Math.floor(soldiers));
   const body = useMemo(() => buildBody(), []);
@@ -726,10 +869,10 @@ export function Dragon({ soldiers }: { soldiers: number }) {
       shader.vertexShader = shader.vertexShader.replace(
         "#include <begin_vertex>",
         `#include <begin_vertex>
-  float tailW = smoothstep(-1.2, -5.1, transformed.z);
-  float neckW = smoothstep(1.8, 3.4, transformed.z);
-  transformed.x += sin(uTime * 2.5 + transformed.z * 1.2) * tailW * 0.62;
-  transformed.y += cos(uTime * 1.9 + transformed.z * 0.7) * tailW * 0.18;
+  float tailW = smoothstep(-0.6, -7.8, transformed.z);
+  float neckW = smoothstep(1.4, 2.3, transformed.z);
+  transformed.x += sin(uTime * 2.2 + transformed.z * 0.8) * tailW * 1.05;
+  transformed.y += cos(uTime * 1.6 + transformed.z * 0.5) * tailW * 0.32;
   transformed.x += sin(uTime * 1.25) * neckW * 0.07;
   transformed.y += sin(uTime * 1.6 + 0.4) * neckW * 0.05;`,
       );
@@ -743,13 +886,12 @@ export function Dragon({ soldiers }: { soldiers: number }) {
 
   return (
     <group>
-      {[0, 1, 2].map((i) => (
-        <Drake key={i} index={i} soldiers={n} body={body} jawGeo={jawGeo} wings={wings} bodyMat={bodyMat} />
-      ))}
+      <Drake index={0} soldiers={n} body={body} jawGeo={jawGeo} wings={wings} bodyMat={bodyMat} />
       {dragonBreaths(n).map((b, i) => (
         <GroundFire key={i} ax={b.ax} az={b.az} t0={b.t0} dur={b.dur} armed radius={b.r} />
       ))}
       <Reply soldiers={n} />
+      <Lancer soldiers={n} />
     </group>
   );
 }
