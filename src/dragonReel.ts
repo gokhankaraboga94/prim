@@ -9,7 +9,14 @@ export function isDragon(id: string | null | undefined): id is DragonId {
   return id === DRAGON_ID;
 }
 
-export const DRAGON_SECONDS = 36;
+export const DRAGON_SECONDS = 48;
+
+export const DRAGON_ARCHERS = 16;
+
+export function dragonIsArcher(i: number, n: number) {
+  const stride = Math.max(1, Math.ceil(Math.max(1, n) / DRAGON_ARCHERS));
+  return i % stride === 0 && Math.floor(i / stride) < DRAGON_ARCHERS;
+}
 
 export const FIRE_R = 1.5;
 
@@ -68,19 +75,20 @@ function fleeStep(x: number, z: number, t: number, seed: number) {
 
 type Key = { t: number; x: number; y: number; z: number; pitch: number };
 
-export const SPEAR_LOOSE = 22.4;
-export const SPEAR_HIT = 23.6;
+export const SPEAR_LOOSE = 32.2;
+export const SPEAR_HIT = 32.7;
 
 const PATHS: Key[][] = [
   [
     { t: 0, x: -18, y: 24, z: 14, pitch: -0.42 },
     { t: 5.5, x: -4, y: 17.5, z: 9, pitch: -1.02 },
     { t: 11, x: 2, y: 15.6, z: 5, pitch: -1.02 },
-    { t: 18, x: 2.6, y: 14.8, z: 3.4, pitch: -1.02 },
-    { t: 22.2, x: 2.8, y: 14.4, z: 2.6, pitch: -1.02 },
-    { t: 24.6, x: 10, y: 21, z: -2, pitch: -0.1 },
-    { t: 30, x: 26, y: 38, z: 1, pitch: 0.14 },
-    { t: 36, x: 48, y: 50, z: 12, pitch: 0.04 },
+    { t: 22, x: 2.4, y: 15, z: 4, pitch: -1.02 },
+    { t: 30, x: 2.8, y: 14.5, z: 3, pitch: -1.02 },
+    { t: 32.2, x: 3, y: 14.3, z: 2.7, pitch: -1.02 },
+    { t: 34.4, x: 14, y: 24, z: -2, pitch: -0.1 },
+    { t: 41, x: 32, y: 42, z: 2, pitch: 0.14 },
+    { t: 48, x: 54, y: 54, z: 14, pitch: 0.04 },
   ],
 ];
 
@@ -243,6 +251,13 @@ function buildPlan(n: number): Plan {
   const sweeps: { t0: number; dur: number; r: number; side: Side }[] = [
     { t0: 12.6, dur: 1.45, r: 2.9, side: "left" },
     { t0: 14.5, dur: 1.35, r: 2.8, side: "front" },
+    { t0: 16.6, dur: 1.4, r: 3, side: "right" },
+    { t0: 18.6, dur: 1.4, r: 3, side: "all" },
+    { t0: 20.7, dur: 1.4, r: 2.95, side: "left" },
+    { t0: 22.8, dur: 1.4, r: 3, side: "front" },
+    { t0: 25, dur: 1.4, r: 2.9, side: "all" },
+    { t0: 27.2, dur: 1.35, r: 2.9, side: "right" },
+    { t0: 29.3, dur: 1.3, r: 2.85, side: "left" },
   ];
   for (const shot of sweeps) {
     const when = shot.t0 + 0.2;
@@ -367,11 +382,11 @@ export function dragonAt(t: number, which = 0, n = 0): DragonPose {
 export function riderAt(t: number) {
   const keys = [
     { t: 0, x: -26, z: 8 },
-    { t: 15, x: -20, z: 5 },
-    { t: 19, x: -8, z: 2.4 },
-    { t: 22.3, x: 0.5, z: 3.2 },
-    { t: 29, x: 12, z: 6.4 },
-    { t: 36, x: 22, z: 8 },
+    { t: 24, x: -22, z: 6 },
+    { t: 28.4, x: -8, z: 2.4 },
+    { t: 32.1, x: 0.6, z: 3.2 },
+    { t: 40, x: 14, z: 6.4 },
+    { t: 48, x: 24, z: 8 },
   ];
   let i = 0;
   while (i < keys.length - 2 && t > keys[i + 1].t) i += 1;
@@ -383,7 +398,7 @@ export function riderAt(t: number) {
     x: lerp(a.x, b.x, e),
     z: lerp(a.z, b.z, e),
     yaw: Math.atan2(b.x - a.x, b.z - a.z),
-    gallop: t < 32 ? 1 : 0.2,
+    gallop: t < 44 ? 1 : 0.2,
   };
 }
 
@@ -395,7 +410,7 @@ export function sampleDragonCam(recT: number): ShotPose {
     x: 7,
     y: t < SPEAR_HIT ? 15 : 18,
     z: -30,
-    lx: a.x * 0.35 + (t > 18 ? ride.x * 0.12 : 0),
+    lx: a.x * 0.35 + (t > 27 ? ride.x * 0.12 : 0),
     ly: t < SPEAR_HIT ? 7 : 14,
     lz: 3.5,
     fov: 55,
@@ -435,9 +450,10 @@ export function dragonFriendAt(i: number, n: number, t: number, out: New1Pose) {
       }
       out.ry = Math.atan2(aimX - live.x, aimZ - live.z);
     }
+    const archer = dragonIsArcher(i, n);
     const shot = ((t * 0.95 + hash01(i + 3) * 1.7) % 2.05) / 2.05;
-    const drawing = !live.moving && t > 3.2 && shot > 0.16 && shot < 0.58;
-    out.rx = live.moving ? 0.36 : drawing ? -0.86 : -0.62;
+    const drawing = archer && !live.moving && t > 3.2 && shot > 0.16 && shot < 0.58;
+    out.rx = live.moving ? 0.36 : archer ? (drawing ? -0.86 : -0.62) : -0.22;
     return;
   }
   const age = t - dieAt;

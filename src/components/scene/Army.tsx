@@ -14,7 +14,7 @@ import { vsSoldierAt, type VsPose } from "../../vsReel";
 import { NEW6_ARCHERS, NEW62_ARCHERS, new1FriendAt, new2FriendAt, new2VisualFriends, new5FriendAt, new5OnScreen, new6FriendAt, new6SwordPitch, new6VisualFriends, new7FriendAt, new7VisualFriends } from "../../new1Reel";
 import { labFriendAt, labRosterIds } from "../../mazeReel";
 import { FILM_DOWN, filmFriendAt, filmRoster } from "../../filmReel";
-import { dragonFriendAt } from "../../dragonReel";
+import { dragonFriendAt, dragonIsArcher } from "../../dragonReel";
 import { DEV2_N, DEV_N, devFriendAt, devIsArcher, devIsSpear, devNameCovered, devSnakeStriking } from "../../devReel";
 import { sfxArrowLoose, sfxBowDraw, sfxVolleyPeak } from "../../reelSfx";
 import { raidCount, sallyHunting, sallyLiveIndex, sallyLocal, sallyRaiderAt, swordArmPose, swordStyleAt, swordSwingU } from "../../siegeEvent";
@@ -1397,6 +1397,16 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
           stamp(bodies.current, dragonLive);
           bodies.current.setColorAt(dragonLive, vsPose.blood ? (vsPose.rx < 1.15 ? _fireTint : _charTint) : _plainTint);
           dragonLive += 1;
+          if (!vsPose.blood && !dragonIsArcher(i, n) && bladeSwings.current) {
+            const tremble = Math.sin(recT * 6 + i) * 0.06;
+            _swingM.makeTranslation(0.3, 0.9, 0.16);
+            _swingSpin.makeRotationX(-(0.42 + tremble));
+            _swingNeg.makeTranslation(-0.3, -0.9, -0.16);
+            _swingM.multiply(_swingSpin).multiply(_swingNeg);
+            _swingBody.copy(dummy.matrix).multiply(_swingM);
+            bladeSwings.current.setMatrixAt(dragonSwords, _swingBody);
+            dragonSwords += 1;
+          }
           continue;
         }
         if (giant) {
