@@ -110,44 +110,35 @@ function prepMerge(geos: THREE.BufferGeometry[]) {
 
 function buildBody() {
   const stations: Station[] = [
-    { x: 0.02, y: 0.16, z: -7.6, rx: 0.04, ry: 0.03 },
-    { x: -0.03, y: 0.16, z: -6.2, rx: 0.08, ry: 0.055 },
-    { x: 0.02, y: 0.14, z: -4.8, rx: 0.14, ry: 0.09 },
-    { x: 0, y: 0.1, z: -3.3, rx: 0.24, ry: 0.16 },
-    { x: 0, y: 0.04, z: -1.8, rx: 0.4, ry: 0.26 },
-    { x: 0, y: 0, z: -0.45, rx: 0.56, ry: 0.38 },
-    { x: 0, y: 0.04, z: 0.7, rx: 0.5, ry: 0.36 },
-    { x: 0, y: 0.22, z: 1.45, rx: 0.34, ry: 0.28 },
-    { x: 0, y: 0.48, z: 2.05, rx: 0.26, ry: 0.22 },
+    { x: 0.04, y: 0.2, z: -11.2, rx: 0.02, ry: 0.015 },
+    { x: -0.05, y: 0.18, z: -9.4, rx: 0.04, ry: 0.028 },
+    { x: 0.04, y: 0.16, z: -7.6, rx: 0.07, ry: 0.045 },
+    { x: -0.02, y: 0.14, z: -5.8, rx: 0.12, ry: 0.075 },
+    { x: 0, y: 0.1, z: -4.0, rx: 0.2, ry: 0.13 },
+    { x: 0, y: 0.04, z: -2.3, rx: 0.32, ry: 0.21 },
+    { x: 0, y: 0, z: -0.7, rx: 0.44, ry: 0.3 },
+    { x: 0, y: 0.04, z: 0.55, rx: 0.4, ry: 0.28 },
+    { x: 0, y: 0.14, z: 1.4, rx: 0.22, ry: 0.16 },
+    { x: 0, y: 0.36, z: 1.95, rx: 0.14, ry: 0.11 },
+    { x: 0, y: 0.66, z: 2.35, rx: 0.12, ry: 0.095 },
+    { x: 0, y: 1.0, z: 2.68, rx: 0.1, ry: 0.085 },
   ];
   const tube = skinTube(stations, 12);
-  const cone = new THREE.ConeGeometry(0.08, 0.42, 5);
+  const cone = new THREE.ConeGeometry(0.07, 0.42, 5);
   const extras: THREE.BufferGeometry[] = [tube];
-  const onBack = (z: number) => {
-    let best = stations[0];
-    let bestD = Infinity;
-    for (const s of stations) {
-      const d = Math.abs(s.z - z);
-      if (d < bestD) {
-        bestD = d;
-        best = s;
-      }
-    }
-    return best;
-  };
-  const spine = [-6.4, -5.0, -3.6, -2.2, -0.8, 0.4, 1.3];
-  spine.forEach((z, i) => {
-    const s = onBack(z);
-    const h = 0.12 + (1 - i / spine.length) * 0.16;
-    extras.push(placed(cone, new THREE.Color("#3a100e"), 0, s.y + s.ry + h * 0.12, z, -0.7, 0, 0, 0.28, h / 0.42, 0.18));
+  stations.forEach((s, i) => {
+    if (i < 1 || i > stations.length - 2) return;
+    const h = 0.05 + s.ry * 1.25;
+    extras.push(placed(cone, new THREE.Color("#4a1410"), s.x, s.y + s.ry * 0.9 + h * 0.3, s.z, -0.5, 0, 0, 0.2, h / 0.42, 0.12));
   });
-  const thigh = new THREE.CylinderGeometry(0.07, 0.09, 0.55, 6);
-  const shin = new THREE.CylinderGeometry(0.045, 0.06, 0.48, 5);
-  const claw = new THREE.ConeGeometry(0.025, 0.14, 4);
+  const thigh = new THREE.CylinderGeometry(0.09, 0.12, 0.62, 7);
+  const shin = new THREE.CylinderGeometry(0.05, 0.07, 0.55, 6);
+  const claw = new THREE.ConeGeometry(0.028, 0.16, 4);
   ([-1, 1] as const).forEach((sign) => {
-    extras.push(placed(thigh, new THREE.Color("#6a221c"), sign * 0.28, -0.12, -0.2, 1.05, 0, sign * 0.2, 1.1, 1.1, 1.1));
-    extras.push(placed(shin, new THREE.Color("#4e1814"), sign * 0.4, -0.4, -0.55, 1.55, 0, sign * 0.08, 0.9, 1, 0.9));
-    extras.push(placed(claw, new THREE.Color("#2a1810"), sign * 0.4, -0.55, -0.95, 1.35, 0, sign * 0.2));
+    extras.push(placed(thigh, new THREE.Color("#6a221c"), sign * 0.2, -0.04, -0.45, 0.8, 0, sign * 0.12, 1.15, 1.15, 1.15));
+    extras.push(placed(shin, new THREE.Color("#4a1612"), sign * 0.32, -0.4, -0.85, 1.25, 0, sign * 0.04, 0.85, 1.1, 0.85));
+    extras.push(placed(claw, new THREE.Color("#1a0c08"), sign * 0.38, -0.62, -1.2, 1.15, 0, sign * 0.1));
+    extras.push(placed(claw, new THREE.Color("#1a0c08"), sign * 0.24, -0.58, -1.08, 1.1, 0.35, sign * 0.15, 0.7, 0.7, 0.7));
   });
   thigh.dispose();
   shin.dispose();
@@ -159,45 +150,46 @@ function buildBody() {
 }
 
 function buildSkull() {
-  const ball = new THREE.SphereGeometry(0.4, 14, 10);
-  const ridge = new THREE.BoxGeometry(0.78, 0.1, 0.18);
-  const horn = new THREE.ConeGeometry(0.055, 0.48, 6);
+  const stations: Station[] = [
+    { x: 0, y: 0.02, z: -0.2, rx: 0.13, ry: 0.11 },
+    { x: 0, y: 0.12, z: 0.05, rx: 0.22, ry: 0.17 },
+    { x: 0, y: 0.06, z: 0.38, rx: 0.16, ry: 0.1 },
+    { x: 0, y: -0.02, z: 0.72, rx: 0.1, ry: 0.05 },
+    { x: 0, y: -0.03, z: 1.02, rx: 0.04, ry: 0.022 },
+  ];
+  const tube = skinTube(stations, 12);
+  const horn = new THREE.ConeGeometry(0.038, 0.46, 5);
+  const pit = new THREE.SphereGeometry(0.028, 6, 4);
   const parts = [
-    placed(ball, DORSAL, 0, 0.08, -0.08, 0, 0, 0, 1.2, 0.95, 1.05),
-    placed(ball, DORSAL, -0.32, -0.02, 0.12, 0, 0, 0, 0.42, 0.48, 0.42),
-    placed(ball, DORSAL, 0.32, -0.02, 0.12, 0, 0, 0, 0.42, 0.48, 0.42),
-    placed(ball, new THREE.Color("#9a3028"), 0, -0.08, 0.48, 0.1, 0, 0, 0.7, 0.42, 0.85),
-    placed(ball, new THREE.Color("#1a0c0a"), -0.24, 0.1, 0.22, 0, 0, 0, 0.28, 0.2, 0.18),
-    placed(ball, new THREE.Color("#1a0c0a"), 0.24, 0.1, 0.22, 0, 0, 0, 0.28, 0.2, 0.18),
-    placed(ridge, new THREE.Color("#3a100e"), 0, 0.34, 0.16),
-    placed(horn, HORN, -0.16, 0.42, -0.16, 0.7, 0.15, 0.55, 0.85, 1.35, 0.85),
-    placed(horn, HORN, 0.16, 0.42, -0.16, 0.7, -0.15, -0.55, 0.85, 1.35, 0.85),
-    placed(horn, HORN, -0.28, 0.28, -0.02, 0.45, 0.35, 0.9, 0.55, 0.9, 0.55),
-    placed(horn, HORN, 0.28, 0.28, -0.02, 0.45, -0.35, -0.9, 0.55, 0.9, 0.55),
-    placed(ball, new THREE.Color("#140808"), -0.08, -0.12, 0.72, 0, 0, 0, 0.12, 0.08, 0.1),
-    placed(ball, new THREE.Color("#140808"), 0.08, -0.12, 0.72, 0, 0, 0, 0.12, 0.08, 0.1),
+    tube,
+    placed(horn, HORN, -0.06, 0.32, -0.02, -1.05, 0.15, 0.35, 0.75, 1.45, 0.75),
+    placed(horn, HORN, 0.06, 0.32, -0.02, -1.05, -0.15, -0.35, 0.75, 1.45, 0.75),
+    placed(horn, HORN, -0.14, 0.2, 0.08, -0.7, 0.45, 0.85, 0.5, 1.05, 0.5),
+    placed(horn, HORN, 0.14, 0.2, 0.08, -0.7, -0.45, -0.85, 0.5, 1.05, 0.5),
+    placed(horn, HORN, 0, 0.28, 0.12, -0.85, 0, 0, 0.4, 0.85, 0.4),
+    placed(pit, new THREE.Color("#140808"), -0.035, -0.02, 0.9),
+    placed(pit, new THREE.Color("#140808"), 0.035, -0.02, 0.9),
   ];
   const merged = prepMerge(parts);
-  ball.dispose();
-  ridge.dispose();
   horn.dispose();
+  pit.dispose();
   if (merged) parts.forEach((g) => g.dispose());
   return merged ?? new THREE.BufferGeometry();
 }
 
 function buildJaw() {
   const stations: Station[] = [
-    { x: 0, y: 0, z: 0, rx: 0.32, ry: 0.1 },
-    { x: 0, y: -0.015, z: 0.22, rx: 0.24, ry: 0.08 },
-    { x: 0, y: -0.01, z: 0.42, rx: 0.12, ry: 0.045 },
+    { x: 0, y: 0.01, z: 0.02, rx: 0.15, ry: 0.045 },
+    { x: 0, y: -0.015, z: 0.32, rx: 0.1, ry: 0.032 },
+    { x: 0, y: -0.02, z: 0.58, rx: 0.04, ry: 0.016 },
   ];
   const tube = skinTube(stations, 10);
-  const tooth = new THREE.ConeGeometry(0.02, 0.09, 4);
+  const tooth = new THREE.ConeGeometry(0.018, 0.07, 4);
   const teeth: THREE.BufferGeometry[] = [tube];
-  for (let i = 0; i < 4; i++) {
-    const z = 0.1 + i * 0.08;
-    teeth.push(placed(tooth, new THREE.Color("#f3ead8"), -0.04, 0.04, z, 0, 0, 0));
-    teeth.push(placed(tooth, new THREE.Color("#f3ead8"), 0.04, 0.04, z, 0, 0, 0));
+  for (let i = 0; i < 5; i++) {
+    const z = 0.08 + i * 0.09;
+    teeth.push(placed(tooth, new THREE.Color("#f3ead8"), -0.045, 0.03, z, -0.4, 0, 0.15));
+    teeth.push(placed(tooth, new THREE.Color("#f3ead8"), 0.045, 0.03, z, -0.4, 0, -0.15));
   }
   const merged = prepMerge(teeth);
   tooth.dispose();
@@ -209,9 +201,9 @@ type WingParts = { skin: THREE.BufferGeometry; bone: THREE.BufferGeometry };
 
 function wingGeo(sign: number): WingParts {
   const fingers = [
-    [[0, 0.04, 0.15], [sign * 0.7, 0.48, 0.55], [sign * 1.45, 0.22, -0.15], [sign * 2.15, -0.02, -1.15]],
-    [[0, 0.02, 0.02], [sign * 1.05, 0.22, -0.55], [sign * 2.25, 0.02, -1.85], [sign * 3.45, -0.18, -3.35]],
-    [[0, 0, -0.08], [sign * 0.65, 0.04, -1.05], [sign * 1.4, -0.1, -2.25], [sign * 2.05, -0.22, -3.45]],
+    [[0, 0.06, 0.2], [sign * 0.85, 0.72, 0.15], [sign * 1.7, 0.42, -0.7], [sign * 2.45, 0.05, -1.85]],
+    [[0, 0.02, 0], [sign * 1.15, 0.28, -0.85], [sign * 2.45, 0.04, -2.45], [sign * 3.85, -0.16, -4.15]],
+    [[0, 0, -0.12], [sign * 0.7, 0.06, -1.15], [sign * 1.45, -0.08, -2.45], [sign * 2.15, -0.2, -3.7]],
   ];
   const steps = 4;
   const chains = fingers.map((finger) => {
@@ -261,10 +253,10 @@ function wingGeo(sign: number): WingParts {
   skin.computeVertexNormals();
   const rod = new THREE.CylinderGeometry(0.007, 0.011, 1, 4);
   const spars = [
-    placed(rod, BONE, sign * 1.05, 0.18, -0.15, 0.5, 0, sign * 0.62, 1, 2.5, 1),
-    placed(rod, BONE, sign * 1.7, 0.02, -1.55, 0.9, 0, sign * 0.48, 1, 3.7, 1),
-    placed(rod, BONE, sign * 1.0, -0.06, -1.65, 1.05, 0, sign * 0.4, 1, 3.3, 1),
-    placed(rod, BONE, sign * 0.22, 0.1, 0.02, 0.25, 0, sign * 0.9, 0.35, 0.6, 0.35),
+    placed(rod, BONE, sign * 1.2, 0.32, -0.45, 0.55, 0, sign * 0.55, 1, 2.7, 1),
+    placed(rod, BONE, sign * 1.9, 0.04, -1.9, 0.85, 0, sign * 0.42, 1, 4.3, 1),
+    placed(rod, BONE, sign * 1.05, -0.04, -1.85, 1.0, 0, sign * 0.35, 1, 3.6, 1),
+    placed(rod, BONE, sign * 0.22, 0.12, 0.04, 0.2, 0, sign * 0.85, 0.35, 0.55, 0.35),
   ];
   rod.dispose();
   const bone = prepMerge(spars) ?? new THREE.BufferGeometry();
@@ -419,9 +411,9 @@ function Drake({
   const skinMat = useMemo(
     () =>
       new THREE.MeshStandardMaterial({
-        color: "#9a2820",
+        color: "#c4472a",
         transparent: true,
-        opacity: 0.4,
+        opacity: 0.58,
         roughness: 0.74,
         metalness: 0,
         side: THREE.DoubleSide,
@@ -528,38 +520,38 @@ function Drake({
     <group>
       <group ref={root} scale={scale}>
         {body && <mesh geometry={body} material={bodyMat} />}
-        <group ref={eyes} position={[0, 0.72, 2.15]}>
+        <group ref={eyes} position={[0, 1.02, 2.78]}>
           {skull && <mesh geometry={skull} material={bodyMat} />}
           {([-1, 1] as const).map((side) => (
-            <group key={side} position={[side * 0.24, 0.12, 0.24]}>
+            <group key={side} position={[side * 0.16, 0.1, 0.22]}>
               <mesh>
-                <sphereGeometry args={[0.055, 10, 8]} />
+                <sphereGeometry args={[0.042, 10, 8]} />
                 <meshStandardMaterial color="#e6b15a" roughness={0.22} metalness={0.18} />
               </mesh>
-              <mesh position={[0, 0, 0.028]} scale={[0.55, 0.18, 0.3]}>
-                <sphereGeometry args={[0.03, 6, 4]} />
+              <mesh position={[0, 0, 0.02]} scale={[0.45, 0.16, 0.28]}>
+                <sphereGeometry args={[0.026, 6, 4]} />
                 <meshBasicMaterial color="#0c0604" />
               </mesh>
             </group>
           ))}
-          <group ref={jaw} position={[0, -0.18, 0.28]}>
+          <group ref={jaw} position={[0, -0.1, 0.32]}>
             {jawGeo && (
               <mesh geometry={jawGeo}>
                 <meshStandardMaterial vertexColors roughness={0.88} metalness={0.02} />
               </mesh>
             )}
-            <mesh position={[0, 0.04, 0.16]}>
-              <boxGeometry args={[0.28, 0.05, 0.28]} />
+            <mesh position={[0, 0.02, 0.18]}>
+              <boxGeometry args={[0.16, 0.03, 0.22]} />
               <meshBasicMaterial color="#14080a" />
             </mesh>
           </group>
         </group>
-        <object3D ref={mouthAnchor} position={[0, 0.48, 2.95]} />
-        <group ref={left} position={[0.42, 0.32, 0.85]}>
+        <object3D ref={mouthAnchor} position={[0, 0.88, 3.72]} />
+        <group ref={left} position={[0.34, 0.28, 1.15]}>
           <mesh geometry={wings[0].bone} material={boneMat} />
           <mesh geometry={wings[0].skin} material={skinMat} renderOrder={2} />
         </group>
-        <group ref={right} position={[-0.42, 0.32, 0.85]}>
+        <group ref={right} position={[-0.34, 0.28, 1.15]}>
           <mesh geometry={wings[1].bone} material={boneMat} />
           <mesh geometry={wings[1].skin} material={skinMat} renderOrder={2} />
         </group>
@@ -908,8 +900,8 @@ export function Dragon({ soldiers }: { soldiers: number }) {
       shader.vertexShader = shader.vertexShader.replace(
         "#include <begin_vertex>",
         `#include <begin_vertex>
-  float tailW = smoothstep(-0.6, -7.8, transformed.z);
-  float neckW = smoothstep(1.4, 2.3, transformed.z);
+  float tailW = smoothstep(-0.8, -10.4, transformed.z);
+  float neckW = smoothstep(1.6, 2.6, transformed.z);
   transformed.x += sin(uTime * 2.2 + transformed.z * 0.8) * tailW * 1.05;
   transformed.y += cos(uTime * 1.6 + transformed.z * 0.5) * tailW * 0.32;
   transformed.x += sin(uTime * 1.25) * neckW * 0.07;
