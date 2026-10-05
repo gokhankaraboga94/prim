@@ -5,8 +5,8 @@ import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js
 import { REEL_HOLD } from "../../recordCanvas";
 import { SPEAR_HIT, SPEAR_LOOSE, dragonAt, dragonBreathIndex, dragonBreaths, dragonFriendAt, riderAt } from "../../dragonReel";
 
-const DORSAL = new THREE.Color("#2a2620");
-const BELLY = new THREE.Color("#9c8b74");
+const DORSAL = new THREE.Color("#8a1e1a");
+const BELLY = new THREE.Color("#c45a48");
 const HORN = new THREE.Color("#c4b193");
 const BONE = new THREE.Color("#3a332b");
 
@@ -271,12 +271,12 @@ function wingGeo(sign: number): WingParts {
   skin.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
   skin.setIndex(idx);
   skin.computeVertexNormals();
-  const rod = new THREE.CylinderGeometry(0.018, 0.026, 1, 5);
+  const rod = new THREE.CylinderGeometry(0.007, 0.011, 1, 4);
   const spars = [
     placed(rod, BONE, sign * 1.7, 0.28, 0.95, 0.15, 0, sign * 0.55, 1, 3.4, 1),
     placed(rod, BONE, sign * 2.5, 0.22, -0.15, 0.35, 0, sign * 0.72, 1, 4.2, 1),
     placed(rod, BONE, sign * 2.15, 0.02, -1.05, 0.7, 0, sign * 0.62, 1, 3.6, 1),
-    placed(rod, BONE, sign * 0.55, 0.16, 0.12, 0.2, 0, sign * 1.05, 0.85, 1.15, 0.85),
+    placed(rod, BONE, sign * 0.55, 0.16, 0.12, 0.2, 0, sign * 1.05, 0.45, 0.85, 0.45),
   ];
   rod.dispose();
   const bone = prepMerge(spars) ?? new THREE.BufferGeometry();
@@ -431,7 +431,7 @@ function Drake({
   const skinMat = useMemo(
     () =>
       new THREE.MeshStandardMaterial({
-        color: "#7a5346",
+        color: "#9a3028",
         transparent: true,
         opacity: 0.3,
         roughness: 0.74,
@@ -600,8 +600,8 @@ function Drake({
   );
 }
 
-const REPLY_BOWS = 160;
-const REPLY_ARROWS = 64;
+const REPLY_BOWS = 80;
+const REPLY_ARROWS = 32;
 
 function makeReplyBow() {
   const arc = new THREE.TorusGeometry(0.36, 0.014, 4, 10, Math.PI * 1.25);
@@ -715,6 +715,44 @@ function Reply({ soldiers }: { soldiers: number }) {
   );
 }
 
+function buildHorseBody() {
+  const coat = new THREE.Color("#6a4630");
+  const dark = new THREE.Color("#2c1c14");
+  const barrel = new THREE.CylinderGeometry(0.28, 0.3, 1.15, 8);
+  barrel.rotateX(Math.PI / 2);
+  const ball = new THREE.SphereGeometry(0.3, 8, 6);
+  const neck = new THREE.CylinderGeometry(0.1, 0.15, 0.58, 6);
+  const head = new THREE.SphereGeometry(0.16, 8, 6);
+  const muzzle = new THREE.CylinderGeometry(0.065, 0.085, 0.26, 6);
+  const ear = new THREE.ConeGeometry(0.035, 0.14, 4);
+  const mane = new THREE.BoxGeometry(0.045, 0.1, 0.42);
+  const tail = new THREE.ConeGeometry(0.055, 0.62, 5);
+  const parts = [
+    placed(barrel, coat, 0, 1.18, 0),
+    placed(ball, coat, 0, 1.2, 0.42, 0, 0, 0, 0.85, 0.9, 0.7),
+    placed(ball, coat, 0, 1.22, -0.42, 0, 0, 0, 0.9, 0.95, 0.72),
+    placed(neck, coat, 0, 1.55, 0.72, 0.7, 0, 0),
+    placed(head, coat, 0, 1.86, 0.98, 0, 0, 0, 0.7, 0.75, 1.05),
+    placed(muzzle, coat, 0, 1.78, 1.18, Math.PI / 2, 0, 0),
+    placed(ear, dark, -0.07, 2.02, 0.96, -0.2, 0, -0.3),
+    placed(ear, dark, 0.07, 2.02, 0.96, -0.2, 0, 0.3),
+    placed(mane, dark, 0, 1.68, 0.78, 0.7, 0, 0),
+    placed(tail, dark, 0, 1.05, -0.72, 0.5, 0, 0),
+    placed(ball, dark, 0, 1.46, -0.05, 0, 0, 0, 0.35, 0.12, 0.28),
+  ];
+  const merged = prepMerge(parts);
+  barrel.dispose();
+  ball.dispose();
+  neck.dispose();
+  head.dispose();
+  muzzle.dispose();
+  ear.dispose();
+  mane.dispose();
+  tail.dispose();
+  if (merged) parts.forEach((g) => g.dispose());
+  return merged ?? new THREE.BufferGeometry();
+}
+
 function Lancer({ soldiers }: { soldiers: number }) {
   const horse = useRef<THREE.Group>(null);
   const fl = useRef<THREE.Group>(null);
@@ -727,6 +765,7 @@ function Lancer({ soldiers }: { soldiers: number }) {
   const hit = useMemo(() => new THREE.Vector3(), []);
   const euler = useMemo(() => new THREE.Euler(), []);
   const locked = useRef(false);
+  const horseBody = useMemo(() => buildHorseBody(), []);
 
   useFrame(({ clock }) => {
     const t = Math.max(0, clock.elapsedTime - REEL_HOLD);
@@ -753,7 +792,7 @@ function Lancer({ soldiers }: { soldiers: number }) {
         locked.current = false;
         const wind = Math.max(0, Math.min(1, (t - (SPEAR_LOOSE - 0.8)) / 0.8));
         euler.set(0, ride.yaw, 0);
-        from.set(0.42, 1.9, 0.5).applyEuler(euler);
+        from.set(0.46, 2.15, 0.55).applyEuler(euler);
         from.x += ride.x;
         from.y += bob;
         from.z += ride.z;
@@ -783,54 +822,52 @@ function Lancer({ soldiers }: { soldiers: number }) {
   return (
     <group>
       <group ref={horse}>
-        <mesh position={[0, 1.15, 0]}>
-          <boxGeometry args={[0.38, 0.46, 1.5]} />
-          <meshLambertMaterial color="#5c4030" />
+        <mesh geometry={horseBody}>
+          <meshLambertMaterial vertexColors />
         </mesh>
-        <mesh position={[0, 1.48, 0.78]} rotation={[0.65, 0, 0]}>
-          <boxGeometry args={[0.2, 0.5, 0.2]} />
-          <meshLambertMaterial color="#4e3628" />
-        </mesh>
-        <mesh position={[0, 1.82, 1.02]}>
-          <boxGeometry args={[0.18, 0.2, 0.4]} />
-          <meshLambertMaterial color="#4e3628" />
-        </mesh>
-        <group ref={fl} position={[-0.14, 1.05, 0.48]}>
-          <mesh position={[0, -0.4, 0]}>
-            <boxGeometry args={[0.09, 0.8, 0.1]} />
-            <meshLambertMaterial color="#3d2a1c" />
+        {(
+          [
+            [fl, -0.16, 0.42],
+            [fr, 0.16, 0.42],
+            [hl, -0.16, -0.46],
+            [hr, 0.16, -0.46],
+          ] as const
+        ).map(([ref, x, z]) => (
+          <group key={`${x}-${z}`} ref={ref} position={[x, 1.08, z]}>
+            <mesh position={[0, -0.26, 0]}>
+              <cylinderGeometry args={[0.05, 0.065, 0.5, 6]} />
+              <meshLambertMaterial color="#5a3c28" />
+            </mesh>
+            <mesh position={[0, -0.68, 0.03]}>
+              <cylinderGeometry args={[0.038, 0.048, 0.42, 5]} />
+              <meshLambertMaterial color="#4a3220" />
+            </mesh>
+            <mesh position={[0, -0.92, 0.05]}>
+              <boxGeometry args={[0.07, 0.05, 0.11]} />
+              <meshLambertMaterial color="#1c140e" />
+            </mesh>
+          </group>
+        ))}
+        <group position={[0, 1.58, -0.02]}>
+          <mesh position={[0, 0.32, 0]}>
+            <boxGeometry args={[0.42, 0.5, 0.24]} />
+            <meshLambertMaterial color="#2f74ff" />
           </mesh>
-        </group>
-        <group ref={fr} position={[0.14, 1.05, 0.48]}>
-          <mesh position={[0, -0.4, 0]}>
-            <boxGeometry args={[0.09, 0.8, 0.1]} />
-            <meshLambertMaterial color="#3d2a1c" />
+          <mesh position={[0, 0.66, 0.02]}>
+            <boxGeometry args={[0.22, 0.2, 0.2]} />
+            <meshLambertMaterial color="#e4ebf2" />
           </mesh>
-        </group>
-        <group ref={hl} position={[-0.14, 1.05, -0.48]}>
-          <mesh position={[0, -0.4, 0]}>
-            <boxGeometry args={[0.09, 0.8, 0.1]} />
-            <meshLambertMaterial color="#3d2a1c" />
+          <mesh position={[0, 0.82, 0]}>
+            <coneGeometry args={[0.12, 0.16, 5]} />
+            <meshLambertMaterial color="#d7c56a" />
           </mesh>
-        </group>
-        <group ref={hr} position={[0.14, 1.05, -0.48]}>
-          <mesh position={[0, -0.4, 0]}>
-            <boxGeometry args={[0.09, 0.8, 0.1]} />
-            <meshLambertMaterial color="#3d2a1c" />
+          <mesh position={[0, 0.96, -0.02]}>
+            <boxGeometry args={[0.06, 0.22, 0.06]} />
+            <meshLambertMaterial color="#f2f4f7" />
           </mesh>
-        </group>
-        <group position={[0, 1.62, -0.02]}>
-          <mesh position={[0, 0.28, 0]}>
-            <boxGeometry args={[0.36, 0.42, 0.22]} />
-            <meshLambertMaterial color="#1a56e8" />
-          </mesh>
-          <mesh position={[0, 0.62, 0]}>
-            <boxGeometry args={[0.18, 0.18, 0.18]} />
-            <meshLambertMaterial color="#d5dde6" />
-          </mesh>
-          <mesh position={[0.2, 0.32, 0.16]} rotation={[0.8, 0, -0.3]}>
-            <boxGeometry args={[0.08, 0.42, 0.08]} />
-            <meshLambertMaterial color="#1a56e8" />
+          <mesh position={[0.24, 0.38, 0.18]} rotation={[0.7, 0, -0.35]}>
+            <boxGeometry args={[0.09, 0.46, 0.09]} />
+            <meshLambertMaterial color="#2f74ff" />
           </mesh>
         </group>
       </group>

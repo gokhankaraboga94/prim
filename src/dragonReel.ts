@@ -68,18 +68,19 @@ function fleeStep(x: number, z: number, t: number, seed: number) {
 
 type Key = { t: number; x: number; y: number; z: number; pitch: number };
 
-export const SPEAR_LOOSE = 16.4;
-export const SPEAR_HIT = 17.65;
+export const SPEAR_LOOSE = 22.4;
+export const SPEAR_HIT = 23.6;
 
 const PATHS: Key[][] = [
   [
     { t: 0, x: -18, y: 24, z: 14, pitch: -0.42 },
     { t: 5.5, x: -4, y: 17.5, z: 9, pitch: -0.95 },
     { t: 11, x: 2, y: 15.6, z: 5, pitch: -1.05 },
-    { t: 16.2, x: 3.4, y: 14.6, z: 2.4, pitch: -0.86 },
-    { t: 18.5, x: 8, y: 19, z: -1.5, pitch: -0.15 },
-    { t: 24, x: 20, y: 32, z: -4, pitch: 0.16 },
-    { t: 36, x: 46, y: 48, z: 10, pitch: 0.04 },
+    { t: 18, x: 2.6, y: 14.8, z: 3.4, pitch: -0.9 },
+    { t: 22.2, x: 2.8, y: 14.4, z: 2.6, pitch: -0.82 },
+    { t: 24.6, x: 10, y: 21, z: -2, pitch: -0.1 },
+    { t: 30, x: 26, y: 38, z: 1, pitch: 0.14 },
+    { t: 36, x: 48, y: 50, z: 12, pitch: 0.04 },
   ],
 ];
 
@@ -364,11 +365,12 @@ export function dragonAt(t: number, which = 0, n = 0): DragonPose {
 
 export function riderAt(t: number) {
   const keys = [
-    { t: 0, x: -16, z: -6 },
-    { t: 9, x: -6, z: -1 },
-    { t: 16.2, x: 0.2, z: 3.4 },
-    { t: 23, x: 10, z: 6.5 },
-    { t: 36, x: 22, z: 9 },
+    { t: 0, x: -26, z: 8 },
+    { t: 15, x: -20, z: 5 },
+    { t: 19, x: -8, z: 2.4 },
+    { t: 22.3, x: 0.5, z: 3.2 },
+    { t: 29, x: 12, z: 6.4 },
+    { t: 36, x: 22, z: 8 },
   ];
   let i = 0;
   while (i < keys.length - 2 && t > keys[i + 1].t) i += 1;
@@ -380,7 +382,7 @@ export function riderAt(t: number) {
     x: lerp(a.x, b.x, e),
     z: lerp(a.z, b.z, e),
     yaw: Math.atan2(b.x - a.x, b.z - a.z),
-    gallop: t < 26 ? 1 : 0.15,
+    gallop: t < 32 ? 1 : 0.2,
   };
 }
 
@@ -392,7 +394,7 @@ export function sampleDragonCam(recT: number): ShotPose {
     x: 7,
     y: t < SPEAR_HIT ? 15 : 18,
     z: -30,
-    lx: a.x * 0.4 + ride.x * 0.2,
+    lx: a.x * 0.35 + (t > 18 ? ride.x * 0.12 : 0),
     ly: t < SPEAR_HIT ? 7 : 14,
     lz: 3.5,
     fov: 55,
