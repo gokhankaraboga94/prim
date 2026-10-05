@@ -74,10 +74,10 @@ export const SPEAR_HIT = 23.6;
 const PATHS: Key[][] = [
   [
     { t: 0, x: -18, y: 24, z: 14, pitch: -0.42 },
-    { t: 5.5, x: -4, y: 17.5, z: 9, pitch: -0.95 },
-    { t: 11, x: 2, y: 15.6, z: 5, pitch: -1.05 },
-    { t: 18, x: 2.6, y: 14.8, z: 3.4, pitch: -0.9 },
-    { t: 22.2, x: 2.8, y: 14.4, z: 2.6, pitch: -0.82 },
+    { t: 5.5, x: -4, y: 17.5, z: 9, pitch: -1.02 },
+    { t: 11, x: 2, y: 15.6, z: 5, pitch: -1.02 },
+    { t: 18, x: 2.6, y: 14.8, z: 3.4, pitch: -1.02 },
+    { t: 22.2, x: 2.8, y: 14.4, z: 2.6, pitch: -1.02 },
     { t: 24.6, x: 10, y: 21, z: -2, pitch: -0.1 },
     { t: 30, x: 26, y: 38, z: 1, pitch: 0.14 },
     { t: 36, x: 48, y: 50, z: 12, pitch: 0.04 },
@@ -341,9 +341,10 @@ export function dragonAt(t: number, which = 0, n = 0): DragonPose {
   const k2 = atKey(path, t + 0.12);
   const fleeing = t >= SPEAR_LOOSE;
   const env = !fleeing && n > 0 ? breathEnv(t, which, n) : { breath: 0, ax: k.x, az: k.z + 6, r: FIRE_R };
-  const yaw = fleeing ? Math.atan2(k2.x - k.x, k2.z - k.z) : Math.atan2(env.ax - k.x, env.az - k.z);
-  let roll = Math.max(-0.45, Math.min(0.45, (k2.x - k.x) * -0.45));
-  let pitch = k.pitch;
+  const combatYaw = Math.atan2(20, -9);
+  const yaw = fleeing ? Math.atan2(k2.x - k.x, k2.z - k.z) : combatYaw;
+  let roll = Math.max(-0.28, Math.min(0.28, (k2.x - k.x) * -0.2));
+  let pitch = fleeing ? k.pitch : -1.02;
   if (t >= SPEAR_HIT) {
     const flinch = Math.exp(-(t - SPEAR_HIT) * 1.5);
     roll += flinch * 0.75;
