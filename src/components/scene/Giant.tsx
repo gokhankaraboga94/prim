@@ -127,7 +127,195 @@ function HeadHp({ soldiers }: { soldiers: number }) {
   );
 }
 
-function GiantBody({ soldiers, big, sword, dread, crown = false }: { soldiers: number; big: boolean; sword: boolean; dread: boolean; crown?: boolean }) {
+function FleshShell({
+  hide,
+  meat,
+  bone,
+  horn,
+  eye,
+  iron,
+}: {
+  hide: THREE.Material;
+  meat: THREE.Material;
+  bone: THREE.Material;
+  horn: THREE.Material;
+  eye: THREE.Material;
+  iron: THREE.Material;
+}) {
+  const claws = [-0.28, 0, 0.28];
+  return (
+    <group>
+      <mesh position={[-1.02, 4.7, 0.22]} rotation={[0.16, 0, 0.07]} material={hide}>
+        <capsuleGeometry args={[0.78, 2.05, 4, 8]} />
+      </mesh>
+      <mesh position={[1.08, 4.55, -0.02]} rotation={[0.08, 0, -0.1]} material={hide}>
+        <capsuleGeometry args={[0.86, 2.15, 4, 8]} />
+      </mesh>
+      <mesh position={[-1.04, 3.05, 0.48]} material={hide}>
+        <sphereGeometry args={[0.62, 10, 8]} />
+      </mesh>
+      <mesh position={[1.12, 2.95, 0.22]} material={hide}>
+        <sphereGeometry args={[0.66, 10, 8]} />
+      </mesh>
+      <mesh position={[-0.98, 1.75, 0.42]} rotation={[0.22, 0, 0.04]} material={hide}>
+        <capsuleGeometry args={[0.48, 1.55, 4, 8]} />
+      </mesh>
+      <mesh position={[1.16, 1.65, 0.18]} rotation={[0.12, 0, -0.05]} material={hide}>
+        <capsuleGeometry args={[0.52, 1.6, 4, 8]} />
+      </mesh>
+      <mesh position={[1.28, 1.85, 0.72]} rotation={[0.4, 0.2, 0.4]} material={meat}>
+        <capsuleGeometry args={[0.16, 0.85, 3, 6]} />
+      </mesh>
+      <mesh position={[1.22, 1.7, 0.78]} rotation={[0.5, 0, 0.2]} material={bone}>
+        <capsuleGeometry args={[0.06, 0.7, 2, 5]} />
+      </mesh>
+      <mesh position={[-0.92, 0.32, 1.15]} scale={[0.62, 0.28, 1.15]} material={hide}>
+        <sphereGeometry args={[1, 10, 8]} />
+      </mesh>
+      <mesh position={[1.18, 0.3, 1.05]} scale={[0.68, 0.3, 1.2]} material={hide}>
+        <sphereGeometry args={[1, 10, 8]} />
+      </mesh>
+      {claws.map((x) => (
+        <mesh key={`lt${x}`} position={[-0.92 + x, 0.18, 2.15]} rotation={[1.15, 0, x]} material={horn}>
+          <coneGeometry args={[0.08, 0.42, 5]} />
+        </mesh>
+      ))}
+      {claws.map((x) => (
+        <mesh key={`rt${x}`} position={[1.18 + x, 0.16, 2.1]} rotation={[1.15, 0, -x]} material={horn}>
+          <coneGeometry args={[0.09, 0.48, 5]} />
+        </mesh>
+      ))}
+      <mesh position={[0.05, 6.25, 0.08]} scale={[2.2, 1.15, 1.5]} material={hide}>
+        <sphereGeometry args={[1, 12, 10]} />
+      </mesh>
+      <mesh position={[0.08, 6.15, 0.05]} material={iron}>
+        <cylinderGeometry args={[1.45, 1.7, 0.42, 8]} />
+      </mesh>
+      <mesh position={[0.18, 7.55, 0.42]} scale={[1.75, 1.25, 1.35]} material={hide}>
+        <sphereGeometry args={[1, 12, 10]} />
+      </mesh>
+      <mesh position={[0.35, 7.15, 0.95]} scale={[1.15, 0.75, 0.85]} material={hide}>
+        <sphereGeometry args={[1, 10, 8]} />
+      </mesh>
+      <mesh position={[-0.15, 8.35, 0.55]} rotation={[0.3, 0.4, 0.8]} material={meat}>
+        <capsuleGeometry args={[0.22, 1.15, 3, 6]} />
+      </mesh>
+      <mesh position={[0, 9.45, 0.12]} scale={[2.05, 1.45, 1.25]} material={hide}>
+        <sphereGeometry args={[1, 12, 10]} />
+      </mesh>
+      <mesh position={[-0.72, 9.55, 0.95]} scale={[0.78, 0.55, 0.48]} material={hide}>
+        <sphereGeometry args={[1, 10, 8]} />
+      </mesh>
+      <mesh position={[0.78, 9.7, 0.88]} scale={[0.86, 0.6, 0.5]} material={hide}>
+        <sphereGeometry args={[1, 10, 8]} />
+      </mesh>
+      {[-0.2, 0.15, 0.5].map((y, i) => (
+        <mesh key={`rib${y}`} position={[-1.55, 8.55 + y, 0.35]} rotation={[0.2, 0.5, 1.15 + i * 0.08]} material={bone}>
+          <capsuleGeometry args={[0.06, 0.85, 2, 5]} />
+        </mesh>
+      ))}
+      <mesh position={[-1.45, 8.85, 0.15]} scale={[0.35, 0.7, 0.4]} material={meat}>
+        <sphereGeometry args={[1, 8, 6]} />
+      </mesh>
+      <mesh position={[-2.15, 10.65, 0.12]} scale={[1.05, 0.82, 0.85]} material={hide}>
+        <sphereGeometry args={[1, 10, 8]} />
+      </mesh>
+      <mesh position={[2.25, 10.7, 0.08]} scale={[1.15, 0.9, 0.9]} material={hide}>
+        <sphereGeometry args={[1, 10, 8]} />
+      </mesh>
+      <mesh position={[2.45, 10.95, 0.35]} rotation={[0.2, 0.1, -0.4]} material={iron}>
+        <boxGeometry args={[1.15, 0.28, 1.35]} />
+      </mesh>
+      <mesh position={[2.15, 10.55, 0.55]} rotation={[0.6, -0.2, 0.4]} material={meat}>
+        <capsuleGeometry args={[0.1, 0.7, 2, 5]} />
+      </mesh>
+      {[-0.4, 0.15, 0.7, 1.2].map((y, i) => (
+        <mesh key={`sp${y}`} position={[(i - 1.5) * 0.12, 7.4 + y, -1.05]} rotation={[-0.85, 0, 0]} material={bone}>
+          <coneGeometry args={[0.12, 0.7, 5]} />
+        </mesh>
+      ))}
+      <mesh position={[0.02, 12.05, 0.18]} material={hide}>
+        <capsuleGeometry args={[0.58, 0.85, 4, 8]} />
+      </mesh>
+      <mesh position={[0.28, 12.15, 0.55]} rotation={[0.4, 0, 0.3]} material={meat}>
+        <capsuleGeometry args={[0.05, 0.9, 2, 4]} />
+      </mesh>
+      <mesh position={[0.04, 13.95, 0.22]} scale={[1.02, 1.18, 0.98]} material={hide}>
+        <sphereGeometry args={[1.05, 14, 12]} />
+      </mesh>
+      <mesh position={[0.08, 13.35, 0.72]} rotation={[0.35, 0, 0]} scale={[0.95, 0.62, 0.78]} material={hide}>
+        <sphereGeometry args={[0.78, 12, 10]} />
+      </mesh>
+      <mesh position={[0.06, 14.35, 0.95]} rotation={[0.15, 0, 0]} material={hide}>
+        <capsuleGeometry args={[0.18, 1.35, 3, 6]} />
+      </mesh>
+      <mesh position={[-0.38, 13.82, 0.92]} material={horn}>
+        <sphereGeometry args={[0.28, 8, 6]} />
+      </mesh>
+      <mesh position={[0.46, 13.74, 0.88]} material={horn}>
+        <sphereGeometry args={[0.3, 8, 6]} />
+      </mesh>
+      <mesh position={[-0.38, 13.85, 1.12]} material={eye}>
+        <sphereGeometry args={[0.14, 8, 6]} />
+      </mesh>
+      <mesh position={[0.46, 13.78, 1.1]} material={eye}>
+        <sphereGeometry args={[0.16, 8, 6]} />
+      </mesh>
+      <mesh position={[0.08, 13.15, 1.22]} rotation={[0.2, 0, 0]} material={meat}>
+        <boxGeometry args={[0.72, 0.12, 0.08]} />
+      </mesh>
+      {[-0.28, -0.08, 0.16, 0.36].map((x) => (
+        <mesh key={`fang${x}`} position={[x, 13.05, 1.18]} rotation={[0.4, 0, x * 0.4]} material={bone}>
+          <coneGeometry args={[0.07, x > 0 ? 0.48 : 0.38, 5]} />
+        </mesh>
+      ))}
+      <mesh position={[-0.95, 14.55, 0.15]} rotation={[0.4, 0.15, 0.95]} material={horn}>
+        <coneGeometry args={[0.2, 1.7, 6]} />
+      </mesh>
+      <mesh position={[1.05, 14.7, 0.2]} rotation={[0.55, -0.1, -1.05]} material={horn}>
+        <coneGeometry args={[0.22, 1.95, 6]} />
+      </mesh>
+      <mesh position={[0.55, 14.95, -0.15]} rotation={[-0.4, 0, -0.35]} material={horn}>
+        <coneGeometry args={[0.1, 0.7, 5]} />
+      </mesh>
+      <mesh position={[-1.05, 13.7, 0.15]} rotation={[0, 0, 0.4]} material={hide}>
+        <sphereGeometry args={[0.22, 6, 5]} />
+      </mesh>
+      <mesh position={[0.95, 13.55, 0.35]} rotation={[0.5, 0.4, -0.6]} material={meat}>
+        <capsuleGeometry args={[0.08, 0.45, 2, 4]} />
+      </mesh>
+    </group>
+  );
+}
+
+function FleshLimb({ hide, meat, bone, mace = false }: { hide: THREE.Material; meat: THREE.Material; bone: THREE.Material; mace?: boolean }) {
+  return (
+    <group>
+      <mesh position={[0.02, -0.9, 0.08]} rotation={[mace ? 0.28 : 0.12, 0, 0]} material={hide}>
+        <capsuleGeometry args={[0.5, 1.2, 4, 8]} />
+      </mesh>
+      <mesh position={[0.06, -1.75, mace ? 0.28 : 0.16]} material={hide}>
+        <sphereGeometry args={[0.4, 8, 6]} />
+      </mesh>
+      <mesh position={[0.08, -2.55, mace ? 0.7 : 0.28]} rotation={[mace ? 0.65 : 0.22, 0, 0]} material={hide}>
+        <capsuleGeometry args={[0.34, 1.05, 4, 7]} />
+      </mesh>
+      <mesh position={[0.22, -1.35, 0.32]} rotation={[0.25, 0, 0.15]} material={meat}>
+        <capsuleGeometry args={[0.045, 1.35, 2, 4]} />
+      </mesh>
+      <mesh position={[0.06, mace ? -3.25 : -3.2, mace ? 1.15 : 0.42]} material={hide}>
+        <sphereGeometry args={[0.36, 8, 6]} />
+      </mesh>
+      {[-0.18, 0, 0.18].map((x) => (
+        <mesh key={x} position={[x, mace ? -3.35 : -3.45, mace ? 1.45 : 0.72]} rotation={[1.2, 0, x]} material={bone}>
+          <coneGeometry args={[0.05, 0.36, 4]} />
+        </mesh>
+      ))}
+    </group>
+  );
+}
+
+function GiantBody({ soldiers, big, sword, dread, flesh = false, crown = false }: { soldiers: number; big: boolean; sword: boolean; dread: boolean; flesh?: boolean; crown?: boolean }) {
   const root = useRef<THREE.Group>(null);
   const arm = useRef<THREE.Group>(null);
   const mace = useRef<THREE.Group>(null);
@@ -137,6 +325,9 @@ function GiantBody({ soldiers, big, sword, dread, crown = false }: { soldiers: n
   const slit = useMemo(() => new THREE.MeshStandardMaterial({ color: "#ff2a14", emissive: "#ff1a10", emissiveIntensity: 1.4, roughness: 0.4 }), []);
   const eye = useMemo(() => new THREE.MeshStandardMaterial({ color: "#ff3a18", emissive: "#ff1a08", emissiveIntensity: 2.4, roughness: 0.28 }), []);
   const horn = useMemo(() => new THREE.MeshStandardMaterial({ color: "#1a1816", metalness: 0.45, roughness: 0.55 }), []);
+  const hide = useMemo(() => new THREE.MeshStandardMaterial({ color: "#8d7362", roughness: 0.84, metalness: 0.02 }), []);
+  const meat = useMemo(() => new THREE.MeshStandardMaterial({ color: "#7a1c16", roughness: 0.48, metalness: 0.03, emissive: "#2a0604", emissiveIntensity: 0.35 }), []);
+  const bone = useMemo(() => new THREE.MeshStandardMaterial({ color: "#e4d5bc", roughness: 0.58, metalness: 0.06 }), []);
   useFrame(({ clock }) => {
     const t = Math.max(0, clock.elapsedTime - REEL_HOLD);
     const g = devGiantAt(t);
@@ -188,7 +379,9 @@ function GiantBody({ soldiers, big, sword, dread, crown = false }: { soldiers: n
   const spikes = [0, 45, 90, 135, 180, 225, 270, 315];
   return (
     <group ref={root} scale={big ? 1.52 : 1}>
-      {dread ? (
+      {flesh ? (
+        <FleshShell hide={hide} meat={meat} bone={bone} horn={horn} eye={eye} iron={iron} />
+      ) : dread ? (
         <DreadShell plate={plate} iron={iron} eye={eye} horn={horn} />
       ) : (
         <>
@@ -245,7 +438,9 @@ function GiantBody({ soldiers, big, sword, dread, crown = false }: { soldiers: n
         </>
       )}
       <group ref={arm} position={[-2.7, 10.4, 0.2]}>
-        {dread ? (
+        {flesh ? (
+          <FleshLimb hide={hide} meat={meat} bone={bone} />
+        ) : dread ? (
           <>
             <mesh position={[-0.18, -0.95, 0.12]} rotation={[0.12, 0, 0.08]} material={plate}>
               <cylinderGeometry args={[0.62, 0.82, 1.95, 6]} />
@@ -278,7 +473,9 @@ function GiantBody({ soldiers, big, sword, dread, crown = false }: { soldiers: n
       </group>
       {crown && <HeadHp soldiers={soldiers} />}
       <group ref={mace} position={[2.7, 10.5, 0.25]}>
-        {dread ? (
+        {flesh ? (
+          <FleshLimb hide={hide} meat={meat} bone={bone} mace />
+        ) : dread ? (
           <>
             <mesh position={[0.22, -0.9, 0.18]} rotation={[0.2, 0, -0.08]} material={plate}>
               <cylinderGeometry args={[0.68, 0.86, 1.85, 6]} />
@@ -733,10 +930,10 @@ function DevTroop({ soldiers }: { soldiers: number }) {
   );
 }
 
-export function Giant({ soldiers, big = false, sword = false, dread = false, snake = false, devs = false, crown = false }: { soldiers: number; big?: boolean; sword?: boolean; dread?: boolean; snake?: boolean; devs?: boolean; crown?: boolean }) {
+export function Giant({ soldiers, big = false, sword = false, dread = false, flesh = false, snake = false, devs = false, crown = false }: { soldiers: number; big?: boolean; sword?: boolean; dread?: boolean; flesh?: boolean; snake?: boolean; devs?: boolean; crown?: boolean }) {
   return (
     <group>
-      {devs ? <DevTroop soldiers={soldiers} /> : snake ? <SnakeBody soldiers={soldiers} /> : <GiantBody soldiers={soldiers} big={big} sword={sword} dread={dread} crown={crown} />}
+      {devs ? <DevTroop soldiers={soldiers} /> : snake ? <SnakeBody soldiers={soldiers} /> : <GiantBody soldiers={soldiers} big={big} sword={sword} dread={dread} flesh={flesh} crown={crown} />}
       <ArrowVolley big={big} snake={snake} devs={devs} soldiers={soldiers} />
     </group>
   );
