@@ -585,42 +585,6 @@ function isStrikingPart(center: THREE.Vector3) {
   return center.z > 0.55 && center.y < 0.65 && center.y > -0.95 && center.x < 0.15;
 }
 
-function colossusEye() {
-  const group = new THREE.Group();
-  const socketMat = new THREE.MeshStandardMaterial({ color: "#14080a", roughness: 0.86, metalness: 0.05 });
-  const scleraMat = new THREE.MeshStandardMaterial({ color: "#f4e6e0", roughness: 0.18, metalness: 0.02 });
-  const irisMat = new THREE.MeshStandardMaterial({ color: "#c8100c", emissive: "#ff2a14", emissiveIntensity: 0.7, roughness: 0.26, metalness: 0.06 });
-  const pupilMat = new THREE.MeshStandardMaterial({ color: "#070203", roughness: 0.12, metalness: 0.15 });
-  const wetMat = new THREE.MeshBasicMaterial({ color: "#fff7f2" });
-  const socket = new THREE.Mesh(new THREE.SphereGeometry(0.058, 16, 12), socketMat);
-  socket.scale.set(1, 0.86, 0.48);
-  socket.position.z = -0.018;
-  const sclera = new THREE.Mesh(new THREE.SphereGeometry(0.034, 20, 16), scleraMat);
-  const iris = new THREE.Mesh(new THREE.SphereGeometry(0.016, 16, 12), irisMat);
-  iris.scale.y = 0.92;
-  iris.position.z = 0.022;
-  const pupil = new THREE.Mesh(new THREE.SphereGeometry(0.0075, 12, 10), pupilMat);
-  pupil.position.z = 0.034;
-  const catchLight = new THREE.Mesh(new THREE.SphereGeometry(0.0036, 8, 6), wetMat);
-  catchLight.position.set(0.009, 0.01, 0.032);
-  group.add(socket, sclera, iris, pupil, catchLight);
-  group.traverse((obj) => {
-    const mesh = obj as THREE.Mesh;
-    if (mesh.isMesh) mesh.frustumCulled = false;
-  });
-  return group;
-}
-
-function colossusEyes() {
-  const root = new THREE.Group();
-  const left = colossusEye();
-  left.position.set(-0.36, 1.3, 0.5);
-  const right = colossusEye();
-  right.position.set(-0.05, 1.315, 0.48);
-  root.add(left, right);
-  return root;
-}
-
 function ColossusModel({ soldiers }: { soldiers: number }) {
   const rig = useRef<THREE.Group>(null);
   const strike = useMemo(() => ({ arm: null as THREE.Group | null }), []);
@@ -630,7 +594,6 @@ function ColossusModel({ soldiers }: { soldiers: number }) {
     const metal = new THREE.MeshStandardMaterial({ color: "#a7b0b8", metalness: 0.84, roughness: 0.32, side: THREE.DoubleSide });
     const ink = new THREE.MeshStandardMaterial({ color: "#3a3e46", metalness: 0.4, roughness: 0.48, side: THREE.DoubleSide });
     const sword = colossusSword();
-    const eyes = colossusEyes();
     loader.load(COLOSSUS_URL, (gltf) => {
       const host = rig.current;
       if (drop || !host) return;
@@ -669,7 +632,6 @@ function ColossusModel({ soldiers }: { soldiers: number }) {
       for (const mesh of limb) arm.attach(mesh);
       model.add(sword);
       arm.attach(sword);
-      model.add(eyes);
       strike.arm = arm;
       host.add(model);
     });
@@ -678,15 +640,13 @@ function ColossusModel({ soldiers }: { soldiers: number }) {
       strike.arm = null;
       metal.dispose();
       ink.dispose();
-      for (const extra of [sword, eyes]) {
-        extra.traverse((obj) => {
-          const mesh = obj as THREE.Mesh;
-          if (!mesh.isMesh) return;
-          mesh.geometry.dispose();
-          const mat = mesh.material as THREE.Material;
-          mat.dispose();
-        });
-      }
+      sword.traverse((obj) => {
+        const mesh = obj as THREE.Mesh;
+        if (!mesh.isMesh) return;
+        mesh.geometry.dispose();
+        const mat = mesh.material as THREE.Material;
+        mat.dispose();
+      });
       rig.current?.clear();
     };
   }, []);
