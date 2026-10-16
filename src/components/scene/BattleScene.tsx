@@ -2,7 +2,7 @@ import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState, type React
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
 import * as THREE from "three";
-import { Army, armyFrame } from "./Army";
+import { Army, armyFrame, liveCamera } from "./Army";
 import { Castle } from "./Castle";
 import { SallyRaid } from "./SallyRaid";
 import { CaptureHpHud, CountdownFlash, HuntSightHud, LabHealthBar, New2RatioBar, ReelFade, ReelTitles, ReelVignette, SpinNameHud, XxxHookHud } from "./CaptureHpHud";
@@ -791,6 +791,29 @@ function TimedVisible({ until, children }: { until: number; children: ReactNode 
   return <group ref={g}>{children}</group>;
 }
 
+function useLiveShot(soldiers: number) {
+  const [shot, setShot] = useState(() => liveCamera(Math.max(1, soldiers)));
+  const locked = useRef(soldiers > 0);
+  useEffect(() => {
+    if (locked.current || soldiers <= 0) return;
+    locked.current = true;
+    setShot(liveCamera(soldiers));
+  }, [soldiers]);
+  return shot;
+}
+
+function LiveOpening({ shot }: { shot: { x: number; y: number; z: number; lx: number; ly: number; lz: number } }) {
+  const { camera, controls } = useThree();
+  useLayoutEffect(() => {
+    const orbit = controls as { target?: THREE.Vector3; update?: () => void } | null;
+    if (!orbit?.target) return;
+    camera.position.set(shot.x, shot.y, shot.z);
+    orbit.target.set(shot.lx, shot.ly, shot.lz);
+    orbit.update?.();
+  }, [camera, controls, shot]);
+  return null;
+}
+
 function SceneContent({
   soldiers,
   names = [],
@@ -846,6 +869,7 @@ function SceneContent({
   const duel = Boolean(new2 || new3 || new4);
   const blades = Boolean(new3 || new4 || new5 || new6 || new62 || new7);
   const spin = Boolean(xxx && xxxSpin(xxx));
+  const opening = useLiveShot(soldiers);
   if (spin) {
     return (
       <>
@@ -892,7 +916,7 @@ function SceneContent({
       {film && <FilmFoes />}
       {dragon && <Dragon soldiers={Math.max(1, soldiers)} />}
       {giant && <Giant soldiers={isDevAll(giant) ? Math.max(1, soldiers) : Math.min(giant === DEV2_ID ? DEV2_N : DEV_N, Math.max(1, soldiers))} big={isDevBig(giant)} sword={isDevSword(giant)} dread={isDevDread(giant)} flesh={isDev7(giant)} snake={isSnake(giant)} devs={isDevs(giant)} crown={devLive} />}
-      <Army count={friendN} names={names} commanders={commanders} cinematic={cinematic} duration={duration} skipCommander={hideCmd} roster={roster} discover={discover} countdown={Boolean(countdown)} defend={Boolean(defend)} defend2={sortie} defend3={isDefend3(defend)} loose={isDefend5(defend)} blue={isDefend4(defend) || isDefend5(defend)} vs={field} vs2={climb} new1={Boolean(new1)} new2={duel} blade={blades || Boolean(maze)} bridge={chase} cross={cross} wide={wide} relief={relief} maze={Boolean(maze)} film={Boolean(film)} dragon={Boolean(dragon)} giant={Boolean(giant)} giantBig={isDevBig(giant)} giantAll={isDevAll(giant)} giantSword={isDevSword(giant)} giantSnake={isSnake(giant)} giantDevs={isDevs(giant)} giantKnight={isDev7(giant)} nameGold={isDevDread(giant) || isSnake(giant) || isDevs(giant)} nameAlert={devLive || isDefend5(defend)} mix={split} mixSlow={isMix9(mix)} nameHunt={Boolean(xxx)} quiet={Boolean(xxx && xxxQuiet(xxx)) || slaughter || Boolean(maze) || Boolean(film) || Boolean(dragon) || Boolean(giant)} square={Boolean(xxx && xxxSquare(xxx))} readNames={Boolean(xxx && xxxCloseNames(xxx))} scanHunt={Boolean(xxx && xxxScanHunt(xxx))} level={level} rosterIds={rosterIds} />
+      <Army count={friendN} names={names} commanders={commanders} cinematic={cinematic} duration={duration} skipCommander={hideCmd} roster={roster} discover={discover} countdown={Boolean(countdown)} defend={Boolean(defend)} defend2={sortie} defend3={isDefend3(defend)} loose={isDefend5(defend)} blue={isDefend4(defend) || isDefend5(defend)} vs={field} vs2={climb} new1={Boolean(new1)} new2={duel} blade={blades || Boolean(maze)} bridge={chase} cross={cross} wide={wide} relief={relief} maze={Boolean(maze)} film={Boolean(film)} dragon={Boolean(dragon)} giant={Boolean(giant)} giantBig={isDevBig(giant)} giantAll={isDevAll(giant)} giantSword={isDevSword(giant)} giantSnake={isSnake(giant)} giantDevs={isDevs(giant)} giantKnight={isDev7(giant)} knight={!cinematic} nameGold={isDevDread(giant) || isSnake(giant) || isDevs(giant)} nameAlert={devLive || isDefend5(defend)} mix={split} mixSlow={isMix9(mix)} nameHunt={Boolean(xxx)} quiet={Boolean(xxx && xxxQuiet(xxx)) || slaughter || Boolean(maze) || Boolean(film) || Boolean(dragon) || Boolean(giant)} square={Boolean(xxx && xxxSquare(xxx))} readNames={Boolean(xxx && xxxCloseNames(xxx))} scanHunt={Boolean(xxx && xxxScanHunt(xxx))} level={level} rosterIds={rosterIds} />
       {Boolean(xxx && xxxSquare(xxx)) && <Catapults soldiers={soldiers} square />}
       {Boolean(xxx && xxxScanHunt(xxx)) && <NameScanBeam soldiers={soldiers} />}
       {cinematic && split ? (
@@ -929,20 +953,23 @@ function SceneContent({
           rosterIds={rosterIds}
         />
       ) : (
-        <OrbitControls
-          makeDefault
-          enableDamping
-          dampingFactor={0.06}
-          enablePan
-          panSpeed={1.25}
-          minDistance={2.4}
-          maxDistance={720}
-          minPolarAngle={0.18}
-          maxPolarAngle={1.32}
-          target={[0, 6, 30]}
-          rotateSpeed={1.2}
-          zoomSpeed={1.85}
-        />
+        <>
+          <OrbitControls
+            makeDefault
+            enableDamping
+            dampingFactor={0.06}
+            enablePan
+            panSpeed={1.25}
+            minDistance={2.4}
+            maxDistance={720}
+            minPolarAngle={0.18}
+            maxPolarAngle={1.32}
+            target={[opening.lx, opening.ly, opening.lz]}
+            rotateSpeed={1.2}
+            zoomSpeed={1.85}
+          />
+          <LiveOpening shot={opening} />
+        </>
       )}
       {cinematic && !split && !countdown && !defend && !vs && !slaughter && !xxx && maxHp != null && hp != null && (
         <CaptureHpHud hp={hp} maxHp={maxHp} soldiers={soldiers} duration={duration ?? 8} skipCommander={hideCmd} cinema={cinema} roster={roster} discover={discover} />
@@ -1086,7 +1113,7 @@ function BattleSceneInner({
         preserveDrawingBuffer: Boolean(cinematic),
         failIfMajorPerformanceCaveat: false,
       }}
-      camera={{ fov: 36, near: 0.35, far: 2400, position: cinematic ? [12, 11, 74] : [9, 21, 96] }}
+      camera={{ fov: 36, near: 0.35, far: 2400, position: cinematic ? [12, 11, 74] : [liveCamera(soldiers).x, liveCamera(soldiers).y, liveCamera(soldiers).z] }}
       frameloop={active ? "always" : "demand"}
       style={{ width: "100%", height: "100%", display: "block" }}
       onCreated={({ gl }) => {

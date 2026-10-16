@@ -94,6 +94,7 @@ type ArmyProps = {
   giantSnake?: boolean;
   giantDevs?: boolean;
   giantKnight?: boolean;
+  knight?: boolean;
   nameGold?: boolean;
   nameAlert?: boolean;
   mix?: boolean;
@@ -125,6 +126,19 @@ function rankSizes(n: number) {
   const sizes: number[] = [];
   for (let r = 0; r < rows; r++) sizes.push(base + (r < extra ? 1 : 0));
   return sizes;
+}
+
+export function liveStand(count: number) {
+  const rows = Math.max(1, Math.ceil(Math.max(1, Math.floor(count)) / 30));
+  const back = FRONT_Z + (rows - 1) * RANK;
+  return { back, lookZ: back - 18 };
+}
+
+export function liveCamera(count: number) {
+  const stand = liveStand(count);
+  const behind = stand.back + 20;
+  const z = Math.max(108, behind);
+  return { x: 8, y: 22, z, lx: 0, ly: 5, lz: behind > 108 ? stand.back - 16 : 30 };
 }
 
 function fileRankSizes(n: number, cols = 30) {
@@ -953,14 +967,14 @@ function NameLayers({
 }
 
 
-export function Army({ count, names = [], commanders = [], cinematic, duration = 8, skipCommander = false, roster = null, discover = null, countdown = false, defend = false, defend2 = false, defend3 = false, loose = false, blue = false, vs = false, vs2 = false, new1 = false, new2 = false, blade = false, bridge = false, cross = false, wide = false, relief = false, maze = false, film = false, dragon = false, giant = false, giantBig = false, giantAll = false, giantSword = false, giantSnake = false, giantDevs = false, giantKnight = false, nameGold = false, nameAlert = false, mix = false, mixSlow = false, nameHunt = false, quiet = false, square = false, readNames = false, scanHunt = false, level = 1, rosterIds = null }: ArmyProps) {
+export function Army({ count, names = [], commanders = [], cinematic, duration = 8, skipCommander = false, roster = null, discover = null, countdown = false, defend = false, defend2 = false, defend3 = false, loose = false, blue = false, vs = false, vs2 = false, new1 = false, new2 = false, blade = false, bridge = false, cross = false, wide = false, relief = false, maze = false, film = false, dragon = false, giant = false, giantBig = false, giantAll = false, giantSword = false, giantSnake = false, giantDevs = false, giantKnight = false, knight = false, nameGold = false, nameAlert = false, mix = false, mixSlow = false, nameHunt = false, quiet = false, square = false, readNames = false, scanHunt = false, level = 1, rosterIds = null }: ArmyProps) {
   const bodies = useRef<THREE.InstancedMesh>(null);
   const knightHelms = useRef<THREE.InstancedMesh>(null);
   const [knightGeo, setKnightGeo] = useState<{ body: THREE.BufferGeometry; helm: THREE.BufferGeometry } | null>(null);
   const knightHelmMat = useMemo(() => new THREE.MeshStandardMaterial({ color: "#e7eef5", metalness: 0.9, roughness: 0.18, envMapIntensity: 1.4 }), []);
   const knightBodyMat = useMemo(() => new THREE.MeshStandardMaterial({ color: "#1a56e8", metalness: 0.38, roughness: 0.42, envMapIntensity: 0.8 }), []);
   useEffect(() => {
-    if (!giantKnight) return;
+    if (!giantKnight && !knight) return;
     let drop = false;
     const loader = new GLTFLoader();
     loader.load("/models/knight.glb", (gltf) => {
@@ -970,7 +984,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
     return () => {
       drop = true;
     };
-  }, [giantKnight]);
+  }, [giantKnight, knight]);
   useEffect(() => {
     return () => {
       knightGeo?.body.dispose();
@@ -1633,6 +1647,8 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
         dummy.scale.setScalar(scale);
         dummy.updateMatrix();
         stamp(bodies.current, i);
+        if (knightHelms.current) stamp(knightHelms.current, i);
+        if (knight) continue;
         stamp(soldierPlumes.current, i);
         if (role === "spear" && spears.current) {
           if (meleeArms.current) {
@@ -1725,7 +1741,20 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
       if (bowHolds.current) bowHolds.current.instanceMatrix.needsUpdate = true;
       if (drawArms.current) drawArms.current.instanceMatrix.needsUpdate = true;
       if (nocks.current) nocks.current.instanceMatrix.needsUpdate = true;
-      if (!cinematic && !openField && !defend && !vs && !vs2) {
+      if (knight && bodies.current) {
+        if (knightHelms.current) {
+          knightHelms.current.count = bodies.current.count;
+          knightHelms.current.instanceMatrix.needsUpdate = true;
+        }
+        if (soldierPlumes.current) soldierPlumes.current.count = 0;
+        if (bowHolds.current) bowHolds.current.count = 0;
+        if (drawArms.current) drawArms.current.count = 0;
+        if (nocks.current) nocks.current.count = 0;
+        if (spears.current) spears.current.count = 0;
+        if (bladeSwings.current) bladeSwings.current.count = 0;
+        if (meleeArms.current) meleeArms.current.count = 0;
+        if (rankBows.current) rankBows.current.count = 0;
+      } else if (!cinematic && !openField && !defend && !vs && !vs2) {
         if (bowHolds.current) bowHolds.current.count = liveBows;
         if (drawArms.current) drawArms.current.count = liveBows;
         if (nocks.current) nocks.current.count = liveBows;
@@ -1858,14 +1887,6 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
         continue;
       }
       const cmd = idx < 0 || layout.cmdOf[idx] >= 0;
-      if (!cmd && !cinematic && !defend && !vs && !vs2 && !openField && !roster && !countdown && !mix && !discover) {
-        const ranks = form.sizes.length;
-        const slot = layout.slotOf[idx];
-        if (ranks > 5 && slot >= 0 && slotCoord(slot, form.sizes).row < ranks - 5) {
-          hideName(k, cell);
-          continue;
-        }
-      }
       if (isolate && (idx < 0 || !packSet?.has(idx))) {
         hideName(k, cell);
         continue;
@@ -1891,6 +1912,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
         continue;
       }
       let nameScale = crowd;
+      if (!cinematic && !openField && !defend && !vs && !vs2 && !roster && !countdown && !mix && !discover) nameScale = Math.max(0.95, crowd);
       const staggered = Boolean(countdown || defend || vs || vs2 || openField);
       if (countdown) nameScale = 1.12 * crowd;
       else if (defend) nameScale = 1.22 * crowd;
@@ -2241,6 +2263,12 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
         </>
       ) : (
         <>
+          {knight && knightGeo ? (
+            <>
+              <instancedMesh ref={bodies} args={[knightGeo.body, knightBodyMat, instanceCap]} frustumCulled={false} />
+              <instancedMesh ref={knightHelms} args={[knightGeo.helm, knightHelmMat, instanceCap]} frustumCulled={false} />
+            </>
+          ) : (
           <instancedMesh key={`archer-v14-${instanceCap}`} ref={bodies} args={[archerGeo, undefined, instanceCap]} frustumCulled={false} castShadow={!cinematic}>
             {cinematic ? (
               <meshStandardMaterial vertexColors roughness={0.46} metalness={0.72} envMapIntensity={0.9} />
@@ -2248,6 +2276,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
               <meshLambertMaterial vertexColors />
             )}
           </instancedMesh>
+          )}
           <instancedMesh ref={soldierPlumes} args={[soldierPlumeGeo, undefined, instanceCap]} frustumCulled={false}>
             {cinematic ? (
               <meshStandardMaterial vertexColors roughness={0.86} metalness={0} side={THREE.DoubleSide} />
