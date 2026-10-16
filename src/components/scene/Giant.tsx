@@ -101,7 +101,33 @@ function DreadShell({ plate, iron, eye, horn }: { plate: THREE.Material; iron: T
   );
 }
 
-function GiantBody({ soldiers, big, sword, dread }: { soldiers: number; big: boolean; sword: boolean; dread: boolean }) {
+const HEAD_BAR = 2.5;
+
+function HeadHp({ soldiers }: { soldiers: number }) {
+  const fill = useRef<THREE.Mesh>(null);
+  useFrame(({ clock }) => {
+    const alive = devAlive(Math.max(0, clock.elapsedTime - REEL_HOLD), soldiers, true, true, false, false);
+    const u = Math.max(0, Math.min(1, alive / Math.max(1, soldiers)));
+    const mesh = fill.current;
+    if (!mesh) return;
+    mesh.scale.x = Math.max(0.04, u);
+    mesh.position.x = (u - 1) * HEAD_BAR * 0.5;
+  });
+  return (
+    <group position={[0.05, 16.2, 0.48]}>
+      <mesh>
+        <boxGeometry args={[HEAD_BAR, 0.3, 0.12]} />
+        <meshBasicMaterial color="#3a0c0c" />
+      </mesh>
+      <mesh ref={fill} position={[0, 0, 0.05]}>
+        <boxGeometry args={[HEAD_BAR, 0.16, 0.08]} />
+        <meshBasicMaterial color="#ff1a1a" toneMapped={false} />
+      </mesh>
+    </group>
+  );
+}
+
+function GiantBody({ soldiers, big, sword, dread, crown = false }: { soldiers: number; big: boolean; sword: boolean; dread: boolean; crown?: boolean }) {
   const root = useRef<THREE.Group>(null);
   const arm = useRef<THREE.Group>(null);
   const mace = useRef<THREE.Group>(null);
@@ -250,6 +276,7 @@ function GiantBody({ soldiers, big, sword, dread }: { soldiers: number; big: boo
           </group>
         )}
       </group>
+      {crown && <HeadHp soldiers={soldiers} />}
       <group ref={mace} position={[2.7, 10.5, 0.25]}>
         {dread ? (
           <>
@@ -706,10 +733,10 @@ function DevTroop({ soldiers }: { soldiers: number }) {
   );
 }
 
-export function Giant({ soldiers, big = false, sword = false, dread = false, snake = false, devs = false }: { soldiers: number; big?: boolean; sword?: boolean; dread?: boolean; snake?: boolean; devs?: boolean }) {
+export function Giant({ soldiers, big = false, sword = false, dread = false, snake = false, devs = false, crown = false }: { soldiers: number; big?: boolean; sword?: boolean; dread?: boolean; snake?: boolean; devs?: boolean; crown?: boolean }) {
   return (
     <group>
-      {devs ? <DevTroop soldiers={soldiers} /> : snake ? <SnakeBody soldiers={soldiers} /> : <GiantBody soldiers={soldiers} big={big} sword={sword} dread={dread} />}
+      {devs ? <DevTroop soldiers={soldiers} /> : snake ? <SnakeBody soldiers={soldiers} /> : <GiantBody soldiers={soldiers} big={big} sword={sword} dread={dread} crown={crown} />}
       <ArrowVolley big={big} snake={snake} devs={devs} soldiers={soldiers} />
     </group>
   );

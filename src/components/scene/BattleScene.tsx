@@ -14,14 +14,14 @@ import { rosterSoldierIds, sampleRoster, type PlanBId } from "../../rosterReel";
 import { sagaGateRecT, sampleSaga, type SagaId } from "../../sagaReel";
 import { discoverGateRecT, sampleDiscover, type DiscoverId } from "../../discoverReel";
 import { countdownShake, sampleCountdown, type CountdownId } from "../../countdownReel";
-import { DEFEND2_SORTIE, isDefend3, isDefend4, isDefendSortie, sampleDefendCam, type DefendId } from "../../defendReel";
+import { DEFEND2_SORTIE, defendShownFriends, isDefend3, isDefend4, isDefend5, isDefendSortie, sampleDefendCam, type DefendId } from "../../defendReel";
 import { isVs, isVs2, sampleVsCam, type VsId } from "../../vsReel";
 import { sampleNew1Cam, sampleNew2Cam, sampleNew5Cam, sampleNew6Cam, sampleNew62Cam, sampleNew7Cam, type New1Id, type New2Id, type New3Id, type New4Id, type New5Id, type New6Id, type New62Id, type New7Id } from "../../new1Reel";
 import { LAB_N, sampleLabCam, type LabId } from "../../mazeReel";
 import { sampleFilmCam, type FilmId } from "../../filmReel";
 import { sampleDragonCam, type DragonId } from "../../dragonReel";
 import { Dragon } from "./Dragon";
-import { DEV2_ID, DEV2_N, DEV_N, isDev5, isDevAll, isDevBig, isDevSword, isDevs, isSnake, sampleDevCam, type GiantId } from "../../devReel";
+import { DEV2_ID, DEV2_N, DEV_N, isDev6, isDevAll, isDevBig, isDevDread, isDevSword, isDevs, isSnake, sampleDevCam, type GiantId } from "../../devReel";
 import { Maze } from "./Maze";
 import { FilmFoes } from "./FilmFoes";
 import { DevHealthBar, Giant } from "./Giant";
@@ -246,7 +246,7 @@ function CinematicCam({
         : vs
         ? sampleVsCam(sampleT, soldiers, level, vs)
         : defend
-        ? sampleDefendCam(sampleT, soldiers, defend, level)
+        ? sampleDefendCam(sampleT, defendShownFriends(defend, soldiers), defend, level)
         : countdown
         ? sampleCountdown(sampleT, ctx)
         : discover
@@ -717,6 +717,42 @@ function New4Peak() {
   );
 }
 
+function GrassField() {
+  const ground = useMemo(() => {
+    const canvas = document.createElement("canvas");
+    canvas.width = 1024;
+    canvas.height = 1024;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return null;
+    ctx.fillStyle = "#3c7a32";
+    ctx.fillRect(0, 0, 1024, 1024);
+    const tones = ["#2d6426", "#4d9440", "#326e2a", "#5aaa48", "#244f1e", "#67b356", "#3a7630", "#1f4a1c"];
+    for (let i = 0; i < 14000; i++) {
+      ctx.fillStyle = tones[i % tones.length];
+      ctx.fillRect(Math.random() * 1024, Math.random() * 1024, 1 + Math.random() * 5, 2 + Math.random() * 8);
+    }
+    for (let i = 0; i < 80; i++) {
+      ctx.fillStyle = `rgba(54, 120, 42, ${0.16 + Math.random() * 0.2})`;
+      ctx.beginPath();
+      ctx.ellipse(Math.random() * 1024, Math.random() * 1024, 24 + Math.random() * 70, 14 + Math.random() * 36, Math.random() * Math.PI, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.wrapS = THREE.RepeatWrapping;
+    tex.wrapT = THREE.RepeatWrapping;
+    tex.repeat.set(18, 18);
+    tex.anisotropy = 8;
+    tex.colorSpace = THREE.SRGBColorSpace;
+    return tex;
+  }, []);
+  return (
+    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow>
+      <planeGeometry args={[2800, 2800]} />
+      <meshStandardMaterial map={ground} color="#ffffff" roughness={0.96} metalness={0} envMapIntensity={0.12} />
+    </mesh>
+  );
+}
+
 function New1Terrain() {
   const ground = useNew1GroundTexture();
   return (
@@ -814,6 +850,8 @@ function SceneContent({
   const chiefN = hideCmd ? 0 : chiefs.length;
   const split = Boolean(mix);
   const sortie = isDefendSortie(defend);
+  const grass = isDev6(giant) || isDefend5(defend);
+  const friendN = defend ? defendShownFriends(defend, soldiers) : soldiers;
   const field = isVs(vs);
   const climb = isVs2(vs);
   const chase = Boolean(new5 || new7);
@@ -850,7 +888,7 @@ function SceneContent({
       {!maze && <SkyDome cheap={Boolean(defend) && !isDefend3(defend)} />}
       {!maze && <SteelSky />}
       {!maze && <DayLights cinematic={cinematic} slim={Boolean(defend) && !isDefend3(defend)} warm={slaughter || Boolean(dragon)} />}
-      {film || dragon || giant ? <New1Terrain /> : maze ? <Maze soldiers={soldiers} /> : cross ? <New6Cross /> : chase ? <New5Bridge /> : new4 ? <New4Peak /> : slaughter || isDefend4(defend) ? <New1Terrain /> : <Terrain road={!defend && !field} cheap={Boolean(defend)} />}
+      {grass ? <GrassField /> : film || dragon || giant ? <New1Terrain /> : maze ? <Maze soldiers={soldiers} /> : cross ? <New6Cross /> : chase ? <New5Bridge /> : new4 ? <New4Peak /> : slaughter || isDefend4(defend) ? <New1Terrain /> : <Terrain road={!defend && !field} cheap={Boolean(defend)} />}
       {!defend && !field && !slaughter && !maze && !film && !dragon && !giant && <Castle level={level} pressure={pressure} gateClosed={Boolean(countdown) || split || climb || Boolean(xxx)} wallFight={climb} />}
       {sortie && (
         <TimedVisible until={DEFEND2_SORTIE + 0.85}>
@@ -869,8 +907,8 @@ function SceneContent({
       {climb && <VsLadders level={level} />}
       {film && <FilmFoes />}
       {dragon && <Dragon soldiers={Math.max(1, soldiers)} />}
-      {giant && <Giant soldiers={isDevAll(giant) ? Math.max(1, soldiers) : Math.min(giant === DEV2_ID ? DEV2_N : DEV_N, Math.max(1, soldiers))} big={isDevBig(giant)} sword={isDevSword(giant)} dread={isDev5(giant)} snake={isSnake(giant)} devs={isDevs(giant)} />}
-      <Army count={soldiers} names={names} commanders={commanders} cinematic={cinematic} duration={duration} skipCommander={hideCmd} roster={roster} discover={discover} countdown={Boolean(countdown)} defend={Boolean(defend)} defend2={sortie} defend3={isDefend3(defend)} blue={isDefend4(defend)} vs={field} vs2={climb} new1={Boolean(new1)} new2={duel} blade={blades || Boolean(maze)} bridge={chase} cross={cross} wide={wide} relief={relief} maze={Boolean(maze)} film={Boolean(film)} dragon={Boolean(dragon)} giant={Boolean(giant)} giantBig={isDevBig(giant)} giantAll={isDevAll(giant)} giantSword={isDevSword(giant)} giantSnake={isSnake(giant)} giantDevs={isDevs(giant)} nameGold={isDev5(giant) || isSnake(giant) || isDevs(giant)} mix={split} mixSlow={isMix9(mix)} nameHunt={Boolean(xxx)} quiet={Boolean(xxx && xxxQuiet(xxx)) || slaughter || Boolean(maze) || Boolean(film) || Boolean(dragon) || Boolean(giant)} square={Boolean(xxx && xxxSquare(xxx))} readNames={Boolean(xxx && xxxCloseNames(xxx))} scanHunt={Boolean(xxx && xxxScanHunt(xxx))} level={level} rosterIds={rosterIds} />
+      {giant && <Giant soldiers={isDevAll(giant) ? Math.max(1, soldiers) : Math.min(giant === DEV2_ID ? DEV2_N : DEV_N, Math.max(1, soldiers))} big={isDevBig(giant)} sword={isDevSword(giant)} dread={isDevDread(giant)} snake={isSnake(giant)} devs={isDevs(giant)} crown={isDev6(giant)} />}
+      <Army count={friendN} names={names} commanders={commanders} cinematic={cinematic} duration={duration} skipCommander={hideCmd} roster={roster} discover={discover} countdown={Boolean(countdown)} defend={Boolean(defend)} defend2={sortie} defend3={isDefend3(defend)} blue={isDefend4(defend) || isDefend5(defend)} vs={field} vs2={climb} new1={Boolean(new1)} new2={duel} blade={blades || Boolean(maze)} bridge={chase} cross={cross} wide={wide} relief={relief} maze={Boolean(maze)} film={Boolean(film)} dragon={Boolean(dragon)} giant={Boolean(giant)} giantBig={isDevBig(giant)} giantAll={isDevAll(giant)} giantSword={isDevSword(giant)} giantSnake={isSnake(giant)} giantDevs={isDevs(giant)} nameGold={isDevDread(giant) || isSnake(giant) || isDevs(giant)} nameAlert={isDev6(giant) || isDefend5(defend)} mix={split} mixSlow={isMix9(mix)} nameHunt={Boolean(xxx)} quiet={Boolean(xxx && xxxQuiet(xxx)) || slaughter || Boolean(maze) || Boolean(film) || Boolean(dragon) || Boolean(giant)} square={Boolean(xxx && xxxSquare(xxx))} readNames={Boolean(xxx && xxxCloseNames(xxx))} scanHunt={Boolean(xxx && xxxScanHunt(xxx))} level={level} rosterIds={rosterIds} />
       {Boolean(xxx && xxxSquare(xxx)) && <Catapults soldiers={soldiers} square />}
       {Boolean(xxx && xxxScanHunt(xxx)) && <NameScanBeam soldiers={soldiers} />}
       {cinematic && split ? (

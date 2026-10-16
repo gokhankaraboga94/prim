@@ -5,12 +5,14 @@ export const DEFEND_ID = "savunma" as const;
 export const DEFEND2_ID = "savunma2" as const;
 export const DEFEND3_ID = "savunma3" as const;
 export const DEFEND4_ID = "savunma4" as const;
-export type DefendId = typeof DEFEND_ID | typeof DEFEND2_ID | typeof DEFEND3_ID | typeof DEFEND4_ID;
+export const DEFEND5_ID = "savunma5" as const;
+export type DefendId = typeof DEFEND_ID | typeof DEFEND2_ID | typeof DEFEND3_ID | typeof DEFEND4_ID | typeof DEFEND5_ID;
 
 export const DEFEND_MODE = { id: DEFEND_ID, label: "Savunma" } as const;
 export const DEFEND2_MODE = { id: DEFEND2_ID, label: "Savunma 2" } as const;
 export const DEFEND3_MODE = { id: DEFEND3_ID, label: "Savunma 3" } as const;
 export const DEFEND4_MODE = { id: DEFEND4_ID, label: "Savunma 4" } as const;
+export const DEFEND5_MODE = { id: DEFEND5_ID, label: "Savunma 5" } as const;
 
 export const DEFEND_PULL_END = 0.96;
 export const DEFEND_MAIN_SECONDS = 14;
@@ -21,6 +23,10 @@ export const DEFEND3_ZOOM_END = 13;
 export const DEFEND3_ORBIT = 14;
 export const DEFEND3_SECONDS = DEFEND3_ZOOM_END + DEFEND3_ORBIT;
 export const DEFEND4_SECONDS = DEFEND3_SECONDS;
+export const DEFEND5_SECONDS = DEFEND4_SECONDS;
+export const DEFEND5_RINGS = 48;
+export const DEFEND5_RING_GAP = 0.44;
+export const DEFEND5_RING_SPACING = 0.36;
 
 export const DEFEND_CX = 0;
 export const DEFEND_CZ = 0;
@@ -63,23 +69,33 @@ export type DefendRingLayout = {
 };
 
 export function isDefend(id: string | null | undefined): id is DefendId {
-  return id === DEFEND_ID || id === DEFEND2_ID || id === DEFEND3_ID || id === DEFEND4_ID;
+  return id === DEFEND_ID || id === DEFEND2_ID || id === DEFEND3_ID || id === DEFEND4_ID || id === DEFEND5_ID;
 }
 
 export function isDefend2(id: string | null | undefined): id is typeof DEFEND2_ID {
   return id === DEFEND2_ID;
 }
 
-export function isDefend3(id: string | null | undefined): id is typeof DEFEND3_ID | typeof DEFEND4_ID {
-  return id === DEFEND3_ID || id === DEFEND4_ID;
+export function isDefend3(id: string | null | undefined): id is typeof DEFEND3_ID | typeof DEFEND4_ID | typeof DEFEND5_ID {
+  return id === DEFEND3_ID || id === DEFEND4_ID || id === DEFEND5_ID;
 }
 
 export function isDefend4(id: string | null | undefined): id is typeof DEFEND4_ID {
   return id === DEFEND4_ID;
 }
 
-export function isDefendSortie(id: string | null | undefined): id is typeof DEFEND2_ID | typeof DEFEND3_ID | typeof DEFEND4_ID {
-  return id === DEFEND2_ID || id === DEFEND3_ID || id === DEFEND4_ID;
+export function isDefend5(id: string | null | undefined): id is typeof DEFEND5_ID {
+  return id === DEFEND5_ID;
+}
+
+export function isDefendSortie(id: string | null | undefined): id is typeof DEFEND2_ID | typeof DEFEND3_ID | typeof DEFEND4_ID | typeof DEFEND5_ID {
+  return id === DEFEND2_ID || id === DEFEND3_ID || id === DEFEND4_ID || id === DEFEND5_ID;
+}
+
+export function defendShownFriends(id: string | null | undefined, soldiers: number) {
+  const n = Math.max(1, Math.floor(soldiers));
+  if (isDefend5(id)) return Math.max(1, Math.floor(n / 2));
+  return n;
 }
 
 export function defendDuration(id: string | null | undefined) {
@@ -161,16 +177,19 @@ export function defendArmyRadius(n: number) {
 }
 
 function ringCount(id?: string | null) {
+  if (isDefend5(id)) return DEFEND5_RINGS;
   if (isDefend3(id)) return DEFEND3_RINGS;
   return isDefendSortie(id) ? DEFEND2_RINGS : DEFEND_RINGS;
 }
 
 function ringGap(id?: string | null) {
+  if (isDefend5(id)) return DEFEND5_RING_GAP;
   if (isDefend3(id)) return DEFEND3_RING_GAP;
   return isDefendSortie(id) ? DEFEND2_RING_GAP : DEFEND_RING_GAP;
 }
 
 function ringSpacing(id?: string | null) {
+  if (isDefend5(id)) return DEFEND5_RING_SPACING;
   if (isDefend3(id)) return DEFEND3_RING_SPACING;
   return isDefendSortie(id) ? DEFEND2_RING_SPACING : DEFEND_RING_SPACING;
 }
@@ -196,7 +215,55 @@ export function defendOuterAt(recT: number, armyR: number, id?: string | null) {
   return start + (end - start) * u;
 }
 
+function packRings(armyR: number, spacing: number, want: number, id: DefendId): DefendRingLayout {
+  const gap = ringGap(id);
+  const outer0 = defendOuterAt(0, armyR, id);
+  const minR = armyR + innerGap(id) - 0.4;
+  const ringsN = ringCount(id);
+  const specs: DefendRingSpec[] = [];
+  for (let ring = 0; ring < ringsN; ring++) {
+    const r0 = outer0 - ring * gap;
+    if (r0 < minR) continue;
+    const innerU = ring / Math.max(1, ringsN - 1);
+    const pack = Math.max(0.34, 1 - Math.pow(innerU, 1.25) * 0.58);
+    const sp = spacing * pack;
+    const n = Math.max(22, Math.round((2 * Math.PI * r0) / sp));
+    specs.push({ ring, n, offset: (ring % 2) * (Math.PI / Math.max(1, n)) });
+  }
+  specs.sort((a, b) => b.ring - a.ring);
+  const rings: DefendRingSpec[] = [];
+  let cap = 0;
+  for (const spec of specs) {
+    if (cap >= want) break;
+    if (cap + spec.n > want) {
+      const take = want - cap;
+      if (take < 12) break;
+      rings.push({ ring: spec.ring, n: take, offset: spec.offset });
+      cap += take;
+      break;
+    }
+    rings.push(spec);
+    cap += spec.n;
+  }
+  rings.sort((a, b) => a.ring - b.ring);
+  return { armyR, rings, cap: Math.max(1, cap), gap };
+}
+
+function defend5RingLayout(soldiers: number): DefendRingLayout {
+  const base = defendRingLayout(Math.max(1, soldiers), DEFEND4_ID);
+  const want = Math.max(24, base.cap * 2);
+  const armyR = defendArmyRadius(defendShownFriends(DEFEND5_ID, soldiers));
+  let spacing = DEFEND5_RING_SPACING;
+  let laid = packRings(armyR, spacing, want, DEFEND5_ID);
+  while (laid.cap < want && spacing > 0.22) {
+    spacing *= 0.86;
+    laid = packRings(armyR, spacing, want, DEFEND5_ID);
+  }
+  return laid;
+}
+
 export function defendRingLayout(soldiers: number, id: DefendId = DEFEND_ID): DefendRingLayout {
+  if (id === DEFEND5_ID) return defend5RingLayout(soldiers);
   const armyR = defendArmyRadius(Math.max(1, soldiers));
   const gap = ringGap(id);
   const spacing = ringSpacing(id);
@@ -301,25 +368,26 @@ export function defendEnemyAt(
   out.y = step;
 
   if (isDefendSortie(id) && recT < DEFEND2_SORTIE) {
+    const once = isDefend5(id);
     const k = spec.ring * spec.n + i;
-    const delay = (k / Math.max(1, layout.cap)) * 2.05;
+    const delay = once ? (k % 36) * 0.01 : (k / Math.max(1, layout.cap)) * 2.05;
     if (recT < delay) {
-      const lane = (i % 11 - 5) * 0.62;
+      const lane = once ? ((i % 19) - 9) * 0.46 : (i % 11 - 5) * 0.62;
       out.x = cx + lane;
       out.y = -40;
       out.z = gateZ + 0.6;
       out.yaw = 0;
       return;
     }
-    const u = easeInOut(clamp01((recT - delay) / 4.05));
-    const pour = clamp01(u / 0.3);
-    const wrap = easeInOut(clamp01((u - 0.22) / 0.78));
+    const u = easeInOut(clamp01((recT - delay) / (once ? 2.7 : 4.05)));
+    const pour = clamp01(u / (once ? 0.2 : 0.3));
+    const wrap = easeInOut(clamp01((u - (once ? 0.14 : 0.22)) / (once ? 0.86 : 0.78)));
     const aNow = Math.PI + wrap * (aFinal - Math.PI);
     const xRing = cx + Math.sin(aNow) * r;
     const zRing = cz + Math.cos(aNow) * r;
-    const lane = (i % 11 - 5) * 0.62;
+    const lane = once ? ((i % 19) - 9) * 0.46 : (i % 11 - 5) * 0.62;
     const gx = cx + lane;
-    const gz = gateZ + 1.35 + (spec.ring % 4) * 0.45;
+    const gz = once ? gateZ + 1.15 : gateZ + 1.35 + (spec.ring % 4) * 0.45;
     out.x = gx + (xRing - gx) * pour;
     out.z = gz + (zRing - gz) * pour;
     out.yaw = wrap > 0.38 ? Math.atan2(cx - out.x, cz - out.z) : Math.atan2(xRing - gx, zRing - gz);
@@ -364,7 +432,8 @@ export function sampleDefend(recT: number, soldiers: number, id: DefendId = DEFE
   return pose(x, y, z, lx, 1.45 + zoomU * 0.18, lz, fov);
 }
 
-function sampleDefendSortie(recT: number, soldiers: number, level: number, close = false): ShotPose {
+function sampleDefendSortie(recT: number, soldiers: number, level: number, id: DefendId): ShotPose {
+  const close = isDefend3(id);
   const t = Math.max(0, recT);
   const armyR = defendArmyRadius(Math.max(1, soldiers));
   const gateZ = castleFrame(level).front;
@@ -372,7 +441,7 @@ function sampleDefendSortie(recT: number, soldiers: number, level: number, close
   const u = clamp01(t / DEFEND2_SORTIE);
   const nearZ = Math.min(gateZ - 8, oz - armyR);
   const farZ = oz + armyR + 10;
-  const wrapR = armyR + innerGap(DEFEND3_ID) + ringBand(DEFEND3_ID) + 8;
+  const wrapR = armyR + innerGap(id) + ringBand(id) + 8;
   const lookZ = close ? oz + armyR * 0.08 : (nearZ + farZ) * (0.48 + u * 0.06);
   const span = close ? wrapR : Math.max((farZ - nearZ) * 0.52, armyR + 16);
   const polar = close ? 0.13 + u * 0.04 : 0.055 + u * 0.025;
@@ -391,7 +460,7 @@ function sampleDefendPath(recT: number, soldiers: number, id: DefendId, level: n
   const play = recT - DEFEND2_SORTIE;
   const shrink = offsetPose(sampleDefend(Math.max(0, play), soldiers, id), ox, oz);
   if (play >= 0) return shrink;
-  const bird = sampleDefendSortie(recT, soldiers, level, isDefend3(id));
+  const bird = sampleDefendSortie(recT, soldiers, level, id);
   const blend = easeOutCubic(clamp01((recT - (DEFEND2_SORTIE - 0.75)) / 0.75));
   if (blend <= 0) return bird;
   return lerpPose(bird, offsetPose(sampleDefend(0, soldiers, id), ox, oz), blend);

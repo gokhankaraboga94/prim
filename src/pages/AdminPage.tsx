@@ -28,11 +28,11 @@ import { DISCOVER_ID, DISCOVER2_ID, DISCOVER3_ID, RAF2_ID, DISCOVER_MODE, DISCOV
 import { MIX_MODES, MIX_SECONDS, MIX9_SECONDS, isMix, isMix9, type MixId } from "../mixReel";
 import { COUNTDOWN_ID, COUNTDOWN_MODE, COUNTDOWN_SECONDS, isCountdown, type CountdownId } from "../countdownReel";
 import { HARIKA2_SECONDS, SPIN_SECONDS, XXX_MODES, XXX_SECONDS, XXXV_SECONDS, isXxx, xxxHideCmd, xxxSeconds, type XxxId } from "../xxxReel";
-import { DEFEND_ID, DEFEND2_ID, DEFEND3_ID, DEFEND4_ID, DEFEND_MODE, DEFEND2_MODE, DEFEND3_MODE, DEFEND4_MODE, DEFEND_SECONDS, DEFEND2_SECONDS, DEFEND3_SECONDS, DEFEND4_SECONDS, isDefend, isDefend2, isDefend3, isDefend4, isDefendSortie, type DefendId } from "../defendReel";
+import { DEFEND_ID, DEFEND2_ID, DEFEND3_ID, DEFEND4_ID, DEFEND5_ID, DEFEND_MODE, DEFEND2_MODE, DEFEND3_MODE, DEFEND4_MODE, DEFEND5_MODE, DEFEND_SECONDS, DEFEND2_SECONDS, DEFEND3_SECONDS, DEFEND4_SECONDS, DEFEND5_SECONDS, isDefend, isDefend2, isDefend3, isDefend4, isDefend5, isDefendSortie, type DefendId } from "../defendReel";
 import { VS_ID, VS2_ID, VS_MODE, VS2_MODE, VS_SECONDS, VS2_SECONDS, isVs, isVs2, isVsMode, type VsId } from "../vsReel";
 import { NEW1_ID, NEW1_MODE, NEW1_SECONDS, NEW2_ID, NEW2_MODE, NEW2_SECONDS, NEW3_ID, NEW3_MODE, NEW3_SECONDS, NEW4_ID, NEW4_MODE, NEW4_SECONDS, NEW5_ID, NEW5_MODE, NEW5_SECONDS, NEW6_ID, NEW6_MODE, NEW6_SECONDS, NEW62_ID, NEW62_MODE, NEW62_SECONDS, NEW7_ID, NEW7_MODE, NEW7_SECONDS, isNew1, isNew2, isNew3, isNew4, isNew5, isNew6, isNew62, isNew7, isNewField, type New1Id, type New2Id, type New3Id, type New4Id, type New5Id, type New6Id, type New62Id, type New7Id } from "../new1Reel";
 import { LAB_ID, LAB_MODE, LAB_SECONDS, isLab, type LabId } from "../mazeReel";
-import { DEV2_ID, DEV2_MODE, DEV2_SECONDS, DEV3_ID, DEV3_MODE, DEV3_SECONDS, DEV4_ID, DEV4_MODE, DEV4_SECONDS, DEV5_ID, DEV5_MODE, DEV5_SECONDS, DEV_ID, DEV_MODE, DEV_SECONDS, DEVS_ID, DEVS_MODE, DEVS_SECONDS, SNAKE_ID, SNAKE_MODE, SNAKE_SECONDS, isDev, isDev2, isDev3, isDev4, isDev5, isDevs, isGiantShot, isSnake, type Dev2Id, type Dev3Id, type Dev4Id, type Dev5Id, type DevId, type DevsId, type SnakeId } from "../devReel";
+import { DEV2_ID, DEV2_MODE, DEV2_SECONDS, DEV3_ID, DEV3_MODE, DEV3_SECONDS, DEV4_ID, DEV4_MODE, DEV4_SECONDS, DEV5_ID, DEV5_MODE, DEV5_SECONDS, DEV6_ID, DEV6_MODE, DEV6_SECONDS, DEV_ID, DEV_MODE, DEV_SECONDS, DEVS_ID, DEVS_MODE, DEVS_SECONDS, SNAKE_ID, SNAKE_MODE, SNAKE_SECONDS, isDev, isDev2, isDev3, isDev4, isDev5, isDev6, isDevs, isGiantShot, isSnake, type Dev2Id, type Dev3Id, type Dev4Id, type Dev5Id, type Dev6Id, type DevId, type DevsId, type SnakeId } from "../devReel";
 import { FILM_ID, FILM_MODE, FILM_SECONDS, isFilm, type FilmId } from "../filmReel";
 import { DRAGON_ID, DRAGON_MODE, DRAGON_SECONDS, isDragon, type DragonId } from "../dragonReel";
 import { unlockReelSfx } from "../reelSfx";
@@ -57,7 +57,7 @@ export function AdminPage() {
   const [reelSeconds, setReelSeconds] = useState<number>(7);
   const [reelText, setReelText] = useState(true);
   const [reelSkipCmd, setReelSkipCmd] = useState(false);
-  const [reelShot, setReelShot] = useState<ReelShot | PlanBId | SagaId | DiscoverId | MixId | CountdownId | DefendId | VsId | New1Id | New2Id | New3Id | New4Id | New5Id | New6Id | New62Id | New7Id | LabId | DevId | Dev2Id | Dev3Id | Dev4Id | Dev5Id | SnakeId | DevsId | FilmId | DragonId | XxxId | null>(null);
+  const [reelShot, setReelShot] = useState<ReelShot | PlanBId | SagaId | DiscoverId | MixId | CountdownId | DefendId | VsId | New1Id | New2Id | New3Id | New4Id | New5Id | New6Id | New62Id | New7Id | LabId | DevId | Dev2Id | Dev3Id | Dev4Id | Dev5Id | Dev6Id | SnakeId | DevsId | FilmId | DragonId | XxxId | null>(null);
   const [reelDay, setReelDay] = useState("1");
   const [capturing, setCapturing] = useState(false);
   const [editIndex, setEditIndex] = useState<number | null>(null);
@@ -563,11 +563,13 @@ export function AdminPage() {
                   : isFilm(reelShot)
                     ? [FILM_SECONDS]
                   : isGiantShot(reelShot)
-                    ? [isDevs(reelShot) ? DEVS_SECONDS : isSnake(reelShot) ? SNAKE_SECONDS : isDev5(reelShot) ? DEV5_SECONDS : isDev4(reelShot) ? DEV4_SECONDS : isDev3(reelShot) ? DEV3_SECONDS : isDev2(reelShot) ? DEV2_SECONDS : DEV_SECONDS]
+                    ? [isDevs(reelShot) ? DEVS_SECONDS : isSnake(reelShot) ? SNAKE_SECONDS : isDev6(reelShot) ? DEV6_SECONDS : isDev5(reelShot) ? DEV5_SECONDS : isDev4(reelShot) ? DEV4_SECONDS : isDev3(reelShot) ? DEV3_SECONDS : isDev2(reelShot) ? DEV2_SECONDS : DEV_SECONDS]
                   : isNewField(reelShot)
                     ? [isLab(reelShot) ? LAB_SECONDS : isNew7(reelShot) ? NEW7_SECONDS : isNew62(reelShot) ? NEW62_SECONDS : isNew6(reelShot) ? NEW6_SECONDS : isNew5(reelShot) ? NEW5_SECONDS : isNew4(reelShot) ? NEW4_SECONDS : isNew3(reelShot) ? NEW3_SECONDS : isNew2(reelShot) ? NEW2_SECONDS : NEW1_SECONDS]
                   : isVsMode(reelShot)
                     ? [isVs2(reelShot) ? VS2_SECONDS : VS_SECONDS]
+                  : isDefend5(reelShot)
+                    ? [DEFEND5_SECONDS]
                   : isDefend4(reelShot)
                     ? [DEFEND4_SECONDS]
                   : isDefend3(reelShot)
@@ -808,6 +810,18 @@ export function AdminPage() {
             </button>
             <button
               type="button"
+              className={reelShot === DEV6_ID ? "on" : ""}
+              onClick={() => {
+                setReelShot((cur) => (cur === DEV6_ID ? null : DEV6_ID));
+                setReelSeconds(DEV6_SECONDS);
+                setReelText(false);
+                setReelSkipCmd(true);
+              }}
+            >
+              {DEV6_MODE.label} — {DEV6_SECONDS}s
+            </button>
+            <button
+              type="button"
               className={reelShot === SNAKE_ID ? "on" : ""}
               onClick={() => {
                 setReelShot((cur) => (cur === SNAKE_ID ? null : SNAKE_ID));
@@ -869,6 +883,9 @@ export function AdminPage() {
           )}
           {isDev5(reelShot) && (
             <p className="muted">DEV4 ile aynı. Dev daha kalıplı, boynuzlu, tek kızıl göz. İsimler bar gibi sarı. Üstte sayı düşer.</p>
+          )}
+          {isDev6(reelShot) && (
+            <p className="muted">DEV5 ile aynı. İsimler yüzde 25 daha büyük, dikkat tabelası gibi açık sarı. Devin başının üstünde kırmızı can barı. Zemin doğal çim.</p>
           )}
           {isSnake(reelShot) && (
             <p className="muted">DEV5 ile aynı kadro ve kamera. Yeşil-kahverengi yılan. Bekleyenler dairede. Çoğunluk başa, birkaç kişi gövdeye ve kuyruğa gider. Yılan hem onlara hem dairedeki bekleyen ve okçulara saldırır.</p>
@@ -1046,6 +1063,17 @@ export function AdminPage() {
             </button>
             <button
               type="button"
+              className={reelShot === DEFEND5_ID ? "on" : ""}
+              onClick={() => {
+                setReelShot((cur) => (cur === DEFEND5_ID ? null : DEFEND5_ID));
+                setReelSeconds(DEFEND5_SECONDS);
+                setReelSkipCmd(true);
+              }}
+            >
+              {DEFEND5_MODE.label} — {DEFEND5_SECONDS}s
+            </button>
+            <button
+              type="button"
               className={reelShot === VS_ID ? "on" : ""}
               onClick={() => {
                 setReelShot((cur) => (cur === VS_ID ? null : VS_ID));
@@ -1118,6 +1146,11 @@ export function AdminPage() {
           {isDefend4(reelShot) && (
             <p className="muted">
               Savunma 3 ile aynı. Zemin new3 toprağı, bizim askerler mavi.
+            </p>
+          )}
+          {isDefend5(reelShot) && (
+            <p className="muted">
+              Savunma 4 ile aynı. Zemin doğal çim. Düşman kaleden tek seferde çıkar, sayısı iki kat. Bizim asker yarıya iner. İsimler açık sarı.
             </p>
           )}
           {reelShot === DEFEND3_ID && (

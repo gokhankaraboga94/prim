@@ -91,6 +91,7 @@ type ArmyProps = {
   giantSnake?: boolean;
   giantDevs?: boolean;
   nameGold?: boolean;
+  nameAlert?: boolean;
   mix?: boolean;
   mixSlow?: boolean;
   nameHunt?: boolean;
@@ -948,7 +949,7 @@ function NameLayers({
 }
 
 
-export function Army({ count, names = [], commanders = [], cinematic, duration = 8, skipCommander = false, roster = null, discover = null, countdown = false, defend = false, defend2 = false, defend3 = false, blue = false, vs = false, vs2 = false, new1 = false, new2 = false, blade = false, bridge = false, cross = false, wide = false, relief = false, maze = false, film = false, dragon = false, giant = false, giantBig = false, giantAll = false, giantSword = false, giantSnake = false, giantDevs = false, nameGold = false, mix = false, mixSlow = false, nameHunt = false, quiet = false, square = false, readNames = false, scanHunt = false, level = 1, rosterIds = null }: ArmyProps) {
+export function Army({ count, names = [], commanders = [], cinematic, duration = 8, skipCommander = false, roster = null, discover = null, countdown = false, defend = false, defend2 = false, defend3 = false, blue = false, vs = false, vs2 = false, new1 = false, new2 = false, blade = false, bridge = false, cross = false, wide = false, relief = false, maze = false, film = false, dragon = false, giant = false, giantBig = false, giantAll = false, giantSword = false, giantSnake = false, giantDevs = false, nameGold = false, nameAlert = false, mix = false, mixSlow = false, nameHunt = false, quiet = false, square = false, readNames = false, scanHunt = false, level = 1, rosterIds = null }: ArmyProps) {
   const bodies = useRef<THREE.InstancedMesh>(null);
   const soldierPlumes = useRef<THREE.InstancedMesh>(null);
   const bowHolds = useRef<THREE.InstancedMesh>(null);
@@ -1132,11 +1133,11 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
           text: i < 0 ? DEFAULT_COMMANDER : names[i],
           commander: !defend && !vs && !vs2 && !openField && (i < 0 || isCommander(names[i], chiefsList)),
           plain: Boolean(countdown || defend || vs || vs2 || openField || roster || square || film),
-          fill: nameGold ? "#ffe14a" : undefined,
+          fill: nameAlert ? "#ffd54f" : nameGold ? "#ffe14a" : undefined,
         })),
         giantDevs || dragon
       ),
-    [labeled, names, chiefsList, countdown, defend, vs, vs2, openField, roster, square, film, nameGold, giantDevs, dragon]
+    [labeled, names, chiefsList, countdown, defend, vs, vs2, openField, roster, square, film, nameGold, nameAlert, giantDevs, dragon]
   );
   useEffect(() => () => nameAtlas.dispose(), [nameAtlas]);
 
@@ -1862,7 +1863,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
       const staggered = Boolean(countdown || defend || vs || vs2 || openField);
       if (countdown) nameScale = 1.12 * crowd;
       else if (defend) nameScale = 1.22 * crowd;
-      else if (giant) nameScale = giantDevs ? 2.02 : giantBig ? 1.58 : 0.96;
+      else if (giant) nameScale = (giantDevs ? 2.02 : giantBig ? 1.58 : 0.96) * (nameAlert ? 1.25 : 1);
       else if (maze) nameScale = 1.05;
       else if (dragon) nameScale = 1.22;
       else if (film) nameScale = 1.48;
@@ -1946,7 +1947,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
         }
       }
       let sx = (isolate ? Math.min(1.05, cell.sx * nameScale) : cell.sx * nameScale);
-      if (giant) sx = Math.min(sx, giantDevs ? 3.46 : giantBig ? 2.7 : 1.72);
+      if (giant) sx = Math.min(sx, (giantDevs ? 3.46 : giantBig ? 2.7 : 1.72) * (nameAlert ? 1.25 : 1));
       else if (dragon) sx = Math.min(sx, 1.65);
       else if (film) sx = Math.min(sx, 1.7);
       else if (maze) sx = Math.min(sx, 2.15);

@@ -3,7 +3,7 @@ import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { REEL_HOLD } from "../../recordCanvas";
 import { castleFrame } from "../../castleLayout";
-import { DEFEND2_SORTIE, defendEnemyAt, defendRingLayout, isDefend3, isDefendSortie, type DefendId } from "../../defendReel";
+import { DEFEND2_SORTIE, defendEnemyAt, defendRingLayout, isDefend3, isDefend5, isDefendSortie, type DefendId } from "../../defendReel";
 import { getDefendRaiderGeometry } from "./SallyRaid";
 
 const dummy = new THREE.Object3D();
@@ -24,6 +24,7 @@ export function DefendRing({ soldiers, mode, level = 1 }: DefendRingProps) {
   const bodies = useRef<THREE.InstancedMesh>(null);
   const skip = useRef(0);
   const redTip = isDefend3(mode);
+  const cheap = isDefend5(mode);
   const geo = useMemo(() => getDefendRaiderGeometry(redTip), [redTip]);
   const layout = useMemo(() => defendRingLayout(soldiers, mode), [soldiers, mode]);
   const cap = layout.cap;
@@ -42,7 +43,7 @@ export function DefendRing({ soldiers, mode, level = 1 }: DefendRingProps) {
     const recT = state.clock.elapsedTime - REEL_HOLD;
     const wrapping = isDefendSortie(mode) && recT < DEFEND2_SORTIE;
     skip.current += 1;
-    if (!wrapping && !redTip && skip.current % 2 === 1) return;
+    if ((cheap || (!wrapping && !redTip)) && skip.current % 2 === 1) return;
     const t = state.clock.elapsedTime;
     const n = Math.min(cap, baked.length);
     for (let k = 0; k < n; k++) {
@@ -60,7 +61,7 @@ export function DefendRing({ soldiers, mode, level = 1 }: DefendRingProps) {
 
   return (
     <instancedMesh key={`${cap}-${mode}-spear-tip`} ref={bodies} args={[geo, undefined, cap]} frustumCulled={false}>
-      {redTip ? (
+      {redTip && !cheap ? (
         <meshStandardMaterial vertexColors roughness={0.48} metalness={0.18} envMapIntensity={0.55} />
       ) : (
         <meshBasicMaterial vertexColors />
