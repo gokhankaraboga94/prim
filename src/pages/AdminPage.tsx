@@ -885,7 +885,7 @@ export function AdminPage() {
             <p className="muted">DEV4 ile aynı. Dev daha kalıplı, boynuzlu, tek kızıl göz. İsimler bar gibi sarı. Üstte sayı düşer.</p>
           )}
           {isDev6(reelShot) && (
-            <p className="muted">DEV5 ile aynı. İsimler yüzde 25 daha büyük ve daha açık sarı. Can barı başın önünde ve arkasında. Zemin kale kuşatmasındaki çim.</p>
+            <p className="muted">DEV5 ile aynı. İsimler yüzde 25 daha büyük, bar kenarı sarısı. Tek can barı iki yüzden de görünür. Zemin kale kuşatmasındaki çim.</p>
           )}
           {isSnake(reelShot) && (
             <p className="muted">DEV5 ile aynı kadro ve kamera. Yeşil-kahverengi yılan. Bekleyenler dairede. Çoğunluk başa, birkaç kişi gövdeye ve kuyruğa gider. Yılan hem onlara hem dairedeki bekleyen ve okçulara saldırır.</p>
@@ -1150,7 +1150,7 @@ export function AdminPage() {
           )}
           {isDefend5(reelShot) && (
             <p className="muted">
-              Savunma 4 ile aynı. Zemin kale kuşatmasındaki çim. Düşman kaleden tek seferde çıkar, sayısı iki kat. Bizim asker yarıya iner, araları daha açık. İsimler açık sarı.
+              Savunma 4 ile aynı. Zemin kale kuşatmasındaki çim. Düşman kaleden tek seferde çıkar, sayısı iki kat. Bizim asker yarıya iner, isimler askerin üstünde ve bar kenarı sarısı. İlk karede kale daha dar kadrajda.
             </p>
           )}
           {reelShot === DEFEND3_ID && (

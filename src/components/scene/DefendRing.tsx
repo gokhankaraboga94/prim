@@ -43,7 +43,7 @@ export function DefendRing({ soldiers, mode, level = 1 }: DefendRingProps) {
     const recT = state.clock.elapsedTime - REEL_HOLD;
     const wrapping = isDefendSortie(mode) && recT < DEFEND2_SORTIE;
     skip.current += 1;
-    if ((cheap || (!wrapping && !redTip)) && skip.current % 2 === 1) return;
+    if (!wrapping && (cheap || !redTip) && skip.current % 2 === 1) return;
     const t = state.clock.elapsedTime;
     const n = Math.min(cap, baked.length);
     for (let k = 0; k < n; k++) {

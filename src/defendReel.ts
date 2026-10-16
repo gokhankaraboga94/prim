@@ -372,24 +372,24 @@ export function defendEnemyAt(
   if (isDefendSortie(id) && recT < DEFEND2_SORTIE) {
     const once = isDefend5(id);
     const k = spec.ring * spec.n + i;
-    const delay = once ? (k % 36) * 0.01 : (k / Math.max(1, layout.cap)) * 2.05;
+    const delay = once ? (k % 28) * 0.012 : (k / Math.max(1, layout.cap)) * 2.05;
     if (recT < delay) {
-      const lane = once ? ((i % 19) - 9) * 0.46 : (i % 11 - 5) * 0.62;
+      const lane = once ? ((i % 15) - 7) * 0.55 : (i % 11 - 5) * 0.62;
       out.x = cx + lane;
       out.y = -40;
-      out.z = gateZ + 0.6;
+      out.z = gateZ + 0.35;
       out.yaw = 0;
       return;
     }
-    const u = easeInOut(clamp01((recT - delay) / (once ? 2.7 : 4.05)));
-    const pour = clamp01(u / (once ? 0.2 : 0.3));
-    const wrap = easeInOut(clamp01((u - (once ? 0.14 : 0.22)) / (once ? 0.86 : 0.78)));
+    const u = easeInOut(clamp01((recT - delay) / (once ? 3.6 : 4.05)));
+    const pour = clamp01(u / (once ? 0.42 : 0.3));
+    const wrap = easeInOut(clamp01((u - (once ? 0.28 : 0.22)) / (once ? 0.72 : 0.78)));
     const aNow = Math.PI + wrap * (aFinal - Math.PI);
     const xRing = cx + Math.sin(aNow) * r;
     const zRing = cz + Math.cos(aNow) * r;
-    const lane = once ? ((i % 19) - 9) * 0.46 : (i % 11 - 5) * 0.62;
+    const lane = once ? ((i % 15) - 7) * 0.55 : (i % 11 - 5) * 0.62;
     const gx = cx + lane;
-    const gz = once ? gateZ + 1.15 : gateZ + 1.35 + (spec.ring % 4) * 0.45;
+    const gz = once ? gateZ + 1.05 : gateZ + 1.35 + (spec.ring % 4) * 0.45;
     out.x = gx + (xRing - gx) * pour;
     out.z = gz + (zRing - gz) * pour;
     out.yaw = wrap > 0.38 ? Math.atan2(cx - out.x, cz - out.z) : Math.atan2(xRing - gx, zRing - gz);
@@ -444,11 +444,12 @@ function sampleDefendSortie(recT: number, soldiers: number, level: number, id: D
   const nearZ = Math.min(gateZ - 8, oz - armyR);
   const farZ = oz + armyR + 10;
   const wrapR = armyR + innerGap(id) + ringBand(id) + 8;
-  const lookZ = close ? oz + armyR * 0.08 : (nearZ + farZ) * (0.48 + u * 0.06);
-  const span = close ? wrapR : Math.max((farZ - nearZ) * 0.52, armyR + 16);
-  const polar = close ? 0.13 + u * 0.04 : 0.055 + u * 0.025;
-  const fov = close ? 40 : 42;
-  const dist = distToFitRing(span, polar, fov, close ? 1.16 : 1.3) * (close ? 0.9 : 1);
+  const tightGate = close && isDefend5(id);
+  const lookZ = tightGate ? gateZ + 16 + u * Math.max(20, armyR * 0.55) : close ? oz + armyR * 0.08 : (nearZ + farZ) * (0.48 + u * 0.06);
+  const span = tightGate ? Math.max(18, armyR * 0.62) : close ? wrapR : Math.max((farZ - nearZ) * 0.52, armyR + 16);
+  const polar = tightGate ? 0.28 + u * 0.04 : close ? 0.13 + u * 0.04 : 0.055 + u * 0.025;
+  const fov = tightGate ? 32 : close ? 40 : 42;
+  const dist = distToFitRing(span, polar, fov, tightGate ? 0.92 : close ? 1.16 : 1.3) * (tightGate ? 0.72 : close ? 0.9 : 1);
   const az = 0.02;
   const x = Math.sin(polar) * Math.sin(az) * dist;
   const y = Math.cos(polar) * dist;

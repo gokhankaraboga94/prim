@@ -1134,7 +1134,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
           text: i < 0 ? DEFAULT_COMMANDER : names[i],
           commander: !defend && !vs && !vs2 && !openField && (i < 0 || isCommander(names[i], chiefsList)),
           plain: Boolean(countdown || defend || vs || vs2 || openField || roster || square || film),
-          fill: nameAlert ? "#fff4b0" : nameGold ? "#ffe14a" : undefined,
+          fill: nameAlert ? "#ffe14a" : nameGold ? "#ffe14a" : undefined,
         })),
         giantDevs || dragon
       ),
@@ -1486,7 +1486,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
           continue;
         }
         if (defend) {
-          defendSoldierPos(i, n, t, pos, defendOx, defendOz, defend3);
+          defendSoldierPos(i, n, t, pos, defendOx, defendOz, defend3, loose ? DEFEND5_SPREAD : 1);
           dummy.position.copy(pos);
           dummy.rotation.set(0, defendYawOut(pos.x, pos.z, defendOx, defendOz), 0);
           dummy.scale.setScalar(scale);
