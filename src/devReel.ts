@@ -233,8 +233,26 @@ export function devGiantAt(t: number) {
   return { x, z, yaw: Math.atan2(dx, dz || 0.001) };
 }
 
-export function devNameCovered(sx: number, sz: number, cx: number, cz: number, recT: number, big: boolean) {
+export function devNameCovered(sx: number, sz: number, cx: number, cz: number, recT: number, big: boolean, wide = false) {
   const g = devGiantAt(Math.max(0, recT));
+  if (wide) {
+    const yaw = g.yaw;
+    const vx = sx - cx;
+    const vz = sz - cz;
+    const len2 = vx * vx + vz * vz;
+    if (len2 < 1) return false;
+    const t = ((g.x - cx) * vx + (g.z - cz) * vz) / len2;
+    if (t <= 0.04 || t >= 0.97) return false;
+    const px = cx + vx * t;
+    const pz = cz + vz * t;
+    const ox = g.x - px;
+    const oz = g.z - pz;
+    const forward = ox * Math.sin(yaw) + oz * Math.cos(yaw);
+    const right = ox * Math.cos(yaw) - oz * Math.sin(yaw);
+    const depth = 12.6;
+    const width = 9.4;
+    return (forward * forward) / (depth * depth) + (right * right) / (width * width) < 1;
+  }
   const vx = g.x - cx;
   const vz = g.z - cz;
   const vlen = Math.hypot(vx, vz) || 1;
