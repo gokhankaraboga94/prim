@@ -603,9 +603,12 @@ function ColossusModel({ soldiers }: { soldiers: number }) {
       model.add(arm);
       model.updateMatrixWorld(true);
       const limb: THREE.Object3D[] = [];
+      const meshes: THREE.Mesh[] = [];
       model.traverse((obj) => {
         const mesh = obj as THREE.Mesh;
-        if (!mesh.isMesh || mesh.parent === sword) return;
+        if (mesh.isMesh) meshes.push(mesh);
+      });
+      for (const mesh of meshes) {
         mesh.frustumCulled = false;
         const box = new THREE.Box3().setFromObject(mesh);
         const center = box.getCenter(new THREE.Vector3());
@@ -625,7 +628,7 @@ function ColossusModel({ soldiers }: { soldiers: number }) {
           mesh.material = metal;
         } else mesh.material = metal;
         if (isStrikingPart(center)) limb.push(mesh);
-      });
+      }
       for (const mesh of limb) arm.attach(mesh);
       model.add(sword);
       arm.attach(sword);
