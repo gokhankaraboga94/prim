@@ -53,11 +53,23 @@ void main() {
 }
 `;
 
+const FRAG_CRISP = `
+uniform sampler2D map;
+varying vec2 vUv;
+void main() {
+  vec4 c = texture2D(map, vUv);
+  float a = smoothstep(0.22, 0.78, c.a);
+  if (a < 0.02) discard;
+  gl_FragColor = vec4(c.rgb, a);
+}
+`;
+
 function pickCell(unique: number, crisp: boolean) {
   if (crisp) {
-    if (unique <= 500) return { w: 512, h: 128, font: 78, cmd: 88 };
-    if (unique <= 1200) return { w: 384, h: 96, font: 58, cmd: 66 };
-    return { w: 256, h: 72, font: 44, cmd: 50 };
+    if (unique <= 400) return { w: 768, h: 192, font: 122, cmd: 136 };
+    if (unique <= 900) return { w: 512, h: 144, font: 90, cmd: 102 };
+    if (unique <= 1600) return { w: 384, h: 112, font: 70, cmd: 78 };
+    return { w: 288, h: 88, font: 54, cmd: 60 };
   }
   if (unique <= 400) return { w: 256, h: 64, font: 36, cmd: 42 };
   if (unique <= 1200) return { w: 192, h: 48, font: 26, cmd: 32 };
@@ -86,7 +98,8 @@ function paintCell(
   commander: boolean,
   font: number,
   cmdFont: number,
-  fill?: string
+  fill?: string,
+  crisp = false
 ) {
   ctx.clearRect(x, y, w, h);
   if (!text) return 0;
@@ -102,7 +115,7 @@ function paintCell(
   ctx.textBaseline = "middle";
   ctx.lineJoin = "round";
   ctx.miterLimit = 2;
-  ctx.lineWidth = Math.max(5, size * 0.22);
+  ctx.lineWidth = crisp ? Math.max(3, size * 0.1) : Math.max(5, size * 0.22);
   ctx.strokeStyle = commander ? "rgba(4, 22, 40, 0.96)" : "rgba(0,0,0,0.94)";
   ctx.fillStyle = fill || (commander ? "#2eb8d4" : "#fff");
   ctx.strokeText(text, x + w / 2, y + h / 2);
@@ -154,12 +167,14 @@ export function buildNameAtlas(items: NameItem[], crisp = false): NameAtlas {
     const ctx = canvas.getContext("2d");
     if (!ctx) continue;
     ctx.clearRect(0, 0, canvasW, canvasH);
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = "high";
     for (let i = 0; i < uCount; i++) {
       const item = unique[start + i];
       const col = i % cols;
       const row = Math.floor(i / cols);
       const text = labelOf(item);
-      const tw = paintCell(ctx, col * cell.w, row * cell.h, cell.w, cell.h, text, item.commander, cell.font, cell.cmd, item.fill);
+      const tw = paintCell(ctx, col * cell.w, row * cell.h, cell.w, cell.h, text, item.commander, cell.font, cell.cmd, item.fill, crisp);
       const sy = item.commander ? syBase * 1.12 : syBase;
       const sx = Math.min(2.9, sy * Math.max(1.15, (tw + 18) / cell.h));
       uniqueCells.push({
@@ -175,16 +190,16 @@ export function buildNameAtlas(items: NameItem[], crisp = false): NameAtlas {
     const map = new THREE.CanvasTexture(canvas);
     map.colorSpace = THREE.NoColorSpace;
     map.generateMipmaps = crisp;
-    map.minFilter = crisp ? THREE.LinearMipmapLinearFilter : THREE.LinearFilter;
+    map.minFilter = crisp ? THREE.LinearMipmapNearestFilter : THREE.LinearFilter;
     map.magFilter = THREE.LinearFilter;
-    map.anisotropy = crisp ? 8 : 1;
+    map.anisotropy = crisp ? 16 : 1;
     map.wrapS = THREE.ClampToEdgeWrapping;
     map.wrapT = THREE.ClampToEdgeWrapping;
     map.flipY = true;
     const material = new THREE.ShaderMaterial({
       uniforms: { map: { value: map } },
       vertexShader: VERT,
-      fragmentShader: FRAG,
+      fragmentShader: crisp ? FRAG_CRISP : FRAG,
       transparent: true,
       depthTest: false,
       depthWrite: false,

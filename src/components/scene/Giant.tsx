@@ -614,9 +614,9 @@ function colossusEye() {
 function colossusEyes() {
   const root = new THREE.Group();
   const left = colossusEye();
-  left.position.set(-0.36, 1.02, 0.5);
+  left.position.set(-0.36, 1.14, 0.5);
   const right = colossusEye();
-  right.position.set(-0.05, 1.035, 0.48);
+  right.position.set(-0.05, 1.155, 0.48);
   root.add(left, right);
   return root;
 }

@@ -1161,9 +1161,9 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
           plain: Boolean(countdown || defend || vs || vs2 || openField || roster || square || film),
           fill: nameAlert ? "#ffe14a" : nameGold ? "#ffe14a" : undefined,
         })),
-        giantDevs || dragon
+        giant || dragon
       ),
-    [labeled, names, chiefsList, countdown, defend, vs, vs2, openField, roster, square, film, nameGold, nameAlert, giantDevs, dragon]
+    [labeled, names, chiefsList, countdown, defend, vs, vs2, openField, roster, square, film, nameGold, nameAlert, giant, dragon]
   );
   useEffect(() => () => nameAtlas.dispose(), [nameAtlas]);
 
