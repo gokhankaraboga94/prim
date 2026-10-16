@@ -127,191 +127,302 @@ function HeadHp({ soldiers }: { soldiers: number }) {
   );
 }
 
-function FleshShell({
-  hide,
-  meat,
-  bone,
-  horn,
-  eye,
-  iron,
-}: {
+type FleshKit = {
   hide: THREE.Material;
   meat: THREE.Material;
   bone: THREE.Material;
   horn: THREE.Material;
   eye: THREE.Material;
-  iron: THREE.Material;
-}) {
-  const claws = [-0.28, 0, 0.28];
+  pit: THREE.Material;
+  torso: THREE.BufferGeometry;
+  leg: THREE.BufferGeometry;
+  arm: THREE.BufferGeometry;
+  head: THREE.BufferGeometry;
+  hornL: THREE.BufferGeometry;
+  hornR: THREE.BufferGeometry;
+  foot: THREE.BufferGeometry;
+  maul: THREE.BufferGeometry;
+};
+
+function lathe(profile: number[][], n = 18) {
+  const geo = new THREE.LatheGeometry(
+    profile.map(([r, y]) => new THREE.Vector2(r, y)),
+    n
+  );
+  geo.computeVertexNormals();
+  return geo;
+}
+
+function roughen(geo: THREE.BufferGeometry, amp: number) {
+  const p = geo.attributes.position;
+  for (let i = 0; i < p.count; i++) {
+    const x = p.getX(i);
+    const y = p.getY(i);
+    const z = p.getZ(i);
+    const n = Math.sin(x * 7.3 + y * 3.1) * Math.cos(z * 6.4 + y * 2.2);
+    p.setXYZ(i, x * (1 + n * amp), y, z * (1 + n * amp * 0.65));
+  }
+  geo.computeVertexNormals();
+}
+
+function hornTube(side: number) {
+  const curve = new THREE.CatmullRomCurve3([
+    new THREE.Vector3(0, 0, 0),
+    new THREE.Vector3(side * 0.28, 0.48, 0.02),
+    new THREE.Vector3(side * 0.72, 0.92, -0.18),
+    new THREE.Vector3(side * 1.12, 0.62, -0.48),
+  ]);
+  return new THREE.TubeGeometry(curve, 12, side > 0 ? 0.13 : 0.11, 6, false);
+}
+
+function footGeo() {
+  const shape = new THREE.Shape();
+  shape.moveTo(-0.42, -0.2);
+  shape.bezierCurveTo(-0.55, 0.4, -0.4, 0.95, -0.08, 1.2);
+  shape.bezierCurveTo(0.18, 1.32, 0.48, 1.02, 0.5, 0.5);
+  shape.bezierCurveTo(0.5, 0.1, 0.36, -0.28, 0.02, -0.34);
+  shape.closePath();
+  const geo = new THREE.ExtrudeGeometry(shape, { depth: 0.34, bevelEnabled: true, bevelThickness: 0.07, bevelSize: 0.06, bevelSegments: 1, curveSegments: 8 });
+  geo.translate(0, 0, -0.17);
+  geo.rotateX(-Math.PI / 2);
+  geo.computeVertexNormals();
+  return geo;
+}
+
+function skullGeo() {
+  const geo = new THREE.SphereGeometry(1, 32, 22);
+  const p = geo.attributes.position;
+  const v = new THREE.Vector3();
+  for (let i = 0; i < p.count; i++) {
+    v.fromBufferAttribute(p, i);
+    v.y *= 1.18;
+    if (v.z > 0 && v.y > -0.05 && v.y < 0.42) v.z += 0.34 * Math.max(0, v.z);
+    if (Math.abs(v.x) > 0.25 && v.y < 0.15 && v.y > -0.4 && v.z > 0) v.x *= 0.78;
+    if (v.y < -0.12 && v.z > 0) {
+      v.z += 0.42;
+      v.y -= 0.16;
+    }
+    if (v.y > 0.45) v.x *= 0.88;
+    if (v.z < 0) v.z *= 0.82;
+    if (v.y < -0.45) v.y -= 0.12;
+    p.setXYZ(i, v.x, v.y, v.z);
+  }
+  geo.computeVertexNormals();
+  return geo;
+}
+
+function paintFlesh() {
+  const size = 512;
+  const color = document.createElement("canvas");
+  const bump = document.createElement("canvas");
+  color.width = color.height = size;
+  bump.width = bump.height = size;
+  const g = color.getContext("2d");
+  const b = bump.getContext("2d");
+  if (!g || !b) return { map: null, bumpMap: null };
+  g.fillStyle = "#4e4038";
+  g.fillRect(0, 0, size, size);
+  b.fillStyle = "#808080";
+  b.fillRect(0, 0, size, size);
+  for (let i = 0; i < 160; i++) {
+    const x = Math.random() * size;
+    const y = Math.random() * size;
+    const rx = 10 + Math.random() * 90;
+    const ry = 6 + Math.random() * 40;
+    const roll = Math.random();
+    g.fillStyle = roll > 0.84 ? "rgba(86,24,20,0.5)" : roll > 0.45 ? "rgba(16,12,10,0.42)" : "rgba(112,90,74,0.32)";
+    g.beginPath();
+    g.ellipse(x, y, rx, ry, Math.random() * Math.PI, 0, Math.PI * 2);
+    g.fill();
+    b.fillStyle = roll > 0.5 ? "rgba(36,36,36,0.55)" : "rgba(180,180,180,0.3)";
+    b.beginPath();
+    b.ellipse(x, y, rx, ry, Math.random() * Math.PI, 0, Math.PI * 2);
+    b.fill();
+  }
+  g.lineCap = "round";
+  b.lineCap = "round";
+  for (let i = 0; i < 22; i++) {
+    const x = Math.random() * size;
+    const y = Math.random() * size;
+    const x2 = x + (Math.random() - 0.5) * 200;
+    const y2 = y + (Math.random() - 0.5) * 70;
+    g.strokeStyle = "rgba(64,18,16,0.8)";
+    g.lineWidth = 1.4 + Math.random() * 3.2;
+    g.beginPath();
+    g.moveTo(x, y);
+    g.lineTo(x2, y2);
+    g.stroke();
+    b.strokeStyle = "rgba(24,24,24,0.95)";
+    b.lineWidth = g.lineWidth + 1.2;
+    b.beginPath();
+    b.moveTo(x, y);
+    b.lineTo(x2, y2);
+    b.stroke();
+  }
+  const map = new THREE.CanvasTexture(color);
+  const bumpMap = new THREE.CanvasTexture(bump);
+  map.colorSpace = THREE.SRGBColorSpace;
+  map.wrapS = map.wrapT = THREE.RepeatWrapping;
+  bumpMap.wrapS = bumpMap.wrapT = THREE.RepeatWrapping;
+  map.repeat.set(2, 1);
+  bumpMap.repeat.set(2, 1);
+  return { map, bumpMap };
+}
+
+function buildFleshKit(): FleshKit {
+  const { map, bumpMap } = paintFlesh();
+  const hide = new THREE.MeshStandardMaterial({ map, bumpMap, bumpScale: 0.42, color: "#a89484", roughness: 0.78, metalness: 0.02 });
+  const meat = new THREE.MeshStandardMaterial({ color: "#5c1814", roughness: 0.62, metalness: 0.02 });
+  const bone = new THREE.MeshStandardMaterial({ color: "#cbbfa6", roughness: 0.72, metalness: 0.04 });
+  const horn = new THREE.MeshStandardMaterial({ color: "#241c16", roughness: 0.48, metalness: 0.22 });
+  const eye = new THREE.MeshStandardMaterial({ color: "#ff4a22", emissive: "#ff1c08", emissiveIntensity: 1.5, roughness: 0.35 });
+  const pit = new THREE.MeshStandardMaterial({ color: "#100c0a", roughness: 0.9 });
+  const torso = lathe(
+    [
+      [1.22, 0],
+      [1.48, 0.5],
+      [1.66, 1.15],
+      [1.46, 1.95],
+      [1.18, 2.6],
+      [1.52, 3.25],
+      [1.82, 3.95],
+      [1.96, 4.5],
+      [1.48, 5.1],
+      [0.7, 5.6],
+      [0.48, 6.25],
+      [0.4, 6.75],
+    ],
+    20
+  );
+  const leg = lathe(
+    [
+      [0.34, 0],
+      [0.48, 0.35],
+      [0.62, 1.15],
+      [0.42, 1.9],
+      [0.5, 2.35],
+      [0.86, 3.15],
+      [0.98, 4.15],
+      [0.72, 5.05],
+    ],
+    14
+  );
+  const arm = lathe(
+    [
+      [0.16, 0],
+      [0.36, 0.14],
+      [0.28, 0.42],
+      [0.24, 0.85],
+      [0.38, 1.45],
+      [0.28, 1.9],
+      [0.5, 2.4],
+      [0.56, 3.05],
+      [0.4, 3.4],
+    ],
+    12
+  );
+  roughen(torso, 0.04);
+  roughen(leg, 0.035);
+  roughen(arm, 0.03);
+  const head = skullGeo();
+  roughen(head, 0.025);
+  const foot = footGeo();
+  const maul = new THREE.IcosahedronGeometry(1.05, 1);
+  const mp = maul.attributes.position;
+  for (let i = 0; i < mp.count; i++) {
+    const n = 0.78 + Math.abs(Math.sin(i * 2.4 + 1.7)) * 0.4;
+    mp.setXYZ(i, mp.getX(i) * n, mp.getY(i) * (0.7 + (i % 4) * 0.08), mp.getZ(i) * n);
+  }
+  maul.computeVertexNormals();
+  return { hide, meat, bone, horn, eye, pit, torso, leg, arm, head, hornL: hornTube(-1), hornR: hornTube(1), foot, maul };
+}
+
+function FleshShell({ kit }: { kit: FleshKit }) {
+  const spines = [
+    { y: 7.15, h: 0.55, x: -0.08 },
+    { y: 8.05, h: 0.85, x: 0.12 },
+    { y: 9.05, h: 0.62, x: -0.04 },
+    { y: 10.05, h: 0.95, x: 0.08 },
+    { y: 10.9, h: 0.48, x: -0.1 },
+  ];
   return (
     <group>
-      <mesh position={[-1.02, 4.7, 0.22]} rotation={[0.16, 0, 0.07]} material={hide}>
-        <capsuleGeometry args={[0.78, 2.05, 4, 8]} />
-      </mesh>
-      <mesh position={[1.08, 4.55, -0.02]} rotation={[0.08, 0, -0.1]} material={hide}>
-        <capsuleGeometry args={[0.86, 2.15, 4, 8]} />
-      </mesh>
-      <mesh position={[-1.04, 3.05, 0.48]} material={hide}>
-        <sphereGeometry args={[0.62, 10, 8]} />
-      </mesh>
-      <mesh position={[1.12, 2.95, 0.22]} material={hide}>
-        <sphereGeometry args={[0.66, 10, 8]} />
-      </mesh>
-      <mesh position={[-0.98, 1.75, 0.42]} rotation={[0.22, 0, 0.04]} material={hide}>
-        <capsuleGeometry args={[0.48, 1.55, 4, 8]} />
-      </mesh>
-      <mesh position={[1.16, 1.65, 0.18]} rotation={[0.12, 0, -0.05]} material={hide}>
-        <capsuleGeometry args={[0.52, 1.6, 4, 8]} />
-      </mesh>
-      <mesh position={[1.28, 1.85, 0.72]} rotation={[0.4, 0.2, 0.4]} material={meat}>
-        <capsuleGeometry args={[0.16, 0.85, 3, 6]} />
-      </mesh>
-      <mesh position={[1.22, 1.7, 0.78]} rotation={[0.5, 0, 0.2]} material={bone}>
-        <capsuleGeometry args={[0.06, 0.7, 2, 5]} />
-      </mesh>
-      <mesh position={[-0.92, 0.32, 1.15]} scale={[0.62, 0.28, 1.15]} material={hide}>
-        <sphereGeometry args={[1, 10, 8]} />
-      </mesh>
-      <mesh position={[1.18, 0.3, 1.05]} scale={[0.68, 0.3, 1.2]} material={hide}>
-        <sphereGeometry args={[1, 10, 8]} />
-      </mesh>
-      {claws.map((x) => (
-        <mesh key={`lt${x}`} position={[-0.92 + x, 0.18, 2.15]} rotation={[1.15, 0, x]} material={horn}>
-          <coneGeometry args={[0.08, 0.42, 5]} />
+      <mesh geometry={kit.leg} material={kit.hide} position={[-0.92, 0.22, 0.12]} rotation={[0.1, 0.04, 0.07]} />
+      <mesh geometry={kit.leg} material={kit.hide} position={[1.02, 0.18, -0.02]} rotation={[0.05, -0.05, -0.09]} scale={[1.08, 1, 1.05]} />
+      <mesh geometry={kit.foot} material={kit.hide} position={[-0.95, 0.16, 0.85]} />
+      <mesh geometry={kit.foot} material={kit.hide} position={[1.08, 0.14, 0.78]} scale={[1.06, 1, 1.04]} />
+      {[-0.22, 0.08, 0.34].map((x, i) => (
+        <mesh key={`lt${x}`} position={[-0.95 + x, 0.12, 2.05]} rotation={[1.25, 0, x]} material={kit.horn}>
+          <coneGeometry args={[0.07, 0.32 + i * 0.08, 5]} />
         </mesh>
       ))}
-      {claws.map((x) => (
-        <mesh key={`rt${x}`} position={[1.18 + x, 0.16, 2.1]} rotation={[1.15, 0, -x]} material={horn}>
-          <coneGeometry args={[0.09, 0.48, 5]} />
+      {[-0.18, 0.12, 0.4].map((x, i) => (
+        <mesh key={`rt${x}`} position={[1.08 + x, 0.1, 2.0]} rotation={[1.25, 0, -x]} material={kit.horn}>
+          <coneGeometry args={[0.08, 0.28 + (2 - i) * 0.1, 5]} />
         </mesh>
       ))}
-      <mesh position={[0.05, 6.25, 0.08]} scale={[2.2, 1.15, 1.5]} material={hide}>
-        <sphereGeometry args={[1, 12, 10]} />
+      <mesh geometry={kit.torso} material={kit.hide} position={[0.04, 5.15, 0.05]} scale={[1.08, 1, 0.8]} />
+      <mesh position={[0.06, 5.35, 0.02]} material={kit.horn}>
+        <cylinderGeometry args={[1.25, 1.48, 0.28, 6]} />
       </mesh>
-      <mesh position={[0.08, 6.15, 0.05]} material={iron}>
-        <cylinderGeometry args={[1.45, 1.7, 0.42, 8]} />
+      <mesh position={[-1.35, 8.7, 0.25]} rotation={[0.2, 0.4, 0.9]} material={kit.meat}>
+        <capsuleGeometry args={[0.16, 0.9, 3, 6]} />
       </mesh>
-      <mesh position={[0.18, 7.55, 0.42]} scale={[1.75, 1.25, 1.35]} material={hide}>
-        <sphereGeometry args={[1, 12, 10]} />
+      <mesh position={[-1.22, 8.95, 0.42]} rotation={[0.35, 0.2, 0.5]} material={kit.bone}>
+        <capsuleGeometry args={[0.045, 0.55, 2, 4]} />
       </mesh>
-      <mesh position={[0.35, 7.15, 0.95]} scale={[1.15, 0.75, 0.85]} material={hide}>
-        <sphereGeometry args={[1, 10, 8]} />
-      </mesh>
-      <mesh position={[-0.15, 8.35, 0.55]} rotation={[0.3, 0.4, 0.8]} material={meat}>
-        <capsuleGeometry args={[0.22, 1.15, 3, 6]} />
-      </mesh>
-      <mesh position={[0, 9.45, 0.12]} scale={[2.05, 1.45, 1.25]} material={hide}>
-        <sphereGeometry args={[1, 12, 10]} />
-      </mesh>
-      <mesh position={[-0.72, 9.55, 0.95]} scale={[0.78, 0.55, 0.48]} material={hide}>
-        <sphereGeometry args={[1, 10, 8]} />
-      </mesh>
-      <mesh position={[0.78, 9.7, 0.88]} scale={[0.86, 0.6, 0.5]} material={hide}>
-        <sphereGeometry args={[1, 10, 8]} />
-      </mesh>
-      {[-0.2, 0.15, 0.5].map((y, i) => (
-        <mesh key={`rib${y}`} position={[-1.55, 8.55 + y, 0.35]} rotation={[0.2, 0.5, 1.15 + i * 0.08]} material={bone}>
-          <capsuleGeometry args={[0.06, 0.85, 2, 5]} />
+      {spines.map((s) => (
+        <mesh key={s.y} position={[s.x, s.y, -1.28]} rotation={[-0.7, 0, s.x]} material={kit.bone}>
+          <coneGeometry args={[0.1, s.h, 5]} />
         </mesh>
       ))}
-      <mesh position={[-1.45, 8.85, 0.15]} scale={[0.35, 0.7, 0.4]} material={meat}>
-        <sphereGeometry args={[1, 8, 6]} />
-      </mesh>
-      <mesh position={[-2.15, 10.65, 0.12]} scale={[1.05, 0.82, 0.85]} material={hide}>
-        <sphereGeometry args={[1, 10, 8]} />
-      </mesh>
-      <mesh position={[2.25, 10.7, 0.08]} scale={[1.15, 0.9, 0.9]} material={hide}>
-        <sphereGeometry args={[1, 10, 8]} />
-      </mesh>
-      <mesh position={[2.45, 10.95, 0.35]} rotation={[0.2, 0.1, -0.4]} material={iron}>
-        <boxGeometry args={[1.15, 0.28, 1.35]} />
-      </mesh>
-      <mesh position={[2.15, 10.55, 0.55]} rotation={[0.6, -0.2, 0.4]} material={meat}>
-        <capsuleGeometry args={[0.1, 0.7, 2, 5]} />
-      </mesh>
-      {[-0.4, 0.15, 0.7, 1.2].map((y, i) => (
-        <mesh key={`sp${y}`} position={[(i - 1.5) * 0.12, 7.4 + y, -1.05]} rotation={[-0.85, 0, 0]} material={bone}>
-          <coneGeometry args={[0.12, 0.7, 5]} />
+      <group position={[0.02, 13.55, 0.18]}>
+        <mesh geometry={kit.head} material={kit.hide} scale={1.28} />
+        <mesh geometry={kit.hornL} material={kit.horn} position={[-0.62, 0.72, 0.05]} />
+        <mesh geometry={kit.hornR} material={kit.horn} position={[0.7, 0.76, 0.06]} />
+        <mesh position={[-0.38, 0.08, 1.42]} material={kit.pit}>
+          <sphereGeometry args={[0.22, 8, 6]} />
         </mesh>
-      ))}
-      <mesh position={[0.02, 12.05, 0.18]} material={hide}>
-        <capsuleGeometry args={[0.58, 0.85, 4, 8]} />
-      </mesh>
-      <mesh position={[0.28, 12.15, 0.55]} rotation={[0.4, 0, 0.3]} material={meat}>
-        <capsuleGeometry args={[0.05, 0.9, 2, 4]} />
-      </mesh>
-      <mesh position={[0.04, 13.95, 0.22]} scale={[1.02, 1.18, 0.98]} material={hide}>
-        <sphereGeometry args={[1.05, 14, 12]} />
-      </mesh>
-      <mesh position={[0.08, 13.35, 0.72]} rotation={[0.35, 0, 0]} scale={[0.95, 0.62, 0.78]} material={hide}>
-        <sphereGeometry args={[0.78, 12, 10]} />
-      </mesh>
-      <mesh position={[0.06, 14.35, 0.95]} rotation={[0.15, 0, 0]} material={hide}>
-        <capsuleGeometry args={[0.18, 1.35, 3, 6]} />
-      </mesh>
-      <mesh position={[-0.38, 13.82, 0.92]} material={horn}>
-        <sphereGeometry args={[0.28, 8, 6]} />
-      </mesh>
-      <mesh position={[0.46, 13.74, 0.88]} material={horn}>
-        <sphereGeometry args={[0.3, 8, 6]} />
-      </mesh>
-      <mesh position={[-0.38, 13.85, 1.12]} material={eye}>
-        <sphereGeometry args={[0.14, 8, 6]} />
-      </mesh>
-      <mesh position={[0.46, 13.78, 1.1]} material={eye}>
-        <sphereGeometry args={[0.16, 8, 6]} />
-      </mesh>
-      <mesh position={[0.08, 13.15, 1.22]} rotation={[0.2, 0, 0]} material={meat}>
-        <boxGeometry args={[0.72, 0.12, 0.08]} />
-      </mesh>
-      {[-0.28, -0.08, 0.16, 0.36].map((x) => (
-        <mesh key={`fang${x}`} position={[x, 13.05, 1.18]} rotation={[0.4, 0, x * 0.4]} material={bone}>
-          <coneGeometry args={[0.07, x > 0 ? 0.48 : 0.38, 5]} />
+        <mesh position={[0.42, 0.02, 1.4]} material={kit.pit}>
+          <sphereGeometry args={[0.24, 8, 6]} />
         </mesh>
-      ))}
-      <mesh position={[-0.95, 14.55, 0.15]} rotation={[0.4, 0.15, 0.95]} material={horn}>
-        <coneGeometry args={[0.2, 1.7, 6]} />
-      </mesh>
-      <mesh position={[1.05, 14.7, 0.2]} rotation={[0.55, -0.1, -1.05]} material={horn}>
-        <coneGeometry args={[0.22, 1.95, 6]} />
-      </mesh>
-      <mesh position={[0.55, 14.95, -0.15]} rotation={[-0.4, 0, -0.35]} material={horn}>
-        <coneGeometry args={[0.1, 0.7, 5]} />
-      </mesh>
-      <mesh position={[-1.05, 13.7, 0.15]} rotation={[0, 0, 0.4]} material={hide}>
-        <sphereGeometry args={[0.22, 6, 5]} />
-      </mesh>
-      <mesh position={[0.95, 13.55, 0.35]} rotation={[0.5, 0.4, -0.6]} material={meat}>
-        <capsuleGeometry args={[0.08, 0.45, 2, 4]} />
-      </mesh>
+        <mesh position={[-0.38, 0.06, 1.58]} material={kit.eye}>
+          <boxGeometry args={[0.2, 0.045, 0.04]} />
+        </mesh>
+        <mesh position={[0.44, 0, 1.56]} material={kit.eye}>
+          <boxGeometry args={[0.22, 0.05, 0.04]} />
+        </mesh>
+        <mesh position={[0.06, -0.55, 1.48]} material={kit.pit}>
+          <boxGeometry args={[0.7, 0.18, 0.12]} />
+        </mesh>
+        {[
+          [-0.24, 0.46],
+          [-0.06, 0.3],
+          [0.16, 0.55],
+          [0.34, 0.24],
+        ].map(([x, h]) => (
+          <mesh key={x} position={[x, -0.62, 1.52]} rotation={[0.55, 0, x * 0.5]} material={kit.bone}>
+            <coneGeometry args={[0.06, h, 5]} />
+          </mesh>
+        ))}
+        <mesh position={[1.05, -0.08, 0.35]} rotation={[0.4, 0.3, -0.5]} material={kit.meat}>
+          <boxGeometry args={[0.32, 0.09, 0.07]} />
+        </mesh>
+      </group>
     </group>
   );
 }
 
-function FleshLimb({ hide, meat, bone, mace = false }: { hide: THREE.Material; meat: THREE.Material; bone: THREE.Material; mace?: boolean }) {
+function FleshLimb({ kit, mace = false }: { kit: FleshKit; mace?: boolean }) {
+  const claws = mace ? [-0.16, 0.05, 0.22] : [-0.2, 0, 0.18];
   return (
-    <group>
-      <mesh position={[0.02, -0.9, 0.08]} rotation={[mace ? 0.28 : 0.12, 0, 0]} material={hide}>
-        <capsuleGeometry args={[0.5, 1.2, 4, 8]} />
-      </mesh>
-      <mesh position={[0.06, -1.75, mace ? 0.28 : 0.16]} material={hide}>
-        <sphereGeometry args={[0.4, 8, 6]} />
-      </mesh>
-      <mesh position={[0.08, -2.55, mace ? 0.7 : 0.28]} rotation={[mace ? 0.65 : 0.22, 0, 0]} material={hide}>
-        <capsuleGeometry args={[0.34, 1.05, 4, 7]} />
-      </mesh>
-      <mesh position={[0.22, -1.35, 0.32]} rotation={[0.25, 0, 0.15]} material={meat}>
-        <capsuleGeometry args={[0.045, 1.35, 2, 4]} />
-      </mesh>
-      <mesh position={[0.06, mace ? -3.25 : -3.2, mace ? 1.15 : 0.42]} material={hide}>
-        <sphereGeometry args={[0.36, 8, 6]} />
-      </mesh>
-      {[-0.18, 0, 0.18].map((x) => (
-        <mesh key={x} position={[x, mace ? -3.35 : -3.45, mace ? 1.45 : 0.72]} rotation={[1.2, 0, x]} material={bone}>
-          <coneGeometry args={[0.05, 0.36, 4]} />
+    <mesh geometry={kit.arm} material={kit.hide} position={mace ? [0.05, -3.15, 0.9] : [0.02, -3.2, 0.32]} rotation={[mace ? -0.32 : -0.12, 0, mace ? -0.06 : 0.05]}>
+      {claws.map((x, i) => (
+        <mesh key={x} position={[x, 0.02, 0.28]} rotation={[1.15, 0, x * 2]} material={kit.horn}>
+          <coneGeometry args={[0.045, 0.28 + i * 0.08, 4]} />
         </mesh>
       ))}
-    </group>
+    </mesh>
   );
 }
 
@@ -325,9 +436,7 @@ function GiantBody({ soldiers, big, sword, dread, flesh = false, crown = false }
   const slit = useMemo(() => new THREE.MeshStandardMaterial({ color: "#ff2a14", emissive: "#ff1a10", emissiveIntensity: 1.4, roughness: 0.4 }), []);
   const eye = useMemo(() => new THREE.MeshStandardMaterial({ color: "#ff3a18", emissive: "#ff1a08", emissiveIntensity: 2.4, roughness: 0.28 }), []);
   const horn = useMemo(() => new THREE.MeshStandardMaterial({ color: "#1a1816", metalness: 0.45, roughness: 0.55 }), []);
-  const hide = useMemo(() => new THREE.MeshStandardMaterial({ color: "#8d7362", roughness: 0.84, metalness: 0.02 }), []);
-  const meat = useMemo(() => new THREE.MeshStandardMaterial({ color: "#7a1c16", roughness: 0.48, metalness: 0.03, emissive: "#2a0604", emissiveIntensity: 0.35 }), []);
-  const bone = useMemo(() => new THREE.MeshStandardMaterial({ color: "#e4d5bc", roughness: 0.58, metalness: 0.06 }), []);
+  const fleshKit = useMemo(() => (flesh ? buildFleshKit() : null), [flesh]);
   useFrame(({ clock }) => {
     const t = Math.max(0, clock.elapsedTime - REEL_HOLD);
     const g = devGiantAt(t);
@@ -379,8 +488,8 @@ function GiantBody({ soldiers, big, sword, dread, flesh = false, crown = false }
   const spikes = [0, 45, 90, 135, 180, 225, 270, 315];
   return (
     <group ref={root} scale={big ? 1.52 : 1}>
-      {flesh ? (
-        <FleshShell hide={hide} meat={meat} bone={bone} horn={horn} eye={eye} iron={iron} />
+      {flesh && fleshKit ? (
+        <FleshShell kit={fleshKit} />
       ) : dread ? (
         <DreadShell plate={plate} iron={iron} eye={eye} horn={horn} />
       ) : (
@@ -438,8 +547,8 @@ function GiantBody({ soldiers, big, sword, dread, flesh = false, crown = false }
         </>
       )}
       <group ref={arm} position={[-2.7, 10.4, 0.2]}>
-        {flesh ? (
-          <FleshLimb hide={hide} meat={meat} bone={bone} />
+        {flesh && fleshKit ? (
+          <FleshLimb kit={fleshKit} />
         ) : dread ? (
           <>
             <mesh position={[-0.18, -0.95, 0.12]} rotation={[0.12, 0, 0.08]} material={plate}>
@@ -473,8 +582,8 @@ function GiantBody({ soldiers, big, sword, dread, flesh = false, crown = false }
       </group>
       {crown && <HeadHp soldiers={soldiers} />}
       <group ref={mace} position={[2.7, 10.5, 0.25]}>
-        {flesh ? (
-          <FleshLimb hide={hide} meat={meat} bone={bone} mace />
+        {flesh && fleshKit ? (
+          <FleshLimb kit={fleshKit} mace />
         ) : dread ? (
           <>
             <mesh position={[0.22, -0.9, 0.18]} rotation={[0.2, 0, -0.08]} material={plate}>
@@ -489,6 +598,21 @@ function GiantBody({ soldiers, big, sword, dread, flesh = false, crown = false }
             <cylinderGeometry args={[0.48, 0.62, 3.1, 6]} />
           </mesh>
         )}
+        {flesh && fleshKit ? (
+          <>
+            <mesh position={[0.5, -2.15, 4.7]} rotation={[1.25, 0.04, 0]} material={iron}>
+              <cylinderGeometry args={[0.16, 0.22, 7.6, 6]} />
+            </mesh>
+            <mesh geometry={fleshKit.maul} position={[0.72, -2.85, 8.15]} rotation={[0.4, 0.8, 0.2]} material={iron} />
+            <mesh position={[0.95, -1.7, 8.35]} rotation={[0.4, 0.2, -0.3]} material={horn}>
+              <coneGeometry args={[0.18, 0.85, 4]} />
+            </mesh>
+            <mesh position={[0.2, -3.7, 7.7]} rotation={[2.2, 0.4, 0.6]} material={horn}>
+              <coneGeometry args={[0.16, 0.7, 4]} />
+            </mesh>
+          </>
+        ) : (
+          <>
         <mesh position={[0.45, -2.2, 4.6]} rotation={[1.2, 0, 0]} material={iron}>
           <cylinderGeometry args={[0.22, 0.28, 7.4, 6]} />
         </mesh>
@@ -507,6 +631,8 @@ function GiantBody({ soldiers, big, sword, dread, flesh = false, crown = false }
         <mesh position={[1.75, -2.7, 8.2]} rotation={[0, 0, -Math.PI / 2]} material={iron}>
           <coneGeometry args={[0.26, 1.05, 4]} />
         </mesh>
+          </>
+        )}
       </group>
     </group>
   );
