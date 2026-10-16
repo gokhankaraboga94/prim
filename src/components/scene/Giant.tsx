@@ -1,10 +1,11 @@
-import { useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { Hud, OrthographicCamera } from "@react-three/drei";
 import { useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import { formatCount } from "../../game";
 import { REEL_HOLD } from "../../recordCanvas";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
+import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { devAlive, devClubHit, devGiantAt, devMaceSwing, devSnakeBite, devSwordPose, devTailLash, devTroopHit, devTroopSlot, devWaitArrow, TROOP_N, TROOP_SCALE } from "../../devReel";
 
 const dummy = new THREE.Object3D();
@@ -520,6 +521,47 @@ function FleshLimb({ kit, mace = false }: { kit: FleshKit; mace?: boolean }) {
   );
 }
 
+const COLOSSUS_URL = "/models/colossus.glb";
+const COLOSSUS_HEIGHT = 15.6;
+const COLOSSUS_SPAN_Y = 2.711936;
+const COLOSSUS_MIN_Y = -1.520994;
+const COLOSSUS_CENTER_X = -0.291638;
+const COLOSSUS_CENTER_Z = -0.259902;
+
+function ColossusModel() {
+  const rig = useRef<THREE.Group>(null);
+  useEffect(() => {
+    const loader = new GLTFLoader();
+    let drop = false;
+    loader.load(COLOSSUS_URL, (gltf) => {
+      const host = rig.current;
+      if (drop || !host) return;
+      const model = gltf.scene;
+      model.traverse((obj) => {
+        const mesh = obj as THREE.Mesh;
+        if (!mesh.isMesh) return;
+        mesh.frustumCulled = false;
+        const src = mesh.material as THREE.MeshStandardMaterial;
+        const mat = src.clone();
+        mat.side = THREE.DoubleSide;
+        mat.color.set("#c8baa8");
+        mat.roughness = 0.68;
+        mat.metalness = 0.08;
+        mesh.material = mat;
+      });
+      host.add(model);
+    });
+    return () => {
+      drop = true;
+      const host = rig.current;
+      if (!host) return;
+      host.clear();
+    };
+  }, []);
+  const scale = COLOSSUS_HEIGHT / COLOSSUS_SPAN_Y;
+  return <group ref={rig} scale={scale} position={[-COLOSSUS_CENTER_X * scale, -COLOSSUS_MIN_Y * scale, -COLOSSUS_CENTER_Z * scale]} />;
+}
+
 function GiantBody({ soldiers, big, sword, dread, flesh = false, crown = false }: { soldiers: number; big: boolean; sword: boolean; dread: boolean; flesh?: boolean; crown?: boolean }) {
   const root = useRef<THREE.Group>(null);
   const arm = useRef<THREE.Group>(null);
@@ -530,7 +572,6 @@ function GiantBody({ soldiers, big, sword, dread, flesh = false, crown = false }
   const slit = useMemo(() => new THREE.MeshStandardMaterial({ color: "#ff2a14", emissive: "#ff1a10", emissiveIntensity: 1.4, roughness: 0.4 }), []);
   const eye = useMemo(() => new THREE.MeshStandardMaterial({ color: "#ff3a18", emissive: "#ff1a08", emissiveIntensity: 2.4, roughness: 0.28 }), []);
   const horn = useMemo(() => new THREE.MeshStandardMaterial({ color: "#1a1816", metalness: 0.45, roughness: 0.55 }), []);
-  const fleshKit = useMemo(() => (flesh ? buildFleshKit() : null), [flesh]);
   useFrame(({ clock }) => {
     const t = Math.max(0, clock.elapsedTime - REEL_HOLD);
     const g = devGiantAt(t);
@@ -582,8 +623,8 @@ function GiantBody({ soldiers, big, sword, dread, flesh = false, crown = false }
   const spikes = [0, 45, 90, 135, 180, 225, 270, 315];
   return (
     <group ref={root} scale={big ? 1.52 : 1}>
-      {flesh && fleshKit ? (
-        <FleshShell kit={fleshKit} />
+      {flesh ? (
+        <ColossusModel />
       ) : dread ? (
         <DreadShell plate={plate} iron={iron} eye={eye} horn={horn} />
       ) : (
@@ -640,10 +681,10 @@ function GiantBody({ soldiers, big, sword, dread, flesh = false, crown = false }
       </mesh>
         </>
       )}
+      {!flesh && (
+        <>
       <group ref={arm} position={[-2.7, 10.4, 0.2]}>
-        {flesh && fleshKit ? (
-          <FleshLimb kit={fleshKit} />
-        ) : dread ? (
+        {dread ? (
           <>
             <mesh position={[-0.18, -0.95, 0.12]} rotation={[0.12, 0, 0.08]} material={plate}>
               <cylinderGeometry args={[0.62, 0.82, 1.95, 6]} />
@@ -674,11 +715,8 @@ function GiantBody({ soldiers, big, sword, dread, flesh = false, crown = false }
           </group>
         )}
       </group>
-      {crown && <HeadHp soldiers={soldiers} />}
       <group ref={mace} position={[2.7, 10.5, 0.25]}>
-        {flesh && fleshKit ? (
-          <FleshLimb kit={fleshKit} mace />
-        ) : dread ? (
+        {dread ? (
           <>
             <mesh position={[0.22, -0.9, 0.18]} rotation={[0.2, 0, -0.08]} material={plate}>
               <cylinderGeometry args={[0.68, 0.86, 1.85, 6]} />
@@ -692,21 +730,6 @@ function GiantBody({ soldiers, big, sword, dread, flesh = false, crown = false }
             <cylinderGeometry args={[0.48, 0.62, 3.1, 6]} />
           </mesh>
         )}
-        {flesh && fleshKit ? (
-          <>
-            <mesh position={[0.5, -2.15, 4.7]} rotation={[1.25, 0.04, 0]} material={iron}>
-              <cylinderGeometry args={[0.16, 0.22, 7.6, 6]} />
-            </mesh>
-            <mesh geometry={fleshKit.maul} position={[0.72, -2.85, 8.15]} rotation={[0.4, 0.8, 0.2]} material={iron} />
-            <mesh position={[0.95, -1.7, 8.35]} rotation={[0.4, 0.2, -0.3]} material={horn}>
-              <coneGeometry args={[0.18, 0.85, 4]} />
-            </mesh>
-            <mesh position={[0.2, -3.7, 7.7]} rotation={[2.2, 0.4, 0.6]} material={horn}>
-              <coneGeometry args={[0.16, 0.7, 4]} />
-            </mesh>
-          </>
-        ) : (
-          <>
         <mesh position={[0.45, -2.2, 4.6]} rotation={[1.2, 0, 0]} material={iron}>
           <cylinderGeometry args={[0.22, 0.28, 7.4, 6]} />
         </mesh>
@@ -725,9 +748,10 @@ function GiantBody({ soldiers, big, sword, dread, flesh = false, crown = false }
         <mesh position={[1.75, -2.7, 8.2]} rotation={[0, 0, -Math.PI / 2]} material={iron}>
           <coneGeometry args={[0.26, 1.05, 4]} />
         </mesh>
-          </>
-        )}
       </group>
+        </>
+      )}
+      {crown && <HeadHp soldiers={soldiers} />}
     </group>
   );
 }
