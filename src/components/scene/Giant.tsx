@@ -129,13 +129,14 @@ function HeadHp({ soldiers }: { soldiers: number }) {
 
 type FleshKit = {
   hide: THREE.Material;
-  meat: THREE.Material;
   bone: THREE.Material;
   horn: THREE.Material;
   eye: THREE.Material;
   pit: THREE.Material;
+  skin: THREE.Material;
   torso: THREE.BufferGeometry;
-  leg: THREE.BufferGeometry;
+  legL: THREE.BufferGeometry;
+  legR: THREE.BufferGeometry;
   arm: THREE.BufferGeometry;
   head: THREE.BufferGeometry;
   hornL: THREE.BufferGeometry;
@@ -144,35 +145,74 @@ type FleshKit = {
   maul: THREE.BufferGeometry;
 };
 
+const FLESH = new THREE.Color("#6b5648");
+const FLESH_DARK = new THREE.Color("#1c1613");
+const FLESH_BLOOD = new THREE.Color("#6a1a14");
+const FLESH_BONE = new THREE.Color("#cbb89a");
+const FLESH_BRUISE = new THREE.Color("#3c2a36");
+
 function lathe(profile: number[][], n = 18) {
-  const geo = new THREE.LatheGeometry(
+  return new THREE.LatheGeometry(
     profile.map(([r, y]) => new THREE.Vector2(r, y)),
     n
   );
-  geo.computeVertexNormals();
-  return geo;
 }
 
-function roughen(geo: THREE.BufferGeometry, amp: number) {
-  const p = geo.attributes.position;
-  for (let i = 0; i < p.count; i++) {
-    const x = p.getX(i);
-    const y = p.getY(i);
-    const z = p.getZ(i);
-    const n = Math.sin(x * 7.3 + y * 3.1) * Math.cos(z * 6.4 + y * 2.2);
-    p.setXYZ(i, x * (1 + n * amp), y, z * (1 + n * amp * 0.65));
-  }
+function paintVert(colors: Float32Array, i: number, light: number, blood = 0, bone = 0, bruise = 0) {
+  const col = FLESH.clone();
+  col.lerp(FLESH_DARK, THREE.MathUtils.clamp(1 - light, 0, 0.78));
+  if (bruise > 0) col.lerp(FLESH_BRUISE, Math.min(1, bruise));
+  if (blood > 0) col.lerp(FLESH_BLOOD, Math.min(1, blood));
+  if (bone > 0) col.lerp(FLESH_BONE, Math.min(1, bone));
+  colors[i * 3] = col.r;
+  colors[i * 3 + 1] = col.g;
+  colors[i * 3 + 2] = col.b;
+}
+
+function finishHide(geo: THREE.BufferGeometry, colors: Float32Array) {
+  geo.setAttribute("color", new THREE.BufferAttribute(colors, 3));
   geo.computeVertexNormals();
 }
 
-function hornTube(side: number) {
+function hornGeo(side: number) {
   const curve = new THREE.CatmullRomCurve3([
     new THREE.Vector3(0, 0, 0),
-    new THREE.Vector3(side * 0.28, 0.48, 0.02),
-    new THREE.Vector3(side * 0.72, 0.92, -0.18),
-    new THREE.Vector3(side * 1.12, 0.62, -0.48),
+    new THREE.Vector3(side * 0.22, 0.42, 0.04),
+    new THREE.Vector3(side * 0.62, 0.95, -0.12),
+    new THREE.Vector3(side * 1.05, 0.58, -0.42),
   ]);
-  return new THREE.TubeGeometry(curve, 12, side > 0 ? 0.13 : 0.11, 6, false);
+  const steps = 14;
+  const radial = 6;
+  const frames = curve.computeFrenetFrames(steps, false);
+  const positions: number[] = [];
+  const indices: number[] = [];
+  for (let i = 0; i <= steps; i++) {
+    const t = i / steps;
+    const radius = 0.2 * (1 - t) * (1 - t) + 0.025;
+    const center = curve.getPoint(t);
+    const n = frames.normals[i];
+    const b = frames.binormals[i];
+    for (let j = 0; j <= radial; j++) {
+      const a = (j / radial) * Math.PI * 2;
+      positions.push(
+        center.x + (Math.cos(a) * n.x + Math.sin(a) * b.x) * radius,
+        center.y + (Math.cos(a) * n.y + Math.sin(a) * b.y) * radius,
+        center.z + (Math.cos(a) * n.z + Math.sin(a) * b.z) * radius
+      );
+    }
+  }
+  const row = radial + 1;
+  for (let i = 0; i < steps; i++) {
+    for (let j = 0; j < radial; j++) {
+      const a = i * row + j;
+      indices.push(a, a + row, a + 1, a + 1, a + row, a + row + 1);
+    }
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
+  geo.setIndex(indices);
+  geo.computeVertexNormals();
+  return geo;
 }
 
 function footGeo() {
@@ -189,94 +229,179 @@ function footGeo() {
   return geo;
 }
 
-function skullGeo() {
-  const geo = new THREE.SphereGeometry(1, 32, 22);
+function sculptFoot(geo: THREE.BufferGeometry) {
   const p = geo.attributes.position;
+  const colors = new Float32Array(p.count * 3);
+  for (let i = 0; i < p.count; i++) {
+    let y = p.getY(i);
+    const x = p.getX(i);
+    const z = p.getZ(i);
+    if (y > 0.01 && z > 0.4) y += Math.max(0, Math.sin((x + 0.12) * 12)) * 0.065 * Math.min(1, (z - 0.4) / 0.55);
+    p.setY(i, y);
+    paintVert(colors, i, 0.58 + y, z > 1.05 ? 0.3 : 0);
+  }
+  finishHide(geo, colors);
+}
+
+function sculptTorso(geo: THREE.BufferGeometry) {
+  const p = geo.attributes.position;
+  const colors = new Float32Array(p.count * 3);
+  for (let i = 0; i < p.count; i++) {
+    let x = p.getX(i);
+    let y = p.getY(i);
+    let z = p.getZ(i);
+    const rad = Math.hypot(x, z) || 1;
+    const yn = y / 6.75;
+    const front = Math.max(0, z / rad);
+    const back = Math.max(0, -z / rad);
+    if (yn > 0.62 && yn < 0.84) x *= 1 + 0.34 * Math.sin(((yn - 0.62) / 0.22) * Math.PI);
+    if (yn > 0.5) z += (yn - 0.5) * 0.4;
+    if (yn > 0.5 && yn < 0.72 && z > 0) {
+      const pec = Math.exp(-((Math.abs(x) - 0.62) ** 2) / 0.2) * Math.exp(-((y - 4.2) ** 2) / 0.32);
+      z += 0.46 * pec;
+    }
+    if (Math.abs(x) < 0.15 && yn > 0.5 && yn < 0.74 && z > 0.3) z -= 0.16;
+    if (yn > 0.08 && yn < 0.4 && z > 0) {
+      const gut = Math.sin(((yn - 0.08) / 0.32) * Math.PI);
+      z += 0.52 * gut * front;
+      y -= 0.24 * gut * front;
+      z += Math.max(0, Math.sin(y * 6.4)) * 0.055 * gut;
+    }
+    if (back > 0.4 && yn > 0.12 && yn < 0.9) {
+      const ridge = Math.exp(-(x * x) / 0.07);
+      z -= 0.22 * ridge;
+    }
+    if (yn > 0.66 && yn < 0.76 && z > 0 && Math.abs(x) > 0.3 && Math.abs(x) < 1.55) {
+      z += 0.1;
+      y += 0.045;
+    }
+    const wound = Math.exp(-((x + 1.28) ** 2) / 0.16 - ((y - 3.5) ** 2) / 0.2);
+    if (wound > 0.04 && z > -0.4) {
+      x *= 1 - wound * 0.18;
+      z *= 1 - wound * 0.12;
+    }
+    p.setXYZ(i, x, y, z);
+    paintVert(colors, i, 0.44 + front * 0.36 - back * 0.16, wound * 0.85, back > 0.62 && Math.abs(x) < 0.22 ? 0.45 : 0, x > 1 && yn < 0.32 ? 0.28 : 0);
+  }
+  finishHide(geo, colors);
+}
+
+function sculptLeg(geo: THREE.BufferGeometry, side: number) {
+  const p = geo.attributes.position;
+  const colors = new Float32Array(p.count * 3);
+  for (let i = 0; i < p.count; i++) {
+    let x = p.getX(i);
+    let y = p.getY(i);
+    let z = p.getZ(i);
+    const yn = y / 5.05;
+    if (yn > 0.55 && yn < 0.92 && z > -0.08) {
+      const k = Math.sin(((yn - 0.55) / 0.37) * Math.PI);
+      z += 0.28 * k;
+      x += side * 0.15 * k;
+    }
+    if (yn > 0.58 && yn < 0.9 && z < 0) z -= 0.14 * Math.sin(((yn - 0.58) / 0.32) * Math.PI);
+    const knee = Math.exp(-((yn - 0.45) ** 2) / 0.0016);
+    if (z > -0.2) z += 0.2 * knee;
+    if (yn > 0.14 && yn < 0.4 && z < 0.08) z -= 0.32 * Math.sin(((yn - 0.14) / 0.26) * Math.PI);
+    if (yn > 0.12 && yn < 0.42 && z > 0 && Math.abs(x) < 0.24) z += 0.1;
+    let gash = 0;
+    if (side < 0 && yn > 0.18 && yn < 0.36) {
+      gash = Math.exp(-((x - 0.12) ** 2) / 0.018 - ((yn - 0.27) ** 2) / 0.0035);
+      z -= 0.18 * gash;
+    }
+    p.setXYZ(i, x, y, z);
+    paintVert(colors, i, 0.5 + (z > 0 ? 0.18 : -0.1), gash * 0.8, knee * 0.6);
+  }
+  finishHide(geo, colors);
+}
+
+function sculptArm(geo: THREE.BufferGeometry) {
+  const p = geo.attributes.position;
+  const colors = new Float32Array(p.count * 3);
+  for (let i = 0; i < p.count; i++) {
+    let x = p.getX(i);
+    let y = p.getY(i);
+    let z = p.getZ(i);
+    const yn = y / 3.4;
+    if (yn > 0.72) {
+      const k = (yn - 0.72) / 0.28;
+      x *= 1 + 0.3 * k;
+      z *= 1 + 0.14 * k;
+    }
+    if (yn > 0.55 && yn < 0.78 && z > -0.15) z += 0.18 * Math.sin(((yn - 0.55) / 0.23) * Math.PI);
+    const elbow = Math.exp(-((yn - 0.5) ** 2) / 0.0011);
+    if (z > -0.25) z += 0.12 * elbow;
+    if (yn > 0.16 && yn < 0.46) {
+      x *= 1.14;
+      z += z > 0 ? 0.07 : -0.09;
+    }
+    if (yn < 0.13) {
+      x *= 1.75;
+      z *= 0.72;
+      if (z < 0) z -= Math.max(0, Math.sin(x * 15)) * 0.055;
+    }
+    p.setXYZ(i, x, y, z);
+    paintVert(colors, i, 0.5 + (yn > 0.62 ? 0.12 : 0), yn < 0.18 ? 0.5 : yn < 0.36 ? 0.16 : 0, elbow * 0.45);
+  }
+  finishHide(geo, colors);
+}
+
+function skullGeo() {
+  const geo = new THREE.SphereGeometry(1, 40, 28);
+  const p = geo.attributes.position;
+  const colors = new Float32Array(p.count * 3);
   const v = new THREE.Vector3();
   for (let i = 0; i < p.count; i++) {
     v.fromBufferAttribute(p, i);
-    v.y *= 1.18;
-    if (v.z > 0 && v.y > -0.05 && v.y < 0.42) v.z += 0.34 * Math.max(0, v.z);
-    if (Math.abs(v.x) > 0.25 && v.y < 0.15 && v.y > -0.4 && v.z > 0) v.x *= 0.78;
-    if (v.y < -0.12 && v.z > 0) {
-      v.z += 0.42;
-      v.y -= 0.16;
+    const ox = v.x;
+    const oy = v.y;
+    const oz = v.z;
+    v.y *= 1.1;
+    const brow = Math.exp(-((oy - 0.28) ** 2) / 0.016) * Math.max(0, oz);
+    v.z += 0.46 * brow;
+    v.y += 0.04 * brow * (ox > 0.05 ? 0.45 : 1);
+    const socketAt = (cx: number, cy: number) => {
+      const d = Math.hypot(ox - cx, oy - cy);
+      return d < 0.32 && oz > 0.15 ? (1 - d / 0.32) ** 1.45 : 0;
+    };
+    const sock = Math.max(socketAt(-0.32, 0.05), socketAt(0.34, -0.02));
+    v.z -= 0.5 * sock;
+    if (Math.abs(ox) < 0.14 && oy > -0.18 && oy < 0.16 && oz > 0.25) {
+      v.z += 0.3 * (1 - Math.abs(ox) / 0.14);
+      v.x *= 0.4;
     }
-    if (v.y > 0.45) v.x *= 0.88;
-    if (v.z < 0) v.z *= 0.82;
-    if (v.y < -0.45) v.y -= 0.12;
+    if (Math.abs(ox) > 0.3 && Math.abs(ox) < 0.7 && oy < 0.06 && oy > -0.36 && oz > 0) {
+      v.z -= 0.22;
+      v.x *= 0.88;
+    }
+    if (oy < 0) {
+      const jaw = Math.min(1, -oy * 1.25);
+      v.y -= 0.3 * jaw;
+      if (oz > 0) v.z += 0.5 * jaw;
+      v.x *= 1 + 0.16 * jaw;
+    }
+    if (oy > 0.42) v.x *= 0.84;
+    if (oz < 0) v.z *= 0.76;
+    if (Math.abs(ox) > 0.7 && Math.abs(oy) < 0.26 && Math.abs(oz) < 0.28) v.x += Math.sign(ox) * 0.14;
+    if (ox > 0.72 && oy < 0.08) v.x *= 0.86;
+    const mouth = Math.exp(-((oy + 0.36) ** 2) / 0.01) * Math.max(0, oz);
+    v.z -= 0.24 * mouth;
+    const crack = Math.exp(-((ox - 0.12) ** 2) / 0.008) * Math.max(0, oy - 0.4) * Math.exp(-((oz + 0.1) ** 2) / 0.05);
+    v.y -= 0.18 * crack;
     p.setXYZ(i, v.x, v.y, v.z);
+    paintVert(colors, i, 0.46 + Math.max(0, oz) * 0.32 + oy * 0.08 - sock * 0.5, mouth * 0.9, Math.max(brow * 0.4, crack), Math.abs(ox) > 0.45 && oy < -0.05 ? 0.32 : 0);
   }
-  geo.computeVertexNormals();
+  finishHide(geo, colors);
   return geo;
 }
 
-function paintFlesh() {
-  const size = 512;
-  const color = document.createElement("canvas");
-  const bump = document.createElement("canvas");
-  color.width = color.height = size;
-  bump.width = bump.height = size;
-  const g = color.getContext("2d");
-  const b = bump.getContext("2d");
-  if (!g || !b) return { map: null, bumpMap: null };
-  g.fillStyle = "#4e4038";
-  g.fillRect(0, 0, size, size);
-  b.fillStyle = "#808080";
-  b.fillRect(0, 0, size, size);
-  for (let i = 0; i < 160; i++) {
-    const x = Math.random() * size;
-    const y = Math.random() * size;
-    const rx = 10 + Math.random() * 90;
-    const ry = 6 + Math.random() * 40;
-    const roll = Math.random();
-    g.fillStyle = roll > 0.84 ? "rgba(86,24,20,0.5)" : roll > 0.45 ? "rgba(16,12,10,0.42)" : "rgba(112,90,74,0.32)";
-    g.beginPath();
-    g.ellipse(x, y, rx, ry, Math.random() * Math.PI, 0, Math.PI * 2);
-    g.fill();
-    b.fillStyle = roll > 0.5 ? "rgba(36,36,36,0.55)" : "rgba(180,180,180,0.3)";
-    b.beginPath();
-    b.ellipse(x, y, rx, ry, Math.random() * Math.PI, 0, Math.PI * 2);
-    b.fill();
-  }
-  g.lineCap = "round";
-  b.lineCap = "round";
-  for (let i = 0; i < 22; i++) {
-    const x = Math.random() * size;
-    const y = Math.random() * size;
-    const x2 = x + (Math.random() - 0.5) * 200;
-    const y2 = y + (Math.random() - 0.5) * 70;
-    g.strokeStyle = "rgba(64,18,16,0.8)";
-    g.lineWidth = 1.4 + Math.random() * 3.2;
-    g.beginPath();
-    g.moveTo(x, y);
-    g.lineTo(x2, y2);
-    g.stroke();
-    b.strokeStyle = "rgba(24,24,24,0.95)";
-    b.lineWidth = g.lineWidth + 1.2;
-    b.beginPath();
-    b.moveTo(x, y);
-    b.lineTo(x2, y2);
-    b.stroke();
-  }
-  const map = new THREE.CanvasTexture(color);
-  const bumpMap = new THREE.CanvasTexture(bump);
-  map.colorSpace = THREE.SRGBColorSpace;
-  map.wrapS = map.wrapT = THREE.RepeatWrapping;
-  bumpMap.wrapS = bumpMap.wrapT = THREE.RepeatWrapping;
-  map.repeat.set(2, 1);
-  bumpMap.repeat.set(2, 1);
-  return { map, bumpMap };
-}
-
 function buildFleshKit(): FleshKit {
-  const { map, bumpMap } = paintFlesh();
-  const hide = new THREE.MeshStandardMaterial({ map, bumpMap, bumpScale: 0.42, color: "#a89484", roughness: 0.78, metalness: 0.02 });
-  const meat = new THREE.MeshStandardMaterial({ color: "#5c1814", roughness: 0.62, metalness: 0.02 });
-  const bone = new THREE.MeshStandardMaterial({ color: "#cbbfa6", roughness: 0.72, metalness: 0.04 });
-  const horn = new THREE.MeshStandardMaterial({ color: "#241c16", roughness: 0.48, metalness: 0.22 });
-  const eye = new THREE.MeshStandardMaterial({ color: "#ff4a22", emissive: "#ff1c08", emissiveIntensity: 1.5, roughness: 0.35 });
-  const pit = new THREE.MeshStandardMaterial({ color: "#100c0a", roughness: 0.9 });
+  const hide = new THREE.MeshStandardMaterial({ vertexColors: true, color: "#ffffff", roughness: 0.84, metalness: 0.02 });
+  const bone = new THREE.MeshStandardMaterial({ color: "#d4c4a8", roughness: 0.62, metalness: 0.04 });
+  const horn = new THREE.MeshStandardMaterial({ color: "#241c16", roughness: 0.4, metalness: 0.3 });
+  const eye = new THREE.MeshStandardMaterial({ color: "#ff3a18", emissive: "#ff1206", emissiveIntensity: 1.8, roughness: 0.28 });
+  const pit = new THREE.MeshStandardMaterial({ color: "#0c0908", roughness: 1 });
+  const skin = new THREE.MeshStandardMaterial({ color: "#6b5648", roughness: 0.84, metalness: 0.02 });
   const torso = lathe(
     [
       [1.22, 0],
@@ -292,9 +417,10 @@ function buildFleshKit(): FleshKit {
       [0.48, 6.25],
       [0.4, 6.75],
     ],
-    20
+    28
   );
-  const leg = lathe(
+  sculptTorso(torso);
+  const legL = lathe(
     [
       [0.34, 0],
       [0.48, 0.35],
@@ -305,8 +431,11 @@ function buildFleshKit(): FleshKit {
       [0.98, 4.15],
       [0.72, 5.05],
     ],
-    14
+    18
   );
+  const legR = legL.clone();
+  sculptLeg(legL, -1);
+  sculptLeg(legR, 1);
   const arm = lathe(
     [
       [0.16, 0],
@@ -319,14 +448,11 @@ function buildFleshKit(): FleshKit {
       [0.56, 3.05],
       [0.4, 3.4],
     ],
-    12
+    16
   );
-  roughen(torso, 0.04);
-  roughen(leg, 0.035);
-  roughen(arm, 0.03);
-  const head = skullGeo();
-  roughen(head, 0.025);
+  sculptArm(arm);
   const foot = footGeo();
+  sculptFoot(foot);
   const maul = new THREE.IcosahedronGeometry(1.05, 1);
   const mp = maul.attributes.position;
   for (let i = 0; i < mp.count; i++) {
@@ -334,79 +460,39 @@ function buildFleshKit(): FleshKit {
     mp.setXYZ(i, mp.getX(i) * n, mp.getY(i) * (0.7 + (i % 4) * 0.08), mp.getZ(i) * n);
   }
   maul.computeVertexNormals();
-  return { hide, meat, bone, horn, eye, pit, torso, leg, arm, head, hornL: hornTube(-1), hornR: hornTube(1), foot, maul };
+  return { hide, bone, horn, eye, pit, skin, torso, legL, legR, arm, head: skullGeo(), hornL: hornGeo(-1), hornR: hornGeo(1), foot, maul };
 }
 
 function FleshShell({ kit }: { kit: FleshKit }) {
-  const spines = [
-    { y: 7.15, h: 0.55, x: -0.08 },
-    { y: 8.05, h: 0.85, x: 0.12 },
-    { y: 9.05, h: 0.62, x: -0.04 },
-    { y: 10.05, h: 0.95, x: 0.08 },
-    { y: 10.9, h: 0.48, x: -0.1 },
-  ];
   return (
     <group>
-      <mesh geometry={kit.leg} material={kit.hide} position={[-0.92, 0.22, 0.12]} rotation={[0.1, 0.04, 0.07]} />
-      <mesh geometry={kit.leg} material={kit.hide} position={[1.02, 0.18, -0.02]} rotation={[0.05, -0.05, -0.09]} scale={[1.08, 1, 1.05]} />
-      <mesh geometry={kit.foot} material={kit.hide} position={[-0.95, 0.16, 0.85]} />
-      <mesh geometry={kit.foot} material={kit.hide} position={[1.08, 0.14, 0.78]} scale={[1.06, 1, 1.04]} />
-      {[-0.22, 0.08, 0.34].map((x, i) => (
-        <mesh key={`lt${x}`} position={[-0.95 + x, 0.12, 2.05]} rotation={[1.25, 0, x]} material={kit.horn}>
-          <coneGeometry args={[0.07, 0.32 + i * 0.08, 5]} />
-        </mesh>
-      ))}
-      {[-0.18, 0.12, 0.4].map((x, i) => (
-        <mesh key={`rt${x}`} position={[1.08 + x, 0.1, 2.0]} rotation={[1.25, 0, -x]} material={kit.horn}>
-          <coneGeometry args={[0.08, 0.28 + (2 - i) * 0.1, 5]} />
-        </mesh>
-      ))}
-      <mesh geometry={kit.torso} material={kit.hide} position={[0.04, 5.15, 0.05]} scale={[1.08, 1, 0.8]} />
-      <mesh position={[0.06, 5.35, 0.02]} material={kit.horn}>
-        <cylinderGeometry args={[1.25, 1.48, 0.28, 6]} />
-      </mesh>
-      <mesh position={[-1.35, 8.7, 0.25]} rotation={[0.2, 0.4, 0.9]} material={kit.meat}>
-        <capsuleGeometry args={[0.16, 0.9, 3, 6]} />
-      </mesh>
-      <mesh position={[-1.22, 8.95, 0.42]} rotation={[0.35, 0.2, 0.5]} material={kit.bone}>
-        <capsuleGeometry args={[0.045, 0.55, 2, 4]} />
-      </mesh>
-      {spines.map((s) => (
-        <mesh key={s.y} position={[s.x, s.y, -1.28]} rotation={[-0.7, 0, s.x]} material={kit.bone}>
-          <coneGeometry args={[0.1, s.h, 5]} />
-        </mesh>
-      ))}
-      <group position={[0.02, 13.55, 0.18]}>
-        <mesh geometry={kit.head} material={kit.hide} scale={1.28} />
-        <mesh geometry={kit.hornL} material={kit.horn} position={[-0.62, 0.72, 0.05]} />
-        <mesh geometry={kit.hornR} material={kit.horn} position={[0.7, 0.76, 0.06]} />
-        <mesh position={[-0.38, 0.08, 1.42]} material={kit.pit}>
-          <sphereGeometry args={[0.22, 8, 6]} />
-        </mesh>
-        <mesh position={[0.42, 0.02, 1.4]} material={kit.pit}>
-          <sphereGeometry args={[0.24, 8, 6]} />
-        </mesh>
-        <mesh position={[-0.38, 0.06, 1.58]} material={kit.eye}>
-          <boxGeometry args={[0.2, 0.045, 0.04]} />
-        </mesh>
-        <mesh position={[0.44, 0, 1.56]} material={kit.eye}>
-          <boxGeometry args={[0.22, 0.05, 0.04]} />
-        </mesh>
-        <mesh position={[0.06, -0.55, 1.48]} material={kit.pit}>
-          <boxGeometry args={[0.7, 0.18, 0.12]} />
-        </mesh>
-        {[
-          [-0.24, 0.46],
-          [-0.06, 0.3],
-          [0.16, 0.55],
-          [0.34, 0.24],
-        ].map(([x, h]) => (
-          <mesh key={x} position={[x, -0.62, 1.52]} rotation={[0.55, 0, x * 0.5]} material={kit.bone}>
-            <coneGeometry args={[0.06, h, 5]} />
+      <mesh geometry={kit.legL} material={kit.hide} position={[-0.96, 0.2, 0.1]} rotation={[0.14, 0.02, 0.07]} />
+      <mesh geometry={kit.legR} material={kit.hide} position={[1.06, 0.16, -0.02]} rotation={[0.05, -0.03, -0.09]} />
+      <mesh geometry={kit.foot} material={kit.hide} position={[-1.0, 0.1, 0.7]} rotation={[0.1, 0.04, 0]} />
+      <mesh geometry={kit.foot} material={kit.hide} position={[1.14, 0.08, 0.64]} rotation={[0.08, -0.1, 0]} />
+      <mesh geometry={kit.torso} material={kit.hide} position={[0.02, 5.02, 0]} />
+      <group position={[0.03, 13.4, 0.38]}>
+        <mesh geometry={kit.head} material={kit.hide} scale={1.18}>
+          <mesh geometry={kit.hornL} material={kit.horn} position={[-0.4, 0.4, 0.08]} />
+          <mesh geometry={kit.hornR} material={kit.horn} position={[0.48, 0.34, 0.06]} />
+          <mesh position={[-0.3, 0.02, 0.52]} material={kit.eye}>
+            <boxGeometry args={[0.15, 0.04, 0.035]} />
           </mesh>
-        ))}
-        <mesh position={[1.05, -0.08, 0.35]} rotation={[0.4, 0.3, -0.5]} material={kit.meat}>
-          <boxGeometry args={[0.32, 0.09, 0.07]} />
+          <mesh position={[0.33, -0.04, 0.5]} material={kit.eye}>
+            <boxGeometry args={[0.17, 0.038, 0.035]} />
+          </mesh>
+          <mesh position={[0.02, -0.48, 0.58]} material={kit.pit}>
+            <boxGeometry args={[0.38, 0.06, 0.07]} />
+          </mesh>
+          <mesh position={[-0.1, -0.55, 0.74]} rotation={[0.75, 0, -0.2]} material={kit.bone}>
+            <coneGeometry args={[0.055, 0.4, 5]} />
+          </mesh>
+          <mesh position={[0.12, -0.52, 0.76]} rotation={[0.65, 0, 0.25]} material={kit.bone}>
+            <coneGeometry args={[0.05, 0.26, 5]} />
+          </mesh>
+          <mesh position={[0.24, -0.34, 0.7]} rotation={[2.5, 0.2, 0.5]} material={kit.bone}>
+            <coneGeometry args={[0.04, 0.16, 4]} />
+          </mesh>
         </mesh>
       </group>
     </group>
@@ -414,12 +500,20 @@ function FleshShell({ kit }: { kit: FleshKit }) {
 }
 
 function FleshLimb({ kit, mace = false }: { kit: FleshKit; mace?: boolean }) {
-  const claws = mace ? [-0.16, 0.05, 0.22] : [-0.2, 0, 0.18];
+  const fingers = [-0.16, -0.05, 0.06, 0.17];
   return (
-    <mesh geometry={kit.arm} material={kit.hide} position={mace ? [0.05, -3.15, 0.9] : [0.02, -3.2, 0.32]} rotation={[mace ? -0.32 : -0.12, 0, mace ? -0.06 : 0.05]}>
-      {claws.map((x, i) => (
-        <mesh key={x} position={[x, 0.02, 0.28]} rotation={[1.15, 0, x * 2]} material={kit.horn}>
-          <coneGeometry args={[0.045, 0.28 + i * 0.08, 4]} />
+    <mesh geometry={kit.arm} material={kit.hide} position={mace ? [0.06, -3.15, 0.88] : [0.02, -3.2, 0.3]} rotation={[mace ? -0.3 : -0.1, 0, mace ? -0.05 : 0.04]}>
+      {fingers.map((x, i) => (
+        <mesh key={i} position={[x, 0.01, 0.16]} rotation={[1.25, 0, (i - 1.5) * 0.1]} material={kit.skin}>
+          <capsuleGeometry args={[0.055, 0.28, 3, 5]} />
+        </mesh>
+      ))}
+      <mesh position={[mace ? -0.22 : 0.22, -0.02, 0.1]} rotation={[1.05, mace ? 0.45 : -0.45, mace ? 0.7 : -0.7]} material={kit.skin}>
+        <capsuleGeometry args={[0.06, 0.22, 3, 5]} />
+      </mesh>
+      {fingers.map((x, i) => (
+        <mesh key={`n${i}`} position={[x, -0.08, 0.38]} rotation={[1.45, 0, 0]} material={kit.horn}>
+          <coneGeometry args={[0.03, 0.12, 4]} />
         </mesh>
       ))}
     </mesh>
