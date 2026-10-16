@@ -718,37 +718,20 @@ function New4Peak() {
 }
 
 function GrassField() {
+  const source = useGroundTexture();
   const ground = useMemo(() => {
-    const canvas = document.createElement("canvas");
-    canvas.width = 1024;
-    canvas.height = 1024;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return null;
-    ctx.fillStyle = "#3c7a32";
-    ctx.fillRect(0, 0, 1024, 1024);
-    const tones = ["#2d6426", "#4d9440", "#326e2a", "#5aaa48", "#244f1e", "#67b356", "#3a7630", "#1f4a1c"];
-    for (let i = 0; i < 14000; i++) {
-      ctx.fillStyle = tones[i % tones.length];
-      ctx.fillRect(Math.random() * 1024, Math.random() * 1024, 1 + Math.random() * 5, 2 + Math.random() * 8);
-    }
-    for (let i = 0; i < 80; i++) {
-      ctx.fillStyle = `rgba(54, 120, 42, ${0.16 + Math.random() * 0.2})`;
-      ctx.beginPath();
-      ctx.ellipse(Math.random() * 1024, Math.random() * 1024, 24 + Math.random() * 70, 14 + Math.random() * 36, Math.random() * Math.PI, 0, Math.PI * 2);
-      ctx.fill();
-    }
-    const tex = new THREE.CanvasTexture(canvas);
+    if (!source) return null;
+    const tex = source.clone();
     tex.wrapS = THREE.RepeatWrapping;
     tex.wrapT = THREE.RepeatWrapping;
-    tex.repeat.set(18, 18);
-    tex.anisotropy = 8;
-    tex.colorSpace = THREE.SRGBColorSpace;
+    tex.repeat.set(120, 120);
+    tex.needsUpdate = true;
     return tex;
-  }, []);
+  }, [source]);
   return (
     <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow>
-      <planeGeometry args={[2800, 2800]} />
-      <meshStandardMaterial map={ground} color="#ffffff" roughness={0.96} metalness={0} envMapIntensity={0.12} />
+      <planeGeometry args={[2400, 2400]} />
+      <meshStandardMaterial map={ground} color="#68b44a" roughness={0.92} envMapIntensity={0.2} />
     </mesh>
   );
 }
@@ -908,7 +891,7 @@ function SceneContent({
       {film && <FilmFoes />}
       {dragon && <Dragon soldiers={Math.max(1, soldiers)} />}
       {giant && <Giant soldiers={isDevAll(giant) ? Math.max(1, soldiers) : Math.min(giant === DEV2_ID ? DEV2_N : DEV_N, Math.max(1, soldiers))} big={isDevBig(giant)} sword={isDevSword(giant)} dread={isDevDread(giant)} snake={isSnake(giant)} devs={isDevs(giant)} crown={isDev6(giant)} />}
-      <Army count={friendN} names={names} commanders={commanders} cinematic={cinematic} duration={duration} skipCommander={hideCmd} roster={roster} discover={discover} countdown={Boolean(countdown)} defend={Boolean(defend)} defend2={sortie} defend3={isDefend3(defend)} blue={isDefend4(defend) || isDefend5(defend)} vs={field} vs2={climb} new1={Boolean(new1)} new2={duel} blade={blades || Boolean(maze)} bridge={chase} cross={cross} wide={wide} relief={relief} maze={Boolean(maze)} film={Boolean(film)} dragon={Boolean(dragon)} giant={Boolean(giant)} giantBig={isDevBig(giant)} giantAll={isDevAll(giant)} giantSword={isDevSword(giant)} giantSnake={isSnake(giant)} giantDevs={isDevs(giant)} nameGold={isDevDread(giant) || isSnake(giant) || isDevs(giant)} nameAlert={isDev6(giant) || isDefend5(defend)} mix={split} mixSlow={isMix9(mix)} nameHunt={Boolean(xxx)} quiet={Boolean(xxx && xxxQuiet(xxx)) || slaughter || Boolean(maze) || Boolean(film) || Boolean(dragon) || Boolean(giant)} square={Boolean(xxx && xxxSquare(xxx))} readNames={Boolean(xxx && xxxCloseNames(xxx))} scanHunt={Boolean(xxx && xxxScanHunt(xxx))} level={level} rosterIds={rosterIds} />
+      <Army count={friendN} names={names} commanders={commanders} cinematic={cinematic} duration={duration} skipCommander={hideCmd} roster={roster} discover={discover} countdown={Boolean(countdown)} defend={Boolean(defend)} defend2={sortie} defend3={isDefend3(defend)} loose={isDefend5(defend)} blue={isDefend4(defend) || isDefend5(defend)} vs={field} vs2={climb} new1={Boolean(new1)} new2={duel} blade={blades || Boolean(maze)} bridge={chase} cross={cross} wide={wide} relief={relief} maze={Boolean(maze)} film={Boolean(film)} dragon={Boolean(dragon)} giant={Boolean(giant)} giantBig={isDevBig(giant)} giantAll={isDevAll(giant)} giantSword={isDevSword(giant)} giantSnake={isSnake(giant)} giantDevs={isDevs(giant)} nameGold={isDevDread(giant) || isSnake(giant) || isDevs(giant)} nameAlert={isDev6(giant) || isDefend5(defend)} mix={split} mixSlow={isMix9(mix)} nameHunt={Boolean(xxx)} quiet={Boolean(xxx && xxxQuiet(xxx)) || slaughter || Boolean(maze) || Boolean(film) || Boolean(dragon) || Boolean(giant)} square={Boolean(xxx && xxxSquare(xxx))} readNames={Boolean(xxx && xxxCloseNames(xxx))} scanHunt={Boolean(xxx && xxxScanHunt(xxx))} level={level} rosterIds={rosterIds} />
       {Boolean(xxx && xxxSquare(xxx)) && <Catapults soldiers={soldiers} square />}
       {Boolean(xxx && xxxScanHunt(xxx)) && <NameScanBeam soldiers={soldiers} />}
       {cinematic && split ? (

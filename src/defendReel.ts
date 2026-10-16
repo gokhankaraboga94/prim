@@ -24,9 +24,10 @@ export const DEFEND3_ORBIT = 14;
 export const DEFEND3_SECONDS = DEFEND3_ZOOM_END + DEFEND3_ORBIT;
 export const DEFEND4_SECONDS = DEFEND3_SECONDS;
 export const DEFEND5_SECONDS = DEFEND4_SECONDS;
-export const DEFEND5_RINGS = 48;
-export const DEFEND5_RING_GAP = 0.44;
-export const DEFEND5_RING_SPACING = 0.36;
+export const DEFEND5_RINGS = 64;
+export const DEFEND5_RING_GAP = 0.62;
+export const DEFEND5_RING_SPACING = 0.58;
+export const DEFEND5_SPREAD = 1.45;
 
 export const DEFEND_CX = 0;
 export const DEFEND_CZ = 0;
@@ -149,11 +150,11 @@ function offsetPose(p: ShotPose, ox: number, oz: number): ShotPose {
   return pose(p.x + ox, p.y, p.z + oz, p.lx + ox, p.ly, p.lz + oz, p.fov);
 }
 
-function roamOverArmy(base: ShotPose, recT: number, soldiers: number, ox: number, oz: number): ShotPose {
+function roamOverArmy(base: ShotPose, recT: number, soldiers: number, ox: number, oz: number, spread = 1): ShotPose {
   const t = Math.max(0, recT - DEFEND3_ZOOM_END);
   const u = clamp01(t / DEFEND3_ORBIT);
   const fade = easeInOut(clamp01(t / 1.05));
-  const armyR = defendArmyRadius(Math.max(1, soldiers));
+  const armyR = defendArmyRadius(Math.max(1, soldiers), spread);
   const rx = armyR * 0.56;
   const rz = armyR * 0.56;
   const lookX = ox + Math.sin(u * Math.PI * 2.05 + 0.35) * rx;
@@ -172,8 +173,8 @@ function roamOverArmy(base: ShotPose, recT: number, soldiers: number, ox: number
   return lerpPose(base, roam, fade);
 }
 
-export function defendArmyRadius(n: number) {
-  return Math.max(3.4, Math.sqrt(Math.max(1, n) / Math.PI) * DEFEND_SPACING);
+export function defendArmyRadius(n: number, spread = 1) {
+  return Math.max(3.4, Math.sqrt(Math.max(1, n) / Math.PI) * DEFEND_SPACING * spread);
 }
 
 function ringCount(id?: string | null) {
@@ -252,10 +253,10 @@ function packRings(armyR: number, spacing: number, want: number, id: DefendId): 
 function defend5RingLayout(soldiers: number): DefendRingLayout {
   const base = defendRingLayout(Math.max(1, soldiers), DEFEND4_ID);
   const want = Math.max(24, base.cap * 2);
-  const armyR = defendArmyRadius(defendShownFriends(DEFEND5_ID, soldiers));
+  const armyR = defendArmyRadius(defendShownFriends(DEFEND5_ID, soldiers), DEFEND5_SPREAD);
   let spacing = DEFEND5_RING_SPACING;
   let laid = packRings(armyR, spacing, want, DEFEND5_ID);
-  while (laid.cap < want && spacing > 0.22) {
+  while (laid.cap < want && spacing > 0.48) {
     spacing *= 0.86;
     laid = packRings(armyR, spacing, want, DEFEND5_ID);
   }
@@ -325,10 +326,11 @@ export function defendSoldierPos(
   out: { set: (x: number, y: number, z: number) => void },
   cx = DEFEND_CX,
   cz = DEFEND_CZ,
-  symmetric = false
+  symmetric = false,
+  spread = 1
 ) {
   const n = Math.max(1, count);
-  const rMax = defendArmyRadius(n);
+  const rMax = defendArmyRadius(n, spread);
   void t;
   if (symmetric) {
     const loc = defendSymLoc(Math.max(0, Math.min(index, n - 1)), n);
@@ -412,7 +414,7 @@ function distToFitRing(outer: number, polar: number, fovDeg: number, pad: number
 export function sampleDefend(recT: number, soldiers: number, id: DefendId = DEFEND_ID): ShotPose {
   const t = Math.max(0, recT);
   const tight = isDefend3(id);
-  const armyR = defendArmyRadius(Math.max(1, soldiers));
+  const armyR = defendArmyRadius(Math.max(1, soldiers), isDefend5(id) ? DEFEND5_SPREAD : 1);
   const outer = defendOuterAt(t, armyR, id);
   const pull = easeOutCubic(clamp01(t / DEFEND_PULL_END));
   const zoomU = easeOutCubic(clamp01((t - DEFEND_PULL_END) / (DEFEND_MAIN_SECONDS * 0.8)));
@@ -435,7 +437,7 @@ export function sampleDefend(recT: number, soldiers: number, id: DefendId = DEFE
 function sampleDefendSortie(recT: number, soldiers: number, level: number, id: DefendId): ShotPose {
   const close = isDefend3(id);
   const t = Math.max(0, recT);
-  const armyR = defendArmyRadius(Math.max(1, soldiers));
+  const armyR = defendArmyRadius(Math.max(1, soldiers), isDefend5(id) ? DEFEND5_SPREAD : 1);
   const gateZ = castleFrame(level).front;
   const oz = DEFEND2_CZ;
   const u = clamp01(t / DEFEND2_SORTIE);
@@ -471,5 +473,5 @@ export function sampleDefendCam(recT: number, soldiers: number, id: DefendId, le
   const frozen = sampleDefendPath(Math.min(recT, DEFEND3_ZOOM_END), soldiers, id, level);
   if (recT <= DEFEND3_ZOOM_END) return frozen;
   const { x: ox, z: oz } = defendOrigin(id);
-  return roamOverArmy(frozen, recT, soldiers, ox, oz);
+  return roamOverArmy(frozen, recT, soldiers, ox, oz, isDefend5(id) ? DEFEND5_SPREAD : 1);
 }
