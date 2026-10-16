@@ -528,36 +528,133 @@ const COLOSSUS_MIN_Y = -1.520994;
 const COLOSSUS_CENTER_X = -0.291638;
 const COLOSSUS_CENTER_Z = -0.259902;
 
-function ColossusModel() {
+function stoneSkin() {
+  const size = 512;
+  const color = document.createElement("canvas");
+  const bump = document.createElement("canvas");
+  const rough = document.createElement("canvas");
+  color.width = color.height = bump.width = bump.height = rough.width = rough.height = size;
+  const paint = color.getContext("2d");
+  const height = bump.getContext("2d");
+  const grain = rough.getContext("2d");
+  if (!paint || !height || !grain) return null;
+  paint.fillStyle = "#8a7260";
+  paint.fillRect(0, 0, size, size);
+  height.fillStyle = "#808080";
+  height.fillRect(0, 0, size, size);
+  grain.fillStyle = "#9a9a9a";
+  grain.fillRect(0, 0, size, size);
+  for (let i = 0; i < 200; i++) {
+    const x = Math.random() * size;
+    const y = Math.random() * size;
+    const rx = 6 + Math.random() * 80;
+    const ry = 4 + Math.random() * 32;
+    const roll = Math.random();
+    paint.fillStyle = roll > 0.82 ? "rgba(110,42,30,0.42)" : roll > 0.45 ? "rgba(36,26,20,0.38)" : "rgba(196,164,132,0.3)";
+    paint.beginPath();
+    paint.ellipse(x, y, rx, ry, Math.random() * Math.PI, 0, Math.PI * 2);
+    paint.fill();
+    height.fillStyle = roll > 0.55 ? "rgba(30,30,30,0.6)" : "rgba(200,200,200,0.34)";
+    height.beginPath();
+    height.ellipse(x, y, rx, ry, Math.random() * Math.PI, 0, Math.PI * 2);
+    height.fill();
+    grain.fillStyle = roll > 0.7 ? "rgba(30,30,30,0.55)" : "rgba(230,230,230,0.22)";
+    grain.beginPath();
+    grain.ellipse(x, y, rx, ry, Math.random() * Math.PI, 0, Math.PI * 2);
+    grain.fill();
+  }
+  paint.lineCap = "round";
+  height.lineCap = "round";
+  for (let i = 0; i < 34; i++) {
+    const x = Math.random() * size;
+    const y = Math.random() * size;
+    const x2 = x + (Math.random() - 0.5) * 180;
+    const y2 = y + (Math.random() - 0.5) * 36;
+    paint.strokeStyle = "rgba(48,28,20,0.7)";
+    paint.lineWidth = 1 + Math.random() * 2.6;
+    paint.beginPath();
+    paint.moveTo(x, y);
+    paint.lineTo(x2, y2);
+    paint.stroke();
+    height.strokeStyle = "rgba(16,16,16,0.9)";
+    height.lineWidth = paint.lineWidth + 1.2;
+    height.beginPath();
+    height.moveTo(x, y);
+    height.lineTo(x2, y2);
+    height.stroke();
+  }
+  const map = new THREE.CanvasTexture(color);
+  const bumpMap = new THREE.CanvasTexture(bump);
+  const roughnessMap = new THREE.CanvasTexture(rough);
+  map.colorSpace = THREE.SRGBColorSpace;
+  for (const tex of [map, bumpMap, roughnessMap]) {
+    tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+    tex.anisotropy = 4;
+  }
+  return { map, bumpMap, roughnessMap };
+}
+
+function isStrikingPart(center: THREE.Vector3) {
+  return center.z > 0.55 && center.y < 0.65 && center.y > -0.95 && center.x < 0.15;
+}
+
+function ColossusModel({ soldiers }: { soldiers: number }) {
   const rig = useRef<THREE.Group>(null);
+  const strike = useMemo(() => ({ arm: null as THREE.Group | null }), []);
   useEffect(() => {
     const loader = new GLTFLoader();
     let drop = false;
+    const skin = stoneSkin();
+    const mat = new THREE.MeshStandardMaterial({
+      map: skin?.map,
+      bumpMap: skin?.bumpMap,
+      roughnessMap: skin?.roughnessMap,
+      bumpScale: 0.55,
+      color: "#ffffff",
+      roughness: 0.78,
+      metalness: 0.05,
+      side: THREE.DoubleSide,
+    });
     loader.load(COLOSSUS_URL, (gltf) => {
       const host = rig.current;
       if (drop || !host) return;
       const model = gltf.scene;
+      const arm = new THREE.Group();
+      arm.position.set(-0.2, 0.78, 0.38);
+      model.add(arm);
+      model.updateMatrixWorld(true);
+      const limb: THREE.Object3D[] = [];
       model.traverse((obj) => {
         const mesh = obj as THREE.Mesh;
         if (!mesh.isMesh) return;
         mesh.frustumCulled = false;
-        const src = mesh.material as THREE.MeshStandardMaterial;
-        const mat = src.clone();
-        mat.side = THREE.DoubleSide;
-        mat.color.set("#c8baa8");
-        mat.roughness = 0.68;
-        mat.metalness = 0.08;
         mesh.material = mat;
+        const center = new THREE.Box3().setFromObject(mesh).getCenter(new THREE.Vector3());
+        if (isStrikingPart(center)) limb.push(mesh);
       });
+      for (const mesh of limb) arm.attach(mesh);
+      strike.arm = arm;
       host.add(model);
     });
     return () => {
       drop = true;
-      const host = rig.current;
-      if (!host) return;
-      host.clear();
+      strike.arm = null;
+      mat.dispose();
+      skin?.map.dispose();
+      skin?.bumpMap.dispose();
+      skin?.roughnessMap.dispose();
+      rig.current?.clear();
     };
   }, []);
+  useFrame(({ clock }) => {
+    const arm = strike.arm;
+    if (!arm) return;
+    const t = Math.max(0, clock.elapsedTime - REEL_HOLD);
+    const s = devMaceSwing(t, soldiers);
+    arm.rotation.x = s.pitch * 0.82;
+    arm.rotation.y = s.twist * 0.35;
+    arm.rotation.z = -s.sweep * 0.4;
+  });
   const scale = COLOSSUS_HEIGHT / COLOSSUS_SPAN_Y;
   return <group ref={rig} scale={scale} position={[-COLOSSUS_CENTER_X * scale, -COLOSSUS_MIN_Y * scale, -COLOSSUS_CENTER_Z * scale]} />;
 }
@@ -624,7 +721,7 @@ function GiantBody({ soldiers, big, sword, dread, flesh = false, crown = false }
   return (
     <group ref={root} scale={big ? 1.52 : 1}>
       {flesh ? (
-        <ColossusModel />
+        <ColossusModel soldiers={soldiers} />
       ) : dread ? (
         <DreadShell plate={plate} iron={iron} eye={eye} horn={horn} />
       ) : (
