@@ -900,7 +900,7 @@ export function AdminPage() {
             <p className="muted">DEV5 ile aynı. İsimler yüzde 25 daha büyük, bar kenarı sarısı. Tek can barı iki yüzden de görünür. Zemin kale kuşatmasındaki çim.</p>
           )}
           {isDev7(reelShot) && (
-            <p className="muted">DEV6 ile aynı kadro, isim, can barı ve çim. Dev, Darwin Yamamoto’nun Colossus modeli (CC-BY). Taş doku. Elindeki parçayı kaldırıp vurur.</p>
+            <p className="muted">DEV6 ile aynı kadro, isim, can barı ve çim. Dev, Darwin Yamamoto’nun Colossus modeli (CC-BY). Gövde metalik gri, baş eller ve ayaklar koyu. Vuran elde kılıç.</p>
           )}
           {isSnake(reelShot) && (
             <p className="muted">DEV5 ile aynı kadro ve kamera. Yeşil-kahverengi yılan. Bekleyenler dairede. Çoğunluk başa, birkaç kişi gövdeye ve kuyruğa gider. Yılan hem onlara hem dairedeki bekleyen ve okçulara saldırır.</p>

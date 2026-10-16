@@ -528,70 +528,57 @@ const COLOSSUS_MIN_Y = -1.520994;
 const COLOSSUS_CENTER_X = -0.291638;
 const COLOSSUS_CENTER_Z = -0.259902;
 
-function stoneSkin() {
-  const size = 512;
-  const color = document.createElement("canvas");
-  const bump = document.createElement("canvas");
-  const rough = document.createElement("canvas");
-  color.width = color.height = bump.width = bump.height = rough.width = rough.height = size;
-  const paint = color.getContext("2d");
-  const height = bump.getContext("2d");
-  const grain = rough.getContext("2d");
-  if (!paint || !height || !grain) return null;
-  paint.fillStyle = "#8a7260";
-  paint.fillRect(0, 0, size, size);
-  height.fillStyle = "#808080";
-  height.fillRect(0, 0, size, size);
-  grain.fillStyle = "#9a9a9a";
-  grain.fillRect(0, 0, size, size);
-  for (let i = 0; i < 200; i++) {
-    const x = Math.random() * size;
-    const y = Math.random() * size;
-    const rx = 6 + Math.random() * 80;
-    const ry = 4 + Math.random() * 32;
-    const roll = Math.random();
-    paint.fillStyle = roll > 0.82 ? "rgba(110,42,30,0.42)" : roll > 0.45 ? "rgba(36,26,20,0.38)" : "rgba(196,164,132,0.3)";
-    paint.beginPath();
-    paint.ellipse(x, y, rx, ry, Math.random() * Math.PI, 0, Math.PI * 2);
-    paint.fill();
-    height.fillStyle = roll > 0.55 ? "rgba(30,30,30,0.6)" : "rgba(200,200,200,0.34)";
-    height.beginPath();
-    height.ellipse(x, y, rx, ry, Math.random() * Math.PI, 0, Math.PI * 2);
-    height.fill();
-    grain.fillStyle = roll > 0.7 ? "rgba(30,30,30,0.55)" : "rgba(230,230,230,0.22)";
-    grain.beginPath();
-    grain.ellipse(x, y, rx, ry, Math.random() * Math.PI, 0, Math.PI * 2);
-    grain.fill();
+function splitAbove(geo: THREE.BufferGeometry, cut: number) {
+  const src = geo.toNonIndexed();
+  const pos = src.getAttribute("position");
+  const norm = src.getAttribute("normal");
+  const uv = src.getAttribute("uv");
+  const topP: number[] = [];
+  const topN: number[] = [];
+  const topU: number[] = [];
+  const lowP: number[] = [];
+  const lowN: number[] = [];
+  const lowU: number[] = [];
+  for (let i = 0; i < pos.count; i += 3) {
+    const y = (pos.getY(i) + pos.getY(i + 1) + pos.getY(i + 2)) / 3;
+    const P = y >= cut ? topP : lowP;
+    const N = y >= cut ? topN : lowN;
+    const U = y >= cut ? topU : lowU;
+    for (let k = 0; k < 3; k++) {
+      P.push(pos.getX(i + k), pos.getY(i + k), pos.getZ(i + k));
+      if (norm) N.push(norm.getX(i + k), norm.getY(i + k), norm.getZ(i + k));
+      if (uv) U.push(uv.getX(i + k), uv.getY(i + k));
+    }
   }
-  paint.lineCap = "round";
-  height.lineCap = "round";
-  for (let i = 0; i < 34; i++) {
-    const x = Math.random() * size;
-    const y = Math.random() * size;
-    const x2 = x + (Math.random() - 0.5) * 180;
-    const y2 = y + (Math.random() - 0.5) * 36;
-    paint.strokeStyle = "rgba(48,28,20,0.7)";
-    paint.lineWidth = 1 + Math.random() * 2.6;
-    paint.beginPath();
-    paint.moveTo(x, y);
-    paint.lineTo(x2, y2);
-    paint.stroke();
-    height.strokeStyle = "rgba(16,16,16,0.9)";
-    height.lineWidth = paint.lineWidth + 1.2;
-    height.beginPath();
-    height.moveTo(x, y);
-    height.lineTo(x2, y2);
-    height.stroke();
-  }
-  const map = new THREE.CanvasTexture(color);
-  const bumpMap = new THREE.CanvasTexture(bump);
-  const roughnessMap = new THREE.CanvasTexture(rough);
-  map.colorSpace = THREE.SRGBColorSpace;
-  for (const tex of [map, bumpMap, roughnessMap]) {
-    tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
-    tex.anisotropy = 4;
-  }
-  return { map, bumpMap, roughnessMap };
+  const pack = (P: number[], N: number[], U: number[]) => {
+    if (!P.length) return null;
+    const next = new THREE.BufferGeometry();
+    next.setAttribute("position", new THREE.Float32BufferAttribute(P, 3));
+    if (N.length) next.setAttribute("normal", new THREE.Float32BufferAttribute(N, 3));
+    else next.computeVertexNormals();
+    if (U.length) next.setAttribute("uv", new THREE.Float32BufferAttribute(U, 2));
+    return next;
+  };
+  return { top: pack(topP, topN, topU), rest: pack(lowP, lowN, lowU) };
+}
+
+function colossusSword() {
+  const group = new THREE.Group();
+  const steel = new THREE.MeshStandardMaterial({ color: "#d7dee6", metalness: 0.92, roughness: 0.22, side: THREE.DoubleSide });
+  const wrap = new THREE.MeshStandardMaterial({ color: "#3a3e46", metalness: 0.4, roughness: 0.5 });
+  const grip = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.045, 0.32, 6), wrap);
+  grip.rotation.x = Math.PI / 2;
+  const guard = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.07, 0.08), steel);
+  guard.position.z = 0.18;
+  const blade = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.028, 1.55), steel);
+  blade.position.z = 0.98;
+  const tip = new THREE.Mesh(new THREE.ConeGeometry(0.055, 0.26, 4), steel);
+  tip.rotation.x = Math.PI / 2;
+  tip.position.z = 1.86;
+  group.add(grip, guard, blade, tip);
+  group.position.set(-0.42, -0.64, 0.98);
+  group.rotation.x = 0.42;
+  return group;
 }
 
 function isStrikingPart(center: THREE.Vector3) {
@@ -604,17 +591,9 @@ function ColossusModel({ soldiers }: { soldiers: number }) {
   useEffect(() => {
     const loader = new GLTFLoader();
     let drop = false;
-    const skin = stoneSkin();
-    const mat = new THREE.MeshStandardMaterial({
-      map: skin?.map,
-      bumpMap: skin?.bumpMap,
-      roughnessMap: skin?.roughnessMap,
-      bumpScale: 0.55,
-      color: "#ffffff",
-      roughness: 0.78,
-      metalness: 0.05,
-      side: THREE.DoubleSide,
-    });
+    const metal = new THREE.MeshStandardMaterial({ color: "#a7b0b8", metalness: 0.84, roughness: 0.32, side: THREE.DoubleSide });
+    const ink = new THREE.MeshStandardMaterial({ color: "#3a3e46", metalness: 0.4, roughness: 0.48, side: THREE.DoubleSide });
+    const sword = colossusSword();
     loader.load(COLOSSUS_URL, (gltf) => {
       const host = rig.current;
       if (drop || !host) return;
@@ -626,23 +605,45 @@ function ColossusModel({ soldiers }: { soldiers: number }) {
       const limb: THREE.Object3D[] = [];
       model.traverse((obj) => {
         const mesh = obj as THREE.Mesh;
-        if (!mesh.isMesh) return;
+        if (!mesh.isMesh || mesh.parent === sword) return;
         mesh.frustumCulled = false;
-        mesh.material = mat;
-        const center = new THREE.Box3().setFromObject(mesh).getCenter(new THREE.Vector3());
+        const box = new THREE.Box3().setFromObject(mesh);
+        const center = box.getCenter(new THREE.Vector3());
+        const size = box.getSize(new THREE.Vector3());
+        const hand = isStrikingPart(center) || (center.x > 0.28 && center.y > 0.02 && center.y < 0.55 && size.y < 0.4);
+        const foot = center.y < -0.82 || (center.y < -0.7 && size.y < 0.4 && center.z < 0.55);
+        const head = box.min.y > 0.62;
+        if (hand || foot || head) mesh.material = ink;
+        else if (box.max.y > 0.88 && box.min.y < 0.55) {
+          const parts = splitAbove(mesh.geometry, 0.74);
+          if (parts.top) {
+            const crown = new THREE.Mesh(parts.top, ink);
+            crown.frustumCulled = false;
+            mesh.add(crown);
+          }
+          if (parts.rest) mesh.geometry = parts.rest;
+          mesh.material = metal;
+        } else mesh.material = metal;
         if (isStrikingPart(center)) limb.push(mesh);
       });
       for (const mesh of limb) arm.attach(mesh);
+      model.add(sword);
+      arm.attach(sword);
       strike.arm = arm;
       host.add(model);
     });
     return () => {
       drop = true;
       strike.arm = null;
-      mat.dispose();
-      skin?.map.dispose();
-      skin?.bumpMap.dispose();
-      skin?.roughnessMap.dispose();
+      metal.dispose();
+      ink.dispose();
+      sword.traverse((obj) => {
+        const mesh = obj as THREE.Mesh;
+        if (!mesh.isMesh) return;
+        mesh.geometry.dispose();
+        const mat = mesh.material as THREE.Material;
+        mat.dispose();
+      });
       rig.current?.clear();
     };
   }, []);
