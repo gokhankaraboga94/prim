@@ -18,10 +18,23 @@ function tuneRoman(src: THREE.Material) {
   const max = Math.max(c.r, c.g, c.b);
   const min = Math.min(c.r, c.g, c.b);
   const sat = max < 0.02 ? 0 : (max - min) / max;
-  const metal = (min < 0.9 && sat < 0.2 && max > 0.3 && max < 0.95) || (max < 0.4 && min > 0.04 && sat < 0.65);
-  mat.metalness = metal ? 0.7 : 0.05;
-  mat.roughness = metal ? 0.3 : 0.62;
-  mat.envMapIntensity = metal ? 1 : 0.42;
+  const skin = sat > 0.4 && c.r > 0.75 && c.g > 0.4 && c.b > 0.15 && c.b < 0.5;
+  const leather = c.r > c.g && c.g > c.b && c.r < 0.45 && sat > 0.45;
+  const steel = sat < 0.22 && max > 0.55 && max < 0.9 && min > 0.45;
+  if (skin || leather) {
+    mat.metalness = 0.04;
+    mat.roughness = 0.68;
+    mat.envMapIntensity = 0.4;
+  } else if (steel) {
+    mat.metalness = 0.84;
+    mat.roughness = 0.26;
+    mat.envMapIntensity = 1;
+  } else {
+    mat.color.set("#c41c16");
+    mat.metalness = 0.58;
+    mat.roughness = 0.36;
+    mat.envMapIntensity = 0.85;
+  }
   return mat;
 }
 
@@ -78,12 +91,45 @@ export function WarsCam() {
   return null;
 }
 
+function useWarsGrass() {
+  const tex = useMemo(() => {
+    const canvas = document.createElement("canvas");
+    canvas.width = 1024;
+    canvas.height = 1024;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return null;
+    ctx.fillStyle = "#4e9a38";
+    ctx.fillRect(0, 0, 1024, 1024);
+    for (let i = 0; i < 14000; i++) {
+      const n = i % 7;
+      ctx.fillStyle = n === 0 ? "#7ec85a" : n === 1 ? "#3d8228" : n === 2 ? "#68b448" : n === 3 ? "#357820" : n === 4 ? "#96d868" : n === 5 ? "#5aa838" : "#2c681c";
+      ctx.fillRect(Math.random() * 1024, Math.random() * 1024, 2 + Math.random() * 8, 2 + Math.random() * 7);
+    }
+    for (let i = 0; i < 90; i++) {
+      ctx.fillStyle = "rgba(92, 68, 36, 0.2)";
+      ctx.beginPath();
+      ctx.ellipse(Math.random() * 1024, Math.random() * 1024, 8 + Math.random() * 24, 5 + Math.random() * 12, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    const map = new THREE.CanvasTexture(canvas);
+    map.wrapS = THREE.RepeatWrapping;
+    map.wrapT = THREE.RepeatWrapping;
+    map.repeat.set(42, 42);
+    map.anisotropy = 8;
+    map.colorSpace = THREE.SRGBColorSpace;
+    return map;
+  }, []);
+  useEffect(() => () => tex?.dispose(), [tex]);
+  return tex;
+}
+
 function WarsGround() {
+  const grass = useWarsGrass();
   return (
     <group>
       <mesh rotation-x={-Math.PI / 2} position={[0, 0, 0]} receiveShadow>
-        <planeGeometry args={[240, 240]} />
-        <meshStandardMaterial color="#3d4a38" roughness={0.94} metalness={0.02} />
+        <planeGeometry args={[1800, 1800]} />
+        <meshStandardMaterial map={grass} color="#68b44a" roughness={0.94} metalness={0.02} envMapIntensity={0.2} />
       </mesh>
       <mesh rotation-x={-Math.PI / 2} position={[0, 0.03, 0]}>
         <circleGeometry args={[WARS_RING_IN, 96]} />
@@ -114,12 +160,9 @@ function WarsFighters() {
   const [roman, setRoman] = useState<RomanPart[] | null>(null);
   const bodyRef = useRef<THREE.InstancedMesh>(null);
   const helmRef = useRef<THREE.InstancedMesh>(null);
-  const bloodRef = useRef<THREE.InstancedMesh>(null);
   const romanRefs = useRef<(THREE.InstancedMesh | null)[]>([]);
   const bodyMat = useMemo(() => new THREE.MeshStandardMaterial({ color: "#1a56e8", roughness: 0.42, metalness: 0.38, envMapIntensity: 0.85 }), []);
   const helmMat = useMemo(() => new THREE.MeshStandardMaterial({ color: "#e7eef5", roughness: 0.18, metalness: 0.9, envMapIntensity: 1.15 }), []);
-  const bloodMat = useMemo(() => new THREE.MeshStandardMaterial({ color: "#6a1814", roughness: 0.86, metalness: 0.04 }), []);
-  const bloodGeo = useMemo(() => new THREE.CircleGeometry(0.62, 18), []);
 
   useEffect(() => {
     let drop = false;
@@ -148,10 +191,8 @@ function WarsFighters() {
     return () => {
       bodyMat.dispose();
       helmMat.dispose();
-      bloodMat.dispose();
-      bloodGeo.dispose();
     };
-  }, [bodyMat, helmMat, bloodMat, bloodGeo]);
+  }, [bodyMat, helmMat]);
 
   useEffect(() => {
     return () => {
@@ -173,7 +214,6 @@ function WarsFighters() {
     const t = Math.max(0, clock.elapsedTime - REEL_HOLD);
     const body = bodyRef.current;
     const helm = helmRef.current;
-    const blood = bloodRef.current;
     if (body && helm) {
       for (let i = 0; i < WARS_FRIENDS; i++) {
         const p = warsKnight(i, t);
@@ -182,18 +222,9 @@ function WarsFighters() {
         pose(p.x, p.z, p.yaw, p.fall, p.fall > 0 ? -1.38 * ease : -strike * 0.24, p.fall > 0 ? (i % 2 ? 0.22 : -0.22) * ease : 0);
         body.setMatrixAt(i, dummy.matrix);
         helm.setMatrixAt(i, dummy.matrix);
-        if (blood) {
-          dummy.rotation.order = "XYZ";
-          dummy.position.set(p.x, 0.07, p.z);
-          dummy.rotation.set(-Math.PI / 2, 0, p.yaw);
-          dummy.scale.setScalar(p.fall > 0.05 ? 0.35 + ease * 1.15 : 0.0001);
-          dummy.updateMatrix();
-          blood.setMatrixAt(i, dummy.matrix);
-        }
       }
       body.instanceMatrix.needsUpdate = true;
       helm.instanceMatrix.needsUpdate = true;
-      if (blood) blood.instanceMatrix.needsUpdate = true;
     }
     if (!roman) return;
     for (let part = 0; part < roman.length; part++) {
@@ -214,7 +245,6 @@ function WarsFighters() {
     <group>
       {knight && (
         <>
-          <instancedMesh ref={bloodRef} args={[bloodGeo, bloodMat, WARS_FRIENDS]} frustumCulled={false} />
           <instancedMesh ref={bodyRef} args={[knight.body, bodyMat, WARS_FRIENDS]} frustumCulled={false} />
           <instancedMesh ref={helmRef} args={[knight.helm, helmMat, WARS_FRIENDS]} frustumCulled={false} />
         </>
