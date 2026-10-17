@@ -5,10 +5,10 @@ import * as THREE from "three";
 import { buildKnightSoldier } from "../../knightSoldier";
 import { buildNameAtlas, type NameAtlas, type NameCell } from "../../nameAtlas";
 import { REEL_HOLD } from "../../recordCanvas";
-import { WARS_FOES, WARS_FRIENDS, WARS_RING_IN, warsCam, warsKnight, warsRoman } from "../../warsReel";
+import { WARS_FOES, WARS_FRIENDS, warsCam, warsKnight, warsRoman } from "../../warsReel";
 
 const dummy = new THREE.Object3D();
-const NAME_S = 0.72;
+const NAME_S = 1.55;
 
 type RomanPart = { geometry: THREE.BufferGeometry; material: THREE.MeshStandardMaterial };
 
@@ -182,14 +182,6 @@ function WarsGround() {
         <planeGeometry args={[1800, 1800]} />
         <meshStandardMaterial map={grass} color="#68b44a" roughness={0.94} metalness={0.02} envMapIntensity={0.2} />
       </mesh>
-      <mesh rotation-x={-Math.PI / 2} position={[0, 0.03, 0]}>
-        <circleGeometry args={[WARS_RING_IN, 96]} />
-        <meshStandardMaterial color="#b08958" roughness={0.88} metalness={0.03} />
-      </mesh>
-      <mesh rotation-x={-Math.PI / 2} position={[0, 0.045, 0]}>
-        <circleGeometry args={[6.8, 72]} />
-        <meshStandardMaterial color="#8c6840" roughness={0.92} metalness={0.02} />
-      </mesh>
     </group>
   );
 }
@@ -257,8 +249,8 @@ function WarsFighters() {
       for (let i = 0; i < WARS_FRIENDS; i++) {
         const p = warsKnight(i, t);
         const ease = p.fall * p.fall;
-        const strike = p.fall > 0 ? 0 : Math.max(0, Math.sin(t * 8.4 + i));
-        pose(p.x, p.z, p.yaw, p.fall, p.fall > 0 ? -1.38 * ease : -strike * 0.24, p.fall > 0 ? (i % 2 ? 0.22 : -0.22) * ease : 0);
+        const swing = p.fall > 0 ? 0 : Math.max(0, Math.sin(t * 8.4 + i));
+        pose(p.x, p.z, p.yaw, p.fall, p.fall > 0 ? -1.38 * ease : -(swing * 0.16 + p.lean * 0.72), p.fall > 0 ? (i % 2 ? 0.22 : -0.22) * ease : p.lean * 0.28);
         body.setMatrixAt(i, dummy.matrix);
         helm.setMatrixAt(i, dummy.matrix);
       }
@@ -272,8 +264,8 @@ function WarsFighters() {
       for (let i = 0; i < WARS_FOES; i++) {
         const p = warsRoman(i, t);
         const ease = p.fall * p.fall;
-        const strike = p.fall > 0 ? 0 : Math.max(0, Math.sin(t * 7.1 + i * 1.6));
-        pose(p.x, p.z, p.yaw, p.fall, p.fall > 0 ? -1.32 * ease : -strike * 0.2, p.fall > 0 ? (i % 2 ? -0.18 : 0.18) * ease : 0);
+        const swing = p.fall > 0 ? 0 : Math.max(0, Math.sin(t * 7.1 + i * 1.6));
+        pose(p.x, p.z, p.yaw, p.fall, p.fall > 0 ? -1.32 * ease : -(swing * 0.14 + p.lean * 0.68), p.fall > 0 ? (i % 2 ? -0.18 : 0.18) * ease : -p.lean * 0.24);
         mesh.setMatrixAt(i, dummy.matrix);
       }
       mesh.instanceMatrix.needsUpdate = true;
@@ -333,8 +325,8 @@ function WarsNames({ names }: { names: string[] }) {
         const hide = p.fall > 0.72;
         dummy.quaternion.copy(camera.quaternion);
         dummy.rotateY(Math.PI);
-        dummy.position.set(p.x, 1.92, p.z);
-        dummy.scale.set(hide ? 0 : Math.min(1.15, cell.sx * NAME_S), hide ? 0 : cell.sy * NAME_S, 1);
+        dummy.position.set(p.x, 2.55, p.z);
+        dummy.scale.set(hide ? 0 : Math.min(2.85, cell.sx * NAME_S), hide ? 0 : cell.sy * NAME_S, 1);
         dummy.updateMatrix();
         mesh.setMatrixAt(cell.local, dummy.matrix);
       }
