@@ -35,6 +35,7 @@ import { LAB_ID, LAB_MODE, LAB_SECONDS, isLab, type LabId } from "../mazeReel";
 import { DEV2_ID, DEV2_MODE, DEV2_SECONDS, DEV3_ID, DEV3_MODE, DEV3_SECONDS, DEV4_ID, DEV4_MODE, DEV4_SECONDS, DEV5_ID, DEV5_MODE, DEV5_SECONDS, DEV6_ID, DEV6_MODE, DEV6_SECONDS, DEV7_ID, DEV7_MODE, DEV7_SECONDS, DEV_ID, DEV_MODE, DEV_SECONDS, DEVS_ID, DEVS_MODE, DEVS_SECONDS, SNAKE_ID, SNAKE_MODE, SNAKE_SECONDS, isDev, isDev2, isDev3, isDev4, isDev5, isDev6, isDev7, isDevs, isGiantShot, isSnake, type Dev2Id, type Dev3Id, type Dev4Id, type Dev5Id, type Dev6Id, type Dev7Id, type DevId, type DevsId, type SnakeId } from "../devReel";
 import { FILM_ID, FILM_MODE, FILM_SECONDS, isFilm, type FilmId } from "../filmReel";
 import { DRAGON_ID, DRAGON_MODE, DRAGON_SECONDS, isDragon, type DragonId } from "../dragonReel";
+import { WARS_ID, WARS_MODE, WARS_SECONDS, isWars, type WarsId } from "../warsReel";
 import { unlockReelSfx } from "../reelSfx";
 
 function skippedNote(skipped: string[]): string {
@@ -57,7 +58,7 @@ export function AdminPage() {
   const [reelSeconds, setReelSeconds] = useState<number>(7);
   const [reelText, setReelText] = useState(true);
   const [reelSkipCmd, setReelSkipCmd] = useState(false);
-  const [reelShot, setReelShot] = useState<ReelShot | PlanBId | SagaId | DiscoverId | MixId | CountdownId | DefendId | VsId | New1Id | New2Id | New3Id | New4Id | New5Id | New6Id | New62Id | New7Id | LabId | DevId | Dev2Id | Dev3Id | Dev4Id | Dev5Id | Dev6Id | Dev7Id | SnakeId | DevsId | FilmId | DragonId | XxxId | null>(null);
+  const [reelShot, setReelShot] = useState<ReelShot | PlanBId | SagaId | DiscoverId | MixId | CountdownId | DefendId | VsId | New1Id | New2Id | New3Id | New4Id | New5Id | New6Id | New62Id | New7Id | LabId | DevId | Dev2Id | Dev3Id | Dev4Id | Dev5Id | Dev6Id | Dev7Id | SnakeId | DevsId | FilmId | DragonId | WarsId | XxxId | null>(null);
   const [reelDay, setReelDay] = useState("1");
   const [capturing, setCapturing] = useState(false);
   const [editIndex, setEditIndex] = useState<number | null>(null);
@@ -558,6 +559,8 @@ export function AdminPage() {
                     ? [RAF2_SECONDS]
                   : isCountdown(reelShot)
                     ? [COUNTDOWN_SECONDS]
+                  : isWars(reelShot)
+                    ? [WARS_SECONDS]
                   : isDragon(reelShot)
                     ? [DRAGON_SECONDS]
                   : isFilm(reelShot)
@@ -834,6 +837,18 @@ export function AdminPage() {
             </button>
             <button
               type="button"
+              className={reelShot === WARS_ID ? "on" : ""}
+              onClick={() => {
+                setReelShot((cur) => (cur === WARS_ID ? null : WARS_ID));
+                setReelSeconds(WARS_SECONDS);
+                setReelText(false);
+                setReelSkipCmd(true);
+              }}
+            >
+              {WARS_MODE.label} — {WARS_SECONDS}s
+            </button>
+            <button
+              type="button"
               className={reelShot === SNAKE_ID ? "on" : ""}
               onClick={() => {
                 setReelShot((cur) => (cur === SNAKE_ID ? null : SNAKE_ID));
@@ -901,6 +916,9 @@ export function AdminPage() {
           )}
           {isDev7(reelShot) && (
             <p className="muted">DEV6 ile aynı kadro, can barı ve çim. Dev, Darwin Yamamoto’nun Colossus modeli (CC-BY): metalik gri gövde, koyu baş el ayak, vuran elde kılıç. Askerler Vaporworks Knight (CC-BY): parlak gri kask, mavi gövde. Devin arkasındaki isimler görünmez.</p>
+          )}
+          {isWars(reelShot) && (
+            <p className="muted">Tepeden çember, kenarı siyah şerit. İçeride 200 Roma askeri, 50 şövalye. Şövalyeler Vaporworks Knight (CC-BY): parlak gri kask, mavi gövde. İsimler DEV7 gibi sarı ve net. Düşman kazanır.</p>
           )}
           {isSnake(reelShot) && (
             <p className="muted">DEV5 ile aynı kadro ve kamera. Yeşil-kahverengi yılan. Bekleyenler dairede. Çoğunluk başa, birkaç kişi gövdeye ve kuyruğa gider. Yılan hem onlara hem dairedeki bekleyen ve okçulara saldırır.</p>
@@ -1423,8 +1441,8 @@ export function AdminPage() {
           maxHp={maxHp}
           seconds={captureSec}
           showTitles={reelText}
-          skipCommander={reelSkipCmd || isDiscover(reelShot) || isCountdown(reelShot) || isDefend(reelShot) || isVsMode(reelShot) || isNewField(reelShot) || isLab(reelShot) || isGiantShot(reelShot) || isFilm(reelShot) || isDragon(reelShot) || (isXxx(reelShot) && xxxHideCmd(reelShot))}
-          shotMode={reelShot === CINEMA_ID || isPlanB(reelShot) || isSaga(reelShot) || isDiscover(reelShot) || isCountdown(reelShot) || isDefend(reelShot) || isVsMode(reelShot) || isNewField(reelShot) || isLab(reelShot) || isGiantShot(reelShot) || isFilm(reelShot) || isDragon(reelShot) || isMix(reelShot) || isXxx(reelShot) ? null : reelShot}
+          skipCommander={reelSkipCmd || isDiscover(reelShot) || isCountdown(reelShot) || isDefend(reelShot) || isVsMode(reelShot) || isNewField(reelShot) || isLab(reelShot) || isGiantShot(reelShot) || isFilm(reelShot) || isDragon(reelShot) || isWars(reelShot) || (isXxx(reelShot) && xxxHideCmd(reelShot))}
+          shotMode={reelShot === CINEMA_ID || isPlanB(reelShot) || isSaga(reelShot) || isDiscover(reelShot) || isCountdown(reelShot) || isDefend(reelShot) || isVsMode(reelShot) || isNewField(reelShot) || isLab(reelShot) || isGiantShot(reelShot) || isFilm(reelShot) || isDragon(reelShot) || isWars(reelShot) || isMix(reelShot) || isXxx(reelShot) ? null : reelShot}
           cinema={reelShot === CINEMA_ID}
           roster={isPlanB(reelShot) ? reelShot : null}
           saga={isSaga(reelShot) ? reelShot : null}
@@ -1444,6 +1462,7 @@ export function AdminPage() {
           film={isFilm(reelShot) ? reelShot : null}
           dragon={isDragon(reelShot) ? reelShot : null}
           giant={isGiantShot(reelShot) ? reelShot : null}
+          wars={isWars(reelShot) ? reelShot : null}
           mix={isMix(reelShot) ? reelShot : null}
           xxx={isXxx(reelShot) ? reelShot : null}
           rosterIds={isJoin(reelShot) ? captureJoinIds.current : null}

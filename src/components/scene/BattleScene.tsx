@@ -20,6 +20,8 @@ import { sampleNew1Cam, sampleNew2Cam, sampleNew5Cam, sampleNew6Cam, sampleNew62
 import { LAB_N, sampleLabCam, type LabId } from "../../mazeReel";
 import { sampleFilmCam, type FilmId } from "../../filmReel";
 import { sampleDragonCam, type DragonId } from "../../dragonReel";
+import { WarsBattle, WarsCam } from "./WarsBattle";
+import type { WarsId } from "../../warsReel";
 import { Dragon } from "./Dragon";
 import { DEV2_ID, DEV2_N, DEV_N, isDev6, isDev7, isDevAll, isDevBig, isDevDread, isDevSword, isDevs, isSnake, sampleDevCam, type GiantId } from "../../devReel";
 import { Maze } from "./Maze";
@@ -77,6 +79,7 @@ type BattleSceneProps = {
   film?: FilmId | null;
   dragon?: DragonId | null;
   giant?: GiantId | null;
+  wars?: WarsId | null;
   mix?: MixId | null;
   xxx?: XxxId | null;
   rosterIds?: number[] | null;
@@ -847,6 +850,7 @@ function SceneContent({
   film = null,
   dragon = null,
   giant = null,
+  wars = null,
   mix = null,
   xxx = null,
   rosterIds = null,
@@ -896,8 +900,8 @@ function SceneContent({
       {!maze && <SkyDome cheap={Boolean(defend) && !isDefend3(defend)} />}
       {!maze && <SteelSky />}
       {!maze && <DayLights cinematic={cinematic} slim={Boolean(defend) && !isDefend3(defend)} warm={slaughter || Boolean(dragon)} />}
-      {grass ? <GrassField /> : film || dragon || giant ? <New1Terrain /> : maze ? <Maze soldiers={soldiers} /> : cross ? <New6Cross /> : chase ? <New5Bridge /> : new4 ? <New4Peak /> : slaughter || isDefend4(defend) ? <New1Terrain /> : <Terrain road={!defend && !field} cheap={Boolean(defend)} />}
-      {!defend && !field && !slaughter && !maze && !film && !dragon && !giant && <Castle level={level} pressure={pressure} gateClosed={Boolean(countdown) || split || climb || Boolean(xxx)} wallFight={climb} />}
+      {!wars && (grass ? <GrassField /> : film || dragon || giant ? <New1Terrain /> : maze ? <Maze soldiers={soldiers} /> : cross ? <New6Cross /> : chase ? <New5Bridge /> : new4 ? <New4Peak /> : slaughter || isDefend4(defend) ? <New1Terrain /> : <Terrain road={!defend && !field} cheap={Boolean(defend)} />)}
+      {!wars && !defend && !field && !slaughter && !maze && !film && !dragon && !giant && <Castle level={level} pressure={pressure} gateClosed={Boolean(countdown) || split || climb || Boolean(xxx)} wallFight={climb} />}
       {sortie && (
         <TimedVisible until={DEFEND2_SORTIE + 0.85}>
           <Castle level={level} pressure={pressure} forceGateOpen />
@@ -910,16 +914,19 @@ function SceneContent({
       ) : slaughter ? (
         <New1Foes soldiers={soldiers} duel={duel} swords={blades} bridge={chase} cross={cross} wide={wide} packed={Boolean(new5)} />
       ) : (
-        !roster && !split && !countdown && !vs && !xxx && !film && !dragon && !giant && <SallyRaid soldiers={soldiers} commanders={chiefN} />
+        !wars && !roster && !split && !countdown && !vs && !xxx && !film && !dragon && !giant && <SallyRaid soldiers={soldiers} commanders={chiefN} />
       )}
       {climb && <VsLadders level={level} />}
       {film && <FilmFoes />}
       {dragon && <Dragon soldiers={Math.max(1, soldiers)} />}
       {giant && <Giant soldiers={isDevAll(giant) ? Math.max(1, soldiers) : Math.min(giant === DEV2_ID ? DEV2_N : DEV_N, Math.max(1, soldiers))} big={isDevBig(giant)} sword={isDevSword(giant)} dread={isDevDread(giant)} flesh={isDev7(giant)} snake={isSnake(giant)} devs={isDevs(giant)} crown={devLive} />}
-      <Army count={friendN} names={names} commanders={commanders} cinematic={cinematic} duration={duration} skipCommander={hideCmd} roster={roster} discover={discover} countdown={Boolean(countdown)} defend={Boolean(defend)} defend2={sortie} defend3={isDefend3(defend)} loose={isDefend5(defend)} blue={isDefend4(defend) || isDefend5(defend)} vs={field} vs2={climb} new1={Boolean(new1)} new2={duel} blade={blades || Boolean(maze)} bridge={chase} cross={cross} wide={wide} relief={relief} maze={Boolean(maze)} film={Boolean(film)} dragon={Boolean(dragon)} giant={Boolean(giant)} giantBig={isDevBig(giant)} giantAll={isDevAll(giant)} giantSword={isDevSword(giant)} giantSnake={isSnake(giant)} giantDevs={isDevs(giant)} giantKnight={isDev7(giant)} knight={!cinematic} nameGold={isDevDread(giant) || isSnake(giant) || isDevs(giant)} nameAlert={devLive || isDefend5(defend)} mix={split} mixSlow={isMix9(mix)} nameHunt={Boolean(xxx)} quiet={Boolean(xxx && xxxQuiet(xxx)) || slaughter || Boolean(maze) || Boolean(film) || Boolean(dragon) || Boolean(giant)} square={Boolean(xxx && xxxSquare(xxx))} readNames={Boolean(xxx && xxxCloseNames(xxx))} scanHunt={Boolean(xxx && xxxScanHunt(xxx))} level={level} rosterIds={rosterIds} />
+      {!wars && <Army count={friendN} names={names} commanders={commanders} cinematic={cinematic} duration={duration} skipCommander={hideCmd} roster={roster} discover={discover} countdown={Boolean(countdown)} defend={Boolean(defend)} defend2={sortie} defend3={isDefend3(defend)} loose={isDefend5(defend)} blue={isDefend4(defend) || isDefend5(defend)} vs={field} vs2={climb} new1={Boolean(new1)} new2={duel} blade={blades || Boolean(maze)} bridge={chase} cross={cross} wide={wide} relief={relief} maze={Boolean(maze)} film={Boolean(film)} dragon={Boolean(dragon)} giant={Boolean(giant)} giantBig={isDevBig(giant)} giantAll={isDevAll(giant)} giantSword={isDevSword(giant)} giantSnake={isSnake(giant)} giantDevs={isDevs(giant)} giantKnight={isDev7(giant)} knight={!cinematic} nameGold={isDevDread(giant) || isSnake(giant) || isDevs(giant)} nameAlert={devLive || isDefend5(defend)} mix={split} mixSlow={isMix9(mix)} nameHunt={Boolean(xxx)} quiet={Boolean(xxx && xxxQuiet(xxx)) || slaughter || Boolean(maze) || Boolean(film) || Boolean(dragon) || Boolean(giant)} square={Boolean(xxx && xxxSquare(xxx))} readNames={Boolean(xxx && xxxCloseNames(xxx))} scanHunt={Boolean(xxx && xxxScanHunt(xxx))} level={level} rosterIds={rosterIds} />}
+      {wars && <WarsBattle names={names} />}
       {Boolean(xxx && xxxSquare(xxx)) && <Catapults soldiers={soldiers} square />}
       {Boolean(xxx && xxxScanHunt(xxx)) && <NameScanBeam soldiers={soldiers} />}
-      {cinematic && split ? (
+      {wars ? (
+        <WarsCam />
+      ) : cinematic && split ? (
         <MixSplitCam duration={duration ?? 15} soldiers={soldiers} level={level} commanders={chiefN} mix={mix!} />
       ) : cinematic ? (
         <CinematicCam
@@ -971,10 +978,10 @@ function SceneContent({
           <LiveOpening shot={opening} />
         </>
       )}
-      {cinematic && !split && !countdown && !defend && !vs && !slaughter && !xxx && maxHp != null && hp != null && (
+      {cinematic && !wars && !split && !countdown && !defend && !vs && !slaughter && !xxx && maxHp != null && hp != null && (
         <CaptureHpHud hp={hp} maxHp={maxHp} soldiers={soldiers} duration={duration ?? 8} skipCommander={hideCmd} cinema={cinema} roster={roster} discover={discover} />
       )}
-      {cinematic && showTitles && !split && !vs && !slaughter && !xxx && (
+      {cinematic && !wars && showTitles && !split && !vs && !slaughter && !xxx && (
         <ReelTitles soldiers={soldiers} duration={duration ?? 8} day={day} skipCommander={hideCmd} cinema={cinema} roster={roster} saga={saga} discover={discover} countdown={countdown} defend={defend} names={names} rosterIds={rosterIds} />
       )}
       {cinematic && xxx && xxxHasHook(xxx) && (
@@ -986,7 +993,7 @@ function SceneContent({
       {cinematic && giant && <DevHealthBar soldiers={isDevAll(giant) ? Math.max(1, soldiers) : Math.min(giant === DEV2_ID ? DEV2_N : DEV_N, Math.max(1, soldiers))} big={isDevBig(giant)} sword={isDevSword(giant)} snake={isSnake(giant) || isDevs(giant)} devs={isDevs(giant)} />}
       {cinematic && !split && <ReelVignette />}
       {countdown && <CountdownFlash />}
-      {cinematic && !discover && !countdown && !defend && !vs && !slaughter && !split && <ReelFade duration={duration ?? 8} />}
+      {cinematic && !wars && !discover && !countdown && !defend && !vs && !slaughter && !split && <ReelFade duration={duration ?? 8} />}
     </>
   );
 }
@@ -1045,6 +1052,7 @@ function BattleSceneInner({
   film = null,
   dragon = null,
   giant = null,
+  wars = null,
   mix = null,
   xxx = null,
   rosterIds = null,
@@ -1166,6 +1174,7 @@ function BattleSceneInner({
         film={film}
         dragon={dragon}
         giant={giant}
+        wars={wars}
         mix={mix}
         xxx={xxx}
         rosterIds={rosterIds}
