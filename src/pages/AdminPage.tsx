@@ -918,7 +918,7 @@ export function AdminPage() {
             <p className="muted">DEV6 ile aynı kadro, can barı ve çim. Dev, Darwin Yamamoto’nun Colossus modeli (CC-BY): metalik gri gövde, koyu baş el ayak, vuran elde kılıç. Askerler Vaporworks Knight (CC-BY): parlak gri kask, mavi gövde. Devin arkasındaki isimler görünmez.</p>
           )}
           {isWars(reelShot) && (
-            <p className="muted">Tepeden çember, kenarı siyah şerit. İçeride 200 Roma askeri, 50 şövalye. Şövalyeler Vaporworks Knight (CC-BY): parlak gri kask, mavi gövde. İsimler DEV7 gibi sarı ve net. Düşman kazanır.</p>
+            <p className="muted">Tepeden çember. İçeride 200 Roma askeri, 50 şövalye. Şövalyeler Vaporworks Knight (CC-BY): parlak gri kask, mavi gövde. İsimler DEV7 gibi sarı ve net. Düşman kazanır.</p>
           )}
           {isSnake(reelShot) && (
             <p className="muted">DEV5 ile aynı kadro ve kamera. Yeşil-kahverengi yılan. Bekleyenler dairede. Çoğunluk başa, birkaç kişi gövdeye ve kuyruğa gider. Yılan hem onlara hem dairedeki bekleyen ve okçulara saldırır.</p>

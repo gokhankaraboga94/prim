@@ -6,7 +6,6 @@ export const WARS_SECONDS = 26;
 export const WARS_FRIENDS = 50;
 export const WARS_FOES = 200;
 export const WARS_RING_IN = 13.7;
-export const WARS_RING_OUT = 15.3;
 
 export function isWars(id: string | null | undefined): id is WarsId {
   return id === WARS_ID;
@@ -27,7 +26,7 @@ function mix(i: number, salt: number) {
 
 export function warsCam(t: number) {
   const spin = t * 0.04;
-  return { x: Math.sin(spin) * 46, y: 30, z: Math.cos(spin) * 46, lx: 0, ly: 0.6, lz: 0, fov: 58 };
+  return { x: Math.sin(spin) * 34.5, y: 22.65, z: Math.cos(spin) * 34.5, lx: 0, ly: 0.6, lz: 0, fov: 58 };
 }
 
 export function warsKnight(i: number, t: number) {

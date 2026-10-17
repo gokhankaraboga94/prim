@@ -5,7 +5,7 @@ import * as THREE from "three";
 import { buildKnightSoldier } from "../../knightSoldier";
 import { buildNameAtlas, type NameAtlas, type NameCell } from "../../nameAtlas";
 import { REEL_HOLD } from "../../recordCanvas";
-import { WARS_FOES, WARS_FRIENDS, WARS_RING_IN, WARS_RING_OUT, warsCam, warsKnight, warsRoman } from "../../warsReel";
+import { WARS_FOES, WARS_FRIENDS, WARS_RING_IN, warsCam, warsKnight, warsRoman } from "../../warsReel";
 
 const dummy = new THREE.Object3D();
 const NAME_S = 0.72;
@@ -189,18 +189,6 @@ function WarsGround() {
       <mesh rotation-x={-Math.PI / 2} position={[0, 0.045, 0]}>
         <circleGeometry args={[6.8, 72]} />
         <meshStandardMaterial color="#8c6840" roughness={0.92} metalness={0.02} />
-      </mesh>
-      <mesh rotation-x={-Math.PI / 2} position={[0, 0.06, 0]}>
-        <ringGeometry args={[WARS_RING_IN, WARS_RING_OUT, 160]} />
-        <meshStandardMaterial color="#07080c" roughness={0.46} metalness={0.38} />
-      </mesh>
-      <mesh rotation-x={-Math.PI / 2} position={[0, 0.09, 0]}>
-        <ringGeometry args={[WARS_RING_IN - 0.16, WARS_RING_IN, 160]} />
-        <meshStandardMaterial color="#d7dee6" roughness={0.28} metalness={0.82} />
-      </mesh>
-      <mesh rotation-x={-Math.PI / 2} position={[0, 0.08, 0]}>
-        <ringGeometry args={[WARS_RING_OUT - 0.08, WARS_RING_OUT + 0.05, 160]} />
-        <meshStandardMaterial color="#1a1c22" roughness={0.4} metalness={0.5} />
       </mesh>
     </group>
   );
