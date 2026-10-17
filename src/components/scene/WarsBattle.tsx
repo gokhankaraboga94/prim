@@ -8,7 +8,7 @@ import { REEL_HOLD } from "../../recordCanvas";
 import { WARS_FOES, WARS_FRIENDS, WARS_RING_IN, WARS_RING_OUT, warsCam, warsKnight, warsRoman } from "../../warsReel";
 
 const dummy = new THREE.Object3D();
-const NAME_S = 1.9;
+const NAME_S = 0.72;
 
 type RomanPart = { geometry: THREE.BufferGeometry; material: THREE.MeshStandardMaterial };
 
@@ -82,7 +82,7 @@ function WarsGround() {
   return (
     <group>
       <mesh rotation-x={-Math.PI / 2} position={[0, 0, 0]} receiveShadow>
-        <planeGeometry args={[140, 140]} />
+        <planeGeometry args={[240, 240]} />
         <meshStandardMaterial color="#3d4a38" roughness={0.94} metalness={0.02} />
       </mesh>
       <mesh rotation-x={-Math.PI / 2} position={[0, 0.03, 0]}>
@@ -90,7 +90,7 @@ function WarsGround() {
         <meshStandardMaterial color="#b08958" roughness={0.88} metalness={0.03} />
       </mesh>
       <mesh rotation-x={-Math.PI / 2} position={[0, 0.045, 0]}>
-        <circleGeometry args={[3.6, 72]} />
+        <circleGeometry args={[6.8, 72]} />
         <meshStandardMaterial color="#8c6840" roughness={0.92} metalness={0.02} />
       </mesh>
       <mesh rotation-x={-Math.PI / 2} position={[0, 0.06, 0]}>
@@ -261,12 +261,11 @@ function WarsNames({ names }: { names: string[] }) {
         if (!cell || cell.sheet !== s) continue;
         const slot = labels[k].slot;
         const p = warsKnight(slot, t);
-        const ring = slot % 2 === 0 ? 0.05 : 0.7;
         const hide = p.fall > 0.72;
         dummy.quaternion.copy(camera.quaternion);
         dummy.rotateY(Math.PI);
-        dummy.position.set(p.x + Math.sin(p.yaw) * ring, 2.15, p.z + Math.cos(p.yaw) * ring);
-        dummy.scale.set(hide ? 0 : Math.min(3.3, cell.sx * NAME_S), hide ? 0 : cell.sy * NAME_S, 1);
+        dummy.position.set(p.x, 1.92, p.z);
+        dummy.scale.set(hide ? 0 : Math.min(1.15, cell.sx * NAME_S), hide ? 0 : cell.sy * NAME_S, 1);
         dummy.updateMatrix();
         mesh.setMatrixAt(cell.local, dummy.matrix);
       }

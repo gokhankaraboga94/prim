@@ -5,8 +5,8 @@ export const WARS_SECONDS = 26;
 
 export const WARS_FRIENDS = 50;
 export const WARS_FOES = 200;
-export const WARS_RING_IN = 6.35;
-export const WARS_RING_OUT = 7.15;
+export const WARS_RING_IN = 13.7;
+export const WARS_RING_OUT = 15.3;
 
 const ROMAN_RINGS = [70, 70, 60];
 
@@ -20,8 +20,8 @@ function ramp(t: number, a: number, b: number) {
 }
 
 export function warsCam(t: number) {
-  const spin = t * 0.04;
-  return { x: Math.sin(spin) * 20, y: 26.5, z: Math.cos(spin) * 20, lx: 0, ly: 0.4, lz: 0, fov: 46 };
+  const spin = t * 0.035;
+  return { x: Math.sin(spin) * 48, y: 56, z: Math.cos(spin) * 48, lx: 0, ly: 0.5, lz: 0, fov: 46 };
 }
 
 export function warsKnight(i: number, t: number) {
@@ -32,8 +32,8 @@ export function warsKnight(i: number, t: number) {
   const fall = t < die ? 0 : Math.min(1, (t - die) / 0.62);
   const meet = ramp(t, 2.2, 7.4);
   const a = (local / n) * Math.PI * 2 + (outer ? 0.16 : 0);
-  const r = (outer ? 2.75 : 1.5) + meet * 0.7;
-  const jab = fall > 0 ? 0 : Math.max(0, Math.sin(t * 8.4 + i)) * 0.16;
+  const r = (outer ? 6.1 : 3.3) + meet * 1.45;
+  const jab = fall > 0 ? 0 : Math.max(0, Math.sin(t * 8.4 + i)) * 0.22;
   const x = Math.sin(a) * (r + jab);
   const z = Math.cos(a) * (r + jab);
   return { x, z, yaw: Math.atan2(x, z), fall };
@@ -50,12 +50,12 @@ export function warsRoman(i: number, t: number) {
   const die = i < 42 ? 9.1 + (i % 42) * 0.24 : 1e9;
   const fall = t < die ? 0 : Math.min(1, (t - die) / 0.55);
   const meet = ramp(t, 2.2, 8.1);
-  const start = [5.85, 5.05, 4.2][ring];
-  const end = [5.45, 4.4, 3.55][ring];
+  const start = [12.7, 10.7, 8.8][ring];
+  const end = [10.9, 8.9, 7.2][ring];
   const a = (local / n) * Math.PI * 2 + ring * 0.09;
-  const r = start + (end - start) * meet + fall * 0.18;
-  const jab = fall > 0 ? 0 : Math.max(0, Math.sin(t * 7.1 + i * 1.6)) * 0.14;
+  const r = start + (end - start) * meet + fall * 0.28;
+  const jab = fall > 0 ? 0 : Math.max(0, Math.sin(t * 7.1 + i * 1.6)) * 0.2;
   const x = Math.sin(a) * (r - jab);
   const z = Math.cos(a) * (r - jab);
-  return { x, z, yaw: Math.atan2(-x, -z), fall };
+  return { x, z, yaw: Math.atan2(-x, -z) - Math.PI / 2, fall };
 }
