@@ -8,7 +8,7 @@ import { REEL_HOLD } from "../../recordCanvas";
 import { WARS_FOES, WARS_FRIENDS, warsCam, warsKnight, warsRoman } from "../../warsReel";
 
 const dummy = new THREE.Object3D();
-const NAME_S = 1.55;
+const NAME_S = 1.395;
 
 type RomanPart = { geometry: THREE.BufferGeometry; material: THREE.MeshStandardMaterial };
 
@@ -142,30 +142,56 @@ export function WarsCam() {
   return null;
 }
 
-function useWarsGrass() {
+function useWarsStone() {
   const tex = useMemo(() => {
     const canvas = document.createElement("canvas");
     canvas.width = 1024;
     canvas.height = 1024;
     const ctx = canvas.getContext("2d");
     if (!ctx) return null;
-    ctx.fillStyle = "#4e9a38";
+    ctx.fillStyle = "#6a6560";
     ctx.fillRect(0, 0, 1024, 1024);
-    for (let i = 0; i < 14000; i++) {
-      const n = i % 7;
-      ctx.fillStyle = n === 0 ? "#7ec85a" : n === 1 ? "#3d8228" : n === 2 ? "#68b448" : n === 3 ? "#357820" : n === 4 ? "#96d868" : n === 5 ? "#5aa838" : "#2c681c";
-      ctx.fillRect(Math.random() * 1024, Math.random() * 1024, 2 + Math.random() * 8, 2 + Math.random() * 7);
+    const tones = ["#c8c2b6", "#b3aea3", "#d5d0c4", "#9a958c", "#aea89c", "#e0dbd0", "#8d8880", "#bcb6aa"];
+    const cols = 14;
+    const rows = 14;
+    const cw = 1024 / cols;
+    const ch = 1024 / rows;
+    for (let y = 0; y < rows; y++) {
+      for (let x = 0; x < cols; x++) {
+        const jx = ((x * 17 + y * 9) % 9) - 4;
+        const jy = ((x * 5 + y * 13) % 9) - 4;
+        const w = cw - 8;
+        const h = ch - 8;
+        const px = x * cw + 4 + jx;
+        const py = y * ch + 4 + jy;
+        ctx.fillStyle = tones[(x * 3 + y * 5) % tones.length];
+        ctx.fillRect(px, py, w, h);
+        ctx.fillStyle = "rgba(255,252,246,0.16)";
+        ctx.fillRect(px, py, w, 3);
+        ctx.fillRect(px, py, 3, h);
+        ctx.fillStyle = "rgba(28,24,20,0.22)";
+        ctx.fillRect(px, py + h - 4, w, 4);
+        ctx.fillRect(px + w - 4, py, 4, h);
+      }
     }
-    for (let i = 0; i < 90; i++) {
-      ctx.fillStyle = "rgba(92, 68, 36, 0.2)";
+    for (let i = 0; i < 7000; i++) {
+      ctx.fillStyle = i % 3 === 0 ? "rgba(255,250,242,0.14)" : "rgba(36,32,28,0.16)";
+      ctx.fillRect(Math.random() * 1024, Math.random() * 1024, 1 + Math.random() * 2, 1 + Math.random() * 2);
+    }
+    ctx.strokeStyle = "rgba(42,38,34,0.4)";
+    ctx.lineWidth = 1.4;
+    for (let i = 0; i < 22; i++) {
+      const x = Math.random() * 1024;
+      const y = Math.random() * 1024;
       ctx.beginPath();
-      ctx.ellipse(Math.random() * 1024, Math.random() * 1024, 8 + Math.random() * 24, 5 + Math.random() * 12, 0, 0, Math.PI * 2);
-      ctx.fill();
+      ctx.moveTo(x, y);
+      ctx.lineTo(x + 16 + Math.random() * 48, y + 8 + Math.random() * 36);
+      ctx.stroke();
     }
     const map = new THREE.CanvasTexture(canvas);
     map.wrapS = THREE.RepeatWrapping;
     map.wrapT = THREE.RepeatWrapping;
-    map.repeat.set(42, 42);
+    map.repeat.set(64, 64);
     map.anisotropy = 8;
     map.colorSpace = THREE.SRGBColorSpace;
     return map;
@@ -175,12 +201,12 @@ function useWarsGrass() {
 }
 
 function WarsGround() {
-  const grass = useWarsGrass();
+  const stone = useWarsStone();
   return (
     <group>
       <mesh rotation-x={-Math.PI / 2} position={[0, 0, 0]} receiveShadow>
         <planeGeometry args={[1800, 1800]} />
-        <meshStandardMaterial map={grass} color="#68b44a" roughness={0.94} metalness={0.02} envMapIntensity={0.2} />
+        <meshStandardMaterial map={stone} color="#f3f0ea" roughness={0.84} metalness={0.04} envMapIntensity={0.32} />
       </mesh>
     </group>
   );
@@ -249,8 +275,7 @@ function WarsFighters() {
       for (let i = 0; i < WARS_FRIENDS; i++) {
         const p = warsKnight(i, t);
         const ease = p.fall * p.fall;
-        const swing = p.fall > 0 ? 0 : Math.max(0, Math.sin(t * 8.4 + i));
-        pose(p.x, p.z, p.yaw, p.fall, p.fall > 0 ? -1.38 * ease : -(swing * 0.16 + p.lean * 0.72), p.fall > 0 ? (i % 2 ? 0.22 : -0.22) * ease : p.lean * 0.28);
+        pose(p.x, p.z, p.yaw, p.fall, p.fall > 0 ? -1.25 * ease : -p.lean * 0.42, p.fall > 0 ? (i % 2 ? 0.2 : -0.2) * ease : p.lean * 0.08);
         body.setMatrixAt(i, dummy.matrix);
         helm.setMatrixAt(i, dummy.matrix);
       }
@@ -264,8 +289,7 @@ function WarsFighters() {
       for (let i = 0; i < WARS_FOES; i++) {
         const p = warsRoman(i, t);
         const ease = p.fall * p.fall;
-        const swing = p.fall > 0 ? 0 : Math.max(0, Math.sin(t * 7.1 + i * 1.6));
-        pose(p.x, p.z, p.yaw, p.fall, p.fall > 0 ? -1.32 * ease : -(swing * 0.14 + p.lean * 0.68), p.fall > 0 ? (i % 2 ? -0.18 : 0.18) * ease : -p.lean * 0.24);
+        pose(p.x, p.z, p.yaw, p.fall, p.fall > 0 ? -1.22 * ease : -p.lean * 0.4, p.fall > 0 ? (i % 2 ? -0.16 : 0.16) * ease : -p.lean * 0.08);
         mesh.setMatrixAt(i, dummy.matrix);
       }
       mesh.instanceMatrix.needsUpdate = true;
@@ -324,9 +348,8 @@ function WarsNames({ names }: { names: string[] }) {
         const p = warsKnight(slot, t);
         const hide = p.fall > 0.72;
         dummy.quaternion.copy(camera.quaternion);
-        dummy.rotateY(Math.PI);
         dummy.position.set(p.x, 2.55, p.z);
-        dummy.scale.set(hide ? 0 : Math.min(2.85, cell.sx * NAME_S), hide ? 0 : cell.sy * NAME_S, 1);
+        dummy.scale.set(hide ? 0 : Math.min(2.57, cell.sx * NAME_S), hide ? 0 : cell.sy * NAME_S, 1);
         dummy.updateMatrix();
         mesh.setMatrixAt(cell.local, dummy.matrix);
       }
