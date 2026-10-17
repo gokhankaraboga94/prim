@@ -38,6 +38,52 @@ function tuneRoman(src: THREE.Material) {
   return mat;
 }
 
+function withoutFootBase(geo: THREE.BufferGeometry) {
+  const srcPos = geo.getAttribute("position");
+  const srcNorm = geo.getAttribute("normal");
+  const index = geo.getIndex();
+  if (!srcPos) return geo;
+  geo.computeBoundingBox();
+  const bounds = geo.boundingBox;
+  if (!bounds) return geo;
+  const height = bounds.max.y - bounds.min.y;
+  const wide = bounds.max.x - bounds.min.x > 0.22 && bounds.max.z - bounds.min.z > 0.22;
+  if (wide && height < 0.05 && bounds.max.y < -0.15) return null;
+  const hasBase = bounds.min.y < -0.3 && bounds.max.y > 0;
+  if (!hasBase) return geo;
+  const kept: number[] = [];
+  const pushTri = (a: number, b: number, c: number) => {
+    const top = Math.max(srcPos.getY(a), srcPos.getY(b), srcPos.getY(c));
+    if (top < 0) return;
+    kept.push(a, b, c);
+  };
+  if (index) {
+    for (let i = 0; i < index.count; i += 3) pushTri(index.getX(i), index.getX(i + 1), index.getX(i + 2));
+  } else {
+    for (let i = 0; i < srcPos.count; i += 3) pushTri(i, i + 1, i + 2);
+  }
+  if (!kept.length) return null;
+  if (kept.length === (index ? index.count : srcPos.count)) return geo;
+  const next = new THREE.BufferGeometry();
+  const positions = new Float32Array(kept.length * 3);
+  const normals = srcNorm ? new Float32Array(kept.length * 3) : null;
+  for (let i = 0; i < kept.length; i++) {
+    const v = kept[i];
+    positions[i * 3] = srcPos.getX(v);
+    positions[i * 3 + 1] = srcPos.getY(v);
+    positions[i * 3 + 2] = srcPos.getZ(v);
+    if (normals && srcNorm) {
+      normals[i * 3] = srcNorm.getX(v);
+      normals[i * 3 + 1] = srcNorm.getY(v);
+      normals[i * 3 + 2] = srcNorm.getZ(v);
+    }
+  }
+  next.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+  if (normals) next.setAttribute("normal", new THREE.BufferAttribute(normals, 3));
+  geo.dispose();
+  return next;
+}
+
 function buildRoman(root: THREE.Object3D): RomanPart[] {
   root.updateMatrixWorld(true);
   const raw: RomanPart[] = [];
@@ -45,8 +91,13 @@ function buildRoman(root: THREE.Object3D): RomanPart[] {
   root.traverse((obj) => {
     const mesh = obj as THREE.Mesh;
     if (!mesh.isMesh) return;
-    const geo = mesh.geometry.clone();
-    geo.applyMatrix4(mesh.matrixWorld);
+    const cloned = mesh.geometry.clone();
+    cloned.applyMatrix4(mesh.matrixWorld);
+    const geo = withoutFootBase(cloned);
+    if (!geo) {
+      cloned.dispose();
+      return;
+    }
     geo.computeBoundingBox();
     if (geo.boundingBox) box.union(geo.boundingBox);
     const src = mesh.material;
