@@ -6,6 +6,8 @@ export const WARS_SECONDS = 26;
 const BASE = 50;
 const GOLD = Math.PI * (3 - Math.sqrt(5));
 const DUEL_GAP = 0.9;
+const Z_OPEN = 1.86;
+const FALL_TIME = 2.9;
 
 export function isWars(id: string | null | undefined): id is WarsId {
   return id === WARS_ID;
@@ -13,6 +15,10 @@ export function isWars(id: string | null | undefined): id is WarsId {
 
 export function warsSpan(friends: number) {
   return Math.sqrt(Math.max(1, Math.floor(friends)) / BASE);
+}
+
+export function warsView(friends: number) {
+  return Math.pow(warsSpan(friends), 0.62);
 }
 
 function ramp(t: number, a: number, b: number) {
@@ -27,10 +33,12 @@ function mix(i: number, salt: number) {
 }
 
 export function warsCam(t: number, friends = BASE) {
-  const span = warsSpan(friends);
+  const view = warsView(friends);
   const spin = t * 0.04;
-  const ring = 34.5 * span;
-  const y = 0.6 + 22.05 * span;
+  const elev = 58 * Math.PI / 180;
+  const dist = 56 * view;
+  const ring = Math.cos(elev) * dist;
+  const y = 0.6 + Math.sin(elev) * dist;
   return { x: Math.sin(spin) * ring, y, z: Math.cos(spin) * ring, lx: 0, ly: 0.6, lz: 0, fov: 58 };
 }
 
@@ -38,6 +46,7 @@ export type WarsLayout = {
   friends: number;
   foes: number;
   span: number;
+  view: number;
   knightR: Float32Array;
   knightMeet: Float32Array;
   knightAng: Float32Array;
@@ -63,6 +72,7 @@ export function makeWarsLayout(friendsIn: number): WarsLayout {
     friends,
     foes,
     span,
+    view: warsView(friends),
     knightR: new Float32Array(friends),
     knightMeet: new Float32Array(friends),
     knightAng: new Float32Array(friends),
@@ -80,18 +90,23 @@ export function makeWarsLayout(friendsIn: number): WarsLayout {
     liveFall: new Float32Array(friends),
   };
   for (let i = 0; i < friends; i++) {
-    layout.knightAng[i] = i * GOLD + mix(i, 2) * 1.7;
-    layout.knightR[i] = (2.2 + mix(i, 3) * 4.5) * span;
-    layout.knightMeet[i] = (0.35 + mix(i, 4) * 1.15) * span;
+    const disk = Math.sqrt((i + 0.5) / Math.max(1, friends));
+    layout.knightAng[i] = i * GOLD;
+    layout.knightR[i] = (1.25 + disk * 4.55) * span;
+    layout.knightMeet[i] = (0.22 + mix(i, 4) * 0.48) * span;
     layout.knightPhase[i] = mix(i, 22) * 6.2;
-    layout.knightDie[i] = 7.1 + mix(i, 1) * 10.2;
+    layout.knightDie[i] = 11.2 + mix(i, 1) * 11.2;
   }
+  const romanIn = 8.15;
+  const romanOut = 12.45;
   for (let i = 0; i < foes; i++) {
-    layout.romanAng[i] = i * GOLD * 1.13 + mix(i, 7) * 2.1;
-    layout.romanStart[i] = (8.05 + mix(i, 8) * 4.45) * span;
-    layout.romanClose[i] = (0.55 + mix(i, 9) * 1.45) * span;
+    const u = (i + 0.5) / Math.max(1, foes);
+    const band = Math.sqrt(romanIn * romanIn + u * (romanOut * romanOut - romanIn * romanIn));
+    layout.romanAng[i] = i * GOLD + 1.7;
+    layout.romanStart[i] = band * span;
+    layout.romanClose[i] = (0.26 + mix(i, 9) * 0.38) * span;
     layout.romanPhase[i] = mix(i, 24) * 6.2;
-    layout.romanDie[i] = mix(i, 5) < 0.2 ? 7.4 + mix(i, 6) * 10.6 : 1e9;
+    layout.romanDie[i] = mix(i, 5) < 0.2 ? 11.6 + mix(i, 6) * 10.8 : 1e9;
   }
   const duelBudget = Math.min(36, Math.floor(friends * 0.42));
   const used = new Set<number>();
@@ -129,22 +144,28 @@ function footwork(x: number, z: number, fx: number, fz: number, t: number, phase
   };
 }
 
+function fallen(t: number, die: number) {
+  if (t <= die) return 0;
+  const u = Math.min(1, (t - die) / FALL_TIME);
+  return u * u * (3 - 2 * u);
+}
+
 function knightAt(layout: WarsLayout, i: number, t: number) {
   const die = layout.knightDie[i];
-  const fall = t < die ? 0 : Math.min(1, (t - die) / 0.55);
-  const meet = ramp(Math.min(t, die), 2.0, 7.2);
+  const fall = fallen(t, die);
+  const meet = ramp(Math.min(t, die), 2.4, 8.4);
   const r = layout.knightR[i] + meet * layout.knightMeet[i];
   const a = layout.knightAng[i];
-  return { x: Math.sin(a) * r, z: Math.cos(a) * r, fall, die };
+  return { x: Math.sin(a) * r, z: Math.cos(a) * r * Z_OPEN, fall, die };
 }
 
 function romanAt(layout: WarsLayout, i: number, t: number) {
   const die = layout.romanDie[i];
-  const fall = t < die ? 0 : Math.min(1, (t - die) / 0.52);
-  const meet = ramp(Math.min(t, die), 2.0, 8.0);
-  const r = Math.max(6.6 * layout.span, layout.romanStart[i] - meet * layout.romanClose[i]);
+  const fall = fallen(t, die);
+  const meet = ramp(Math.min(t, die), 2.4, 9.0);
+  const r = Math.max(7.85 * layout.span, layout.romanStart[i] - meet * layout.romanClose[i]);
   const a = layout.romanAng[i];
-  return { x: Math.sin(a) * r, z: Math.cos(a) * r, fall, die };
+  return { x: Math.sin(a) * r, z: Math.cos(a) * r * Z_OPEN, fall, die };
 }
 
 function lockPair(kx: number, kz: number, rx: number, rz: number, u: number, lunge: number, side: number) {

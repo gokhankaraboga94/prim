@@ -6,10 +6,11 @@ import * as THREE from "three";
 import { buildKnightSoldier } from "../../knightSoldier";
 import { buildNameAtlas, type NameAtlas, type NameCell } from "../../nameAtlas";
 import { REEL_HOLD } from "../../recordCanvas";
-import { makeWarsLayout, warsCam, warsKnight, warsRoman, warsSpan, type WarsLayout } from "../../warsReel";
+import { makeWarsLayout, warsCam, warsKnight, warsRoman, warsView, type WarsLayout } from "../../warsReel";
 
 const dummy = new THREE.Object3D();
-const NAME_S = 1.395;
+const NAME_S = 1.395 * 0.8 * (56 / 40.95);
+const NAME_CAP = 2.57 * 0.8 * (56 / 40.95);
 
 function romanColor(src: THREE.Material) {
   const c = (src as THREE.MeshStandardMaterial).color;
@@ -139,7 +140,7 @@ export function WarsCam({ soldiers }: { soldiers: number }) {
     const shot = warsCam(Math.max(0, clock.elapsedTime - REEL_HOLD), soldiers);
     persp.fov = shot.fov;
     persp.near = 0.4;
-    persp.far = Math.max(520, 640 * warsSpan(soldiers));
+    persp.far = Math.max(640, 860 * warsView(soldiers));
     persp.updateProjectionMatrix();
     persp.position.set(shot.x, shot.y, shot.z);
     persp.up.set(0, 1, 0);
@@ -291,8 +292,7 @@ function WarsFighters({ layout }: { layout: WarsLayout }) {
       layout.liveZ[i] = p.z;
       layout.liveFall[i] = p.fall;
       if (!body || !helm) continue;
-      const ease = p.fall * p.fall;
-      pose(p.x, p.z, p.yaw, p.fall, p.fall > 0 ? -1.25 * ease : -p.lean * 0.42, p.fall > 0 ? (i % 2 ? 0.2 : -0.2) * ease : p.lean * 0.08);
+      pose(p.x, p.z, p.yaw, p.fall, p.fall > 0 ? -1.25 * p.fall : -p.lean * 0.42, p.fall > 0 ? (i % 2 ? 0.16 : -0.16) * p.fall : p.lean * 0.08);
       body.setMatrixAt(i, dummy.matrix);
       helm.setMatrixAt(i, dummy.matrix);
     }
@@ -304,8 +304,7 @@ function WarsFighters({ layout }: { layout: WarsLayout }) {
     if (!foes) return;
     for (let i = 0; i < layout.foes; i++) {
       const p = warsRoman(layout, i, t);
-      const ease = p.fall * p.fall;
-      pose(p.x, p.z, p.yaw, p.fall, p.fall > 0 ? -1.22 * ease : -p.lean * 0.4, p.fall > 0 ? (i % 2 ? -0.16 : 0.16) * ease : -p.lean * 0.08);
+      pose(p.x, p.z, p.yaw, p.fall, p.fall > 0 ? -1.22 * p.fall : -p.lean * 0.4, p.fall > 0 ? (i % 2 ? -0.12 : 0.12) * p.fall : -p.lean * 0.08);
       foes.setMatrixAt(i, dummy.matrix);
     }
     foes.instanceMatrix.needsUpdate = true;
@@ -345,9 +344,9 @@ function WarsNames({ names, layout }: { names: string[]; layout: WarsLayout }) {
 
   useFrame(({ clock }) => {
     const t = Math.max(0, clock.elapsedTime - REEL_HOLD);
-    const size = NAME_S * layout.span;
-    const cap = 2.57 * layout.span;
-    const lift = 2.55 * layout.span;
+    const size = NAME_S * layout.view;
+    const cap = NAME_CAP * layout.view;
+    const lift = 2.45 * layout.view;
     dummy.quaternion.copy(camera.quaternion);
     for (let k = 0; k < labels.length; k++) {
       const cell: NameCell | undefined = atlas.cells[k];

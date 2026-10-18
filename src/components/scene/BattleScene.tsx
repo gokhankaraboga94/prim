@@ -21,7 +21,7 @@ import { LAB_N, sampleLabCam, type LabId } from "../../mazeReel";
 import { sampleFilmCam, type FilmId } from "../../filmReel";
 import { sampleDragonCam, type DragonId } from "../../dragonReel";
 import { WarsBattle, WarsCam } from "./WarsBattle";
-import { warsSpan, type WarsId } from "../../warsReel";
+import { warsView, type WarsId } from "../../warsReel";
 import { Dragon } from "./Dragon";
 import { DEV2_ID, DEV2_N, DEV_N, isDev6, isDev7, isDevAll, isDevBig, isDevDread, isDevSword, isDevs, isSnake, sampleDevCam, type GiantId } from "../../devReel";
 import { Maze } from "./Maze";
@@ -863,7 +863,7 @@ function SceneContent({
   const devLive = isDev6(giant) || isDev7(giant);
   const grass = devLive || isDefend5(defend);
   const friendN = defend ? defendShownFriends(defend, soldiers) : soldiers;
-  const warsScale = wars ? warsSpan(soldiers) : 1;
+  const warsScale = wars ? warsView(soldiers) : 1;
   const field = isVs(vs);
   const climb = isVs2(vs);
   const chase = Boolean(new5 || new7);
