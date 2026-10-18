@@ -7,6 +7,7 @@ export type NameItem = {
   commander: boolean;
   plain?: boolean;
   fill?: string;
+  frame?: boolean;
 };
 
 export type NameCell = {
@@ -117,16 +118,31 @@ function paintCell(
   cmdFont: number,
   fill?: string,
   crisp = false,
-  sharp = false
+  sharp = false,
+  frame = false
 ) {
   ctx.clearRect(x, y, w, h);
   if (!text) return 0;
+  if (frame) {
+    const pad = Math.max(8, Math.round(h * 0.08));
+    const rad = Math.round(h * 0.18);
+    ctx.beginPath();
+    ctx.moveTo(x + pad + rad, y + pad);
+    ctx.arcTo(x + w - pad, y + pad, x + w - pad, y + h - pad, rad);
+    ctx.arcTo(x + w - pad, y + h - pad, x + pad, y + h - pad, rad);
+    ctx.arcTo(x + pad, y + h - pad, x + pad, y + pad, rad);
+    ctx.arcTo(x + pad, y + pad, x + w - pad, y + pad, rad);
+    ctx.closePath();
+    ctx.fillStyle = "#000000";
+    ctx.fill();
+  }
   let size = commander ? cmdFont : font;
   const weight = sharp ? 900 : 800;
   const family = "Inter, Montserrat, Helvetica, Arial, sans-serif";
   ctx.font = `${weight} ${size}px ${family}`;
   let tw = ctx.measureText(text).width;
-  while (tw + (sharp ? 20 : 14) > w && size > 10) {
+  const limit = frame ? w - h * 0.34 : w;
+  while (tw + (sharp ? 20 : 14) > limit && size > 10) {
     size -= 1;
     ctx.font = `${weight} ${size}px ${family}`;
     tw = ctx.measureText(text).width;
@@ -135,10 +151,12 @@ function paintCell(
   ctx.textBaseline = "middle";
   ctx.lineJoin = "round";
   ctx.miterLimit = 2;
-  ctx.lineWidth = sharp ? Math.max(3, size * 0.072) : crisp ? Math.max(3, size * 0.1) : Math.max(5, size * 0.22);
-  ctx.strokeStyle = commander ? "rgba(4, 22, 40, 0.96)" : "rgba(0,0,0,0.94)";
   ctx.fillStyle = fill || (commander ? "#2eb8d4" : "#fff");
-  ctx.strokeText(text, x + w / 2, y + h / 2);
+  if (!frame) {
+    ctx.lineWidth = sharp ? Math.max(3, size * 0.072) : crisp ? Math.max(3, size * 0.1) : Math.max(5, size * 0.22);
+    ctx.strokeStyle = commander ? "rgba(4, 22, 40, 0.96)" : "rgba(0,0,0,0.94)";
+    ctx.strokeText(text, x + w / 2, y + h / 2);
+  }
   ctx.fillText(text, x + w / 2, y + h / 2);
   return tw;
 }
@@ -194,7 +212,7 @@ export function buildNameAtlas(items: NameItem[], crisp = false, sharp = false):
       const col = i % cols;
       const row = Math.floor(i / cols);
       const text = labelOf(item);
-      const tw = paintCell(ctx, col * cell.w, row * cell.h, cell.w, cell.h, text, item.commander, cell.font, cell.cmd, item.fill, crisp || sharp, sharp);
+      const tw = paintCell(ctx, col * cell.w, row * cell.h, cell.w, cell.h, text, item.commander, cell.font, cell.cmd, item.fill, crisp || sharp, sharp, Boolean(item.frame));
       const sy = item.commander ? syBase * 1.12 : syBase;
       const sx = Math.min(2.9, sy * Math.max(1.15, (tw + 18) / cell.h));
       uniqueCells.push({

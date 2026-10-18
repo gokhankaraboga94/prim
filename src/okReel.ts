@@ -1,6 +1,6 @@
 export const OK_ID = "ok" as const;
 export type OkId = typeof OK_ID;
-export const OK_SECONDS = 48;
+export const OK_SECONDS = 96;
 export const OK_MODE = { id: OK_ID, label: "ok" } as const;
 
 export function isOk(id: string | null | undefined): id is OkId {
@@ -19,36 +19,36 @@ const SPAWN_Z = 78;
 const ROW_GAP = 1.24;
 
 const JOINS = [
-  { at: 5.8, add: 50, label: "+50 takipçi", until: 7.5 },
-  { at: 12.4, add: 100, label: "+100 takipçi", until: 14.1 },
-  { at: 20.2, add: 20, label: "+20 takipçi", until: 21.9 },
-  { at: 26.2, add: 50, label: "+50 takipçi", until: 27.9 },
+  { at: 11.6, add: 50, label: "+50 takipçi", until: 15 },
+  { at: 24.8, add: 100, label: "+100 takipçi", until: 28.2 },
+  { at: 40.4, add: 20, label: "+20 takipçi", until: 43.8 },
+  { at: 52.4, add: 50, label: "+50 takipçi", until: 55.8 },
 ] as const;
 
 const WAVES = [
-  { at: 1.1, n: 50, speed: 9.24, cols: 10 },
-  { at: 9.0, n: 112, speed: 9.8, cols: 14 },
-  { at: 16.6, n: 224, speed: 10.36, cols: 16 },
-  { at: 38, n: 360, speed: 11.2, cols: 20 },
+  { at: 2.2, n: 50, speed: 4.62, cols: 10 },
+  { at: 18, n: 112, speed: 4.9, cols: 14 },
+  { at: 33.2, n: 224, speed: 5.18, cols: 16 },
+  { at: 76, n: 360, speed: 5.6, cols: 20 },
 ] as const;
 
 export const OK_FOES = WAVES.reduce((sum, wave) => sum + wave.n, 0);
 
 const FALLS: [number, number][] = [
-  [0, 9.35],
-  [4, 9.7],
-  [8, 10.05],
-  [2, 16.85],
-  [6, 17.2],
-  [11, 17.55],
-  [15, 17.9],
-  [1, 24.05],
-  [5, 24.4],
-  [12, 24.75],
-  [16, 25.1],
-  [3, 44.2],
-  [7, 44.55],
-  [13, 45.0],
+  [0, 18.7],
+  [4, 19.4],
+  [8, 20.1],
+  [2, 33.7],
+  [6, 34.4],
+  [11, 35.1],
+  [15, 35.8],
+  [1, 48.1],
+  [5, 48.8],
+  [12, 49.5],
+  [16, 50.2],
+  [3, 88.4],
+  [7, 89.1],
+  [13, 90],
 ];
 
 const FALL_AT = new Map(FALLS);
@@ -74,8 +74,8 @@ export type OkArrow = {
 
 const ARROWS: OkArrow[] = Array.from({ length: 140 }, () => ({ x: 0, y: 0, z: 0, dx: 0, dy: 1, dz: 0 }));
 
-const GIANT_LIFE = 20;
-const GIANT_SPEED = 3.4;
+const GIANT_LIFE = 40;
+const GIANT_SPEED = 1.7;
 const GIANT_Z0 = 94;
 
 export type OkGiant = {
@@ -115,7 +115,7 @@ export function okBorn(i: number) {
   if (i < START) return 0;
   let n = START;
   for (const join of JOINS) {
-    if (i < n + join.add) return join.at + (i - n) * 0.008;
+    if (i < n + join.add) return join.at + (i - n) * 0.016;
     n += join.add;
   }
   return 999;
@@ -133,7 +133,7 @@ export function okJoined(t: number) {
 export function okBanner(t: number) {
   for (let i = 0; i < WAVES.length; i++) {
     const at = WAVES[i].at;
-    if (t >= at && t < at + 1.8) return `${i + 1}. dalga`;
+    if (t >= at && t < at + 3.6) return `${i + 1}. dalga`;
   }
   for (const join of JOINS) {
     if (t >= join.at && t < join.until) return join.label;
@@ -209,7 +209,7 @@ export function okFoe(i: number, t: number): OkPose | null {
   const { wave, local } = found;
   const col = local % wave.cols;
   const row = Math.floor(local / wave.cols);
-  const delay = (col % 4) * 0.03 + row * 0.045;
+  const delay = (col % 4) * 0.06 + row * 0.09;
   const runT = t - wave.at - delay;
   if (runT < 0) return null;
   const pitchX = Math.min(1.38, 30 / Math.max(1, wave.cols - 1));
@@ -240,7 +240,7 @@ function approachZ(t: number) {
     const rows = Math.ceil(wave.n / wave.cols);
     for (let row = 0; row < rows; row++) {
       const z0 = SPAWN_Z + row * ROW_GAP;
-      const runT = t - wave.at - row * 0.045;
+      const runT = t - wave.at - row * 0.09;
       if (runT < 0) continue;
       const z = z0 - runT * wave.speed;
       if (z > 3.2) {
@@ -297,14 +297,14 @@ export function okArrows(t: number) {
 
 const GROWTH = [
   { t: 0, u: 0 },
-  { t: 5.8, u: 0 },
-  { t: 7.8, u: 0.3 },
-  { t: 12.4, u: 0.3 },
-  { t: 14.6, u: 0.58 },
-  { t: 20.2, u: 0.58 },
-  { t: 22.0, u: 0.74 },
-  { t: 26.2, u: 0.74 },
-  { t: 28.4, u: 1 },
+  { t: 11.6, u: 0 },
+  { t: 15.6, u: 0.3 },
+  { t: 24.8, u: 0.3 },
+  { t: 29.2, u: 0.58 },
+  { t: 40.4, u: 0.58 },
+  { t: 44, u: 0.74 },
+  { t: 52.4, u: 0.74 },
+  { t: 56.8, u: 1 },
 ];
 
 function growth(t: number) {

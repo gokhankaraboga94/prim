@@ -445,21 +445,12 @@ function OkNames({ names }: { names: string[] }) {
   }, [names]);
   const atlas = useMemo<NameAtlas | null>(() => {
     if (!labels.length) return null;
-    const items = labels.map((n) => ({ text: n.text, commander: false, plain: true, fill: "#ffe14a" }));
-    const built = (() => {
-      try {
-        return buildNameAtlas(items, true, true);
-      } catch {
-        return buildNameAtlas(items, true);
-      }
-    })();
-    for (const sheet of built.sheets) {
-      sheet.map.generateMipmaps = false;
-      sheet.map.minFilter = THREE.LinearFilter;
-      sheet.map.magFilter = THREE.LinearFilter;
-      sheet.map.needsUpdate = true;
+    const items = labels.map((n) => ({ text: n.text, commander: false, plain: true, fill: "#ffe14a", frame: true }));
+    try {
+      return buildNameAtlas(items, true);
+    } catch {
+      return buildNameAtlas(items);
     }
-    return built;
   }, [labels]);
   const refs = useRef<(THREE.InstancedMesh | null)[]>([]);
   const { camera } = useThree();
