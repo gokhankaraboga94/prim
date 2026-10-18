@@ -37,15 +37,6 @@ export type KalkanArrow = {
   dz: number;
 };
 
-export type KalkanSword = {
-  x: number;
-  y: number;
-  z: number;
-  pitch: number;
-  yaw: number;
-  show: boolean;
-};
-
 const COLS = 10;
 const ROWS = 10;
 const PX = 0.66;
@@ -108,10 +99,6 @@ export function kalkanVictim(): KalkanPose {
   return { x: 0, y: 0, z: 0, yaw: 0, pitch: 0, roll: 0, scale: 1 };
 }
 
-export function kalkanBrace(t: number) {
-  return easeOut((t - 9.05) / 2.35);
-}
-
 export function kalkanShield(i: number, t: number): KalkanPose | null {
   if (i < 0 || i >= KALKAN_N) return null;
   const plant = plantAt(i);
@@ -122,14 +109,13 @@ export function kalkanShield(i: number, t: number): KalkanPose | null {
   const side = slot.x < 0 ? -1 : 1;
   const fromX = i === 0 ? -0.55 : slot.x + side * 3.4;
   const fromZ = i === 0 ? 1.7 : slot.z;
-  const brace = kalkanBrace(t);
   return {
     x: fromX + (slot.x - fromX) * u,
     y: Math.sin(clamp01(u) * Math.PI) * 0.04,
     z: fromZ + (slot.z - fromZ) * u,
     yaw: 0,
-    pitch: -brace * 0.42,
-    roll: -side * brace * 0.04,
+    pitch: 0,
+    roll: 0,
     scale: 1,
   };
 }
@@ -161,18 +147,6 @@ export function kalkanArrow(t: number): KalkanArrow {
   };
 }
 
-export function kalkanSword(t: number): KalkanSword {
-  const u = kalkanBrace(t);
-  return {
-    x: 0.04,
-    y: mix(6.4, 2.45, u),
-    z: 3.35,
-    pitch: mix(-0.2, -0.04, u),
-    yaw: 0,
-    show: t >= 8.4,
-  };
-}
-
 export function kalkanCam(t: number): KalkanCam {
   if (t < 1.7) return CLOSE;
   if (t < 3.5) return mixCam(CLOSE, MID, easeOut((t - 1.7) / 1.8));
@@ -180,16 +154,16 @@ export function kalkanCam(t: number): KalkanCam {
   return mixCam(WIDE, HOLD, easeOut((t - 7.2) / 2.2));
 }
 
+const NAME_FROM = 1.45;
+const NAME_UNTIL = 14.7;
+
 export function kalkanFocus(t: number, names: string[]) {
-  const victim = kalkanClean(names[0] || "") || "İSİM";
-  for (let i = 5; i >= 0; i--) {
-    const at = plantAt(i);
-    if (t >= at && t < at + 0.4) {
-      const next = kalkanClean(names[i + 1] || "");
-      if (next) return next;
-    }
-  }
-  return victim;
+  const list = names.map((name) => kalkanClean(name)).filter(Boolean);
+  const cast = list.length ? list : ["İSİM"];
+  if (t < NAME_FROM) return cast[0];
+  const step = (NAME_UNTIL - NAME_FROM) / cast.length;
+  const i = Math.min(cast.length - 1, Math.floor((t - NAME_FROM) / Math.max(0.04, step)));
+  return cast[i] || cast[0];
 }
 
 export function kalkanLine(t: number) {

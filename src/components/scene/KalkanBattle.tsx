@@ -17,7 +17,6 @@ import {
   kalkanHudOpen,
   kalkanLine,
   kalkanShield,
-  kalkanSword,
   kalkanVictim,
   type KalkanPose,
 } from "../../kalkanReel";
@@ -233,12 +232,10 @@ function KalkanFighters() {
   const bodyRef = useRef<THREE.InstancedMesh>(null);
   const helmRef = useRef<THREE.InstancedMesh>(null);
   const arrowRef = useRef<THREE.Mesh>(null);
-  const swordRef = useRef<THREE.Group>(null);
   const knightRef = useRef<{ body: THREE.BufferGeometry; helm: THREE.BufferGeometry } | null>(null);
   const bodyMat = useMemo(() => new THREE.MeshStandardMaterial({ color: "#1a56e8", roughness: 0.42, metalness: 0.38 }), []);
   const helmMat = useMemo(() => new THREE.MeshStandardMaterial({ color: "#e7eef5", roughness: 0.18, metalness: 0.9 }), []);
   const arrowMat = useMemo(() => new THREE.MeshStandardMaterial({ color: "#f3d48a", roughness: 0.4, metalness: 0.2, emissive: "#6a4a16", emissiveIntensity: 0.35 }), []);
-  const steel = useMemo(() => new THREE.MeshStandardMaterial({ color: "#e7eef6", metalness: 0.92, roughness: 0.16, emissive: "#b7c6d6", emissiveIntensity: 0.35 }), []);
   const arrows = useMemo(() => arrowGeo(), []);
 
   useEffect(() => {
@@ -260,12 +257,11 @@ function KalkanFighters() {
       bodyMat.dispose();
       helmMat.dispose();
       arrowMat.dispose();
-      steel.dispose();
       arrows?.dispose();
       knightRef.current?.body.dispose();
       knightRef.current?.helm.dispose();
     };
-  }, [bodyMat, helmMat, arrowMat, steel, arrows]);
+  }, [bodyMat, helmMat, arrowMat, arrows]);
 
   useFrame(({ clock }) => {
     const t = Math.max(0, clock.elapsedTime - REEL_HOLD);
@@ -293,15 +289,6 @@ function KalkanFighters() {
       spin.setFromUnitVectors(up, dir);
       arrow.quaternion.copy(spin);
     }
-    const sword = swordRef.current;
-    if (sword) {
-      const blade = kalkanSword(t);
-      sword.visible = blade.show;
-      sword.position.set(blade.x, blade.y, blade.z);
-      sword.scale.setScalar(1.85);
-      sword.rotation.order = "YXZ";
-      sword.rotation.set(blade.pitch, blade.yaw, 0);
-    }
   });
 
   return (
@@ -315,17 +302,6 @@ function KalkanFighters() {
       {arrows && (
         <mesh ref={arrowRef} geometry={arrows} material={arrowMat} frustumCulled={false} />
       )}
-      <group ref={swordRef} visible={false}>
-        <mesh position={[0, 0.18, 0]} rotation={[Math.PI, 0, 0]} material={steel}>
-          <coneGeometry args={[0.14, 0.36, 4]} />
-        </mesh>
-        <mesh position={[0, 2.35, 0]} material={steel}>
-          <boxGeometry args={[0.18, 4.15, 0.05]} />
-        </mesh>
-        <mesh position={[0, 4.5, 0]} material={steel}>
-          <boxGeometry args={[1.05, 0.1, 0.14]} />
-        </mesh>
-      </group>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.02, 0.6]}>
         <circleGeometry args={[11, 40]} />
         <meshStandardMaterial color="#101218" roughness={1} metalness={0} />
