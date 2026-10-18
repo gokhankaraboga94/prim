@@ -21,21 +21,49 @@ export type OrduForm = {
   foes: number;
   cols: number;
   rows: number;
+  foeCols: number;
+  foeRows: number;
   pitchX: number;
   pitchZ: number;
   gap: number;
   width: number;
   depth: number;
+  friendDepth: number;
+  foeDepth: number;
 };
+
+function square(count: number) {
+  const side = count < 1 ? 0 : Math.ceil(Math.sqrt(count));
+  const cols = side;
+  const rows = count < 1 ? 0 : Math.ceil(count / Math.max(1, cols));
+  return {
+    cols,
+    rows,
+    width: Math.max(0, cols - 1) * PITCH,
+    depth: Math.max(0, rows - 1) * PITCH,
+  };
+}
 
 export function orduForm(friendsIn: number): OrduForm {
   const friends = Math.max(0, Math.floor(friendsIn));
-  const side = friends < 1 ? 0 : Math.ceil(Math.sqrt(friends));
-  const cols = side;
-  const rows = friends < 1 ? 0 : Math.ceil(friends / cols);
-  const width = Math.max(0, cols - 1) * PITCH;
-  const depth = Math.max(0, rows - 1) * PITCH;
-  return { friends, foes: friends, cols, rows, pitchX: PITCH, pitchZ: PITCH, gap: GAP, width, depth };
+  const foes = friends * 2;
+  const ours = square(friends);
+  const theirs = square(foes);
+  return {
+    friends,
+    foes,
+    cols: ours.cols,
+    rows: ours.rows,
+    foeCols: theirs.cols,
+    foeRows: theirs.rows,
+    pitchX: PITCH,
+    pitchZ: PITCH,
+    gap: GAP,
+    width: Math.max(ours.width, theirs.width),
+    depth: ours.depth + theirs.depth,
+    friendDepth: ours.depth,
+    foeDepth: theirs.depth,
+  };
 }
 
 export type OrduLayout = OrduForm & {
@@ -83,7 +111,7 @@ export function makeOrduLayout(friendsIn: number): OrduLayout {
     layout.friendPhase[i] = (i % 17) * 0.37;
   }
   for (let i = 0; i < form.foes; i++) {
-    const s = seat(form.cols, form.rows, form.foes, i, form.pitchX, form.gap / 2, 1);
+    const s = seat(form.foeCols, form.foeRows, form.foes, i, form.pitchX, form.gap / 2, 1);
     layout.romanX[i] = s.x;
     layout.romanZ[i] = s.z;
     layout.romanRow[i] = s.row;
@@ -150,15 +178,16 @@ function ndc(px: number, py: number, pz: number, cam: Cam) {
   return { x: cx / ahead / tanH, y: cy / ahead / tanV };
 }
 
-function frameError(cam: Cam, xHalf: number, zNear: number, zFar: number) {
+function frameError(cam: Cam, nearHalf: number, farHalf: number, zNear: number, zFar: number, zFront: number) {
   const near = ndc(0, 2.4, zNear, cam);
   const far = ndc(0, 2.4, zFar, cam);
-  const left = ndc(-xHalf, 1.2, zNear, cam);
-  const right = ndc(xHalf, 1.2, zNear, cam);
-  const farSide = ndc(xHalf, 1.2, zFar, cam);
-  if (!Number.isFinite(near.x + far.x + left.x + right.x + farSide.x)) return 80;
+  const left = ndc(-nearHalf, 1.2, zNear, cam);
+  const right = ndc(nearHalf, 1.2, zNear, cam);
+  const farSide = ndc(farHalf, 1.2, zFar, cam);
+  const foeFront = ndc(farHalf, 1.2, zFront, cam);
+  if (!Number.isFinite(near.x + far.x + left.x + right.x + farSide.x + foeFront.x)) return 80;
   if (far.y <= near.y) return 80;
-  const maxX = Math.max(Math.abs(left.x), Math.abs(right.x), Math.abs(farSide.x));
+  const maxX = Math.max(Math.abs(left.x), Math.abs(right.x), Math.abs(farSide.x), Math.abs(foeFront.x));
   return (
     Math.abs(maxX - 0.84) * 1.3 +
     Math.abs(near.y + 0.86) * 1.5 +
@@ -167,8 +196,9 @@ function frameError(cam: Cam, xHalf: number, zNear: number, zFar: number) {
   );
 }
 
-function fitCam(xHalf: number, zNear: number, zFar: number, fov: number): Cam {
+function fitCam(nearHalf: number, farHalf: number, zNear: number, zFar: number, zFront: number, fov: number): Cam {
   const span = Math.max(1, zFar - zNear);
+  const xHalf = Math.max(nearHalf, farHalf);
   let extra = 2.8 + span * 0.09;
   let y = 3 + span * 1.2 + xHalf * 0.2;
   let frac = 0.42;
@@ -195,7 +225,7 @@ function fitCam(xHalf: number, zNear: number, zFar: number, fov: number): Cam {
             lz: zNear + (zFar - zNear) * nextFrac,
             fov,
           };
-          const err = frameError(cam, xHalf, zNear, zFar);
+          const err = frameError(cam, nearHalf, farHalf, zNear, zFar, zFront);
           if (err >= bestErr) continue;
           bestErr = err;
           bestY = nextY;
@@ -227,11 +257,14 @@ export function orduCam(t: number, friends = 1): Cam {
   const drift = Math.sin(t * 0.35) * 0.35;
   const pull = t <= 3 ? 0 : easeOut((t - 3) / 1.7);
   const front = form.gap / 2;
-  const zNear = -(front + form.depth * pull);
-  const zFar = front + form.depth * pull;
-  const xClose = Math.min(Math.max(form.width / 2, form.pitchX), form.pitchX * 1.7);
-  const xHalf = xClose + (Math.max(form.width / 2, xClose) - xClose) * pull;
-  const cam = fitCam(Math.max(form.pitchX * 0.8, xHalf), zNear, zFar, 48 - pull * 3);
+  const zNear = -(front + form.friendDepth * pull);
+  const zFar = front + form.foeDepth * pull;
+  const friendHalf = Math.max(0, form.cols - 1) * form.pitchX * 0.5;
+  const foeHalf = Math.max(0, form.foeCols - 1) * form.pitchX * 0.5;
+  const xClose = Math.min(Math.max(foeHalf, form.pitchX), form.pitchX * 1.7);
+  const nearHalf = Math.max(form.pitchX * 0.8, xClose + (Math.max(friendHalf, xClose) - xClose) * pull);
+  const farHalf = Math.max(form.pitchX * 0.8, xClose + (Math.max(foeHalf, xClose) - xClose) * pull);
+  const cam = fitCam(nearHalf, farHalf, zNear, zFar, front, 48 - pull * 3);
   cam.x += drift;
   cam.lx += drift * 0.15;
   return cam;

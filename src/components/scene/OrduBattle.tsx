@@ -155,50 +155,12 @@ export function OrduCam({ soldiers }: { soldiers: number }) {
   return null;
 }
 
-function useOrduStone(repeat: number) {
-  const tex = useMemo(() => {
-    const canvas = document.createElement("canvas");
-    canvas.width = 1024;
-    canvas.height = 1024;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return null;
-    ctx.fillStyle = "#6e6a64";
-    ctx.fillRect(0, 0, 1024, 1024);
-    const tones = ["#d4cfc4", "#b7b2a6", "#e4dfd4", "#9c978e", "#c8c2b4", "#8f8a82"];
-    for (let y = 0; y < 12; y++) {
-      for (let x = 0; x < 12; x++) {
-        const px = x * 86 + 5 + ((x * 3 + y) % 5);
-        const py = y * 86 + 5 + ((y * 2 + x) % 5);
-        ctx.fillStyle = tones[(x + y * 2) % tones.length];
-        ctx.fillRect(px, py, 76, 76);
-        ctx.fillStyle = "rgba(255,252,246,0.14)";
-        ctx.fillRect(px, py, 76, 3);
-        ctx.fillStyle = "rgba(30,26,22,0.2)";
-        ctx.fillRect(px, py + 72, 76, 4);
-      }
-    }
-    const map = new THREE.CanvasTexture(canvas);
-    map.wrapS = THREE.RepeatWrapping;
-    map.wrapT = THREE.RepeatWrapping;
-    map.colorSpace = THREE.SRGBColorSpace;
-    map.anisotropy = 8;
-    return map;
-  }, []);
-  useLayoutEffect(() => {
-    if (!tex) return;
-    tex.repeat.set(repeat, repeat);
-  }, [tex, repeat]);
-  useEffect(() => () => tex?.dispose(), [tex]);
-  return tex;
-}
-
 function OrduGround({ layout }: { layout: OrduLayout }) {
   const size = Math.max(420, layout.width * 6 + layout.depth * 8 + 80);
-  const stone = useOrduStone(Math.max(24, size / 28));
   return (
     <mesh rotation-x={-Math.PI / 2} position={[0, 0, 0]} receiveShadow>
       <planeGeometry args={[size, size]} />
-      <meshStandardMaterial map={stone} color="#f4f1ea" roughness={0.86} metalness={0.03} />
+      <meshStandardMaterial color="#6d4428" roughness={1} metalness={0} />
     </mesh>
   );
 }
