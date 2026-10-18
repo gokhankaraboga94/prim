@@ -36,6 +36,7 @@ import { DEV2_ID, DEV2_MODE, DEV2_SECONDS, DEV3_ID, DEV3_MODE, DEV3_SECONDS, DEV
 import { FILM_ID, FILM_MODE, FILM_SECONDS, isFilm, type FilmId } from "../filmReel";
 import { DRAGON_ID, DRAGON_MODE, DRAGON_SECONDS, isDragon, type DragonId } from "../dragonReel";
 import { WARS_ID, WARS_MODE, WARS_SECONDS, isWars, type WarsId } from "../warsReel";
+import { ORDU_ID, ORDU_MODE, ORDU_SECONDS, isOrdu, type OrduId } from "../orduReel";
 import { unlockReelSfx } from "../reelSfx";
 
 function skippedNote(skipped: string[]): string {
@@ -58,7 +59,7 @@ export function AdminPage() {
   const [reelSeconds, setReelSeconds] = useState<number>(7);
   const [reelText, setReelText] = useState(true);
   const [reelSkipCmd, setReelSkipCmd] = useState(false);
-  const [reelShot, setReelShot] = useState<ReelShot | PlanBId | SagaId | DiscoverId | MixId | CountdownId | DefendId | VsId | New1Id | New2Id | New3Id | New4Id | New5Id | New6Id | New62Id | New7Id | LabId | DevId | Dev2Id | Dev3Id | Dev4Id | Dev5Id | Dev6Id | Dev7Id | SnakeId | DevsId | FilmId | DragonId | WarsId | XxxId | null>(null);
+  const [reelShot, setReelShot] = useState<ReelShot | PlanBId | SagaId | DiscoverId | MixId | CountdownId | DefendId | VsId | New1Id | New2Id | New3Id | New4Id | New5Id | New6Id | New62Id | New7Id | LabId | DevId | Dev2Id | Dev3Id | Dev4Id | Dev5Id | Dev6Id | Dev7Id | SnakeId | DevsId | FilmId | DragonId | WarsId | OrduId | XxxId | null>(null);
   const [reelDay, setReelDay] = useState("1");
   const [capturing, setCapturing] = useState(false);
   const [editIndex, setEditIndex] = useState<number | null>(null);
@@ -561,6 +562,8 @@ export function AdminPage() {
                     ? [COUNTDOWN_SECONDS]
                   : isWars(reelShot)
                     ? [WARS_SECONDS]
+                  : isOrdu(reelShot)
+                    ? [ORDU_SECONDS]
                   : isDragon(reelShot)
                     ? [DRAGON_SECONDS]
                   : isFilm(reelShot)
@@ -849,6 +852,18 @@ export function AdminPage() {
             </button>
             <button
               type="button"
+              className={reelShot === ORDU_ID ? "on" : ""}
+              onClick={() => {
+                setReelShot((cur) => (cur === ORDU_ID ? null : ORDU_ID));
+                setReelSeconds(ORDU_SECONDS);
+                setReelText(false);
+                setReelSkipCmd(true);
+              }}
+            >
+              {ORDU_MODE.label} — {ORDU_SECONDS}s
+            </button>
+            <button
+              type="button"
               className={reelShot === SNAKE_ID ? "on" : ""}
               onClick={() => {
                 setReelShot((cur) => (cur === SNAKE_ID ? null : SNAKE_ID));
@@ -919,6 +934,9 @@ export function AdminPage() {
           )}
           {isWars(reelShot) && (
             <p className="muted">Tüm takipçiler sahada. Düşman iki kat. Şövalyeler Vaporworks Knight (CC-BY): parlak gri kask, mavi gövde. İsimler sarı. Düşman kazanır.</p>
+          )}
+          {isOrdu(reelShot) && (
+            <p className="muted">İki ordu karşılıklı. Düşman roman modeli, bizim taraf bütün takipçiler. Kamera ilk 3 saniye yakında, sonra geri çekilir. İsimler sarı ve net. Kanca yazısını sen eklersin. Şövalyeler Vaporworks Knight (CC-BY).</p>
           )}
           {isSnake(reelShot) && (
             <p className="muted">DEV5 ile aynı kadro ve kamera. Yeşil-kahverengi yılan. Bekleyenler dairede. Çoğunluk başa, birkaç kişi gövdeye ve kuyruğa gider. Yılan hem onlara hem dairedeki bekleyen ve okçulara saldırır.</p>
@@ -1441,8 +1459,8 @@ export function AdminPage() {
           maxHp={maxHp}
           seconds={captureSec}
           showTitles={reelText}
-          skipCommander={reelSkipCmd || isDiscover(reelShot) || isCountdown(reelShot) || isDefend(reelShot) || isVsMode(reelShot) || isNewField(reelShot) || isLab(reelShot) || isGiantShot(reelShot) || isFilm(reelShot) || isDragon(reelShot) || isWars(reelShot) || (isXxx(reelShot) && xxxHideCmd(reelShot))}
-          shotMode={reelShot === CINEMA_ID || isPlanB(reelShot) || isSaga(reelShot) || isDiscover(reelShot) || isCountdown(reelShot) || isDefend(reelShot) || isVsMode(reelShot) || isNewField(reelShot) || isLab(reelShot) || isGiantShot(reelShot) || isFilm(reelShot) || isDragon(reelShot) || isWars(reelShot) || isMix(reelShot) || isXxx(reelShot) ? null : reelShot}
+          skipCommander={reelSkipCmd || isDiscover(reelShot) || isCountdown(reelShot) || isDefend(reelShot) || isVsMode(reelShot) || isNewField(reelShot) || isLab(reelShot) || isGiantShot(reelShot) || isFilm(reelShot) || isDragon(reelShot) || isWars(reelShot) || isOrdu(reelShot) || (isXxx(reelShot) && xxxHideCmd(reelShot))}
+          shotMode={reelShot === CINEMA_ID || isPlanB(reelShot) || isSaga(reelShot) || isDiscover(reelShot) || isCountdown(reelShot) || isDefend(reelShot) || isVsMode(reelShot) || isNewField(reelShot) || isLab(reelShot) || isGiantShot(reelShot) || isFilm(reelShot) || isDragon(reelShot) || isWars(reelShot) || isOrdu(reelShot) || isMix(reelShot) || isXxx(reelShot) ? null : reelShot}
           cinema={reelShot === CINEMA_ID}
           roster={isPlanB(reelShot) ? reelShot : null}
           saga={isSaga(reelShot) ? reelShot : null}
@@ -1463,6 +1481,7 @@ export function AdminPage() {
           dragon={isDragon(reelShot) ? reelShot : null}
           giant={isGiantShot(reelShot) ? reelShot : null}
           wars={isWars(reelShot) ? reelShot : null}
+          ordu={isOrdu(reelShot) ? reelShot : null}
           mix={isMix(reelShot) ? reelShot : null}
           xxx={isXxx(reelShot) ? reelShot : null}
           rosterIds={isJoin(reelShot) ? captureJoinIds.current : null}
