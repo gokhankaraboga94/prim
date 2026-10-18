@@ -2,7 +2,7 @@ export const KALKAN_ID = "kalkan" as const;
 export type KalkanId = typeof KALKAN_ID;
 export const KALKAN_SECONDS = 9;
 export const KALKAN_MODE = { id: KALKAN_ID, label: "kalkan" } as const;
-export const KALKAN_N = 7;
+export const KALKAN_N = 100;
 
 export function isKalkan(id: string | null | undefined): id is KalkanId {
   return id === KALKAN_ID;
@@ -46,16 +46,33 @@ export type KalkanSword = {
   show: boolean;
 };
 
-const SLOT_X = [0, -0.58, 0.58, -1.16, 1.16, -1.74, 1.74];
-const PLANT = [1.02, 2.0, 2.08, 2.38, 2.48, 2.72, 2.9];
-const RUN = 0.34;
-const LINE_Z = 0.92;
+const COLS = 10;
+const ROWS = 10;
+const PX = 0.66;
+const PZ = 0.58;
+const LINE_Z = 0.95;
+const RUN = 0.28;
 const ARROW_LEN = 0.72;
 
+const SLOTS = (() => {
+  const slots: { x: number; z: number }[] = [];
+  for (let row = 0; row < ROWS; row++) {
+    for (let col = 0; col < COLS; col++) slots.push({ x: (col - 4.5) * PX, z: LINE_Z + row * PZ });
+  }
+  slots.sort((a, b) => a.z - b.z || Math.abs(a.x) - Math.abs(b.x));
+  return slots;
+})();
+
+function plantAt(i: number) {
+  if (i <= 0) return 1.02;
+  if (i < COLS) return 1.38 + (i - 1) * 0.045;
+  return 1.5 + ((i - COLS) / (KALKAN_N - COLS - 1)) * 1.38;
+}
+
 const CLOSE: KalkanCam = { x: 0, y: 1.62, z: 2.72, lx: 0, ly: 1.58, lz: 0.25, fov: 30 };
-const MID: KalkanCam = { x: 0, y: 1.9, z: 5.15, lx: 0, ly: 1.48, lz: 0.45, fov: 42 };
-const WIDE: KalkanCam = { x: 0, y: 2.25, z: 10.2, lx: 0, ly: 1.62, lz: 0.55, fov: 54 };
-const HOLD: KalkanCam = { x: 0, y: 2.1, z: 9.6, lx: 0, ly: 1.56, lz: 0.5, fov: 52 };
+const MID: KalkanCam = { x: 0, y: 2.55, z: 6.6, lx: 0, ly: 1.4, lz: 1.05, fov: 46 };
+const WIDE: KalkanCam = { x: 0, y: 8.6, z: 15.2, lx: 0, ly: 0.7, lz: 3.4, fov: 58 };
+const HOLD: KalkanCam = { x: 0, y: 7.9, z: 14.2, lx: 0, ly: 0.85, lz: 3.3, fov: 56 };
 
 function clamp01(v: number) {
   return Math.max(0, Math.min(1, v));
@@ -92,32 +109,34 @@ export function kalkanVictim(): KalkanPose {
 }
 
 export function kalkanBrace(t: number) {
-  return easeOut((t - 2.9) / 2.15);
+  return easeOut((t - 3.05) / 2.05);
 }
 
 export function kalkanShield(i: number, t: number): KalkanPose | null {
   if (i < 0 || i >= KALKAN_N) return null;
-  const plant = PLANT[i];
-  const start = plant - RUN;
+  const plant = plantAt(i);
+  const start = i === 0 ? plant - RUN : Math.max(1.16, plant - RUN);
   if (t < start) return null;
-  const u = easeOut((t - start) / RUN);
-  const side = SLOT_X[i] === 0 ? -1 : Math.sign(SLOT_X[i]);
-  const fromX = i === 0 ? -0.55 : side * 3.6;
+  const u = easeOut((t - start) / Math.max(0.08, plant - start));
+  const slot = i === 0 ? { x: 0, z: LINE_Z } : SLOTS[i];
+  const side = slot.x < 0 ? -1 : 1;
+  const fromX = i === 0 ? -0.55 : slot.x + side * 6.2;
+  const fromZ = i === 0 ? 1.7 : slot.z;
   const brace = kalkanBrace(t);
   return {
-    x: fromX + (SLOT_X[i] - fromX) * u,
-    y: Math.sin(clamp01(u) * Math.PI) * 0.05,
-    z: 1.85 + (LINE_Z - 1.85) * u,
+    x: fromX + (slot.x - fromX) * u,
+    y: Math.sin(clamp01(u) * Math.PI) * 0.04,
+    z: fromZ + (slot.z - fromZ) * u,
     yaw: 0,
-    pitch: -brace * 0.56,
-    roll: -side * brace * 0.07,
+    pitch: -brace * 0.42,
+    roll: -side * brace * 0.04,
     scale: 1,
   };
 }
 
 export function kalkanHeld(t: number) {
   let n = 0;
-  for (let i = 0; i < KALKAN_N; i++) if (t >= PLANT[i]) n++;
+  for (let i = 0; i < KALKAN_N; i++) if (t >= plantAt(i)) n++;
   return n;
 }
 
@@ -131,7 +150,7 @@ export function kalkanArrow(t: number): KalkanArrow {
   const shield = kalkanShield(0, t);
   if (!shield) return face;
   const caught = arrowAt(shield.x + 0.04, 1.36 + shield.y, shield.z + 0.62, shield.x, 1.32 + shield.y, shield.z + 0.62 - ARROW_LEN);
-  const u = easeOut((t - (PLANT[0] - 0.12)) / 0.2);
+  const u = easeOut((t - (plantAt(0) - 0.12)) / 0.2);
   return {
     x: mix(face.x, caught.x, u),
     y: mix(face.y, caught.y, u),
@@ -146,11 +165,11 @@ export function kalkanSword(t: number): KalkanSword {
   const u = kalkanBrace(t);
   return {
     x: 0.04,
-    y: mix(3.85, 2.05, u),
-    z: 1.22,
-    pitch: mix(-0.08, -0.28, u),
-    yaw: 0.06,
-    show: t >= 2.75,
+    y: mix(6.4, 2.45, u),
+    z: 3.35,
+    pitch: mix(-0.2, -0.04, u),
+    yaw: 0,
+    show: t >= 2.7,
   };
 }
 
@@ -163,9 +182,9 @@ export function kalkanCam(t: number): KalkanCam {
 
 export function kalkanFocus(t: number, names: string[]) {
   const victim = kalkanClean(names[0] || "") || "İSİM";
-  for (let i = KALKAN_N - 1; i >= 0; i--) {
-    const at = PLANT[i];
-    if (t >= at && t < at + 0.48) {
+  for (let i = 5; i >= 0; i--) {
+    const at = plantAt(i);
+    if (t >= at && t < at + 0.4) {
       const next = kalkanClean(names[i + 1] || "");
       if (next) return next;
     }
@@ -174,7 +193,7 @@ export function kalkanFocus(t: number, names: string[]) {
 }
 
 export function kalkanLine(t: number) {
-  if (t < PLANT[0]) return "bunu kimse tutmazsa ölür";
+  if (t < plantAt(0)) return "bunu kimse tutmazsa ölür";
   return `tutan: ${kalkanHeld(t)}`;
 }
 

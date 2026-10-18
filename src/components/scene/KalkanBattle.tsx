@@ -69,7 +69,7 @@ export function KalkanCam() {
     const shot = kalkanCam(Math.max(0, clock.elapsedTime - REEL_HOLD));
     persp.fov = shot.fov;
     persp.near = 0.2;
-    persp.far = 80;
+    persp.far = 160;
     persp.updateProjectionMatrix();
     persp.position.set(shot.x, shot.y, shot.z);
     persp.up.set(0, 1, 0);
@@ -177,7 +177,7 @@ function paintTag(canvas: HTMLCanvasElement, text: string) {
 function KalkanTags({ names }: { names: string[] }) {
   const tags = useMemo(() => {
     const out: { i: number; text: string; tex: THREE.CanvasTexture }[] = [];
-    for (let i = 0; i < KALKAN_N; i++) {
+    for (let i = 0; i < 10; i++) {
       const text = kalkanClean(names[i + 1] || "");
       if (!text) continue;
       const canvas = document.createElement("canvas");
@@ -301,6 +301,7 @@ function KalkanFighters() {
       const blade = kalkanSword(t);
       sword.visible = blade.show;
       sword.position.set(blade.x, blade.y, blade.z);
+      sword.scale.setScalar(1.85);
       sword.rotation.order = "YXZ";
       sword.rotation.set(blade.pitch, blade.yaw, 0);
     }
@@ -329,7 +330,7 @@ function KalkanFighters() {
         </mesh>
       </group>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.02, 0.6]}>
-        <circleGeometry args={[6.5, 36]} />
+        <circleGeometry args={[11, 40]} />
         <meshStandardMaterial color="#101218" roughness={1} metalness={0} />
       </mesh>
       <ambientLight intensity={0.45} />
