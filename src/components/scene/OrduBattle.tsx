@@ -261,8 +261,7 @@ function OrduFighters({ layout }: { layout: OrduLayout }) {
       const p = orduKnight(layout, i, t);
       layout.liveX[i] = p.x;
       layout.liveZ[i] = p.z;
-      const dist = Math.hypot(p.x - camera.position.x, p.z - camera.position.z);
-      const show = inFront(camera, p.x, p.z) && (layout.friendRow[i] === 0 || dist > 28);
+      const show = inFront(camera, p.x, p.z);
       if (!body || !helm) continue;
       pose(p.x, p.z, p.yaw, p.pitch, p.roll, show);
       body.setMatrixAt(i, dummy.matrix);
@@ -276,8 +275,7 @@ function OrduFighters({ layout }: { layout: OrduLayout }) {
     if (!foes) return;
     for (let i = 0; i < layout.foes; i++) {
       const p = orduRoman(layout, i, t);
-      const dist = Math.hypot(p.x - camera.position.x, p.z - camera.position.z);
-      const show = inFront(camera, p.x, p.z) && (layout.romanRow[i] === 0 || dist > 28);
+      const show = inFront(camera, p.x, p.z);
       pose(p.x, p.z, p.yaw, p.pitch, p.roll, show);
       foes.setMatrixAt(i, dummy.matrix);
     }
@@ -332,7 +330,7 @@ function OrduNames({ names, layout }: { names: string[]; layout: OrduLayout }) {
       const dz = z - camera.position.z;
       const ahead = dx * lookDir.x + (2.45 - camera.position.y) * lookDir.y + dz * lookDir.z;
       const dist = Math.hypot(dx, camera.position.y - 2.45, dz);
-      const hide = ahead < 2.4 || (layout.friendRow[slot] > 0 && Math.hypot(dx, dz) < 30);
+      const hide = ahead < 2.4;
       const want = Math.min(layout.pitchX * 0.86, dist * tanH * 0.46);
       const size = want / 2.9;
       dummy.position.set(x, 2.42, z);

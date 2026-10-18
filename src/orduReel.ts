@@ -3,18 +3,17 @@ export type OrduId = typeof ORDU_ID;
 export const ORDU_MODE = { id: ORDU_ID, label: "ordu" } as const;
 export const ORDU_SECONDS = 13;
 
-const PITCH_X = 2.72;
-const PITCH_Z = 2.18;
-const GAP = 7.4;
+const PITCH = 2.48;
+const GAP = 5.4;
 const ROMAN_YAW = Math.PI / 2;
 
 export function isOrdu(id: string | null | undefined): id is OrduId {
   return id === ORDU_ID;
 }
 
-function smooth(u: number) {
+function easeOut(u: number) {
   const x = Math.max(0, Math.min(1, u));
-  return x * x * (3 - 2 * u);
+  return 1 - (1 - x) * (1 - x);
 }
 
 export type OrduForm = {
@@ -31,11 +30,12 @@ export type OrduForm = {
 
 export function orduForm(friendsIn: number): OrduForm {
   const friends = Math.max(0, Math.floor(friendsIn));
-  const rows = friends < 1 ? 0 : Math.min(8, Math.max(1, Math.ceil(Math.sqrt(friends * 0.55))));
-  const cols = friends < 1 ? 0 : Math.ceil(friends / rows);
-  const width = Math.max(0, cols - 1) * PITCH_X;
-  const depth = Math.max(0, rows - 1) * PITCH_Z;
-  return { friends, foes: friends, cols, rows, pitchX: PITCH_X, pitchZ: PITCH_Z, gap: GAP, width, depth };
+  const side = friends < 1 ? 0 : Math.ceil(Math.sqrt(friends));
+  const cols = side;
+  const rows = friends < 1 ? 0 : Math.ceil(friends / cols);
+  const width = Math.max(0, cols - 1) * PITCH;
+  const depth = Math.max(0, rows - 1) * PITCH;
+  return { friends, foes: friends, cols, rows, pitchX: PITCH, pitchZ: PITCH, gap: GAP, width, depth };
 }
 
 export type OrduLayout = OrduForm & {
@@ -51,12 +51,12 @@ export type OrduLayout = OrduForm & {
   liveZ: Float32Array;
 };
 
-function seat(cols: number, i: number, pitchX: number, pitchZ: number, z0: number, zSign: number) {
+function seat(cols: number, rows: number, count: number, i: number, pitch: number, z0: number, zSign: number) {
   const col = i % cols;
   const row = Math.floor(i / cols);
-  const stagger = (row % 2) * pitchX * 0.38;
-  const x = (col - (cols - 1) / 2) * pitchX + stagger;
-  const z = z0 + zSign * row * pitchZ;
+  const inRow = row === rows - 1 ? count - row * cols : cols;
+  const x = (col - (inRow - 1) / 2) * pitch;
+  const z = z0 + zSign * row * pitch;
   return { x, z, row };
 }
 
@@ -76,14 +76,14 @@ export function makeOrduLayout(friendsIn: number): OrduLayout {
     liveZ: new Float32Array(form.friends),
   };
   for (let i = 0; i < form.friends; i++) {
-    const s = seat(form.cols, i, form.pitchX, form.pitchZ, -form.gap / 2, -1);
+    const s = seat(form.cols, form.rows, form.friends, i, form.pitchX, -form.gap / 2, -1);
     layout.friendX[i] = s.x;
     layout.friendZ[i] = s.z;
     layout.friendRow[i] = s.row;
     layout.friendPhase[i] = (i % 17) * 0.37;
   }
   for (let i = 0; i < form.foes; i++) {
-    const s = seat(form.cols, i, form.pitchX, form.pitchZ, form.gap / 2, 1);
+    const s = seat(form.cols, form.rows, form.foes, i, form.pitchX, form.gap / 2, 1);
     layout.romanX[i] = s.x;
     layout.romanZ[i] = s.z;
     layout.romanRow[i] = s.row;
@@ -115,19 +115,6 @@ export function orduRoman(layout: OrduLayout, i: number, t: number) {
 
 type Cam = { x: number; y: number; z: number; lx: number; ly: number; lz: number; fov: number };
 
-function mixCam(a: Cam, b: Cam, u: number): Cam {
-  const k = 1 - u;
-  return {
-    x: a.x * k + b.x * u,
-    y: a.y * k + b.y * u,
-    z: a.z * k + b.z * u,
-    lx: a.lx * k + b.lx * u,
-    ly: a.ly * k + b.ly * u,
-    lz: a.lz * k + b.lz * u,
-    fov: a.fov * k + b.fov * u,
-  };
-}
-
 function ndc(px: number, py: number, pz: number, cam: Cam) {
   const zx = cam.x - cam.lx;
   const zy = cam.y - cam.ly;
@@ -156,63 +143,98 @@ function ndc(px: number, py: number, pz: number, cam: Cam) {
   const cy = dx * yx + dy * yy + dz * yz;
   const cz = dx * Zx + dy * Zy + dz * Zz;
   const aspect = 1080 / 1920;
+  const ahead = -cz;
+  if (ahead < 0.8) return { x: Number.NaN, y: Number.NaN };
   const tanV = Math.tan((cam.fov * Math.PI) / 360);
   const tanH = tanV * aspect;
-  return { x: cx / -cz / tanH, y: cy / -cz / tanV };
+  return { x: cx / ahead / tanH, y: cy / ahead / tanV };
 }
 
-function wideCam(form: OrduForm): Cam {
-  const back = form.gap / 2 + form.depth;
-  const far = back;
-  let y = Math.max(22, (form.width + back) * 1.05);
-  let extra = Math.max(14, form.width * 0.28 + 8);
-  const fov = 48;
-  const pts = [
-    [-form.width / 2, 2.3, -form.gap / 2],
-    [form.width / 2, 2.3, -form.gap / 2],
-    [-form.width / 2, 2.3, -back],
-    [form.width / 2, 2.3, -back],
-    [-form.width / 2, 1.6, far],
-    [form.width / 2, 1.6, far],
-  ];
-  let cam: Cam = { x: form.width * 0.1, y, z: -back - extra, lx: 0, ly: 0.55, lz: 0, fov };
-  for (let n = 0; n < 8; n++) {
-    cam = { x: form.width * 0.1, y, z: -back - extra, lx: 0, ly: 0.55, lz: 0, fov };
-    let maxX = 0;
-    let maxY = 0;
-    for (const p of pts) {
-      const q = ndc(p[0], p[1], p[2], cam);
-      if (!Number.isFinite(q.x)) continue;
-      maxX = Math.max(maxX, Math.abs(q.x));
-      maxY = Math.max(maxY, Math.abs(q.y));
+function frameError(cam: Cam, xHalf: number, zNear: number, zFar: number) {
+  const near = ndc(0, 2.4, zNear, cam);
+  const far = ndc(0, 2.4, zFar, cam);
+  const left = ndc(-xHalf, 1.2, zNear, cam);
+  const right = ndc(xHalf, 1.2, zNear, cam);
+  const farSide = ndc(xHalf, 1.2, zFar, cam);
+  if (!Number.isFinite(near.x + far.x + left.x + right.x + farSide.x)) return 80;
+  if (far.y <= near.y) return 80;
+  const maxX = Math.max(Math.abs(left.x), Math.abs(right.x), Math.abs(farSide.x));
+  return (
+    Math.abs(maxX - 0.84) * 1.3 +
+    Math.abs(near.y + 0.86) * 1.5 +
+    Math.abs(far.y - 0.84) * 1.5 +
+    Math.max(0, maxX - 0.92) * 10
+  );
+}
+
+function fitCam(xHalf: number, zNear: number, zFar: number, fov: number): Cam {
+  const span = Math.max(1, zFar - zNear);
+  let extra = 2.8 + span * 0.09;
+  let y = 3 + span * 1.2 + xHalf * 0.2;
+  let frac = 0.42;
+  let stepExtra = span * 0.25 + 1;
+  let stepY = Math.max(span, xHalf * 2) * 0.5;
+  let stepFrac = 0.18;
+  for (let n = 0; n < 10; n++) {
+    let bestErr = Infinity;
+    let bestY = y;
+    let bestExtra = extra;
+    let bestFrac = frac;
+    for (const de of [-1, 0, 1]) {
+      for (const dy of [-1, 0, 1]) {
+        for (const df of [-1, 0, 1]) {
+          const nextExtra = Math.max(2.2, extra + de * stepExtra);
+          const nextY = Math.max(4, y + dy * stepY);
+          const nextFrac = Math.min(0.8, Math.max(0.08, frac + df * stepFrac));
+          const cam: Cam = {
+            x: 0,
+            y: nextY,
+            z: zNear - nextExtra,
+            lx: 0,
+            ly: 1.15,
+            lz: zNear + (zFar - zNear) * nextFrac,
+            fov,
+          };
+          const err = frameError(cam, xHalf, zNear, zFar);
+          if (err >= bestErr) continue;
+          bestErr = err;
+          bestY = nextY;
+          bestExtra = nextExtra;
+          bestFrac = nextFrac;
+        }
+      }
     }
-    if (maxX > 0.88 || maxY > 0.9) {
-      y *= 1.1;
-      extra *= 1.08;
-    } else if (maxX < 0.7 && maxY < 0.7) {
-      y *= 0.94;
-      extra *= 0.94;
-    } else break;
+    y = bestY;
+    extra = bestExtra;
+    frac = bestFrac;
+    stepExtra *= 0.5;
+    stepY *= 0.5;
+    stepFrac *= 0.5;
   }
-  return cam;
+  return {
+    x: 0,
+    y,
+    z: zNear - extra,
+    lx: 0,
+    ly: 1.15,
+    lz: zNear + (zFar - zNear) * frac,
+    fov,
+  };
 }
 
 export function orduCam(t: number, friends = 1): Cam {
   const form = orduForm(Math.max(1, friends));
-  const drift = Math.sin(t * 0.42) * 0.55;
-  const close: Cam = {
-    x: 0.4 + drift,
-    y: 9.6,
-    z: -18,
-    lx: drift * 0.25,
-    ly: 1.05,
-    lz: 3.2,
-    fov: 50,
-  };
-  const u = smooth((t - 3) / 5.1);
-  const wide = wideCam(form);
-  wide.x += drift * 0.35;
-  return mixCam(close, wide, u);
+  const drift = Math.sin(t * 0.35) * 0.35;
+  const pull = t <= 3 ? 0 : easeOut((t - 3) / 1.7);
+  const front = form.gap / 2;
+  const zNear = -(front + form.depth * pull);
+  const zFar = front + form.depth * pull;
+  const xClose = Math.min(Math.max(form.width / 2, form.pitchX), form.pitchX * 1.7);
+  const xHalf = xClose + (Math.max(form.width / 2, xClose) - xClose) * pull;
+  const cam = fitCam(Math.max(form.pitchX * 0.8, xHalf), zNear, zFar, 48 - pull * 3);
+  cam.x += drift;
+  cam.lx += drift * 0.15;
+  return cam;
 }
 
 export function orduFar(friends: number) {
