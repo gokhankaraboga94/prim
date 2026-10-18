@@ -446,11 +446,20 @@ function OkNames({ names }: { names: string[] }) {
   const atlas = useMemo<NameAtlas | null>(() => {
     if (!labels.length) return null;
     const items = labels.map((n) => ({ text: n.text, commander: false, plain: true, fill: "#ffe14a" }));
-    try {
-      return buildNameAtlas(items, true, true);
-    } catch {
-      return buildNameAtlas(items, true);
+    const built = (() => {
+      try {
+        return buildNameAtlas(items, true, true);
+      } catch {
+        return buildNameAtlas(items, true);
+      }
+    })();
+    for (const sheet of built.sheets) {
+      sheet.map.generateMipmaps = false;
+      sheet.map.minFilter = THREE.LinearFilter;
+      sheet.map.magFilter = THREE.LinearFilter;
+      sheet.map.needsUpdate = true;
     }
+    return built;
   }, [labels]);
   const refs = useRef<(THREE.InstancedMesh | null)[]>([]);
   const { camera } = useThree();
@@ -475,7 +484,7 @@ function OkNames({ names }: { names: string[] }) {
       const dz = z - camera.position.z;
       const ahead = dx * lookDir.x + (2.4 - camera.position.y) * lookDir.y + dz * lookDir.z;
       const dist = Math.hypot(dx, camera.position.y - 2.4, dz);
-      const want = Math.min(1.68 * 1.05, dist * tanH * 0.5) * 1.35;
+      const want = Math.min(1.68 * 1.05, dist * tanH * 0.5) * 1.55;
       const size = want / 2.9;
       const show = !hide && ahead > 2.4;
       dummy.position.set(x, 2.35, z);

@@ -8,15 +8,15 @@ export function isOk(id: string | null | undefined): id is OkId {
 }
 
 export const OK_FRIENDS = 230;
-export const OK_DECK = { cx: 0, cz: 18, w: 40, d: 160 };
+export const OK_DECK = { cx: 0, cz: 58, w: 40, d: 240 };
 
 const START = 10;
 const COLS = 10;
 const PX = 1.68;
 const PZ = 1.52;
 const FRONT_Z = -6.4;
-const SPAWN_Z = 52;
-const ROW_GAP = 1.72;
+const SPAWN_Z = 78;
+const ROW_GAP = 1.24;
 
 const JOINS = [
   { at: 5.8, add: 50, label: "+50 takipçi", until: 7.5 },
@@ -26,29 +26,29 @@ const JOINS = [
 ] as const;
 
 const WAVES = [
-  { at: 1.1, n: 24, speed: 6.6, cols: 8 },
-  { at: 9.0, n: 64, speed: 7.0, cols: 10 },
-  { at: 16.6, n: 128, speed: 7.4, cols: 12 },
-  { at: 23.6, n: 208, speed: 8.0, cols: 16 },
+  { at: 1.1, n: 50, speed: 9.24, cols: 10 },
+  { at: 9.0, n: 112, speed: 9.8, cols: 14 },
+  { at: 16.6, n: 224, speed: 10.36, cols: 16 },
+  { at: 23.6, n: 360, speed: 11.2, cols: 20 },
 ] as const;
 
 export const OK_FOES = WAVES.reduce((sum, wave) => sum + wave.n, 0);
 
 const FALLS: [number, number][] = [
-  [0, 8.6],
-  [4, 8.95],
-  [8, 9.3],
-  [2, 16.2],
-  [6, 16.55],
-  [11, 16.9],
-  [15, 17.25],
-  [1, 23.4],
-  [5, 23.75],
-  [12, 24.1],
-  [16, 24.45],
-  [3, 29.9],
-  [7, 30.25],
-  [13, 30.6],
+  [0, 9.35],
+  [4, 9.7],
+  [8, 10.05],
+  [2, 16.85],
+  [6, 17.2],
+  [11, 17.55],
+  [15, 17.9],
+  [1, 24.05],
+  [5, 24.4],
+  [12, 24.75],
+  [16, 25.1],
+  [3, 30.45],
+  [7, 30.8],
+  [13, 31.15],
 ];
 
 const FALL_AT = new Map(FALLS);
@@ -134,9 +134,9 @@ export function okFriend(i: number, t: number): OkPose | null {
   if (fall < 0.02) {
     const ph = shotPhase(i, t);
     let pitch = 0;
-    if (ph < 0.42) pitch = -0.5 * (ph / 0.42);
-    else if (ph < 0.58) pitch = -0.5 + 1.05 * ((ph - 0.42) / 0.16);
-    else pitch = 0.55 * (1 - (ph - 0.58) / 0.42);
+    if (ph < 0.42) pitch = -0.2 * (ph / 0.42);
+    else if (ph < 0.58) pitch = -0.2 + 0.38 * ((ph - 0.42) / 0.16);
+    else pitch = 0.18 * (1 - (ph - 0.58) / 0.42);
     return {
       x: spot.x,
       y: (1 - scale) * -0.55,
@@ -176,7 +176,7 @@ export function okFoe(i: number, t: number): OkPose | null {
   const delay = (col % 4) * 0.03 + row * 0.045;
   const runT = t - wave.at - delay;
   if (runT < 0) return null;
-  const pitchX = wave.cols >= 14 ? 1.55 : 1.68;
+  const pitchX = Math.min(1.38, 30 / Math.max(1, wave.cols - 1));
   const x = (col - (wave.cols - 1) / 2) * pitchX + (row % 2) * 0.22;
   const z0 = SPAWN_Z + row * ROW_GAP;
   const killZ = 1.5 + (row % 4) * 0.9 + (col % 3) * 0.28;
@@ -283,13 +283,19 @@ export function okCam(t: number) {
   const u = growth(Math.max(0, t));
   const rows = Math.max(1, Math.ceil(okJoined(t) / COLS));
   const back = FRONT_Z - (rows - 1) * PZ;
+  const lx = 0;
+  const ly = 1.15;
+  const lz = 26 - u * 8;
+  const x = 0;
+  const y = 17 + u * 12;
+  const z = Math.min(-34 - u * 30, back - 16);
   return {
-    x: 0,
-    y: 17 + u * 12,
-    z: Math.min(-34 - u * 30, back - 16),
-    lx: 0,
-    ly: 1.15,
-    lz: 26 - u * 8,
+    x: lx + (x - lx) * 0.9,
+    y: ly + (y - ly) * 0.9,
+    z: lz + (z - lz) * 0.9,
+    lx,
+    ly,
+    lz,
     fov: 60,
   };
 }
