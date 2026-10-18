@@ -5,11 +5,13 @@ import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import * as THREE from "three";
 import { buildKnightSoldier } from "../../knightSoldier";
+import { buildNameAtlas, type NameAtlas, type NameCell } from "../../nameAtlas";
 import { REEL_HOLD } from "../../recordCanvas";
 import {
   KALKAN_N,
   kalkanArrow,
   kalkanCam,
+  kalkanCast,
   kalkanClean,
   kalkanFocus,
   kalkanHudOpen,
@@ -152,81 +154,76 @@ function KalkanHud({ names }: { names: string[] }) {
   );
 }
 
-function paintTag(canvas: HTMLCanvasElement, text: string) {
-  const ctx = canvas.getContext("2d");
-  if (!ctx) return;
-  const w = canvas.width;
-  const h = canvas.height;
-  ctx.clearRect(0, 0, w, h);
-  ctx.fillStyle = "#000000";
-  ctx.beginPath();
-  ctx.roundRect(8, 8, w - 16, h - 16, 36);
-  ctx.fill();
-  ctx.fillStyle = "#ffe14a";
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  let size = 180;
-  ctx.font = `900 ${size}px Arial, sans-serif`;
-  while (ctx.measureText(text).width > w - 48 && size > 36) {
-    size -= 4;
-    ctx.font = `900 ${size}px Arial, sans-serif`;
-  }
-  ctx.fillText(text, w / 2, h / 2 + 2);
-}
-
 function KalkanTags({ names }: { names: string[] }) {
-  const tags = useMemo(() => {
-    const out: { i: number; text: string; tex: THREE.CanvasTexture }[] = [];
-    for (let i = 0; i < 10; i++) {
-      const text = kalkanClean(names[i + 1] || "");
-      if (!text) continue;
-      const canvas = document.createElement("canvas");
-      canvas.width = 1024;
-      canvas.height = 280;
-      paintTag(canvas, text);
-      const tex = new THREE.CanvasTexture(canvas);
-      tex.generateMipmaps = false;
-      tex.minFilter = THREE.LinearFilter;
-      tex.magFilter = THREE.LinearFilter;
-      tex.colorSpace = THREE.SRGBColorSpace;
-      out.push({ i, text, tex });
+  const labels = useMemo(() => {
+    const out: { victim: boolean; slot: number }[] = [];
+    if (kalkanClean(names[0] || "")) out.push({ victim: true, slot: 0 });
+    for (let i = 0; i < KALKAN_N; i++) {
+      if (kalkanClean(names[i + 1] || "")) out.push({ victim: false, slot: i });
     }
     return out;
   }, [names]);
-  const refs = useRef<(THREE.Mesh | null)[]>([]);
+  const atlas = useMemo<NameAtlas | null>(() => {
+    if (!labels.length) return null;
+    const items = labels.map((n) => ({
+      text: kalkanClean(names[n.victim ? 0 : n.slot + 1] || ""),
+      commander: false,
+      plain: true,
+      fill: "#ffe14a",
+      frame: true,
+    }));
+    try {
+      return buildNameAtlas(items, true);
+    } catch {
+      return buildNameAtlas(items);
+    }
+  }, [labels, names]);
+  const refs = useRef<(THREE.InstancedMesh | null)[]>([]);
   const { camera } = useThree();
-  useEffect(() => () => tags.forEach((tag) => tag.tex.dispose()), [tags]);
+  useEffect(() => () => atlas?.dispose(), [atlas]);
   useFrame(({ clock }) => {
+    if (!atlas) return;
     const t = Math.max(0, clock.elapsedTime - REEL_HOLD);
-    tags.forEach((tag, k) => {
-      const mesh = refs.current[k];
-      if (!mesh) return;
-      const pose = kalkanShield(tag.i, t);
+    dummy.quaternion.copy(camera.quaternion);
+    for (let k = 0; k < labels.length; k++) {
+      const cell: NameCell | undefined = atlas.cells[k];
+      const mesh = cell ? refs.current[cell.sheet] : null;
+      if (!cell || !mesh) continue;
+      const label = labels[k];
+      const pose = label.victim ? kalkanVictim() : kalkanShield(label.slot, t);
       if (!pose) {
-        mesh.visible = false;
-        return;
+        dummy.position.set(0, -30, 0);
+        dummy.scale.set(0, 0, 1);
+      } else {
+        const head = headOf(pose);
+        const width = 0.6;
+        const size = width / Math.max(1.15, cell.sx);
+        dummy.position.set(head.x, head.y, head.z);
+        dummy.scale.set(cell.sx * size, cell.sy * size, 1);
       }
-      mesh.visible = true;
-      const head = headOf(pose);
-      mesh.position.set(head.x, head.y, head.z);
-      mesh.quaternion.copy(camera.quaternion);
-    });
+      dummy.updateMatrix();
+      mesh.setMatrixAt(cell.local, dummy.matrix);
+    }
+    for (const mesh of refs.current) {
+      if (mesh) mesh.instanceMatrix.needsUpdate = true;
+    }
   });
+  if (!atlas) return null;
   return (
     <group>
-      {tags.map((tag, k) => (
-        <mesh
-          key={tag.text + k}
-          ref={(node) => {
-            refs.current[k] = node;
-          }}
-          visible={false}
-          renderOrder={12}
-        >
-          <planeGeometry args={[0.86, 0.28]} />
-          <meshBasicMaterial map={tag.tex} transparent depthTest={false} toneMapped={false} />
-        </mesh>
-      ))}
+      {atlas.sheets.map((sheet, s) =>
+        sheet.count > 0 ? (
+          <instancedMesh
+            key={s}
+            ref={(node) => {
+              refs.current[s] = node;
+            }}
+            args={[sheet.geometry, sheet.material, sheet.count]}
+            frustumCulled={false}
+            renderOrder={12}
+          />
+        ) : null
+      )}
     </group>
   );
 }
@@ -341,11 +338,12 @@ function KalkanFighters() {
 }
 
 export function KalkanBattle({ names }: { names: string[] }) {
+  const [cast] = useState(() => kalkanCast(names));
   return (
     <group>
       <KalkanFighters />
-      <KalkanTags names={names} />
-      <KalkanHud names={names} />
+      <KalkanTags names={cast} />
+      <KalkanHud names={cast} />
     </group>
   );
 }

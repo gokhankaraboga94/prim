@@ -972,7 +972,7 @@ export function AdminPage() {
             <p className="muted">Havada krem taş, düşmanın geldiği yön uzun. 10 okçuyla başlar, isimler sarı. Dalga büyüdükçe daha kalabalık düşman koşar. 3. dalgada Colossus gelir, üstünde can barı vardır, oklar onu yavaş düşürür. Ekranda +50, +100, +20 takipçi yazar ve o kadar asker eklenir. Ölenler ön sıradan. Dev Darwin Yamamoto Colossus (CC-BY). Şövalyeler Vaporworks Knight (CC-BY).</p>
           )}
           {isKalkan(reelShot) && (
-            <p className="muted">İlk kare tek isim, ok yüzüne bir karış. 1. saniyede bir isim okun önüne geçer, 3. saniyede 100 kişi tutar. Devin kılıcı iner ve durur. Kimse ölmez. Şövalyeler Vaporworks Knight (CC-BY).</p>
+            <p className="muted">15 saniye. İlk kare tek isim, ok yüzüne bir karış. Okun karşısındaki kişi her kayıtta değişir. 100 kişinin de kullanıcı adı yazar. Tutanlar yerinde kalır, kılıç iner ve durur. Kimse ölmez. Şövalyeler Vaporworks Knight (CC-BY).</p>
           )}
           {isSnake(reelShot) && (
             <p className="muted">DEV5 ile aynı kadro ve kamera. Yeşil-kahverengi yılan. Bekleyenler dairede. Çoğunluk başa, birkaç kişi gövdeye ve kuyruğa gider. Yılan hem onlara hem dairedeki bekleyen ve okçulara saldırır.</p>

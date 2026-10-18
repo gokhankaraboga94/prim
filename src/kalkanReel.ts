@@ -1,6 +1,6 @@
 export const KALKAN_ID = "kalkan" as const;
 export type KalkanId = typeof KALKAN_ID;
-export const KALKAN_SECONDS = 9;
+export const KALKAN_SECONDS = 15;
 export const KALKAN_MODE = { id: KALKAN_ID, label: "kalkan" } as const;
 export const KALKAN_N = 100;
 
@@ -51,7 +51,7 @@ const ROWS = 10;
 const PX = 0.66;
 const PZ = 0.58;
 const LINE_Z = 0.95;
-const RUN = 0.28;
+const RUN = 0.95;
 const ARROW_LEN = 0.72;
 
 const SLOTS = (() => {
@@ -64,9 +64,9 @@ const SLOTS = (() => {
 })();
 
 function plantAt(i: number) {
-  if (i <= 0) return 1.02;
-  if (i < COLS) return 1.38 + (i - 1) * 0.045;
-  return 1.5 + ((i - COLS) / (KALKAN_N - COLS - 1)) * 1.38;
+  if (i <= 0) return 2.15;
+  if (i < COLS) return 2.85 + (i - 1) * 0.32;
+  return 3.6 + ((i - COLS) / (KALKAN_N - COLS - 1)) * 5.15;
 }
 
 const CLOSE: KalkanCam = { x: 0, y: 1.62, z: 2.72, lx: 0, ly: 1.58, lz: 0.25, fov: 30 };
@@ -109,18 +109,18 @@ export function kalkanVictim(): KalkanPose {
 }
 
 export function kalkanBrace(t: number) {
-  return easeOut((t - 3.05) / 2.05);
+  return easeOut((t - 9.05) / 2.35);
 }
 
 export function kalkanShield(i: number, t: number): KalkanPose | null {
   if (i < 0 || i >= KALKAN_N) return null;
   const plant = plantAt(i);
-  const start = i === 0 ? plant - RUN : Math.max(1.16, plant - RUN);
+  const start = i === 0 ? plant - RUN : Math.max(1.9, plant - RUN);
   if (t < start) return null;
   const u = easeOut((t - start) / Math.max(0.08, plant - start));
   const slot = i === 0 ? { x: 0, z: LINE_Z } : SLOTS[i];
   const side = slot.x < 0 ? -1 : 1;
-  const fromX = i === 0 ? -0.55 : slot.x + side * 6.2;
+  const fromX = i === 0 ? -0.55 : slot.x + side * 3.4;
   const fromZ = i === 0 ? 1.7 : slot.z;
   const brace = kalkanBrace(t);
   return {
@@ -169,15 +169,15 @@ export function kalkanSword(t: number): KalkanSword {
     z: 3.35,
     pitch: mix(-0.2, -0.04, u),
     yaw: 0,
-    show: t >= 2.7,
+    show: t >= 8.4,
   };
 }
 
 export function kalkanCam(t: number): KalkanCam {
-  if (t < 1.15) return CLOSE;
-  if (t < 2.2) return mixCam(CLOSE, MID, easeOut((t - 1.15) / 1.05));
-  if (t < 3.35) return mixCam(MID, WIDE, easeOut((t - 2.2) / 1.15));
-  return mixCam(WIDE, HOLD, easeOut((t - 3.35) / 1.4));
+  if (t < 1.7) return CLOSE;
+  if (t < 3.5) return mixCam(CLOSE, MID, easeOut((t - 1.7) / 1.8));
+  if (t < 7.2) return mixCam(MID, WIDE, easeOut((t - 3.5) / 3.7));
+  return mixCam(WIDE, HOLD, easeOut((t - 7.2) / 2.2));
 }
 
 export function kalkanFocus(t: number, names: string[]) {
@@ -198,5 +198,26 @@ export function kalkanLine(t: number) {
 }
 
 export function kalkanHudOpen(t: number) {
-  return 1 - easeOut((t - 2.55) / 0.85);
+  return 1 - easeOut((t - 3.3) / 1.5);
+}
+
+/** One shuffle per recording. Index 0 faces the arrow. */
+export function kalkanCast(names: string[], pick: () => number = Math.random) {
+  const seen = new Set<string>();
+  const pool: string[] = [];
+  for (const raw of names) {
+    const text = kalkanClean(raw);
+    const key = text.toLowerCase();
+    if (!text || seen.has(key)) continue;
+    seen.add(key);
+    pool.push(text);
+  }
+  if (!pool.length) pool.push("İSİM");
+  for (let i = pool.length - 1; i > 0; i--) {
+    const j = Math.floor(pick() * (i + 1));
+    const tmp = pool[i];
+    pool[i] = pool[j];
+    pool[j] = tmp;
+  }
+  return [pool[0], ...pool.slice(1, KALKAN_N + 1)];
 }
