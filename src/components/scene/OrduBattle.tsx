@@ -157,41 +157,91 @@ export function OrduCam({ soldiers }: { soldiers: number }) {
   return null;
 }
 
+function scoreRound(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
+  const rad = Math.min(r, w / 2, h / 2);
+  ctx.beginPath();
+  ctx.moveTo(x + rad, y);
+  ctx.arcTo(x + w, y, x + w, y + h, rad);
+  ctx.arcTo(x + w, y + h, x, y + h, rad);
+  ctx.arcTo(x, y + h, x, y, rad);
+  ctx.arcTo(x, y, x + w, y, rad);
+  ctx.closePath();
+}
+
 function OrduScore({ soldiers }: { soldiers: number }) {
   const size = useThree((s) => s.size);
+  const plate = useRef<THREE.Mesh>(null);
   const form = orduForm(soldiers);
   const tex = useMemo(() => {
     const canvas = document.createElement("canvas");
-    canvas.width = 1080;
-    canvas.height = 180;
+    canvas.width = 2048;
+    canvas.height = 420;
     const ctx = canvas.getContext("2d");
     const map = new THREE.CanvasTexture(canvas);
     map.colorSpace = THREE.SRGBColorSpace;
+    map.anisotropy = 8;
     if (!ctx) return map;
-    const text = `${formatCount(form.foes)} düşman vs ${formatCount(form.friends)} takipçi`;
-    let font = 78;
-    ctx.textAlign = "center";
+    ctx.clearRect(0, 0, 2048, 420);
+    scoreRound(ctx, 28, 28, 1992, 364, 48);
+    ctx.fillStyle = "rgba(8, 4, 2, 0.86)";
+    ctx.fill();
+    ctx.lineWidth = 22;
+    ctx.strokeStyle = "#ffe14a";
+    ctx.stroke();
+    ctx.lineWidth = 8;
+    ctx.strokeStyle = "#ff2a1a";
+    ctx.stroke();
+    const parts = [
+      { text: formatCount(form.foes), font: 168, fill: "#ff3b30" },
+      { text: " düşman  ", font: 84, fill: "#ffd2c8" },
+      { text: "VS", font: 132, fill: "#ffffff" },
+      { text: `  ${formatCount(form.friends)}`, font: 168, fill: "#ffe14a" },
+      { text: " takipçi", font: 84, fill: "#fff4c4" },
+    ];
+    let scale = 1;
+    const widthAt = (s: number) => {
+      let sum = 0;
+      for (const part of parts) {
+        ctx.font = `900 ${Math.round(part.font * s)}px Inter, sans-serif`;
+        sum += ctx.measureText(part.text).width;
+      }
+      return sum;
+    };
+    while (scale > 0.62 && widthAt(scale) > 1840) scale -= 0.02;
+    let cursor = (2048 - widthAt(scale)) / 2;
     ctx.textBaseline = "middle";
-    ctx.font = `900 ${font}px Inter, sans-serif`;
-    while (font > 46 && ctx.measureText(text).width > 1000) {
-      font -= 2;
-      ctx.font = `900 ${font}px Inter, sans-serif`;
-    }
-    ctx.lineWidth = 14;
+    ctx.textAlign = "left";
     ctx.lineJoin = "round";
-    ctx.strokeStyle = "rgba(0,0,0,0.88)";
-    ctx.fillStyle = "#ffe14a";
-    ctx.strokeText(text, 540, 90);
-    ctx.fillText(text, 540, 90);
+    for (const part of parts) {
+      const font = Math.round(part.font * scale);
+      ctx.font = `900 ${font}px Inter, sans-serif`;
+      const tw = ctx.measureText(part.text).width;
+      if (part.text === "VS") {
+        scoreRound(ctx, cursor - 8, 148, tw + 16, 124, 22);
+        ctx.fillStyle = "#c41616";
+        ctx.fill();
+      }
+      ctx.lineWidth = Math.max(10, font * 0.09);
+      ctx.strokeStyle = "rgba(0,0,0,0.9)";
+      ctx.strokeText(part.text, cursor, 210);
+      ctx.fillStyle = part.fill;
+      ctx.fillText(part.text, cursor, 210);
+      cursor += tw;
+    }
     return map;
   }, [form.foes, form.friends]);
   useEffect(() => () => tex.dispose(), [tex]);
-  const w = size.width * 0.94;
-  const h = w * (180 / 1080);
+  useFrame(({ clock }) => {
+    const t = Math.max(0, clock.elapsedTime - REEL_HOLD);
+    const pulse = 1 + Math.sin(t * 3.4) * 0.045;
+    plate.current?.scale.set(pulse, pulse, 1);
+  });
+  const w = size.width * 0.96;
+  const h = w * (420 / 2048);
   return (
     <Hud renderPriority={3}>
       <OrthographicCamera makeDefault position={[0, 0, 10]} />
-      <mesh position={[0, size.height / 2 - h * 0.5 - 36, 4]} renderOrder={30}>
+      <mesh ref={plate} position={[0, size.height / 2 - h * 0.5 - 22, 4]} renderOrder={30}>
         <planeGeometry args={[w, h]} />
         <meshBasicMaterial map={tex} transparent depthTest={false} toneMapped={false} />
       </mesh>
@@ -302,7 +352,7 @@ function OrduNames({ names, layout }: { names: string[]; layout: OrduLayout }) {
     return out;
   }, [names, layout.friends]);
   const atlas = useMemo<NameAtlas>(
-    () => buildNameAtlas(labels.map((n) => ({ text: n.text, commander: false, plain: true, fill: "#ffe14a" })), true),
+    () => buildNameAtlas(labels.map((n) => ({ text: n.text, commander: false, plain: true, fill: "#ffe14a" })), true, true),
     [labels]
   );
   const refs = useRef<(THREE.InstancedMesh | null)[]>([]);
@@ -327,7 +377,7 @@ function OrduNames({ names, layout }: { names: string[]; layout: OrduLayout }) {
       const ahead = dx * lookDir.x + (2.45 - camera.position.y) * lookDir.y + dz * lookDir.z;
       const dist = Math.hypot(dx, camera.position.y - 2.45, dz);
       const hide = ahead < 2.4;
-      const want = Math.min(layout.pitchX * 0.86, dist * tanH * 0.46) * 1.5;
+      const want = Math.min(layout.pitchX * 0.86, dist * tanH * 0.46) * 1.2;
       const size = want / 2.9;
       dummy.position.set(x, 2.42, z);
       dummy.scale.set(hide ? 0 : cell.sx * size, hide ? 0 : cell.sy * size, 1);

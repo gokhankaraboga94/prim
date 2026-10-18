@@ -64,7 +64,24 @@ void main() {
 }
 `;
 
-function pickCell(unique: number, crisp: boolean) {
+const FRAG_SHARP = `
+uniform sampler2D map;
+varying vec2 vUv;
+void main() {
+  vec4 c = texture2D(map, vUv);
+  float a = smoothstep(0.42, 0.64, c.a);
+  if (a < 0.02) discard;
+  gl_FragColor = vec4(c.rgb, a);
+}
+`;
+
+function pickCell(unique: number, crisp: boolean, sharp = false) {
+  if (sharp) {
+    if (unique <= 500) return { w: 768, h: 192, font: 128, cmd: 140 };
+    if (unique <= 1000) return { w: 640, h: 168, font: 110, cmd: 120 };
+    if (unique <= 1800) return { w: 512, h: 144, font: 94, cmd: 104 };
+    return { w: 384, h: 120, font: 76, cmd: 84 };
+  }
   if (crisp) {
     if (unique <= 400) return { w: 768, h: 192, font: 122, cmd: 136 };
     if (unique <= 900) return { w: 512, h: 144, font: 90, cmd: 102 };
@@ -99,23 +116,26 @@ function paintCell(
   font: number,
   cmdFont: number,
   fill?: string,
-  crisp = false
+  crisp = false,
+  sharp = false
 ) {
   ctx.clearRect(x, y, w, h);
   if (!text) return 0;
   let size = commander ? cmdFont : font;
-  ctx.font = `800 ${size}px Inter, Montserrat, Helvetica, Arial, sans-serif`;
+  const weight = sharp ? 900 : 800;
+  const family = "Inter, Montserrat, Helvetica, Arial, sans-serif";
+  ctx.font = `${weight} ${size}px ${family}`;
   let tw = ctx.measureText(text).width;
-  while (tw + 14 > w && size > 10) {
+  while (tw + (sharp ? 20 : 14) > w && size > 10) {
     size -= 1;
-    ctx.font = `800 ${size}px Inter, Montserrat, Helvetica, Arial, sans-serif`;
+    ctx.font = `${weight} ${size}px ${family}`;
     tw = ctx.measureText(text).width;
   }
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   ctx.lineJoin = "round";
   ctx.miterLimit = 2;
-  ctx.lineWidth = crisp ? Math.max(3, size * 0.1) : Math.max(5, size * 0.22);
+  ctx.lineWidth = sharp ? Math.max(3, size * 0.072) : crisp ? Math.max(3, size * 0.1) : Math.max(5, size * 0.22);
   ctx.strokeStyle = commander ? "rgba(4, 22, 40, 0.96)" : "rgba(0,0,0,0.94)";
   ctx.fillStyle = fill || (commander ? "#2eb8d4" : "#fff");
   ctx.strokeText(text, x + w / 2, y + h / 2);
@@ -123,7 +143,7 @@ function paintCell(
   return tw;
 }
 
-export function buildNameAtlas(items: NameItem[], crisp = false): NameAtlas {
+export function buildNameAtlas(items: NameItem[], crisp = false, sharp = false): NameAtlas {
   if (!items.length) {
     return { sheets: [], cells: [], dispose() {} };
   }
@@ -138,7 +158,7 @@ export function buildNameAtlas(items: NameItem[], crisp = false): NameAtlas {
     }
   }
 
-  const cell = pickCell(unique.length, crisp);
+  const cell = pickCell(unique.length, crisp || sharp, sharp);
   const cols = Math.max(1, Math.floor(ATLAS / cell.w));
   const rowsMax = Math.max(1, Math.floor(ATLAS / cell.h));
   const per = cols * rowsMax;
@@ -159,8 +179,8 @@ export function buildNameAtlas(items: NameItem[], crisp = false): NameAtlas {
       while (p < n) p <<= 1;
       return p;
     };
-    const canvasW = crisp ? pot(texW) : texW;
-    const canvasH = crisp ? pot(texH) : texH;
+    const canvasW = crisp || sharp ? pot(texW) : texW;
+    const canvasH = crisp || sharp ? pot(texH) : texH;
     const canvas = document.createElement("canvas");
     canvas.width = canvasW;
     canvas.height = canvasH;
@@ -174,7 +194,7 @@ export function buildNameAtlas(items: NameItem[], crisp = false): NameAtlas {
       const col = i % cols;
       const row = Math.floor(i / cols);
       const text = labelOf(item);
-      const tw = paintCell(ctx, col * cell.w, row * cell.h, cell.w, cell.h, text, item.commander, cell.font, cell.cmd, item.fill, crisp);
+      const tw = paintCell(ctx, col * cell.w, row * cell.h, cell.w, cell.h, text, item.commander, cell.font, cell.cmd, item.fill, crisp || sharp, sharp);
       const sy = item.commander ? syBase * 1.12 : syBase;
       const sx = Math.min(2.9, sy * Math.max(1.15, (tw + 18) / cell.h));
       uniqueCells.push({
@@ -189,17 +209,17 @@ export function buildNameAtlas(items: NameItem[], crisp = false): NameAtlas {
     }
     const map = new THREE.CanvasTexture(canvas);
     map.colorSpace = THREE.NoColorSpace;
-    map.generateMipmaps = crisp;
-    map.minFilter = crisp ? THREE.LinearMipmapNearestFilter : THREE.LinearFilter;
+    map.generateMipmaps = crisp || sharp;
+    map.minFilter = sharp ? THREE.LinearMipmapLinearFilter : crisp ? THREE.LinearMipmapNearestFilter : THREE.LinearFilter;
     map.magFilter = THREE.LinearFilter;
-    map.anisotropy = crisp ? 16 : 1;
+    map.anisotropy = crisp || sharp ? 16 : 1;
     map.wrapS = THREE.ClampToEdgeWrapping;
     map.wrapT = THREE.ClampToEdgeWrapping;
     map.flipY = true;
     const material = new THREE.ShaderMaterial({
       uniforms: { map: { value: map } },
       vertexShader: VERT,
-      fragmentShader: crisp ? FRAG_CRISP : FRAG,
+      fragmentShader: sharp ? FRAG_SHARP : crisp ? FRAG_CRISP : FRAG,
       transparent: true,
       depthTest: false,
       depthWrite: false,
