@@ -1,41 +1,45 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import * as THREE from "three";
 import { buildKnightSoldier } from "../../knightSoldier";
 import { buildNameAtlas, type NameAtlas, type NameCell } from "../../nameAtlas";
 import { REEL_HOLD } from "../../recordCanvas";
-import { WARS_FOES, WARS_FRIENDS, warsCam, warsKnight, warsRoman } from "../../warsReel";
+import { makeWarsLayout, warsCam, warsKnight, warsRoman, warsSpan, type WarsLayout } from "../../warsReel";
 
 const dummy = new THREE.Object3D();
 const NAME_S = 1.395;
 
-type RomanPart = { geometry: THREE.BufferGeometry; material: THREE.MeshStandardMaterial };
-
-function tuneRoman(src: THREE.Material) {
-  const mat = (src as THREE.MeshStandardMaterial).clone();
-  const c = mat.color;
+function romanColor(src: THREE.Material) {
+  const c = (src as THREE.MeshStandardMaterial).color;
   const max = Math.max(c.r, c.g, c.b);
   const min = Math.min(c.r, c.g, c.b);
   const sat = max < 0.02 ? 0 : (max - min) / max;
   const skin = sat > 0.4 && c.r > 0.75 && c.g > 0.4 && c.b > 0.15 && c.b < 0.5;
   const leather = c.r > c.g && c.g > c.b && c.r < 0.45 && sat > 0.45;
   const steel = sat < 0.22 && max > 0.55 && max < 0.9 && min > 0.45;
-  if (skin || leather) {
-    mat.metalness = 0.04;
-    mat.roughness = 0.68;
-    mat.envMapIntensity = 0.4;
-  } else if (steel) {
-    mat.metalness = 0.84;
-    mat.roughness = 0.26;
-    mat.envMapIntensity = 1;
-  } else {
-    mat.color.set("#c41c16");
-    mat.metalness = 0.58;
-    mat.roughness = 0.36;
-    mat.envMapIntensity = 0.85;
+  if (skin || leather || steel) return c.clone();
+  return new THREE.Color("#c41c16");
+}
+
+function paintRoman(geo: THREE.BufferGeometry, color: THREE.Color) {
+  const src = geo.getIndex() ? geo.toNonIndexed() : geo;
+  const pos = src.getAttribute("position");
+  const next = new THREE.BufferGeometry();
+  next.setAttribute("position", pos.clone());
+  const norm = src.getAttribute("normal");
+  if (norm) next.setAttribute("normal", norm.clone());
+  const colors = new Float32Array(pos.count * 3);
+  for (let i = 0; i < pos.count; i++) {
+    colors[i * 3] = color.r;
+    colors[i * 3 + 1] = color.g;
+    colors[i * 3 + 2] = color.b;
   }
-  return mat;
+  next.setAttribute("color", new THREE.BufferAttribute(colors, 3));
+  if (!norm) next.computeVertexNormals();
+  if (src !== geo) src.dispose();
+  return next;
 }
 
 function withoutFootBase(geo: THREE.BufferGeometry) {
@@ -84,9 +88,9 @@ function withoutFootBase(geo: THREE.BufferGeometry) {
   return next;
 }
 
-function buildRoman(root: THREE.Object3D): RomanPart[] {
+function buildRoman(root: THREE.Object3D) {
   root.updateMatrixWorld(true);
-  const raw: RomanPart[] = [];
+  const pieces: THREE.BufferGeometry[] = [];
   const box = new THREE.Box3();
   root.traverse((obj) => {
     const mesh = obj as THREE.Mesh;
@@ -101,18 +105,20 @@ function buildRoman(root: THREE.Object3D): RomanPart[] {
     geo.computeBoundingBox();
     if (geo.boundingBox) box.union(geo.boundingBox);
     const src = mesh.material;
-    raw.push({ geometry: geo, material: tuneRoman(Array.isArray(src) ? src[0] : src) });
+    pieces.push(paintRoman(geo, romanColor(Array.isArray(src) ? src[0] : src)));
+    geo.dispose();
   });
+  if (!pieces.length || box.isEmpty()) return null;
+  const merged = mergeGeometries(pieces, false);
+  for (const piece of pieces) piece.dispose();
+  if (!merged) return null;
   const height = Math.max(0.001, box.max.y - box.min.y);
   const s = 1.66 / height;
   const cx = (box.min.x + box.max.x) / 2;
   const cz = (box.min.z + box.max.z) / 2;
-  const fit = new THREE.Matrix4().makeScale(s, s, s).multiply(new THREE.Matrix4().makeTranslation(-cx, -box.min.y, -cz));
-  for (const part of raw) {
-    part.geometry.applyMatrix4(fit);
-    part.geometry.computeVertexNormals();
-  }
-  return raw;
+  merged.applyMatrix4(new THREE.Matrix4().makeScale(s, s, s).multiply(new THREE.Matrix4().makeTranslation(-cx, -box.min.y, -cz)));
+  merged.computeVertexNormals();
+  return merged;
 }
 
 function pose(x: number, z: number, yaw: number, fall: number, pitch: number, roll: number, y = 0.05) {
@@ -124,16 +130,16 @@ function pose(x: number, z: number, yaw: number, fall: number, pitch: number, ro
   dummy.updateMatrix();
 }
 
-export function WarsCam() {
+export function WarsCam({ soldiers }: { soldiers: number }) {
   const perspCam = useRef<THREE.PerspectiveCamera | null>(null);
   useFrame(({ camera, clock }) => {
     if ((camera as THREE.PerspectiveCamera).isPerspectiveCamera) perspCam.current = camera as THREE.PerspectiveCamera;
     const persp = perspCam.current;
     if (!persp) return;
-    const shot = warsCam(Math.max(0, clock.elapsedTime - REEL_HOLD));
+    const shot = warsCam(Math.max(0, clock.elapsedTime - REEL_HOLD), soldiers);
     persp.fov = shot.fov;
     persp.near = 0.4;
-    persp.far = 420;
+    persp.far = Math.max(520, 640 * warsSpan(soldiers));
     persp.updateProjectionMatrix();
     persp.position.set(shot.x, shot.y, shot.z);
     persp.up.set(0, 1, 0);
@@ -200,26 +206,37 @@ function useWarsStone() {
   return tex;
 }
 
-function WarsGround() {
+function WarsGround({ span }: { span: number }) {
   const stone = useWarsStone();
+  useLayoutEffect(() => {
+    if (!stone) return;
+    const repeat = 64 * span;
+    stone.repeat.set(repeat, repeat);
+  }, [stone, span]);
+  const size = 1800 * span;
   return (
     <group>
       <mesh rotation-x={-Math.PI / 2} position={[0, 0, 0]} receiveShadow>
-        <planeGeometry args={[1800, 1800]} />
+        <planeGeometry args={[size, size]} />
         <meshStandardMaterial map={stone} color="#f3f0ea" roughness={0.84} metalness={0.04} envMapIntensity={0.32} />
       </mesh>
     </group>
   );
 }
 
-function WarsFighters() {
+function markDynamic(mesh: THREE.InstancedMesh | null) {
+  mesh?.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+}
+
+function WarsFighters({ layout }: { layout: WarsLayout }) {
   const [knight, setKnight] = useState<{ body: THREE.BufferGeometry; helm: THREE.BufferGeometry } | null>(null);
-  const [roman, setRoman] = useState<RomanPart[] | null>(null);
+  const [roman, setRoman] = useState<THREE.BufferGeometry | null>(null);
   const bodyRef = useRef<THREE.InstancedMesh>(null);
   const helmRef = useRef<THREE.InstancedMesh>(null);
-  const romanRefs = useRef<(THREE.InstancedMesh | null)[]>([]);
+  const romanRef = useRef<THREE.InstancedMesh>(null);
   const bodyMat = useMemo(() => new THREE.MeshStandardMaterial({ color: "#1a56e8", roughness: 0.42, metalness: 0.38, envMapIntensity: 0.85 }), []);
   const helmMat = useMemo(() => new THREE.MeshStandardMaterial({ color: "#e7eef5", roughness: 0.18, metalness: 0.9, envMapIntensity: 1.15 }), []);
+  const romanMat = useMemo(() => new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.46, metalness: 0.4, envMapIntensity: 0.7 }), []);
 
   useEffect(() => {
     let drop = false;
@@ -231,10 +248,7 @@ function WarsFighters() {
     loader.load("/models/roman.glb", (gltf) => {
       const built = buildRoman(gltf.scene);
       if (drop) {
-        for (const part of built) {
-          part.geometry.dispose();
-          part.material.dispose();
-        }
+        built?.dispose();
         return;
       }
       setRoman(built);
@@ -248,8 +262,9 @@ function WarsFighters() {
     return () => {
       bodyMat.dispose();
       helmMat.dispose();
+      romanMat.dispose();
     };
-  }, [bodyMat, helmMat]);
+  }, [bodyMat, helmMat, romanMat]);
 
   useEffect(() => {
     return () => {
@@ -258,75 +273,67 @@ function WarsFighters() {
     };
   }, [knight]);
 
-  useEffect(() => {
-    return () => {
-      for (const part of roman ?? []) {
-        part.geometry.dispose();
-        part.material.dispose();
-      }
-    };
-  }, [roman]);
+  useEffect(() => () => roman?.dispose(), [roman]);
+
+  useLayoutEffect(() => {
+    markDynamic(bodyRef.current);
+    markDynamic(helmRef.current);
+    markDynamic(romanRef.current);
+  }, [knight, roman, layout.friends]);
 
   useFrame(({ clock }) => {
     const t = Math.max(0, clock.elapsedTime - REEL_HOLD);
     const body = bodyRef.current;
     const helm = helmRef.current;
+    for (let i = 0; i < layout.friends; i++) {
+      const p = warsKnight(layout, i, t);
+      layout.liveX[i] = p.x;
+      layout.liveZ[i] = p.z;
+      layout.liveFall[i] = p.fall;
+      if (!body || !helm) continue;
+      const ease = p.fall * p.fall;
+      pose(p.x, p.z, p.yaw, p.fall, p.fall > 0 ? -1.25 * ease : -p.lean * 0.42, p.fall > 0 ? (i % 2 ? 0.2 : -0.2) * ease : p.lean * 0.08);
+      body.setMatrixAt(i, dummy.matrix);
+      helm.setMatrixAt(i, dummy.matrix);
+    }
     if (body && helm) {
-      for (let i = 0; i < WARS_FRIENDS; i++) {
-        const p = warsKnight(i, t);
-        const ease = p.fall * p.fall;
-        pose(p.x, p.z, p.yaw, p.fall, p.fall > 0 ? -1.25 * ease : -p.lean * 0.42, p.fall > 0 ? (i % 2 ? 0.2 : -0.2) * ease : p.lean * 0.08);
-        body.setMatrixAt(i, dummy.matrix);
-        helm.setMatrixAt(i, dummy.matrix);
-      }
       body.instanceMatrix.needsUpdate = true;
       helm.instanceMatrix.needsUpdate = true;
     }
-    if (!roman) return;
-    for (let part = 0; part < roman.length; part++) {
-      const mesh = romanRefs.current[part];
-      if (!mesh) continue;
-      for (let i = 0; i < WARS_FOES; i++) {
-        const p = warsRoman(i, t);
-        const ease = p.fall * p.fall;
-        pose(p.x, p.z, p.yaw, p.fall, p.fall > 0 ? -1.22 * ease : -p.lean * 0.4, p.fall > 0 ? (i % 2 ? -0.16 : 0.16) * ease : -p.lean * 0.08);
-        mesh.setMatrixAt(i, dummy.matrix);
-      }
-      mesh.instanceMatrix.needsUpdate = true;
+    const foes = romanRef.current;
+    if (!foes) return;
+    for (let i = 0; i < layout.foes; i++) {
+      const p = warsRoman(layout, i, t);
+      const ease = p.fall * p.fall;
+      pose(p.x, p.z, p.yaw, p.fall, p.fall > 0 ? -1.22 * ease : -p.lean * 0.4, p.fall > 0 ? (i % 2 ? -0.16 : 0.16) * ease : -p.lean * 0.08);
+      foes.setMatrixAt(i, dummy.matrix);
     }
+    foes.instanceMatrix.needsUpdate = true;
   });
 
+  if (layout.friends < 1) return null;
   return (
     <group>
       {knight && (
         <>
-          <instancedMesh ref={bodyRef} args={[knight.body, bodyMat, WARS_FRIENDS]} frustumCulled={false} />
-          <instancedMesh ref={helmRef} args={[knight.helm, helmMat, WARS_FRIENDS]} frustumCulled={false} />
+          <instancedMesh ref={bodyRef} args={[knight.body, bodyMat, layout.friends]} frustumCulled={false} />
+          <instancedMesh ref={helmRef} args={[knight.helm, helmMat, layout.friends]} frustumCulled={false} />
         </>
       )}
-      {roman?.map((part, i) => (
-        <instancedMesh
-          key={i}
-          ref={(node) => {
-            romanRefs.current[i] = node;
-          }}
-          args={[part.geometry, part.material, WARS_FOES]}
-          frustumCulled={false}
-        />
-      ))}
+      {roman && <instancedMesh ref={romanRef} args={[roman, romanMat, layout.foes]} frustumCulled={false} />}
     </group>
   );
 }
 
-function WarsNames({ names }: { names: string[] }) {
+function WarsNames({ names, layout }: { names: string[]; layout: WarsLayout }) {
   const labels = useMemo(() => {
     const out: { slot: number; text: string }[] = [];
-    for (let i = 0; i < WARS_FRIENDS; i++) {
+    for (let i = 0; i < layout.friends; i++) {
       const text = String(names[i] ?? "").trim().replace(/^@+/, "");
       if (text) out.push({ slot: i, text });
     }
     return out;
-  }, [names]);
+  }, [names, layout.friends]);
   const atlas = useMemo<NameAtlas>(
     () => buildNameAtlas(labels.map((n) => ({ text: n.text, commander: false, plain: true, fill: "#ffe14a" })), true),
     [labels]
@@ -338,22 +345,23 @@ function WarsNames({ names }: { names: string[] }) {
 
   useFrame(({ clock }) => {
     const t = Math.max(0, clock.elapsedTime - REEL_HOLD);
-    for (let s = 0; s < atlas.sheets.length; s++) {
-      const mesh = refs.current[s];
-      if (!mesh) continue;
-      for (let k = 0; k < labels.length; k++) {
-        const cell: NameCell | undefined = atlas.cells[k];
-        if (!cell || cell.sheet !== s) continue;
-        const slot = labels[k].slot;
-        const p = warsKnight(slot, t);
-        const hide = p.fall > 0.72;
-        dummy.quaternion.copy(camera.quaternion);
-        dummy.position.set(p.x, 2.55, p.z);
-        dummy.scale.set(hide ? 0 : Math.min(2.57, cell.sx * NAME_S), hide ? 0 : cell.sy * NAME_S, 1);
-        dummy.updateMatrix();
-        mesh.setMatrixAt(cell.local, dummy.matrix);
-      }
-      mesh.instanceMatrix.needsUpdate = true;
+    const size = NAME_S * layout.span;
+    const cap = 2.57 * layout.span;
+    const lift = 2.55 * layout.span;
+    dummy.quaternion.copy(camera.quaternion);
+    for (let k = 0; k < labels.length; k++) {
+      const cell: NameCell | undefined = atlas.cells[k];
+      const mesh = cell ? refs.current[cell.sheet] : null;
+      if (!cell || !mesh) continue;
+      const slot = labels[k].slot;
+      const hide = layout.liveFall[slot] > 0.72;
+      dummy.position.set(layout.liveX[slot], lift, layout.liveZ[slot]);
+      dummy.scale.set(hide ? 0 : Math.min(cap, cell.sx * size), hide ? 0 : cell.sy * size, 1);
+      dummy.updateMatrix();
+      mesh.setMatrixAt(cell.local, dummy.matrix);
+    }
+    for (const mesh of refs.current) {
+      if (mesh) mesh.instanceMatrix.needsUpdate = true;
     }
   });
 
@@ -376,12 +384,13 @@ function WarsNames({ names }: { names: string[] }) {
   );
 }
 
-export function WarsBattle({ names }: { names: string[] }) {
+export function WarsBattle({ names, soldiers }: { names: string[]; soldiers: number }) {
+  const layout = useMemo(() => makeWarsLayout(soldiers), [soldiers]);
   return (
     <group>
-      <WarsGround />
-      <WarsFighters />
-      <WarsNames names={names} />
+      <WarsGround span={layout.span} />
+      <WarsFighters layout={layout} />
+      <WarsNames names={names} layout={layout} />
     </group>
   );
 }
