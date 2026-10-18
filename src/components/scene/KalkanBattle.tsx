@@ -135,7 +135,7 @@ function KalkanHud({ names }: { names: string[] }) {
       tex.needsUpdate = true;
     }
     const open = kalkanHudOpen(t);
-    const s = 0.56 + 0.44 * open;
+    const s = (0.56 + 0.44 * open) * 1.1;
     mesh.scale.setScalar(s);
     const h = size.height * 0.42;
     mesh.position.y = size.height / 2 - (h * s) / 2 - 12;
@@ -195,7 +195,7 @@ function KalkanTags({ names }: { names: string[] }) {
         dummy.scale.set(0, 0, 1);
       } else {
         const head = headOf(pose);
-        const width = 0.6;
+        const width = 0.66;
         const size = width / Math.max(1.15, cell.sx);
         dummy.position.set(head.x, head.y, head.z);
         dummy.scale.set(cell.sx * size, cell.sy * size, 1);
