@@ -179,7 +179,9 @@ function OrduScore({ soldiers }: { soldiers: number }) {
     const ctx = canvas.getContext("2d");
     const map = new THREE.CanvasTexture(canvas);
     map.colorSpace = THREE.SRGBColorSpace;
-    map.anisotropy = 8;
+    map.generateMipmaps = false;
+    map.minFilter = THREE.LinearFilter;
+    map.magFilter = THREE.LinearFilter;
     if (!ctx) return map;
     ctx.clearRect(0, 0, 2048, 420);
     scoreRound(ctx, 28, 28, 1992, 364, 48);
@@ -351,10 +353,14 @@ function OrduNames({ names, layout }: { names: string[]; layout: OrduLayout }) {
     }
     return out;
   }, [names, layout.friends]);
-  const atlas = useMemo<NameAtlas>(
-    () => buildNameAtlas(labels.map((n) => ({ text: n.text, commander: false, plain: true, fill: "#ffe14a" })), true, true),
-    [labels]
-  );
+  const atlas = useMemo<NameAtlas>(() => {
+    const items = labels.map((n) => ({ text: n.text, commander: false, plain: true, fill: "#ffe14a" }));
+    try {
+      return buildNameAtlas(items, true, true);
+    } catch {
+      return buildNameAtlas(items, true);
+    }
+  }, [labels]);
   const refs = useRef<(THREE.InstancedMesh | null)[]>([]);
   const { camera } = useThree();
   useEffect(() => () => atlas.dispose(), [atlas]);

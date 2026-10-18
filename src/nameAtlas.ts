@@ -77,10 +77,10 @@ void main() {
 
 function pickCell(unique: number, crisp: boolean, sharp = false) {
   if (sharp) {
-    if (unique <= 500) return { w: 768, h: 192, font: 128, cmd: 140 };
-    if (unique <= 1000) return { w: 640, h: 168, font: 110, cmd: 120 };
-    if (unique <= 1800) return { w: 512, h: 144, font: 94, cmd: 104 };
-    return { w: 384, h: 120, font: 76, cmd: 84 };
+    if (unique <= 400) return { w: 768, h: 192, font: 128, cmd: 140 };
+    if (unique <= 900) return { w: 512, h: 144, font: 96, cmd: 104 };
+    if (unique <= 1600) return { w: 384, h: 112, font: 74, cmd: 82 };
+    return { w: 288, h: 88, font: 58, cmd: 64 };
   }
   if (crisp) {
     if (unique <= 400) return { w: 768, h: 192, font: 122, cmd: 136 };
@@ -210,7 +210,7 @@ export function buildNameAtlas(items: NameItem[], crisp = false, sharp = false):
     const map = new THREE.CanvasTexture(canvas);
     map.colorSpace = THREE.NoColorSpace;
     map.generateMipmaps = crisp || sharp;
-    map.minFilter = sharp ? THREE.LinearMipmapLinearFilter : crisp ? THREE.LinearMipmapNearestFilter : THREE.LinearFilter;
+    map.minFilter = crisp || sharp ? THREE.LinearMipmapNearestFilter : THREE.LinearFilter;
     map.magFilter = THREE.LinearFilter;
     map.anisotropy = crisp || sharp ? 16 : 1;
     map.wrapS = THREE.ClampToEdgeWrapping;
