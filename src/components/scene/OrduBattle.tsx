@@ -220,15 +220,15 @@ function buildOrduSoil() {
       const pebble = pebbleN > 0.74 ? (pebbleN - 0.74) / 0.26 : 0;
       const damp = soilStep(0.58, 0.88, soilFbm(u * 1.25 + 8, v * 1.25));
       const dust = soilStep(0.66, 0.9, soilFbm(u * 1.6 + 3, v * 1.15 + 11));
-      let r = 86 + broad * 42 + mid * 16 + (grit - 0.5) * 14;
-      let g = 48 + broad * 24 + mid * 9 + (grit - 0.5) * 8;
-      let b = 22 + broad * 12 + mid * 4 + (grit - 0.5) * 5;
-      r = r * (1 - damp * 0.34) + dust * 26;
-      g = g * (1 - damp * 0.26) + dust * 16;
-      b = b * (1 - damp * 0.14) + dust * 7;
-      r = r * (1 - pebble * 0.85) + 132 * pebble;
-      g = g * (1 - pebble * 0.85) + 116 * pebble;
-      b = b * (1 - pebble * 0.85) + 96 * pebble;
+      let r = 58 + broad * 28 + mid * 11 + (grit - 0.5) * 10;
+      let g = 32 + broad * 16 + mid * 6 + (grit - 0.5) * 6;
+      let b = 14 + broad * 8 + mid * 3 + (grit - 0.5) * 3;
+      r = r * (1 - damp * 0.34) + dust * 16;
+      g = g * (1 - damp * 0.26) + dust * 10;
+      b = b * (1 - damp * 0.14) + dust * 4;
+      r = r * (1 - pebble * 0.85) + 96 * pebble;
+      g = g * (1 - pebble * 0.85) + 84 * pebble;
+      b = b * (1 - pebble * 0.85) + 68 * pebble;
       const i = (y * size + x) * 4;
       color.data[i] = Math.max(0, Math.min(255, r));
       color.data[i + 1] = Math.max(0, Math.min(255, g));
@@ -271,7 +271,7 @@ function OrduGround({ layout }: { layout: OrduLayout }) {
   return (
     <mesh rotation-x={-Math.PI / 2} position={[0, 0, 0]} receiveShadow>
       <planeGeometry args={[size, size]} />
-      <meshStandardMaterial map={soil?.map} bumpMap={soil?.bumpMap} bumpScale={1.8} color="#ffffff" roughness={0.94} metalness={0} />
+      <meshStandardMaterial map={soil?.map} bumpMap={soil?.bumpMap} bumpScale={1.8} color="#c4aa96" roughness={0.96} metalness={0} />
     </mesh>
   );
 }
@@ -404,7 +404,7 @@ function OrduNames({ names, layout }: { names: string[]; layout: OrduLayout }) {
       const ahead = dx * lookDir.x + (2.45 - camera.position.y) * lookDir.y + dz * lookDir.z;
       const dist = Math.hypot(dx, camera.position.y - 2.45, dz);
       const hide = ahead < 2.4;
-      const want = Math.min(layout.pitchX * 0.86, dist * tanH * 0.46) * 1.25;
+      const want = Math.min(layout.pitchX * 0.86, dist * tanH * 0.46) * 1.5;
       const size = want / 2.9;
       dummy.position.set(x, 2.42, z);
       dummy.scale.set(hide ? 0 : cell.sx * size, hide ? 0 : cell.sy * size, 1);

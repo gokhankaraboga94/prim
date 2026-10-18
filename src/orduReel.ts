@@ -302,14 +302,14 @@ function closerBy(full: Cam, close: Cam, keep: number) {
   return mixCam(full, close, (lo + hi) / 2);
 }
 
-function halfwayMix(close: Cam, wide: Cam) {
-  const goal = lookDist(wide) * 0.5;
-  if (lookDist(close) >= goal) return 1;
+function halfwayMix(close: Cam, wide: Cam, zLimit: number) {
+  const goal = lookDist(wide) * 0.375;
   let lo = 0;
-  let hi = 1;
-  for (let i = 0; i < 18; i++) {
+  let hi = 1.85;
+  for (let i = 0; i < 20; i++) {
     const mid = (lo + hi) / 2;
-    if (lookDist(mixCam(wide, close, mid)) > goal) lo = mid;
+    const cam = mixCam(wide, close, mid);
+    if (lookDist(cam) > goal && cam.z <= zLimit) lo = mid;
     else hi = mid;
   }
   return (lo + hi) / 2;
@@ -322,7 +322,7 @@ export function orduCam(t: number, friends = 1): Cam {
     const close = fitPull(form, 0);
     const full = fitPull(form, 1);
     const wide = closerBy(full, close, 0.7);
-    ends = { close, wide, halfway: halfwayMix(close, wide) };
+    ends = { close, wide, halfway: halfwayMix(close, wide, -form.gap / 2 - 1.2) };
     endCams.set(form.friends, ends);
   }
   let cam: Cam;
