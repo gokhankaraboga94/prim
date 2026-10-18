@@ -99,7 +99,7 @@ export function okGiant(t: number): OkGiant | null {
     x: 0,
     y: fall > 0 ? Math.sin(fall * Math.PI) * 0.9 : Math.abs(Math.sin(age * 2.6)) * 0.16,
     z: Math.max(8, GIANT_Z0 - walked),
-    yaw: Math.PI,
+    yaw: -Math.PI / 2,
     pitch: fall * 1.2,
     hp,
     fall,
@@ -131,6 +131,10 @@ export function okJoined(t: number) {
 }
 
 export function okBanner(t: number) {
+  for (let i = 0; i < WAVES.length; i++) {
+    const at = WAVES[i].at;
+    if (t >= at && t < at + 1.8) return `${i + 1}. dalga`;
+  }
   for (const join of JOINS) {
     if (t >= join.at && t < join.until) return join.label;
   }
