@@ -4,7 +4,7 @@ export const ORDU_MODE = { id: ORDU_ID, label: "ordu" } as const;
 export const ORDU_SECONDS = 13;
 
 const PITCH = 2.48;
-const GAP = 5.4;
+const GAP = 8.1;
 const ROMAN_YAW = Math.PI / 2;
 
 export function isOrdu(id: string | null | undefined): id is OrduId {
@@ -289,6 +289,19 @@ function lookDist(cam: Cam) {
   return Math.hypot(cam.x - cam.lx, cam.y - cam.ly, cam.z - cam.lz);
 }
 
+function closerBy(full: Cam, close: Cam, keep: number) {
+  const goal = lookDist(full) * keep;
+  if (lookDist(close) >= goal) return { ...full };
+  let lo = 0;
+  let hi = 1;
+  for (let i = 0; i < 18; i++) {
+    const mid = (lo + hi) / 2;
+    if (lookDist(mixCam(full, close, mid)) > goal) lo = mid;
+    else hi = mid;
+  }
+  return mixCam(full, close, (lo + hi) / 2);
+}
+
 function halfwayMix(close: Cam, wide: Cam) {
   const goal = lookDist(wide) * 0.5;
   if (lookDist(close) >= goal) return 1;
@@ -307,13 +320,14 @@ export function orduCam(t: number, friends = 1): Cam {
   let ends = endCams.get(form.friends);
   if (!ends) {
     const close = fitPull(form, 0);
-    const wide = fitPull(form, 1);
+    const full = fitPull(form, 1);
+    const wide = closerBy(full, close, 0.7);
     ends = { close, wide, halfway: halfwayMix(close, wide) };
     endCams.set(form.friends, ends);
   }
   let cam: Cam;
   if (t <= 3) cam = { ...ends.close };
-  else if (t <= PULL_END) cam = fitPull(form, easeOut((t - 3) / (PULL_END - 3)));
+  else if (t <= PULL_END) cam = mixCam(ends.close, ends.wide, easeOut((t - 3) / (PULL_END - 3)));
   else {
     const back = easeInOut((t - PULL_END) / (RETURN_END - PULL_END));
     cam = mixCam(ends.wide, ends.close, back * ends.halfway);
