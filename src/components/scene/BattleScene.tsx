@@ -23,7 +23,7 @@ import { sampleDragonCam, type DragonId } from "../../dragonReel";
 import { WarsBattle, WarsCam } from "./WarsBattle";
 import { warsView, type WarsId } from "../../warsReel";
 import { OrduBattle, OrduCam } from "./OrduBattle";
-import { orduHaze, type OrduId } from "../../orduReel";
+import { orduForm, orduHaze, type OrduId } from "../../orduReel";
 import { Dragon } from "./Dragon";
 import { DEV2_ID, DEV2_N, DEV_N, isDev6, isDev7, isDevAll, isDevBig, isDevDread, isDevSword, isDevs, isSnake, sampleDevCam, type GiantId } from "../../devReel";
 import { Maze } from "./Maze";
@@ -723,20 +723,21 @@ function New4Peak() {
   );
 }
 
-function GrassField() {
+function GrassField({ span = 2400 }: { span?: number }) {
   const source = useGroundTexture();
   const ground = useMemo(() => {
     if (!source) return null;
     const tex = source.clone();
     tex.wrapS = THREE.RepeatWrapping;
     tex.wrapT = THREE.RepeatWrapping;
-    tex.repeat.set(120, 120);
+    tex.repeat.set((120 * span) / 2400, (120 * span) / 2400);
     tex.needsUpdate = true;
     return tex;
-  }, [source]);
+  }, [source, span]);
+  useEffect(() => () => ground?.dispose(), [ground]);
   return (
     <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow>
-      <planeGeometry args={[2400, 2400]} />
+      <planeGeometry args={[span, span]} />
       <meshStandardMaterial map={ground} color="#68b44a" roughness={0.92} envMapIntensity={0.2} />
     </mesh>
   );
@@ -869,6 +870,7 @@ function SceneContent({
   const friendN = defend ? defendShownFriends(defend, soldiers) : soldiers;
   const warsScale = wars ? warsView(soldiers) : 1;
   const orduFog = ordu ? orduHaze(soldiers) : null;
+  const orduField = ordu ? orduForm(soldiers) : null;
   const field = isVs(vs);
   const climb = isVs2(vs);
   const chase = Boolean(new5 || new7);
@@ -902,10 +904,11 @@ function SceneContent({
   return (
     <>
       <color attach="background" args={[dragon ? "#7f97ad" : film ? "#9eb4c8" : maze ? "#9eb0c4" : slaughter ? "#8f9aa0" : "#7eb6ee"]} />
-      <fog attach="fog" args={wars ? ["#c8c4ba", 180 * warsScale, 780 * warsScale] : ordu ? ["#3e2918", orduFog?.near ?? 36, orduFog?.far ?? 240] : dragon ? ["#c5d4e2", 70, 420] : film ? ["#d5e4f2", 80, 460] : giant ? ["#d5e4f2", 90, 520] : maze ? ["#c6d0da", 340, 720] : slaughter ? ["#c4b89a", 240, 980] : defend ? (isDefend3(defend) ? ["#9ec8ee", 1100, 3200] : sortie ? ["#9ec8ee", 600, 2200] : ["#9ec8ee", 1400, 4200]) : field ? ["#9ec8ee", 140, 720] : ["#9ec8ee", 380, 1500]} />
+      <fog attach="fog" args={wars ? ["#c8c4ba", 180 * warsScale, 780 * warsScale] : ordu ? ["#d5e4f2", orduFog?.near ?? 78, orduFog?.far ?? 420] : dragon ? ["#c5d4e2", 70, 420] : film ? ["#d5e4f2", 80, 460] : giant ? ["#d5e4f2", 90, 520] : maze ? ["#c6d0da", 340, 720] : slaughter ? ["#c4b89a", 240, 980] : defend ? (isDefend3(defend) ? ["#9ec8ee", 1100, 3200] : sortie ? ["#9ec8ee", 600, 2200] : ["#9ec8ee", 1400, 4200]) : field ? ["#9ec8ee", 140, 720] : ["#9ec8ee", 380, 1500]} />
       {!maze && <SkyDome cheap={Boolean(defend) && !isDefend3(defend)} />}
       {!maze && <SteelSky />}
       {!maze && <DayLights cinematic={cinematic} slim={Boolean(defend) && !isDefend3(defend)} warm={slaughter || Boolean(dragon)} />}
+      {orduField && <GrassField span={Math.max(2400, orduField.width * 8 + orduField.depth * 8)} />}
       {!wars && !ordu && (grass ? <GrassField /> : film || dragon || giant ? <New1Terrain /> : maze ? <Maze soldiers={soldiers} /> : cross ? <New6Cross /> : chase ? <New5Bridge /> : new4 ? <New4Peak /> : slaughter || isDefend4(defend) ? <New1Terrain /> : <Terrain road={!defend && !field} cheap={Boolean(defend)} />)}
       {!wars && !ordu && !defend && !field && !slaughter && !maze && !film && !dragon && !giant && <Castle level={level} pressure={pressure} gateClosed={Boolean(countdown) || split || climb || Boolean(xxx)} wallFight={climb} />}
       {sortie && (

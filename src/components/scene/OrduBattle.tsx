@@ -1,12 +1,14 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
+import { Hud, OrthographicCamera } from "@react-three/drei";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import * as THREE from "three";
+import { formatCount } from "../../game";
 import { buildKnightSoldier } from "../../knightSoldier";
 import { buildNameAtlas, type NameAtlas, type NameCell } from "../../nameAtlas";
 import { REEL_HOLD } from "../../recordCanvas";
-import { makeOrduLayout, orduCam, orduFar, orduKnight, orduRoman, type OrduLayout } from "../../orduReel";
+import { makeOrduLayout, orduCam, orduFar, orduForm, orduKnight, orduRoman, type OrduLayout } from "../../orduReel";
 
 const dummy = new THREE.Object3D();
 const lookDir = new THREE.Vector3();
@@ -155,124 +157,45 @@ export function OrduCam({ soldiers }: { soldiers: number }) {
   return null;
 }
 
-const SOIL_PERIOD = 64;
-
-function soilHash(ix: number, iy: number) {
-  const x = ((ix % SOIL_PERIOD) + SOIL_PERIOD) % SOIL_PERIOD;
-  const y = ((iy % SOIL_PERIOD) + SOIL_PERIOD) % SOIL_PERIOD;
-  let n = (x * 374761393 + y * 668265263) | 0;
-  n = Math.imul(n ^ (n >>> 13), 1274126177);
-  return ((n ^ (n >>> 16)) >>> 0) / 4294967295;
-}
-
-function soilNoise(x: number, y: number) {
-  const x0 = Math.floor(x);
-  const y0 = Math.floor(y);
-  const fx = x - x0;
-  const fy = y - y0;
-  const sx = fx * fx * (3 - 2 * fx);
-  const sy = fy * fy * (3 - 2 * fy);
-  const a = soilHash(x0, y0);
-  const b = soilHash(x0 + 1, y0);
-  const c = soilHash(x0, y0 + 1);
-  const d = soilHash(x0 + 1, y0 + 1);
-  return a * (1 - sx) * (1 - sy) + b * sx * (1 - sy) + c * (1 - sx) * sy + d * sx * sy;
-}
-
-function soilFbm(x: number, y: number) {
-  let value = 0;
-  let amp = 0.52;
-  let freq = 1;
-  for (let i = 0; i < 4; i++) {
-    value += amp * soilNoise(x * freq, y * freq);
-    freq *= 2;
-    amp *= 0.5;
-  }
-  return value;
-}
-
-function soilStep(edge0: number, edge1: number, x: number) {
-  const t = Math.max(0, Math.min(1, (x - edge0) / (edge1 - edge0)));
-  return t * t * (3 - 2 * t);
-}
-
-function buildOrduSoil() {
-  const size = 768;
-  const colorCanvas = document.createElement("canvas");
-  colorCanvas.width = size;
-  colorCanvas.height = size;
-  const bumpCanvas = document.createElement("canvas");
-  bumpCanvas.width = size;
-  bumpCanvas.height = size;
-  const colorCtx = colorCanvas.getContext("2d");
-  const bumpCtx = bumpCanvas.getContext("2d");
-  if (!colorCtx || !bumpCtx) return null;
-  const color = colorCtx.createImageData(size, size);
-  const bump = bumpCtx.createImageData(size, size);
-  for (let y = 0; y < size; y++) {
-    for (let x = 0; x < size; x++) {
-      const u = (x / size) * SOIL_PERIOD;
-      const v = (y / size) * SOIL_PERIOD;
-      const broad = soilFbm(u * 0.85, v * 0.85);
-      const mid = soilFbm(u * 2.3 + 5, v * 2.3 + 2);
-      const grit = soilNoise(u * 22, v * 22);
-      const pebbleN = soilNoise(u * 9.5 + 14, v * 9.5 + 6);
-      const pebble = pebbleN > 0.74 ? (pebbleN - 0.74) / 0.26 : 0;
-      const damp = soilStep(0.58, 0.88, soilFbm(u * 1.25 + 8, v * 1.25));
-      const dust = soilStep(0.66, 0.9, soilFbm(u * 1.6 + 3, v * 1.15 + 11));
-      let r = 58 + broad * 28 + mid * 11 + (grit - 0.5) * 10;
-      let g = 32 + broad * 16 + mid * 6 + (grit - 0.5) * 6;
-      let b = 14 + broad * 8 + mid * 3 + (grit - 0.5) * 3;
-      r = r * (1 - damp * 0.34) + dust * 16;
-      g = g * (1 - damp * 0.26) + dust * 10;
-      b = b * (1 - damp * 0.14) + dust * 4;
-      r = r * (1 - pebble * 0.85) + 96 * pebble;
-      g = g * (1 - pebble * 0.85) + 84 * pebble;
-      b = b * (1 - pebble * 0.85) + 68 * pebble;
-      const i = (y * size + x) * 4;
-      color.data[i] = Math.max(0, Math.min(255, r));
-      color.data[i + 1] = Math.max(0, Math.min(255, g));
-      color.data[i + 2] = Math.max(0, Math.min(255, b));
-      color.data[i + 3] = 255;
-      const height = Math.max(0, Math.min(255, (broad * 0.42 + mid * 0.28 + grit * 0.12 + pebble * 0.7) * 255));
-      bump.data[i] = height;
-      bump.data[i + 1] = height;
-      bump.data[i + 2] = height;
-      bump.data[i + 3] = 255;
+function OrduScore({ soldiers }: { soldiers: number }) {
+  const size = useThree((s) => s.size);
+  const form = orduForm(soldiers);
+  const tex = useMemo(() => {
+    const canvas = document.createElement("canvas");
+    canvas.width = 1080;
+    canvas.height = 180;
+    const ctx = canvas.getContext("2d");
+    const map = new THREE.CanvasTexture(canvas);
+    map.colorSpace = THREE.SRGBColorSpace;
+    if (!ctx) return map;
+    const text = `${formatCount(form.foes)} düşman vs ${formatCount(form.friends)} takipçi`;
+    let font = 78;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.font = `900 ${font}px Inter, sans-serif`;
+    while (font > 46 && ctx.measureText(text).width > 1000) {
+      font -= 2;
+      ctx.font = `900 ${font}px Inter, sans-serif`;
     }
-  }
-  colorCtx.putImageData(color, 0, 0);
-  bumpCtx.putImageData(bump, 0, 0);
-  const map = new THREE.CanvasTexture(colorCanvas);
-  const bumpMap = new THREE.CanvasTexture(bumpCanvas);
-  for (const tex of [map, bumpMap]) {
-    tex.wrapS = THREE.RepeatWrapping;
-    tex.wrapT = THREE.RepeatWrapping;
-    tex.anisotropy = 8;
-  }
-  map.colorSpace = THREE.SRGBColorSpace;
-  bumpMap.colorSpace = THREE.LinearSRGBColorSpace;
-  return { map, bumpMap };
-}
-
-function OrduGround({ layout }: { layout: OrduLayout }) {
-  const size = Math.max(420, layout.width * 6 + layout.depth * 8 + 80);
-  const soil = useMemo(() => buildOrduSoil(), []);
-  useLayoutEffect(() => {
-    if (!soil) return;
-    const repeat = size / 12;
-    soil.map.repeat.set(repeat, repeat);
-    soil.bumpMap.repeat.set(repeat, repeat);
-  }, [soil, size]);
-  useEffect(() => () => {
-    soil?.map.dispose();
-    soil?.bumpMap.dispose();
-  }, [soil]);
+    ctx.lineWidth = 14;
+    ctx.lineJoin = "round";
+    ctx.strokeStyle = "rgba(0,0,0,0.88)";
+    ctx.fillStyle = "#ffe14a";
+    ctx.strokeText(text, 540, 90);
+    ctx.fillText(text, 540, 90);
+    return map;
+  }, [form.foes, form.friends]);
+  useEffect(() => () => tex.dispose(), [tex]);
+  const w = size.width * 0.94;
+  const h = w * (180 / 1080);
   return (
-    <mesh rotation-x={-Math.PI / 2} position={[0, 0, 0]} receiveShadow>
-      <planeGeometry args={[size, size]} />
-      <meshStandardMaterial map={soil?.map} bumpMap={soil?.bumpMap} bumpScale={1.8} color="#c4aa96" roughness={0.96} metalness={0} />
-    </mesh>
+    <Hud renderPriority={3}>
+      <OrthographicCamera makeDefault position={[0, 0, 10]} />
+      <mesh position={[0, size.height / 2 - h * 0.5 - 36, 4]} renderOrder={30}>
+        <planeGeometry args={[w, h]} />
+        <meshBasicMaterial map={tex} transparent depthTest={false} toneMapped={false} />
+      </mesh>
+    </Hud>
   );
 }
 
@@ -439,7 +362,7 @@ export function OrduBattle({ names, soldiers }: { names: string[]; soldiers: num
   const layout = useMemo(() => makeOrduLayout(soldiers), [soldiers]);
   return (
     <group>
-      <OrduGround layout={layout} />
+      <OrduScore soldiers={soldiers} />
       <OrduFighters layout={layout} />
       <OrduNames names={names} layout={layout} />
     </group>
