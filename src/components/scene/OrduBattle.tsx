@@ -155,12 +155,123 @@ export function OrduCam({ soldiers }: { soldiers: number }) {
   return null;
 }
 
+const SOIL_PERIOD = 64;
+
+function soilHash(ix: number, iy: number) {
+  const x = ((ix % SOIL_PERIOD) + SOIL_PERIOD) % SOIL_PERIOD;
+  const y = ((iy % SOIL_PERIOD) + SOIL_PERIOD) % SOIL_PERIOD;
+  let n = (x * 374761393 + y * 668265263) | 0;
+  n = Math.imul(n ^ (n >>> 13), 1274126177);
+  return ((n ^ (n >>> 16)) >>> 0) / 4294967295;
+}
+
+function soilNoise(x: number, y: number) {
+  const x0 = Math.floor(x);
+  const y0 = Math.floor(y);
+  const fx = x - x0;
+  const fy = y - y0;
+  const sx = fx * fx * (3 - 2 * fx);
+  const sy = fy * fy * (3 - 2 * fy);
+  const a = soilHash(x0, y0);
+  const b = soilHash(x0 + 1, y0);
+  const c = soilHash(x0, y0 + 1);
+  const d = soilHash(x0 + 1, y0 + 1);
+  return a * (1 - sx) * (1 - sy) + b * sx * (1 - sy) + c * (1 - sx) * sy + d * sx * sy;
+}
+
+function soilFbm(x: number, y: number) {
+  let value = 0;
+  let amp = 0.52;
+  let freq = 1;
+  for (let i = 0; i < 4; i++) {
+    value += amp * soilNoise(x * freq, y * freq);
+    freq *= 2;
+    amp *= 0.5;
+  }
+  return value;
+}
+
+function soilStep(edge0: number, edge1: number, x: number) {
+  const t = Math.max(0, Math.min(1, (x - edge0) / (edge1 - edge0)));
+  return t * t * (3 - 2 * t);
+}
+
+function buildOrduSoil() {
+  const size = 768;
+  const colorCanvas = document.createElement("canvas");
+  colorCanvas.width = size;
+  colorCanvas.height = size;
+  const bumpCanvas = document.createElement("canvas");
+  bumpCanvas.width = size;
+  bumpCanvas.height = size;
+  const colorCtx = colorCanvas.getContext("2d");
+  const bumpCtx = bumpCanvas.getContext("2d");
+  if (!colorCtx || !bumpCtx) return null;
+  const color = colorCtx.createImageData(size, size);
+  const bump = bumpCtx.createImageData(size, size);
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      const u = (x / size) * SOIL_PERIOD;
+      const v = (y / size) * SOIL_PERIOD;
+      const broad = soilFbm(u * 0.85, v * 0.85);
+      const mid = soilFbm(u * 2.3 + 5, v * 2.3 + 2);
+      const grit = soilNoise(u * 22, v * 22);
+      const pebbleN = soilNoise(u * 9.5 + 14, v * 9.5 + 6);
+      const pebble = pebbleN > 0.74 ? (pebbleN - 0.74) / 0.26 : 0;
+      const damp = soilStep(0.58, 0.88, soilFbm(u * 1.25 + 8, v * 1.25));
+      const dust = soilStep(0.66, 0.9, soilFbm(u * 1.6 + 3, v * 1.15 + 11));
+      let r = 86 + broad * 42 + mid * 16 + (grit - 0.5) * 14;
+      let g = 48 + broad * 24 + mid * 9 + (grit - 0.5) * 8;
+      let b = 22 + broad * 12 + mid * 4 + (grit - 0.5) * 5;
+      r = r * (1 - damp * 0.34) + dust * 26;
+      g = g * (1 - damp * 0.26) + dust * 16;
+      b = b * (1 - damp * 0.14) + dust * 7;
+      r = r * (1 - pebble * 0.85) + 132 * pebble;
+      g = g * (1 - pebble * 0.85) + 116 * pebble;
+      b = b * (1 - pebble * 0.85) + 96 * pebble;
+      const i = (y * size + x) * 4;
+      color.data[i] = Math.max(0, Math.min(255, r));
+      color.data[i + 1] = Math.max(0, Math.min(255, g));
+      color.data[i + 2] = Math.max(0, Math.min(255, b));
+      color.data[i + 3] = 255;
+      const height = Math.max(0, Math.min(255, (broad * 0.42 + mid * 0.28 + grit * 0.12 + pebble * 0.7) * 255));
+      bump.data[i] = height;
+      bump.data[i + 1] = height;
+      bump.data[i + 2] = height;
+      bump.data[i + 3] = 255;
+    }
+  }
+  colorCtx.putImageData(color, 0, 0);
+  bumpCtx.putImageData(bump, 0, 0);
+  const map = new THREE.CanvasTexture(colorCanvas);
+  const bumpMap = new THREE.CanvasTexture(bumpCanvas);
+  for (const tex of [map, bumpMap]) {
+    tex.wrapS = THREE.RepeatWrapping;
+    tex.wrapT = THREE.RepeatWrapping;
+    tex.anisotropy = 8;
+  }
+  map.colorSpace = THREE.SRGBColorSpace;
+  bumpMap.colorSpace = THREE.LinearSRGBColorSpace;
+  return { map, bumpMap };
+}
+
 function OrduGround({ layout }: { layout: OrduLayout }) {
   const size = Math.max(420, layout.width * 6 + layout.depth * 8 + 80);
+  const soil = useMemo(() => buildOrduSoil(), []);
+  useLayoutEffect(() => {
+    if (!soil) return;
+    const repeat = size / 12;
+    soil.map.repeat.set(repeat, repeat);
+    soil.bumpMap.repeat.set(repeat, repeat);
+  }, [soil, size]);
+  useEffect(() => () => {
+    soil?.map.dispose();
+    soil?.bumpMap.dispose();
+  }, [soil]);
   return (
     <mesh rotation-x={-Math.PI / 2} position={[0, 0, 0]} receiveShadow>
       <planeGeometry args={[size, size]} />
-      <meshStandardMaterial color="#6d4428" roughness={1} metalness={0} />
+      <meshStandardMaterial map={soil?.map} bumpMap={soil?.bumpMap} bumpScale={1.8} color="#ffffff" roughness={0.94} metalness={0} />
     </mesh>
   );
 }
@@ -293,7 +404,7 @@ function OrduNames({ names, layout }: { names: string[]; layout: OrduLayout }) {
       const ahead = dx * lookDir.x + (2.45 - camera.position.y) * lookDir.y + dz * lookDir.z;
       const dist = Math.hypot(dx, camera.position.y - 2.45, dz);
       const hide = ahead < 2.4;
-      const want = Math.min(layout.pitchX * 0.86, dist * tanH * 0.46);
+      const want = Math.min(layout.pitchX * 0.86, dist * tanH * 0.46) * 1.25;
       const size = want / 2.9;
       dummy.position.set(x, 2.42, z);
       dummy.scale.set(hide ? 0 : cell.sx * size, hide ? 0 : cell.sy * size, 1);

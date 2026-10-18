@@ -16,6 +16,11 @@ function easeOut(u: number) {
   return 1 - (1 - x) * (1 - x);
 }
 
+function easeInOut(u: number) {
+  const x = Math.max(0, Math.min(1, u));
+  return x * x * (3 - 2 * x);
+}
+
 export type OrduForm = {
   friends: number;
   foes: number;
@@ -252,10 +257,7 @@ function fitCam(nearHalf: number, farHalf: number, zNear: number, zFar: number, 
   };
 }
 
-export function orduCam(t: number, friends = 1): Cam {
-  const form = orduForm(Math.max(1, friends));
-  const drift = Math.sin(t * 0.35) * 0.35;
-  const pull = t <= 3 ? 0 : easeOut((t - 3) / 1.7);
+function fitPull(form: OrduForm, pull: number): Cam {
   const front = form.gap / 2;
   const zNear = -(front + form.friendDepth * pull);
   const zFar = front + form.foeDepth * pull;
@@ -264,7 +266,59 @@ export function orduCam(t: number, friends = 1): Cam {
   const xClose = Math.min(Math.max(foeHalf, form.pitchX), form.pitchX * 1.7);
   const nearHalf = Math.max(form.pitchX * 0.8, xClose + (Math.max(friendHalf, xClose) - xClose) * pull);
   const farHalf = Math.max(form.pitchX * 0.8, xClose + (Math.max(foeHalf, xClose) - xClose) * pull);
-  const cam = fitCam(nearHalf, farHalf, zNear, zFar, front, 48 - pull * 3);
+  return fitCam(nearHalf, farHalf, zNear, zFar, front, 48 - pull * 3);
+}
+
+function mixCam(a: Cam, b: Cam, u: number): Cam {
+  return {
+    x: a.x + (b.x - a.x) * u,
+    y: a.y + (b.y - a.y) * u,
+    z: a.z + (b.z - a.z) * u,
+    lx: a.lx + (b.lx - a.lx) * u,
+    ly: a.ly + (b.ly - a.ly) * u,
+    lz: a.lz + (b.lz - a.lz) * u,
+    fov: a.fov + (b.fov - a.fov) * u,
+  };
+}
+
+const PULL_END = 4.7;
+const RETURN_END = 7.3;
+const endCams = new Map<number, { close: Cam; wide: Cam; halfway: number }>();
+
+function lookDist(cam: Cam) {
+  return Math.hypot(cam.x - cam.lx, cam.y - cam.ly, cam.z - cam.lz);
+}
+
+function halfwayMix(close: Cam, wide: Cam) {
+  const goal = lookDist(wide) * 0.5;
+  if (lookDist(close) >= goal) return 1;
+  let lo = 0;
+  let hi = 1;
+  for (let i = 0; i < 18; i++) {
+    const mid = (lo + hi) / 2;
+    if (lookDist(mixCam(wide, close, mid)) > goal) lo = mid;
+    else hi = mid;
+  }
+  return (lo + hi) / 2;
+}
+
+export function orduCam(t: number, friends = 1): Cam {
+  const form = orduForm(Math.max(1, friends));
+  let ends = endCams.get(form.friends);
+  if (!ends) {
+    const close = fitPull(form, 0);
+    const wide = fitPull(form, 1);
+    ends = { close, wide, halfway: halfwayMix(close, wide) };
+    endCams.set(form.friends, ends);
+  }
+  let cam: Cam;
+  if (t <= 3) cam = { ...ends.close };
+  else if (t <= PULL_END) cam = fitPull(form, easeOut((t - 3) / (PULL_END - 3)));
+  else {
+    const back = easeInOut((t - PULL_END) / (RETURN_END - PULL_END));
+    cam = mixCam(ends.wide, ends.close, back * ends.halfway);
+  }
+  const drift = Math.sin(t * 0.35) * 0.35;
   cam.x += drift;
   cam.lx += drift * 0.15;
   return cam;
@@ -277,6 +331,6 @@ export function orduFar(friends: number) {
 
 export function orduHaze(friends: number) {
   const form = orduForm(friends);
-  const far = Math.max(240, form.width * 2.4 + form.depth * 4 + 120);
-  return { near: 36, far };
+  const far = Math.max(420, form.width * 2.4 + form.depth * 4 + 160);
+  return { near: 78, far };
 }
