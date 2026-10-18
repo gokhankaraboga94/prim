@@ -484,7 +484,7 @@ function OkNames({ names }: { names: string[] }) {
       const dz = z - camera.position.z;
       const ahead = dx * lookDir.x + (2.4 - camera.position.y) * lookDir.y + dz * lookDir.z;
       const dist = Math.hypot(dx, camera.position.y - 2.4, dz);
-      const want = Math.min(1.68 * 1.05, dist * tanH * 0.5) * 1.55;
+      const want = Math.min(1.68 * 1.05, dist * tanH * 0.5) * 1.55 * 0.85;
       const size = want / 2.9;
       const show = !hide && ahead > 2.4;
       dummy.position.set(x, 2.35, z);

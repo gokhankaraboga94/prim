@@ -12,7 +12,7 @@ export const OK_DECK = { cx: 0, cz: 58, w: 40, d: 240 };
 
 const START = 10;
 const COLS = 10;
-const PX = 1.68;
+const PX = 1.68 * 1.25;
 const PZ = 1.52;
 const FRONT_Z = -6.4;
 const SPAWN_Z = 78;
