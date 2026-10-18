@@ -954,7 +954,7 @@ export function AdminPage() {
             <p className="muted">İki ordu karşılıklı, düşman iki kat. Düşman roman modeli, bizim taraf bütün takipçiler. Zemin kale kuşatmasındaki çim. Üstte düşman sayısı ve takipçi sayısı. Kamera ilk 3 saniye yakında, en uzağa çekilir, sonra yarı mesafeden de yakın bir noktaya geri gelir. İsimler sarı ve net. Kanca yazısını sen eklersin. Şövalyeler Vaporworks Knight (CC-BY).</p>
           )}
           {isOk(reelShot) && (
-            <p className="muted">Havada krem taş. 10 okçuyla başlar, karşıdan koşan düşman ölür. Dalga büyüdükçe ekranda +50, +100, +20 takipçi yazar ve o kadar asker eklenir. Bizden de asker düşer, sayı yine artar. Şövalyeler Vaporworks Knight (CC-BY).</p>
+            <p className="muted">Havada krem taş, düşmanın geldiği yön uzun. 10 okçuyla başlar, isimler sarı. Dalga büyüdükçe daha kalabalık düşman koşar; ekranda +50, +100, +20 takipçi yazar ve o kadar asker eklenir. Ölenler ön sıradan. Şövalyeler Vaporworks Knight (CC-BY).</p>
           )}
           {isSnake(reelShot) && (
             <p className="muted">DEV5 ile aynı kadro ve kamera. Yeşil-kahverengi yılan. Bekleyenler dairede. Çoğunluk başa, birkaç kişi gövdeye ve kuyruğa gider. Yılan hem onlara hem dairedeki bekleyen ve okçulara saldırır.</p>

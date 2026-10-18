@@ -1,6 +1,6 @@
 export const OK_ID = "ok" as const;
 export type OkId = typeof OK_ID;
-export const OK_SECONDS = 18;
+export const OK_SECONDS = 32;
 export const OK_MODE = { id: OK_ID, label: "ok" } as const;
 
 export function isOk(id: string | null | undefined): id is OkId {
@@ -8,53 +8,47 @@ export function isOk(id: string | null | undefined): id is OkId {
 }
 
 export const OK_FRIENDS = 230;
-export const OK_FOES = 216;
-export const OK_DECK = { cx: 0, cz: -14, w: 26, d: 70 };
+export const OK_DECK = { cx: 0, cz: 18, w: 40, d: 160 };
 
 const START = 10;
 const COLS = 10;
 const PX = 1.68;
 const PZ = 1.52;
 const FRONT_Z = -6.4;
-const SPAWN_Z = 16.2;
+const SPAWN_Z = 52;
+const ROW_GAP = 1.72;
 
 const JOINS = [
-  { at: 4.7, add: 50, label: "+50 takipçi", until: 6.2 },
-  { at: 8.7, add: 100, label: "+100 takipçi", until: 10.2 },
-  { at: 12.5, add: 20, label: "+20 takipçi", until: 13.9 },
-  { at: 15.4, add: 50, label: "+50 takipçi", until: 16.9 },
+  { at: 5.8, add: 50, label: "+50 takipçi", until: 7.5 },
+  { at: 12.4, add: 100, label: "+100 takipçi", until: 14.1 },
+  { at: 20.2, add: 20, label: "+20 takipçi", until: 21.9 },
+  { at: 26.2, add: 50, label: "+50 takipçi", until: 27.9 },
 ] as const;
 
 const WAVES = [
-  { at: 1.05, n: 16, speed: 6.6, cols: 8 },
-  { at: 5.2, n: 36, speed: 7.0, cols: 9 },
-  { at: 9.2, n: 64, speed: 7.3, cols: 10 },
-  { at: 13.0, n: 100, speed: 7.7, cols: 12 },
+  { at: 1.1, n: 24, speed: 6.6, cols: 8 },
+  { at: 9.0, n: 64, speed: 7.0, cols: 10 },
+  { at: 16.6, n: 128, speed: 7.4, cols: 12 },
+  { at: 23.6, n: 208, speed: 8.0, cols: 16 },
 ] as const;
 
+export const OK_FOES = WAVES.reduce((sum, wave) => sum + wave.n, 0);
+
 const FALLS: [number, number][] = [
-  [1, 6.55],
-  [4, 6.85],
-  [8, 7.15],
-  [15, 7.5],
-  [27, 7.85],
-  [6, 10.35],
-  [13, 10.6],
-  [22, 10.85],
-  [36, 11.1],
-  [48, 11.35],
-  [62, 11.6],
-  [78, 11.9],
-  [96, 12.15],
-  [3, 14.15],
-  [19, 14.4],
-  [33, 14.65],
-  [51, 14.9],
-  [69, 15.2],
-  [88, 15.5],
-  [112, 15.85],
-  [134, 16.15],
-  [156, 16.45],
+  [0, 8.6],
+  [4, 8.95],
+  [8, 9.3],
+  [2, 16.2],
+  [6, 16.55],
+  [11, 16.9],
+  [15, 17.25],
+  [1, 23.4],
+  [5, 23.75],
+  [12, 24.1],
+  [16, 24.45],
+  [3, 29.9],
+  [7, 30.25],
+  [13, 30.6],
 ];
 
 const FALL_AT = new Map(FALLS);
@@ -179,16 +173,18 @@ export function okFoe(i: number, t: number): OkPose | null {
   const { wave, local } = found;
   const col = local % wave.cols;
   const row = Math.floor(local / wave.cols);
-  const delay = (col % wave.cols) * 0.05 + row * 0.14;
+  const delay = (col % 4) * 0.03 + row * 0.045;
   const runT = t - wave.at - delay;
   if (runT < 0) return null;
-  const x = (col - (wave.cols - 1) / 2) * 1.55 + (row % 2) * 0.28;
-  const killZ = 1.15 + (row % 5) * 1.05 + (col % 3) * 0.35;
-  const killDist = SPAWN_Z - killZ;
+  const pitchX = wave.cols >= 14 ? 1.55 : 1.68;
+  const x = (col - (wave.cols - 1) / 2) * pitchX + (row % 2) * 0.22;
+  const z0 = SPAWN_Z + row * ROW_GAP;
+  const killZ = 1.5 + (row % 4) * 0.9 + (col % 3) * 0.28;
+  const killDist = z0 - killZ;
   const dist = runT * wave.speed;
   const dead = dist >= killDist;
   const fall = dead ? Math.min(1, (dist - killDist) / (wave.speed * 0.62)) : 0;
-  const z = dead ? killZ : SPAWN_Z - dist;
+  const z = dead ? killZ : z0 - dist;
   return {
     x,
     y: (dead ? Math.sin(fall * Math.PI) * 0.1 : Math.abs(Math.sin(runT * 12 + local)) * 0.07),
@@ -200,7 +196,27 @@ export function okFoe(i: number, t: number): OkPose | null {
   };
 }
 
-function fillArrow(i: number, t: number, out: OkArrow) {
+function approachZ(t: number) {
+  let front = 8;
+  let seen = false;
+  for (const wave of WAVES) {
+    if (t < wave.at) continue;
+    const rows = Math.ceil(wave.n / wave.cols);
+    for (let row = 0; row < rows; row++) {
+      const z0 = SPAWN_Z + row * ROW_GAP;
+      const runT = t - wave.at - row * 0.045;
+      if (runT < 0) continue;
+      const z = z0 - runT * wave.speed;
+      if (z > 3.2) {
+        front = seen ? Math.min(front, z) : z;
+        seen = true;
+      }
+    }
+  }
+  return Math.max(5, Math.min(34, front));
+}
+
+function fillArrow(i: number, t: number, aim: number, out: OkArrow) {
   if (fallAmount(i, t) > 0.02 || t < okBorn(i)) return false;
   const ph = shotPhase(i, t);
   if (ph < 0.42 || ph > 0.98) return false;
@@ -209,15 +225,15 @@ function fillArrow(i: number, t: number, out: OkArrow) {
   const x0 = spot.x;
   const y0 = 1.35 + (1 - Math.min(1, (t - okBorn(i)) / 0.34)) * -0.4;
   const z0 = spot.z + 0.35;
-  const x1 = spot.x * 0.28 + Math.sin(i * 1.7) * 1.1;
-  const y1 = 1.2;
-  const z1 = 2.3 + (i % 5) * 0.85;
-  const arc = Math.sin(u * Math.PI) * 1.45;
+  const x1 = spot.x * 0.22 + Math.sin(i * 1.7) * 1.4;
+  const y1 = 1.25;
+  const z1 = aim + (i % 5) * 0.7;
+  const arc = Math.sin(u * Math.PI) * 2.1;
   const u2 = Math.min(1, u + 0.05);
   const x = x0 + (x1 - x0) * u;
   const y = y0 + (y1 - y0) * u + arc;
   const z = z0 + (z1 - z0) * u;
-  const arc2 = Math.sin(u2 * Math.PI) * 1.45;
+  const arc2 = Math.sin(u2 * Math.PI) * 2.1;
   out.x = x;
   out.y = y;
   out.z = z;
@@ -229,23 +245,24 @@ function fillArrow(i: number, t: number, out: OkArrow) {
 
 export function okArrows(t: number) {
   let n = 0;
+  const aim = approachZ(t);
   const joined = okJoined(t);
   for (let i = 0; i < joined && n < ARROWS.length; i++) {
-    if (fillArrow(i, t, ARROWS[n])) n++;
+    if (fillArrow(i, t, aim, ARROWS[n])) n++;
   }
   return { list: ARROWS, n };
 }
 
 const GROWTH = [
   { t: 0, u: 0 },
-  { t: 4.7, u: 0 },
-  { t: 6.3, u: 0.34 },
-  { t: 8.7, u: 0.34 },
-  { t: 10.5, u: 0.66 },
-  { t: 12.5, u: 0.66 },
-  { t: 14.0, u: 0.8 },
-  { t: 15.4, u: 0.8 },
-  { t: 17.2, u: 1 },
+  { t: 5.8, u: 0 },
+  { t: 7.8, u: 0.3 },
+  { t: 12.4, u: 0.3 },
+  { t: 14.6, u: 0.58 },
+  { t: 20.2, u: 0.58 },
+  { t: 22.0, u: 0.74 },
+  { t: 26.2, u: 0.74 },
+  { t: 28.4, u: 1 },
 ];
 
 function growth(t: number) {
@@ -268,12 +285,12 @@ export function okCam(t: number) {
   const back = FRONT_Z - (rows - 1) * PZ;
   return {
     x: 0,
-    y: 15 + u * 9,
-    z: Math.min(-38 - u * 26, back - 18),
+    y: 17 + u * 12,
+    z: Math.min(-34 - u * 30, back - 16),
     lx: 0,
-    ly: 1.2,
-    lz: 8 - u * 6,
-    fov: 62,
+    ly: 1.15,
+    lz: 26 - u * 8,
+    fov: 60,
   };
 }
 

@@ -5,6 +5,7 @@ import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import * as THREE from "three";
 import { buildKnightSoldier } from "../../knightSoldier";
+import { buildNameAtlas, type NameAtlas, type NameCell } from "../../nameAtlas";
 import { REEL_HOLD } from "../../recordCanvas";
 import { OK_DECK, OK_FOES, OK_FRIENDS, okArrows, okBanner, okCam, okFoe, okFriend } from "../../okReel";
 
@@ -12,6 +13,7 @@ const dummy = new THREE.Object3D();
 const up = new THREE.Vector3(0, 1, 0);
 const dir = new THREE.Vector3();
 const spin = new THREE.Quaternion();
+const lookDir = new THREE.Vector3();
 
 function romanColor(src: THREE.Material) {
   const c = (src as THREE.MeshStandardMaterial).color;
@@ -149,7 +151,7 @@ function creamStone() {
   const tex = new THREE.CanvasTexture(canvas);
   tex.wrapS = THREE.RepeatWrapping;
   tex.wrapT = THREE.RepeatWrapping;
-  tex.repeat.set(5, 12);
+  tex.repeat.set(OK_DECK.w / 5.2, OK_DECK.d / 6.4);
   tex.colorSpace = THREE.SRGBColorSpace;
   tex.anisotropy = 8;
   return tex;
@@ -248,7 +250,7 @@ export function OkCam() {
     const shot = okCam(Math.max(0, clock.elapsedTime - REEL_HOLD));
     persp.fov = shot.fov;
     persp.near = 0.35;
-    persp.far = 520;
+    persp.far = 980;
     persp.updateProjectionMatrix();
     persp.position.set(shot.x, shot.y, shot.z);
     persp.up.set(0, 1, 0);
@@ -431,11 +433,86 @@ function OkFighters() {
   );
 }
 
-export function OkBattle() {
+function OkNames({ names }: { names: string[] }) {
+  const labels = useMemo(() => {
+    const out: { slot: number; text: string }[] = [];
+    const n = Math.min(names.length, OK_FRIENDS);
+    for (let i = 0; i < n; i++) {
+      const text = String(names[i] ?? "").trim().replace(/^@+/, "");
+      if (text) out.push({ slot: i, text });
+    }
+    return out;
+  }, [names]);
+  const atlas = useMemo<NameAtlas | null>(() => {
+    if (!labels.length) return null;
+    const items = labels.map((n) => ({ text: n.text, commander: false, plain: true, fill: "#ffe14a" }));
+    try {
+      return buildNameAtlas(items, true, true);
+    } catch {
+      return buildNameAtlas(items, true);
+    }
+  }, [labels]);
+  const refs = useRef<(THREE.InstancedMesh | null)[]>([]);
+  const { camera } = useThree();
+  useEffect(() => () => atlas?.dispose(), [atlas]);
+  useFrame(({ clock }) => {
+    if (!atlas) return;
+    const persp = camera as THREE.PerspectiveCamera;
+    const fov = persp.isPerspectiveCamera ? persp.fov : 60;
+    const tanH = Math.tan(THREE.MathUtils.degToRad(fov / 2)) * (1080 / 1920);
+    camera.getWorldDirection(lookDir);
+    dummy.quaternion.copy(camera.quaternion);
+    const t = Math.max(0, clock.elapsedTime - REEL_HOLD);
+    for (let k = 0; k < labels.length; k++) {
+      const cell: NameCell | undefined = atlas.cells[k];
+      const mesh = cell ? refs.current[cell.sheet] : null;
+      if (!cell || !mesh) continue;
+      const pose = okFriend(labels[k].slot, t);
+      const hide = !pose || pose.scale < 0.7 || pose.pitch < -0.35;
+      const x = pose?.x ?? 0;
+      const z = pose?.z ?? 0;
+      const dx = x - camera.position.x;
+      const dz = z - camera.position.z;
+      const ahead = dx * lookDir.x + (2.4 - camera.position.y) * lookDir.y + dz * lookDir.z;
+      const dist = Math.hypot(dx, camera.position.y - 2.4, dz);
+      const want = Math.min(1.68 * 1.05, dist * tanH * 0.5) * 1.35;
+      const size = want / 2.9;
+      const show = !hide && ahead > 2.4;
+      dummy.position.set(x, 2.35, z);
+      dummy.scale.set(show ? cell.sx * size : 0, show ? cell.sy * size : 0, 1);
+      dummy.updateMatrix();
+      mesh.setMatrixAt(cell.local, dummy.matrix);
+    }
+    for (const mesh of refs.current) {
+      if (mesh) mesh.instanceMatrix.needsUpdate = true;
+    }
+  });
+  if (!atlas) return null;
+  return (
+    <group>
+      {atlas.sheets.map((sheet, s) =>
+        sheet.count > 0 ? (
+          <instancedMesh
+            key={s}
+            ref={(node) => {
+              refs.current[s] = node;
+            }}
+            args={[sheet.geometry, sheet.material, sheet.count]}
+            frustumCulled={false}
+            renderOrder={40}
+          />
+        ) : null
+      )}
+    </group>
+  );
+}
+
+export function OkBattle({ names }: { names: string[] }) {
   return (
     <group>
       <OkDeck />
       <OkFighters />
+      <OkNames names={names} />
       <OkBanner />
     </group>
   );
