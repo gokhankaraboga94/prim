@@ -1,6 +1,6 @@
 export const OK_ID = "ok" as const;
 export type OkId = typeof OK_ID;
-export const OK_SECONDS = 32;
+export const OK_SECONDS = 48;
 export const OK_MODE = { id: OK_ID, label: "ok" } as const;
 
 export function isOk(id: string | null | undefined): id is OkId {
@@ -29,7 +29,7 @@ const WAVES = [
   { at: 1.1, n: 50, speed: 9.24, cols: 10 },
   { at: 9.0, n: 112, speed: 9.8, cols: 14 },
   { at: 16.6, n: 224, speed: 10.36, cols: 16 },
-  { at: 23.6, n: 360, speed: 11.2, cols: 20 },
+  { at: 38, n: 360, speed: 11.2, cols: 20 },
 ] as const;
 
 export const OK_FOES = WAVES.reduce((sum, wave) => sum + wave.n, 0);
@@ -46,9 +46,9 @@ const FALLS: [number, number][] = [
   [5, 24.4],
   [12, 24.75],
   [16, 25.1],
-  [3, 30.45],
-  [7, 30.8],
-  [13, 31.15],
+  [3, 44.2],
+  [7, 44.55],
+  [13, 45.0],
 ];
 
 const FALL_AT = new Map(FALLS);
@@ -73,6 +73,38 @@ export type OkArrow = {
 };
 
 const ARROWS: OkArrow[] = Array.from({ length: 140 }, () => ({ x: 0, y: 0, z: 0, dx: 0, dy: 1, dz: 0 }));
+
+const GIANT_LIFE = 20;
+const GIANT_SPEED = 3.4;
+const GIANT_Z0 = 94;
+
+export type OkGiant = {
+  x: number;
+  y: number;
+  z: number;
+  yaw: number;
+  pitch: number;
+  hp: number;
+  fall: number;
+};
+
+export function okGiant(t: number): OkGiant | null {
+  const at = WAVES[2].at;
+  if (t < at) return null;
+  const age = t - at;
+  const hp = Math.max(0, 1 - Math.min(age, GIANT_LIFE) / GIANT_LIFE);
+  const fall = age <= GIANT_LIFE ? 0 : Math.min(1, (age - GIANT_LIFE) / 1.35);
+  const walked = Math.min(age, GIANT_LIFE) * GIANT_SPEED;
+  return {
+    x: 0,
+    y: fall > 0 ? Math.sin(fall * Math.PI) * 0.9 : Math.abs(Math.sin(age * 2.6)) * 0.16,
+    z: Math.max(8, GIANT_Z0 - walked),
+    yaw: Math.PI,
+    pitch: fall * 1.2,
+    hp,
+    fall,
+  };
+}
 
 function shotPhase(i: number, t: number) {
   return (t * 1.05 + (i % 2) * 0.5 + (i % 4) * 0.03) % 1;
@@ -225,9 +257,15 @@ function fillArrow(i: number, t: number, aim: number, out: OkArrow) {
   const x0 = spot.x;
   const y0 = 1.35 + (1 - Math.min(1, (t - okBorn(i)) / 0.34)) * -0.4;
   const z0 = spot.z + 0.35;
-  const x1 = spot.x * 0.22 + Math.sin(i * 1.7) * 1.4;
-  const y1 = 1.25;
-  const z1 = aim + (i % 5) * 0.7;
+  let x1 = spot.x * 0.22 + Math.sin(i * 1.7) * 1.4;
+  let y1 = 1.25;
+  let z1 = aim + (i % 5) * 0.7;
+  const boss = okGiant(t);
+  if (boss && boss.hp > 0.02 && i % 3 === 0) {
+    x1 = Math.sin(i) * 1.6;
+    y1 = 7.2;
+    z1 = boss.z - 0.8;
+  }
   const arc = Math.sin(u * Math.PI) * 2.1;
   const u2 = Math.min(1, u + 0.05);
   const x = x0 + (x1 - x0) * u;

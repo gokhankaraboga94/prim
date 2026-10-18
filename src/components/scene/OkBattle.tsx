@@ -7,7 +7,7 @@ import * as THREE from "three";
 import { buildKnightSoldier } from "../../knightSoldier";
 import { buildNameAtlas, type NameAtlas, type NameCell } from "../../nameAtlas";
 import { REEL_HOLD } from "../../recordCanvas";
-import { OK_DECK, OK_FOES, OK_FRIENDS, okArrows, okBanner, okCam, okFoe, okFriend } from "../../okReel";
+import { OK_DECK, OK_FOES, OK_FRIENDS, okArrows, okBanner, okCam, okFoe, okFriend, okGiant } from "../../okReel";
 
 const dummy = new THREE.Object3D();
 const up = new THREE.Vector3(0, 1, 0);
@@ -516,11 +516,160 @@ function OkNames({ names }: { names: string[] }) {
   );
 }
 
+const COLOSSUS_URL = "/models/colossus.glb";
+const COLOSSUS_HEIGHT = 15.6;
+const COLOSSUS_SPAN_Y = 2.711936;
+const COLOSSUS_MIN_Y = -1.520994;
+const COLOSSUS_CENTER_X = -0.291638;
+const COLOSSUS_CENTER_Z = -0.259902;
+
+function colossusSword() {
+  const group = new THREE.Group();
+  const steel = new THREE.MeshStandardMaterial({ color: "#d7dee6", metalness: 0.92, roughness: 0.22, side: THREE.DoubleSide });
+  const wrap = new THREE.MeshStandardMaterial({ color: "#3a3e46", metalness: 0.4, roughness: 0.5 });
+  const grip = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.045, 0.32, 6), wrap);
+  grip.rotation.x = Math.PI / 2;
+  const guard = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.07, 0.08), steel);
+  guard.position.z = 0.18;
+  const blade = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.028, 1.55), steel);
+  blade.position.z = 0.98;
+  const tip = new THREE.Mesh(new THREE.ConeGeometry(0.055, 0.26, 4), steel);
+  tip.rotation.x = Math.PI / 2;
+  tip.position.z = 1.86;
+  group.add(grip, guard, blade, tip);
+  group.position.set(-0.42, -0.64, 0.98);
+  group.rotation.x = 0.42;
+  return group;
+}
+
+function paintHp(canvas: HTMLCanvasElement, hp: number) {
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return;
+  const w = canvas.width;
+  const h = canvas.height;
+  ctx.clearRect(0, 0, w, h);
+  ctx.fillStyle = "rgba(18, 16, 16, 0.92)";
+  ctx.beginPath();
+  ctx.roundRect(8, 16, w - 16, h - 32, 18);
+  ctx.fill();
+  ctx.lineWidth = 8;
+  ctx.strokeStyle = "#ffe14a";
+  ctx.stroke();
+  ctx.font = "800 64px Arial, sans-serif";
+  ctx.textAlign = "left";
+  ctx.textBaseline = "middle";
+  ctx.fillStyle = "#fff4c4";
+  ctx.fillText("HP", 36, h / 2 + 2);
+  const barX = 168;
+  const barW = w - barX - 36;
+  ctx.fillStyle = "rgba(255,255,255,0.16)";
+  ctx.fillRect(barX, 40, barW, h - 80);
+  ctx.fillStyle = hp > 0.28 ? "#ff3b30" : "#ffb020";
+  ctx.fillRect(barX, 40, Math.max(0, barW * hp), h - 80);
+}
+
+function OkColossus() {
+  const root = useRef<THREE.Group>(null);
+  const rig = useRef<THREE.Group>(null);
+  const bar = useRef<THREE.Mesh>(null);
+  const shown = useRef(-1);
+  const { camera } = useThree();
+  const tex = useMemo(() => {
+    const canvas = document.createElement("canvas");
+    canvas.width = 768;
+    canvas.height = 160;
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.generateMipmaps = false;
+    texture.minFilter = THREE.LinearFilter;
+    texture.magFilter = THREE.LinearFilter;
+    texture.colorSpace = THREE.SRGBColorSpace;
+    return texture;
+  }, []);
+  useEffect(() => () => tex.dispose(), [tex]);
+  useEffect(() => {
+    const loader = new GLTFLoader();
+    let drop = false;
+    const metal = new THREE.MeshStandardMaterial({ color: "#a7b0b8", metalness: 0.84, roughness: 0.32, side: THREE.DoubleSide });
+    const ink = new THREE.MeshStandardMaterial({ color: "#3a3e46", metalness: 0.4, roughness: 0.48, side: THREE.DoubleSide });
+    const sword = colossusSword();
+    loader.load(COLOSSUS_URL, (gltf) => {
+      const host = rig.current;
+      if (drop || !host) return;
+      const model = gltf.scene;
+      model.updateMatrixWorld(true);
+      model.traverse((obj) => {
+        const mesh = obj as THREE.Mesh;
+        if (!mesh.isMesh) return;
+        mesh.frustumCulled = false;
+        const box = new THREE.Box3().setFromObject(mesh);
+        const center = box.getCenter(new THREE.Vector3());
+        const size = box.getSize(new THREE.Vector3());
+        const hand = center.z > 0.55 && center.y < 0.65 && center.y > -0.95 && center.x < 0.15;
+        const foot = center.y < -0.82 || (center.y < -0.7 && size.y < 0.4 && center.z < 0.55);
+        const head = box.min.y > 0.62;
+        mesh.material = hand || foot || head ? ink : metal;
+      });
+      model.add(sword);
+      host.add(model);
+    });
+    return () => {
+      drop = true;
+      metal.dispose();
+      ink.dispose();
+      sword.traverse((obj) => {
+        const mesh = obj as THREE.Mesh;
+        if (!mesh.isMesh) return;
+        mesh.geometry.dispose();
+        (mesh.material as THREE.Material).dispose();
+      });
+      rig.current?.clear();
+    };
+  }, []);
+  useFrame(({ clock }) => {
+    const t = Math.max(0, clock.elapsedTime - REEL_HOLD);
+    const boss = okGiant(t);
+    const body = root.current;
+    const plate = bar.current;
+    if (!body || !plate) return;
+    if (!boss) {
+      body.visible = false;
+      plate.visible = false;
+      return;
+    }
+    body.visible = true;
+    body.position.set(boss.x, boss.y, boss.z);
+    body.rotation.order = "YXZ";
+    body.rotation.set(boss.pitch, boss.yaw, 0);
+    const pct = Math.round(boss.hp * 100);
+    plate.visible = boss.fall < 0.45;
+    plate.position.set(boss.x, boss.y + 17.2 * (1 - boss.fall * 0.65), boss.z);
+    plate.quaternion.copy(camera.quaternion);
+    if (shown.current !== pct) {
+      shown.current = pct;
+      paintHp(tex.image as HTMLCanvasElement, boss.hp);
+      tex.needsUpdate = true;
+    }
+  });
+  const scale = COLOSSUS_HEIGHT / COLOSSUS_SPAN_Y;
+  return (
+    <group>
+      <group ref={root}>
+        <group ref={rig} scale={scale} position={[-COLOSSUS_CENTER_X * scale, -COLOSSUS_MIN_Y * scale, -COLOSSUS_CENTER_Z * scale]} />
+      </group>
+      <mesh ref={bar} visible={false} renderOrder={28}>
+        <planeGeometry args={[7.2, 1.5]} />
+        <meshBasicMaterial map={tex} transparent depthTest={false} toneMapped={false} />
+      </mesh>
+    </group>
+  );
+}
+
 export function OkBattle({ names }: { names: string[] }) {
   return (
     <group>
       <OkDeck />
       <OkFighters />
+      <OkColossus />
       <OkNames names={names} />
       <OkBanner />
     </group>
