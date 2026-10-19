@@ -133,7 +133,7 @@ export function buildArmoredSoldier(root: THREE.Object3D) {
     return null;
   }
   const height = Math.max(0.001, box.max.y - box.min.y);
-  const simplified = clusterMesh(bakedGeo, height * 0.036);
+  const simplified = clusterMesh(bakedGeo, height * 0.064);
   bakedGeo.dispose();
   simplified.computeBoundingBox();
   const fit = simplified.boundingBox;
@@ -147,6 +147,91 @@ export function buildArmoredSoldier(root: THREE.Object3D) {
     .multiply(new THREE.Matrix4().makeTranslation(-(fit.min.x + fit.max.x) / 2, -fit.min.y, -(fit.min.z + fit.max.z) / 2));
   simplified.applyMatrix4(placed);
   const raw = (source as THREE.Mesh).material;
-  const material = (Array.isArray(raw) ? raw[0] : raw).clone();
+  const srcMat = (Array.isArray(raw) ? raw[0] : raw) as THREE.MeshStandardMaterial;
+  const material = new THREE.MeshLambertMaterial({ map: srcMat.map ?? null, color: "#ffffff" });
   return { geometry: simplified, material };
+}
+
+export function simplifySkinned(geo: THREE.BufferGeometry, cell: number) {
+  const pos = geo.getAttribute("position");
+  const uv = geo.getAttribute("uv");
+  const skinIndex = geo.getAttribute("skinIndex");
+  const skinWeight = geo.getAttribute("skinWeight");
+  const index = geo.getIndex();
+  const cells = new Map<string, number>();
+  const remap = new Uint32Array(pos.count);
+  const rep: number[] = [];
+  for (let i = 0; i < pos.count; i++) {
+    const x = pos.getX(i);
+    const y = pos.getY(i);
+    const z = pos.getZ(i);
+    const gx = Math.round(x / cell);
+    const gy = Math.round(y / cell);
+    const gz = Math.round(z / cell);
+    const key = `${gx},${gy},${gz}`;
+    let id = cells.get(key);
+    if (id == null) {
+      id = rep.length;
+      cells.set(key, id);
+      rep.push(i);
+      remap[i] = id;
+      continue;
+    }
+    remap[i] = id;
+    const keep = rep[id];
+    const cx = gx * cell;
+    const cy = gy * cell;
+    const cz = gz * cell;
+    const ox = x - cx;
+    const oy = y - cy;
+    const oz = z - cz;
+    const dx = pos.getX(keep) - cx;
+    const dy = pos.getY(keep) - cy;
+    const dz = pos.getZ(keep) - cz;
+    if (ox * ox + oy * oy + oz * oz < dx * dx + dy * dy + dz * dz) rep[id] = i;
+  }
+  const positions = new Float32Array(rep.length * 3);
+  const uvs = new Float32Array(rep.length * 2);
+  const joints = new Float32Array(rep.length * 4);
+  const weights = new Float32Array(rep.length * 4);
+  for (let i = 0; i < rep.length; i++) {
+    const v = rep[i];
+    positions[i * 3] = pos.getX(v);
+    positions[i * 3 + 1] = pos.getY(v);
+    positions[i * 3 + 2] = pos.getZ(v);
+    if (uv) {
+      uvs[i * 2] = uv.getX(v);
+      uvs[i * 2 + 1] = uv.getY(v);
+    }
+    if (skinIndex && skinWeight) {
+      joints[i * 4] = skinIndex.getX(v);
+      joints[i * 4 + 1] = skinIndex.getY(v);
+      joints[i * 4 + 2] = skinIndex.getZ(v);
+      joints[i * 4 + 3] = skinIndex.getW(v);
+      weights[i * 4] = skinWeight.getX(v);
+      weights[i * 4 + 1] = skinWeight.getY(v);
+      weights[i * 4 + 2] = skinWeight.getZ(v);
+      weights[i * 4 + 3] = skinWeight.getW(v);
+    }
+  }
+  const triCount = index ? index.count : pos.count;
+  const at = (i: number) => (index ? index.getX(i) : i);
+  const tris: number[] = [];
+  for (let i = 0; i < triCount; i += 3) {
+    const a = remap[at(i)];
+    const b = remap[at(i + 1)];
+    const c = remap[at(i + 2)];
+    if (a === b || b === c || a === c) continue;
+    tris.push(a, b, c);
+  }
+  const out = new THREE.BufferGeometry();
+  out.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+  out.setAttribute("uv", new THREE.BufferAttribute(uvs, 2));
+  if (skinIndex && skinWeight) {
+    out.setAttribute("skinIndex", new THREE.BufferAttribute(joints, 4));
+    out.setAttribute("skinWeight", new THREE.BufferAttribute(weights, 4));
+  }
+  out.setIndex(tris);
+  out.computeVertexNormals();
+  return out;
 }

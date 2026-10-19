@@ -4,6 +4,7 @@ import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { REEL_HOLD } from "../../recordCanvas";
 import { devMaceSwing } from "../../devReel";
+import { simplifySkinned } from "../../knightSoldier";
 
 const DEMON_URL = "/models/demon.glb";
 const HEIGHT = 15.6;
@@ -37,6 +38,25 @@ export function DemonModel({ soldiers }: { soldiers: number }) {
       swing.arm = arm;
       swing.fore = fore;
       model.updateMatrixWorld(true);
+      model.traverse((obj) => {
+        const mesh = obj as THREE.SkinnedMesh;
+        if (!mesh.isMesh) return;
+        const geo = mesh.geometry;
+        geo.computeBoundingBox();
+        const span = geo.boundingBox ? Math.max(0.001, geo.boundingBox.max.y - geo.boundingBox.min.y) : 1;
+        const next = simplifySkinned(geo, span * 0.016);
+        mesh.geometry = next;
+        geo.dispose();
+        const src = (Array.isArray(mesh.material) ? mesh.material[0] : mesh.material) as THREE.MeshStandardMaterial;
+        const cheap = new THREE.MeshLambertMaterial({ map: src.map ?? null, color: src.color ? src.color.clone() : "#ffffff" });
+        src.map = null;
+        src.normalMap?.dispose();
+        src.roughnessMap?.dispose();
+        src.metalnessMap?.dispose();
+        src.dispose();
+        mesh.material = cheap;
+        mesh.frustumCulled = false;
+      });
       const box = new THREE.Box3().setFromObject(model);
       const span = Math.max(0.001, box.max.y - box.min.y);
       const fit = HEIGHT / span;

@@ -1202,7 +1202,6 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
           commander: !defend && !vs && !vs2 && !openField && (i < 0 || isCommander(names[i], chiefsList)),
           plain: Boolean(countdown || defend || vs || vs2 || openField || roster || square || film),
           fill: giantHero || nameAlert || nameGold ? "#ffe14a" : undefined,
-          frame: giantHero,
         })),
         giant || dragon
       ),
