@@ -3,7 +3,15 @@ export type ArenaId = typeof ARENA_ID;
 export const ARENA_MODE = { id: ARENA_ID, label: "arena" } as const;
 export const ARENA_SECONDS = 60;
 export const ARENA_FOES = 50;
-export const ARENA_HEROES = 5;
+export const ARENA_HERO_URLS = [
+  "/models/heroes/armored.glb",
+  "/models/heroes/fantasy-a.glb",
+  "/models/heroes/fantasy-b.glb",
+  "/models/heroes/fantasy.glb",
+  "/models/heroes/medieval.glb",
+  "/models/mavi_püsküllü_knight.glb",
+] as const;
+export const ARENA_HEROES = ARENA_HERO_URLS.length;
 
 const INNER = 22;
 

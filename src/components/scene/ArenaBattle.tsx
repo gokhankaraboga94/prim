@@ -5,9 +5,10 @@ import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js
 import * as THREE from "three";
 import { REEL_HOLD } from "../../recordCanvas";
 import { simplifySkinned } from "../../knightSoldier";
-import { HERO_URLS, HERO_YAW } from "../../heroReel";
+import { HERO_YAW } from "../../heroReel";
 import {
   ARENA_FOES,
+  ARENA_HERO_URLS,
   ARENA_HEROES,
   arenaCam,
   arenaFoe,
@@ -675,9 +676,9 @@ function ArenaHeroes() {
   useEffect(() => {
     let drop = false;
     const loader = new GLTFLoader();
-    let left = HERO_URLS.length;
+    let left = ARENA_HERO_URLS.length;
     const loaded: THREE.Group[] = [];
-    HERO_URLS.forEach((url, index) => {
+    ARENA_HERO_URLS.forEach((url, index) => {
       loader.load(url, (gltf) => {
         if (drop) return;
         loaded[index] = fitHero(gltf.scene, HERO_YAW[index] ?? 0);
