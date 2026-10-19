@@ -1,7 +1,7 @@
 export const HERO_ID = "kahramanlar" as const;
 export type HeroId = typeof HERO_ID;
 export const HERO_MODE = { id: HERO_ID, label: "kahramanlar" } as const;
-export const HERO_SECONDS = 12;
+export const HERO_SECONDS = 36;
 export const HERO_N = 5;
 
 export const HERO_URLS = [
@@ -12,20 +12,18 @@ export const HERO_URLS = [
   "/models/heroes/medieval.glb",
 ] as const;
 
-// fantasy.glb helmet sticks out toward local -Z. The others face +Z.
-export const HERO_YAW = [0, 0, 0, Math.PI, 0];
+export const HERO_YAW = [0, 0, 0, 0, 0];
 
-const PX = 1.4;
-const ORDER = [0, 1, 4, 2, 3];
+const RING = 2.35;
 
 export function isHero(id: string | null | undefined): id is HeroId {
   return id === HERO_ID;
 }
 
-export function heroLatest(names: string[]): string[] {
+export function heroRoster(names: string[]): string[] {
   const picked: string[] = [];
   const seen = new Set<string>();
-  for (let i = names.length - 1; i >= 0 && picked.length < HERO_N; i--) {
+  for (let i = names.length - 1; i >= 0; i--) {
     const raw = String(names[i] || "").trim().replace(/^@+/, "");
     if (!raw) continue;
     const key = raw.toLowerCase();
@@ -33,15 +31,25 @@ export function heroLatest(names: string[]): string[] {
     seen.add(key);
     picked.push(raw);
   }
-  picked.reverse();
   return picked;
 }
 
+export function heroNameIndex(i: number, t: number, count: number) {
+  if (count <= 0 || i < 0 || i >= HERO_N) return -1;
+  if (count <= HERO_N) return i < count ? i : -1;
+  const pages = Math.ceil(count / HERO_N);
+  const step = Math.min(0.16, HERO_SECONDS / pages);
+  const page = Math.floor(Math.max(0, t) / Math.max(step, 1e-4)) % pages;
+  const idx = page * HERO_N + i;
+  return idx < count ? idx : i % count;
+}
+
 export function heroSlot(i: number) {
+  const a = (i / HERO_N) * Math.PI * 2;
   return {
-    x: (i - 2) * PX,
-    z: 0,
-    model: ORDER[i] ?? i,
+    x: Math.sin(a) * RING,
+    z: Math.cos(a) * RING,
+    model: i,
   };
 }
 
@@ -57,10 +65,12 @@ export type HeroCam = {
 
 export function heroCam(t: number): HeroCam {
   const u = Math.max(0, Math.min(1, t / HERO_SECONDS));
+  const ang = u * Math.PI * 2;
+  const dist = 14.2;
   return {
-    x: 0,
+    x: Math.sin(ang) * dist,
     y: 1.72,
-    z: 14.4 - u * 0.45,
+    z: Math.cos(ang) * dist,
     lx: 0,
     ly: 1.05,
     lz: 0,

@@ -4,7 +4,7 @@ import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import * as THREE from "three";
 import { buildNameAtlas, type NameAtlas, type NameCell } from "../../nameAtlas";
 import { REEL_HOLD } from "../../recordCanvas";
-import { HERO_N, HERO_URLS, HERO_YAW, heroCam, heroLatest, heroSlot } from "../../heroReel";
+import { HERO_N, HERO_URLS, HERO_YAW, heroCam, heroNameIndex, heroRoster, heroSlot } from "../../heroReel";
 
 const HEIGHT = 1.72;
 const dummy = new THREE.Object3D();
@@ -34,7 +34,7 @@ function HeroCam() {
     const shot = heroCam(Math.max(0, clock.elapsedTime - REEL_HOLD));
     persp.fov = shot.fov;
     persp.near = 0.15;
-    persp.far = 80;
+    persp.far = 220;
     persp.updateProjectionMatrix();
     persp.position.set(shot.x, shot.y, shot.z);
     persp.up.set(0, 1, 0);
@@ -44,7 +44,7 @@ function HeroCam() {
 }
 
 function HeroNames({ names }: { names: string[] }) {
-  const labels = useMemo(() => heroLatest(names), [names]);
+  const labels = useMemo(() => heroRoster(names), [names]);
   const atlas = useMemo<NameAtlas | null>(() => {
     if (!labels.length) return null;
     const items = labels.map((text) => ({ text, commander: false, plain: true, fill: "#ffe14a", frame: true }));
@@ -56,15 +56,26 @@ function HeroNames({ names }: { names: string[] }) {
   }, [labels]);
   const refs = useRef<(THREE.InstancedMesh | null)[]>([]);
   useEffect(() => () => atlas?.dispose(), [atlas]);
-  useFrame(({ camera }) => {
+  useFrame(({ camera, clock }) => {
     if (!atlas) return;
+    const t = Math.max(0, clock.elapsedTime - REEL_HOLD);
     dummy.quaternion.copy(camera.quaternion);
+    dummy.position.set(0, -30, 0);
+    dummy.scale.set(0, 0, 1);
+    dummy.updateMatrix();
     for (let i = 0; i < labels.length; i++) {
       const cell: NameCell | undefined = atlas.cells[i];
       const mesh = cell ? refs.current[cell.sheet] : null;
       if (!cell || !mesh) continue;
-      const slot = heroSlot(i);
-      const width = 1.08;
+      mesh.setMatrixAt(cell.local, dummy.matrix);
+    }
+    for (let h = 0; h < HERO_N; h++) {
+      const idx = heroNameIndex(h, t, labels.length);
+      const cell: NameCell | undefined = idx >= 0 ? atlas.cells[idx] : undefined;
+      const mesh = cell ? refs.current[cell.sheet] : null;
+      if (!cell || !mesh) continue;
+      const slot = heroSlot(h);
+      const width = 1.05;
       const size = width / Math.max(1.15, cell.sx);
       dummy.position.set(slot.x, 2.04, slot.z);
       dummy.scale.set(cell.sx * size, cell.sy * size, 1);
@@ -151,12 +162,13 @@ function HeroLine() {
 
 function HeroStand({ index, body }: { index: number; body: THREE.Object3D }) {
   const ref = useRef<THREE.Group>(null);
-  useFrame(({ clock }) => {
+  useFrame(({ camera, clock }) => {
     const node = ref.current;
     if (!node) return;
     const t = Math.max(0, clock.elapsedTime - REEL_HOLD);
     const slot = heroSlot(index);
     node.position.set(slot.x, Math.sin(t * 1.25 + index * 0.7) * 0.012, slot.z);
+    node.rotation.y = Math.atan2(camera.position.x - slot.x, camera.position.z - slot.z);
   });
   return (
     <group ref={ref}>
