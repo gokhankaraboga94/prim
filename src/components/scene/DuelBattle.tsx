@@ -25,6 +25,7 @@ const KONG_R = new THREE.Vector3(0.16, 0.64, 0.02);
 const ORC_L = new THREE.Vector3(-0.15, 0.6, 0.02);
 const ORC_R = new THREE.Vector3(0.15, 0.6, 0.02);
 const qSwing = new THREE.Quaternion();
+const qLift = new THREE.Quaternion();
 const euler = new THREE.Euler();
 const tmp = new THREE.Vector3();
 const spot = new THREE.Vector3();
@@ -98,7 +99,7 @@ function armWeights(pos: THREE.BufferAttribute, kong: boolean) {
   return { rest, weight, side };
 }
 
-function swingVerts(swing: Swing, angle: number, hand: 1 | -1, left: THREE.Vector3, right: THREE.Vector3) {
+function swingVerts(swing: Swing, angle: number, hand: 1 | -1, left: THREE.Vector3, right: THREE.Vector3, lift = 0, push = 0) {
   const pos = swing.pos;
   const rest = swing.rest;
   const weight = swing.weight;
@@ -109,15 +110,25 @@ function swingVerts(swing: Swing, angle: number, hand: 1 | -1, left: THREE.Vecto
     if (w <= 0) continue;
     const o = i * 3;
     const active = side[i] === hand;
-    const forward = side[i] < 0 ? angle : -angle;
-    euler.set(0, active ? forward : forward * -0.16, 0);
-    qSwing.setFromEuler(euler);
-    tmp.set(rest[o], rest[o + 1], rest[o + 2]).sub(side[i] < 0 ? left : right);
-    tmp.applyQuaternion(qSwing).add(side[i] < 0 ? left : right);
-    pos.setXYZ(i, rest[o] + (tmp.x - rest[o]) * w, rest[o + 1] + (tmp.y - rest[o + 1]) * w, rest[o + 2] + (tmp.z - rest[o + 2]) * w);
+    const yaw = side[i] < 0 ? angle : -angle;
+    const roll = active ? (side[i] < 0 ? -lift : lift) : 0;
+    euler.set(0, 0, active ? roll : 0);
+    qLift.setFromEuler(euler);
+    euler.set(0, active ? yaw : yaw * -0.12, 0);
+    qSwing.setFromEuler(euler).multiply(qLift);
+    const pivot = side[i] < 0 ? left : right;
+    tmp.set(rest[o], rest[o + 1], rest[o + 2]).sub(pivot);
+    tmp.applyQuaternion(qSwing).add(pivot);
+    const drive = active && push > 0 ? push * w : 0;
+    pos.setXYZ(
+      i,
+      rest[o] + (tmp.x - rest[o]) * w,
+      rest[o + 1] + (tmp.y - rest[o + 1]) * w,
+      rest[o + 2] + (tmp.z - rest[o + 2]) * w + drive
+    );
   }
   pos.needsUpdate = true;
-  if (Math.abs(angle) > 0.04) swing.geo?.computeVertexNormals();
+  if (Math.abs(angle) > 0.04 || lift > 0.04) swing.geo?.computeVertexNormals();
 }
 
 function dropHost(host: THREE.Object3D | null) {
@@ -176,9 +187,9 @@ function DuelKong() {
     const punch = boutPunch(t, KONG_HITS);
     const recoil = boutRecoil(t, ORC_HITS);
     const lunge = Math.max(0, punch.a);
-    node.position.set(KONG_HOME + lunge * 0.62 - recoil * 0.38, Math.abs(Math.sin(t * 2.4)) * 0.1, punch.hand * lunge * 0.12);
-    node.rotation.set(lunge * 0.05, Math.PI / 2 + punch.hand * punch.a * 0.1, -recoil * 0.05);
-    swingVerts(swing, punch.a * 1.02, punch.hand, KONG_L, KONG_R);
+    node.position.set(KONG_HOME + lunge * 2.05 - recoil * 0.28, Math.abs(Math.sin(t * 2.4)) * 0.08, punch.hand * lunge * 0.08);
+    node.rotation.set(lunge * 0.08, Math.PI / 2 + punch.hand * punch.a * 0.16, -recoil * 0.04);
+    swingVerts(swing, punch.a * 1.6, punch.hand, KONG_L, KONG_R, 0, lunge * 0.075);
   });
   return (
     <>
@@ -228,10 +239,11 @@ function DuelOrc() {
     const punch = fallen > 0 ? { a: 0, hand: 1 as const } : boutPunch(t, ORC_HITS);
     const recoil = fallen > 0 ? 0 : boutRecoil(t, KONG_HITS);
     const lunge = Math.max(0, punch.a);
-    node.position.set(ORC_HOME - lunge * 0.48 + recoil * 0.32, 0, punch.hand * lunge * 0.08);
+    const lift = Math.max(0, -punch.a) * 1.2;
+    node.position.set(ORC_HOME - lunge * 1.55 + recoil * 0.22, 0, punch.hand * lunge * 0.06);
     node.rotation.order = "YXZ";
-    node.rotation.set(fallen * 1.5 + lunge * 0.04, -Math.PI / 2 - punch.hand * punch.a * 0.1, fallen * 0.42 + recoil * 0.06);
-    swingVerts(swing, punch.a * 0.92, punch.hand, ORC_L, ORC_R);
+    node.rotation.set(fallen * 1.5 + lunge * 0.06, -Math.PI / 2 - punch.hand * punch.a * 0.14, fallen * 0.42 + recoil * 0.05);
+    swingVerts(swing, punch.a * 1.05, punch.hand, ORC_L, ORC_R, lift, lunge * 0.085);
   });
   return (
     <>

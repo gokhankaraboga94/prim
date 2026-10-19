@@ -25,8 +25,8 @@ export const ORC_HITS = stamps(2.77, 0.84, 48);
 const KONG_DMG = chips(KONG_HITS.length, 100, 8);
 const ORC_DMG = chips(ORC_HITS.length, 74, 4);
 
-export const KONG_HOME = -7.4;
-export const ORC_HOME = 7.2;
+export const KONG_HOME = -4.5;
+export const ORC_HOME = 4.3;
 export const KONG_H = 15.6 * 1.52;
 export const ORC_H = 15.6 * 0.7 * 1.52;
 export const ORC_FALL = 46.7;
@@ -47,15 +47,15 @@ export function boutPunch(t: number, hits: readonly number[]) {
   let best = 0;
   let mag = 0;
   let hand: 1 | -1 = 1;
-  const lead = 0.11;
-  const span = 0.3;
+  const lead = 0.18;
+  const span = 0.38;
   for (let i = 0; i < hits.length; i++) {
     const u = (t - (hits[i] - lead)) / span;
     if (u <= 0 || u >= 1) continue;
     let a = 0;
-    if (u < 0.32) a = -(u / 0.32);
-    else if (u < 0.5) a = -1 + ((u - 0.32) / 0.18) * 2;
-    else a = 1 - (u - 0.5) / 0.5;
+    if (u < 0.5) a = -(u / 0.5);
+    else if (u < 0.68) a = -1 + ((u - 0.5) / 0.18) * 2;
+    else a = 1 - (u - 0.68) / 0.32;
     if (Math.abs(a) >= mag) {
       mag = Math.abs(a);
       best = a;
