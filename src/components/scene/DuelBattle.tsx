@@ -14,15 +14,16 @@ import {
   ORC_HOME,
   boutCam,
   boutHp,
+  boutPunch,
   boutRecoil,
-  boutStrike,
 } from "../../boutReel";
 
 const KONG_URL = "/models/bigfoot.glb";
 const ORC_URL = "/models/orc.glb";
-const SHOULDER = new THREE.Vector3(0.16, 0.64, 0.02);
-const LEFT = new THREE.Vector3(-0.15, 0.6, 0.02);
-const RIGHT = new THREE.Vector3(0.15, 0.6, 0.02);
+const KONG_L = new THREE.Vector3(-0.16, 0.64, 0.02);
+const KONG_R = new THREE.Vector3(0.16, 0.64, 0.02);
+const ORC_L = new THREE.Vector3(-0.15, 0.6, 0.02);
+const ORC_R = new THREE.Vector3(0.15, 0.6, 0.02);
 const qSwing = new THREE.Quaternion();
 const euler = new THREE.Euler();
 const tmp = new THREE.Vector3();
@@ -34,7 +35,6 @@ type Swing = {
   rest: Float32Array | null;
   weight: Float32Array | null;
   side: Float32Array | null;
-  club: THREE.Group | null;
 };
 
 function cheapMaterial(src: THREE.Material) {
@@ -78,62 +78,27 @@ function fittedBody(root: THREE.Object3D, height: number) {
   return { host, geo: next };
 }
 
-function spikedClub() {
-  const pivot = new THREE.Group();
-  pivot.position.copy(SHOULDER);
-  const spin = new THREE.Group();
-  pivot.add(spin);
-  const hold = new THREE.Group();
-  hold.position.set(0.145, -0.16, 0.04);
-  spin.add(hold);
-  const wood = new THREE.MeshStandardMaterial({ color: "#5a3818", roughness: 0.68 });
-  const iron = new THREE.MeshStandardMaterial({ color: "#d5dde6", metalness: 0.82, roughness: 0.22 });
-  const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.022, 0.22, 8), wood);
-  shaft.rotation.x = Math.PI / 2;
-  shaft.position.z = 0.11;
-  hold.add(shaft);
-  const head = new THREE.Mesh(new THREE.SphereGeometry(0.046, 10, 8), iron);
-  head.position.z = 0.24;
-  hold.add(head);
-  for (let i = 0; i < 8; i++) {
-    const a = (i / 8) * Math.PI * 2;
-    const spike = new THREE.Mesh(new THREE.ConeGeometry(0.013, 0.062, 5), iron);
-    spike.position.set(Math.cos(a) * 0.052, Math.sin(a) * 0.052, 0.24);
-    spike.rotation.z = a - Math.PI / 2;
-    hold.add(spike);
-  }
-  const nose = new THREE.Mesh(new THREE.ConeGeometry(0.015, 0.07, 5), iron);
-  nose.rotation.x = Math.PI / 2;
-  nose.position.z = 0.31;
-  hold.add(nose);
-  return { pivot, spin, wood, iron };
-}
-
-function armWeights(pos: THREE.BufferAttribute, rightOnly: boolean) {
+function armWeights(pos: THREE.BufferAttribute, kong: boolean) {
   const rest = new Float32Array((pos.array as Float32Array).length);
   rest.set(pos.array as Float32Array);
   const weight = new Float32Array(pos.count);
   const side = new Float32Array(pos.count);
+  const y0 = kong ? 0.3 : 0.14;
+  const x0 = kong ? 0.18 : 0.16;
+  const span = kong ? 0.12 : 0.14;
   for (let i = 0; i < pos.count; i++) {
     const x = rest[i * 3];
     const y = rest[i * 3 + 1];
     const ax = Math.abs(x);
-    if (rightOnly) {
-      if (x < 0.18 || y < 0.3 || y > 0.7) continue;
-      side[i] = 1;
-      const u = Math.min(1, (x - 0.18) / 0.12);
-      weight[i] = u * u * (3 - 2 * u);
-      continue;
-    }
-    if (ax < 0.16 || y < 0.14 || y > 0.7) continue;
+    if (ax < x0 || y < y0 || y > 0.7) continue;
     side[i] = x < 0 ? -1 : 1;
-    const u = Math.min(1, (ax - 0.16) / 0.14);
+    const u = Math.min(1, (ax - x0) / span);
     weight[i] = u * u * (3 - 2 * u);
   }
   return { rest, weight, side };
 }
 
-function swingVerts(swing: Swing, angle: number, both: boolean) {
+function swingVerts(swing: Swing, angle: number, hand: 1 | -1, left: THREE.Vector3, right: THREE.Vector3) {
   const pos = swing.pos;
   const rest = swing.rest;
   const weight = swing.weight;
@@ -143,12 +108,12 @@ function swingVerts(swing: Swing, angle: number, both: boolean) {
     const w = weight[i];
     if (w <= 0) continue;
     const o = i * 3;
-    const pivot = both ? (side[i] < 0 ? LEFT : RIGHT) : SHOULDER;
-    const yaw = both ? -side[i] * angle : -angle;
-    euler.set(0, yaw, 0);
+    const active = side[i] === hand;
+    const forward = side[i] < 0 ? angle : -angle;
+    euler.set(0, active ? forward : forward * -0.16, 0);
     qSwing.setFromEuler(euler);
-    tmp.set(rest[o], rest[o + 1], rest[o + 2]).sub(pivot);
-    tmp.applyQuaternion(qSwing).add(pivot);
+    tmp.set(rest[o], rest[o + 1], rest[o + 2]).sub(side[i] < 0 ? left : right);
+    tmp.applyQuaternion(qSwing).add(side[i] < 0 ? left : right);
     pos.setXYZ(i, rest[o] + (tmp.x - rest[o]) * w, rest[o + 1] + (tmp.y - rest[o + 1]) * w, rest[o + 2] + (tmp.z - rest[o + 2]) * w);
   }
   pos.needsUpdate = true;
@@ -174,7 +139,7 @@ function dropHost(host: THREE.Object3D | null) {
 function DuelKong() {
   const root = useRef<THREE.Group>(null);
   const swing = useMemo<Swing>(
-    () => ({ geo: null, pos: null, rest: null, weight: null, side: null, club: null }),
+    () => ({ geo: null, pos: null, rest: null, weight: null, side: null }),
     []
   );
   useEffect(() => {
@@ -185,15 +150,12 @@ function DuelKong() {
       if (drop || !host) return;
       const fitted = fittedBody(gltf.scene, KONG_H);
       if (!fitted) return;
-      const club = spikedClub();
-      fitted.host.add(club.pivot);
       swing.geo = fitted.geo;
       swing.pos = fitted.geo.getAttribute("position") as THREE.BufferAttribute;
       const arms = armWeights(swing.pos, true);
       swing.rest = arms.rest;
       swing.weight = arms.weight;
       swing.side = arms.side;
-      swing.club = club.spin;
       host.add(fitted.host);
     });
     return () => {
@@ -204,7 +166,6 @@ function DuelKong() {
       swing.rest = null;
       swing.weight = null;
       swing.side = null;
-      swing.club = null;
       dropHost(host);
     };
   }, [root, swing]);
@@ -212,13 +173,12 @@ function DuelKong() {
     const node = root.current;
     if (!node) return;
     const t = Math.max(0, clock.elapsedTime - REEL_HOLD);
-    const strike = boutStrike(t, KONG_HITS);
+    const punch = boutPunch(t, KONG_HITS);
     const recoil = boutRecoil(t, ORC_HITS);
-    const lunge = Math.max(0, strike);
-    node.position.set(KONG_HOME + lunge * 1.25 - recoil * 0.85, Math.abs(Math.sin(t * 2.1)) * 0.16, recoil * 0.2);
-    node.rotation.set(lunge * 0.12, Math.PI / 2 + strike * 0.16, -recoil * 0.1);
-    if (swing.club) swing.club.rotation.y = -strike * 1.15;
-    swingVerts(swing, strike * 1.15, false);
+    const lunge = Math.max(0, punch.a);
+    node.position.set(KONG_HOME + lunge * 0.62 - recoil * 0.38, Math.abs(Math.sin(t * 2.4)) * 0.1, punch.hand * lunge * 0.12);
+    node.rotation.set(lunge * 0.05, Math.PI / 2 + punch.hand * punch.a * 0.1, -recoil * 0.05);
+    swingVerts(swing, punch.a * 1.02, punch.hand, KONG_L, KONG_R);
   });
   return (
     <>
@@ -231,7 +191,7 @@ function DuelKong() {
 function DuelOrc() {
   const root = useRef<THREE.Group>(null);
   const swing = useMemo<Swing>(
-    () => ({ geo: null, pos: null, rest: null, weight: null, side: null, club: null }),
+    () => ({ geo: null, pos: null, rest: null, weight: null, side: null }),
     []
   );
   useEffect(() => {
@@ -264,14 +224,14 @@ function DuelOrc() {
     const node = root.current;
     if (!node) return;
     const t = Math.max(0, clock.elapsedTime - REEL_HOLD);
-    const fallen = Math.max(0, Math.min(1, (t - ORC_FALL) / 2.6));
-    const strike = fallen > 0 ? 0 : boutStrike(t, ORC_HITS);
+    const fallen = Math.max(0, Math.min(1, (t - ORC_FALL) / 2.4));
+    const punch = fallen > 0 ? { a: 0, hand: 1 as const } : boutPunch(t, ORC_HITS);
     const recoil = fallen > 0 ? 0 : boutRecoil(t, KONG_HITS);
-    const lunge = Math.max(0, strike);
-    node.position.set(ORC_HOME - lunge * 1.05 + recoil * 0.7, 0, 0);
+    const lunge = Math.max(0, punch.a);
+    node.position.set(ORC_HOME - lunge * 0.48 + recoil * 0.32, 0, punch.hand * lunge * 0.08);
     node.rotation.order = "YXZ";
-    node.rotation.set(fallen * 1.5 + lunge * 0.08, -Math.PI / 2 - strike * 0.18, fallen * 0.42 + recoil * 0.12);
-    swingVerts(swing, strike * 1.15, true);
+    node.rotation.set(fallen * 1.5 + lunge * 0.04, -Math.PI / 2 - punch.hand * punch.a * 0.1, fallen * 0.42 + recoil * 0.06);
+    swingVerts(swing, punch.a * 0.92, punch.hand, ORC_L, ORC_R);
   });
   return (
     <>
@@ -314,11 +274,11 @@ function HpPlate({
       ctx.clearRect(0, 0, 512, 128);
       ctx.fillStyle = "rgba(6,8,12,0.78)";
       ctx.fillRect(8, 18, 496, 96);
-      ctx.fillStyle = "#3a1515";
+      ctx.fillStyle = "#2a0808";
       ctx.fillRect(28, 58, 456, 36);
-      ctx.fillStyle = hp > 55 ? "#3ddc6a" : hp > 28 ? "#f0c14a" : "#ff3b2f";
+      ctx.fillStyle = "#e10600";
       ctx.fillRect(28, 58, Math.max(0, 456 * (hp / 100)), 36);
-      ctx.strokeStyle = "#ffe14a";
+      ctx.strokeStyle = "#ff2a22";
       ctx.lineWidth = 6;
       ctx.strokeRect(22, 52, 468, 48);
       ctx.font = "700 36px Inter, sans-serif";

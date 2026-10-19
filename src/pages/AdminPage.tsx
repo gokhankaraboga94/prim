@@ -1053,7 +1053,7 @@ export function AdminPage() {
             <p className="muted">DEV8 ile aynı kadro, can barı, çim ve şövalyeler. Kamera yüzde 15 daha yakın. Dev, eklenen ork, yüzde 30 daha küçük. Elindeki baltalar ile askerlere vurur. Askerler Vaporworks Knight (CC-BY).</p>
           )}
           {isBout(reelShot) && (
-            <p className="muted">52 saniye. DEV9’daki çim. King Kong ile ork karşı karşıya. Kong’un elinde dikenli sopa, ork baltalarıyla vurur. İkisinin de üstünde can barı var. Kıyasıya dövüşürler, ork düşer.</p>
+            <p className="muted">52 saniye. DEV9’daki çim. King Kong yumruk atar, ork baltalarıyla karşılık verir. Vuruşlar seri. İkisinin de üstünde kırmızı can barı var. Kıyasıya dövüşürler, ork düşer.</p>
           )}
           {isWars(reelShot) && (
             <p className="muted">Tüm takipçiler sahada. Düşman iki kat. Şövalyeler Vaporworks Knight (CC-BY): parlak gri kask, mavi gövde. İsimler sarı. Düşman kazanır.</p>
