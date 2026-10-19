@@ -194,26 +194,26 @@ export type ArenaCam = {
 export function arenaCam(t: number): ArenaCam {
   const u = Math.max(0, Math.min(1, t / ARENA_SECONDS));
   const ang = u * Math.PI * 2 * 1.05;
-  let dist = 21.6;
-  let y = 10.9;
+  let dist = 10.8;
+  let y = 6.025;
   let lookY = 1.15;
   let fov = 46;
   if (t < 4.5) {
     const k = t / 4.5;
     const e = k * k * (3 - 2 * k);
-    dist = 34 - e * 12.4;
-    y = 18.6 - e * 7.7;
+    dist = 17 - e * 6.2;
+    y = 9.85 - e * 3.825;
     lookY = 1.1;
     fov = 51 - e * 5;
   } else if (t > 52) {
     const k = (t - 52) / 8;
     const e = k * k * (3 - 2 * k);
-    dist = 21.6 + e * 2.4;
-    y = 10.9 + e * 1.8;
+    dist = 10.8 + e * 1.2;
+    y = 6.025 + e * 0.9;
     lookY = 1.35;
   } else {
-    dist = 21.6 + Math.sin((t - 4.5) * 0.28) * 0.25;
-    y = 10.9 + Math.sin((t - 4.5) * 0.21) * 0.16;
+    dist = 10.8 + Math.sin((t - 4.5) * 0.28) * 0.125;
+    y = 6.025 + Math.sin((t - 4.5) * 0.21) * 0.08;
   }
   return {
     x: Math.sin(ang) * dist,
