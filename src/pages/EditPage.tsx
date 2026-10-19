@@ -6,7 +6,7 @@ import { useGame } from "../hooks/useGame";
 import { CHARACTERS, TEAMS, characterById } from "../edit/catalog";
 import { assignNames, assignTeam, createStore, removeSelected, spawnUnits, startBattle } from "../edit/battle";
 import { disposeThumbRenderer, loadCharacter, snapshotCharacter, type CharacterAsset } from "../edit/loadModel";
-import { REEL_HEIGHT, REEL_WIDTH } from "../recordCanvas";
+import { REEL_HEIGHT, REEL_WIDTH, reelWindow } from "../recordCanvas";
 
 export function EditPage() {
   const { game } = useGame();
@@ -113,6 +113,7 @@ export function EditPage() {
 
   function toggleRecord() {
     if (recorder.current && recorder.current.state === "recording") {
+      store.recording = false;
       recorder.current.stop();
       return;
     }
@@ -138,13 +139,8 @@ export function EditPage() {
       const sh = canvas.height;
       const rect = canvas.getBoundingClientRect();
       if (sw > 0 && sh > 0 && rect.width > 0 && rect.height > 0) {
-        const frameW = Math.min(rect.width, (rect.height * 9) / 16);
-        const frameH = Math.min(rect.height, (rect.width * 16) / 9);
-        const sWidth = (frameW / rect.width) * sw;
-        const sHeight = (frameH / rect.height) * sh;
-        const sx = (sw - sWidth) / 2;
-        const sy = (sh - sHeight) / 2;
-        flat.drawImage(canvas, sx, sy, sWidth, sHeight, 0, 0, REEL_WIDTH, REEL_HEIGHT);
+        const crop = reelWindow(sw, sh, store.reelU, store.reelV);
+        flat.drawImage(canvas, crop.x, crop.y, crop.frameW, crop.frameH, 0, 0, REEL_WIDTH, REEL_HEIGHT);
       }
       requestAnimationFrame(copyFrame);
     };
@@ -183,8 +179,9 @@ export function EditPage() {
     };
     rec.start(250);
     recorder.current = rec;
+    store.recording = true;
     setRecording(true);
-    store.note = "9:16 Reels kaydı alınıyor.";
+    store.note = "9:16 kayıt savaşın ortasında.";
     store.bump();
   }
 
@@ -231,7 +228,7 @@ export function EditPage() {
       </header>
 
       <p className="edit-help">
-        Sol tık seçer, sürükleyince kutu olur. Çift tık, aynı modelden yakındakileri de seçer. Takımdan birini seçip yere tıklayınca bütün takım askeri nizamda oraya gider. Savaşta ölenlerin yeri kapanır, kalanlar yeniden dizilir. Kayıt 9:16 Reels kadrajıdır. Sağ tuş kamerayı döndürür, tekerlek yakınlaştırır, orta tuş ve ok tuşları haritayı kaydırır. Takımsız asker savaşmaz.
+        Sol tık seçer, sürükleyince kutu olur. Çift tık, aynı modelden yakındakileri de seçer. Takımdan birini seçip yere tıklayınca bütün takım askeri nizamda oraya gider. Savaşta ölenlerin yeri kapanır, kalanlar yeniden dizilir. Kayıt 9:16 kadrajı savaşın olduğu yeri ortalar. Sağ tuş kamerayı döndürür, tekerlek yakınlaştırır, orta tuş ve ok tuşları haritayı kaydırır. Takımsız asker savaşmaz.
       </p>
 
       <div className="edit-stage">

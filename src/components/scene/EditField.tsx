@@ -5,6 +5,7 @@ import { TEAMS } from "../../edit/catalog";
 import { moveSelected, selectNearby, stepUnits, teamLabel, type EditStore, type Unit } from "../../edit/battle";
 import type { CharacterAsset } from "../../edit/loadModel";
 import { MAX_PER_MODEL, MAX_UNITS } from "../../edit/catalog";
+import { reelWindow } from "../../recordCanvas";
 
 const teamColor = new Map<number, THREE.Color>(TEAMS.map((team) => [team.id, new THREE.Color(team.color)]));
 const white = new THREE.Color("#ffffff");
@@ -276,6 +277,20 @@ function EditRig({ store, assets }: { store: EditStore; assets: Record<string, C
       store.viewX += (rx / rl) * speed;
       store.viewZ += (rz / rl) * speed;
     }
+    const fighters = store.units.filter((unit) => unit.alive && unit.team > 0);
+    if (store.recording && fighters.length) {
+      let cx = 0;
+      let cz = 0;
+      for (const unit of fighters) {
+        cx += unit.x;
+        cz += unit.z;
+      }
+      cx /= fighters.length;
+      cz /= fighters.length;
+      const glide = 1 - Math.exp(-Math.min(0.05, Math.max(0, dt)) * 2.4);
+      store.viewX += (cx - store.viewX) * glide;
+      store.viewZ += (cz - store.viewZ) * glide;
+    }
     store.viewX = Math.max(-320, Math.min(320, store.viewX));
     store.viewZ = Math.max(-320, Math.min(320, store.viewZ));
     camera.position.set(
@@ -289,6 +304,31 @@ function EditRig({ store, assets }: { store: EditStore; assets: Record<string, C
       camera.near = 0.2;
       camera.far = 900;
       camera.updateProjectionMatrix();
+    }
+    camera.updateMatrixWorld();
+    if (fighters.length) {
+      let px = 0;
+      let py = 0;
+      let pz = 0;
+      for (const unit of fighters) {
+        px += unit.x;
+        py += unit.height * 0.45;
+        pz += unit.z;
+      }
+      aim.set(px / fighters.length, py / fighters.length, pz / fighters.length);
+      aim.project(camera);
+      store.reelU = aim.x * 0.5 + 0.5;
+      store.reelV = -aim.y * 0.5 + 0.5;
+    } else {
+      store.reelU = 0.5;
+      store.reelV = 0.5;
+    }
+    const frame = document.querySelector(".edit-reel-frame") as HTMLElement | null;
+    if (frame) {
+      const rect = gl.domElement.getBoundingClientRect();
+      const crop = reelWindow(rect.width, rect.height, store.reelU, store.reelV);
+      frame.style.left = `${(crop.cx / rect.width) * 100}%`;
+      frame.style.top = `${(crop.cy / rect.height) * 100}%`;
     }
 
     if (stepUnits(store, dt)) store.bump();

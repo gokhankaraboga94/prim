@@ -35,6 +35,9 @@ export type EditStore = {
   note: string;
   viewX: number;
   viewZ: number;
+  recording: boolean;
+  reelU: number;
+  reelV: number;
   nextId: number;
   nameStamp: number;
   listeners: Set<() => void>;
@@ -52,6 +55,9 @@ export function createStore(): EditStore {
     note: "Karakter seç, adet gir, haritaya bırak. Kutuya alıp takım yap, sonra VS.",
     viewX: 0,
     viewZ: 0,
+    recording: false,
+    reelU: 0.5,
+    reelV: 0.5,
     nextId: 1,
     nameStamp: 0,
     listeners: new Set(),

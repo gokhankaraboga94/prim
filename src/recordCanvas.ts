@@ -7,6 +7,14 @@ export const REEL_HOLD = 2.25;
 export const REEL_WIDTH = 1080;
 export const REEL_HEIGHT = 1920;
 
+export function reelWindow(width: number, height: number, u: number, v: number) {
+  const frameW = Math.min(width, (height * 9) / 16);
+  const frameH = Math.min(height, (width * 16) / 9);
+  const cx = Math.min(Math.max(u * width, frameW / 2), Math.max(frameW / 2, width - frameW / 2));
+  const cy = Math.min(Math.max(v * height, frameH / 2), Math.max(frameH / 2, height - frameH / 2));
+  return { frameW, frameH, cx, cy, x: cx - frameW / 2, y: cy - frameH / 2 };
+}
+
 export function reelFade(duration: number) {
   return Math.min(1.15, Math.max(0.6, duration * 0.14));
 }
