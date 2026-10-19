@@ -10,6 +10,7 @@ export type CharacterDef = {
 export const CHARACTERS: CharacterDef[] = [
   { id: "knight", label: "Şövalye", url: "/models/knight.glb", height: 1.72, yaw: 0 },
   { id: "mavi-knight", label: "Mavi püsküllü", url: "/models/mavi_püsküllü_knight.glb", height: 1.8, yaw: 0 },
+  { id: "hulk", label: "Hulk", url: "/models/hulk+3d+model.glb", height: 2.8, yaw: 0 },
   { id: "roman", label: "Roman", url: "/models/roman.glb", height: 1.66, yaw: -Math.PI / 2 },
   { id: "armored", label: "Zırhlı", url: "/models/heroes/armored.glb", height: 1.8, yaw: 0 },
   { id: "fantasy-a", label: "Fantazi A", url: "/models/heroes/fantasy-a.glb", height: 1.8, yaw: 0 },
