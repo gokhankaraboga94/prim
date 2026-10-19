@@ -1035,7 +1035,7 @@ export function AdminPage() {
             <p className="muted">DEV8 ile aynı kadro, can barı, çim ve şövalyeler. Kamera biraz daha geride. Dev yüzde 15 daha küçük, elindeki balta ile vurur. Askerler Vaporworks Knight (CC-BY). İsimler sarı.</p>
           )}
           {isDev10(reelShot) && (
-            <p className="muted">DEV8 ile aynı kadro, can barı, çim ve şövalyeler. Dev, eklenen ork, yüzde 30 daha küçük. Elindeki baltalar ile askerlere vurur. Askerler Vaporworks Knight (CC-BY).</p>
+            <p className="muted">DEV8 ile aynı kadro, can barı, çim ve şövalyeler. Kamera yüzde 15 daha yakın. Dev, eklenen ork, yüzde 30 daha küçük. Elindeki baltalar ile askerlere vurur. Askerler Vaporworks Knight (CC-BY).</p>
           )}
           {isWars(reelShot) && (
             <p className="muted">Tüm takipçiler sahada. Düşman iki kat. Şövalyeler Vaporworks Knight (CC-BY): parlak gri kask, mavi gövde. İsimler sarı. Düşman kazanır.</p>
