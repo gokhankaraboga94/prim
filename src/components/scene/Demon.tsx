@@ -7,7 +7,7 @@ import { devMaceSwing } from "../../devReel";
 import { simplifySkinned } from "../../knightSoldier";
 
 const DEMON_URL = "/models/demon.glb";
-const HEIGHT = 15.6;
+const HEIGHT = 15.6 * 0.85;
 const extra = new THREE.Quaternion();
 const euler = new THREE.Euler();
 const extraFore = new THREE.Quaternion();

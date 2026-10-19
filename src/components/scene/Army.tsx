@@ -991,7 +991,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
     if (!giantHero) return;
     let drop = false;
     const loader = new GLTFLoader();
-    loader.load("/models/heroes/armored.glb", (gltf) => {
+    loader.load("/models/armor.glb", (gltf) => {
       if (drop) return;
       const built = buildArmoredSoldier(gltf.scene);
       if (built) setHeroSoldier(built);
