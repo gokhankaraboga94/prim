@@ -1165,7 +1165,7 @@ function BattleSceneInner({
       shadows={!cinematic}
       dpr={cinematic ? (xxx && xxxHiRes(xxx) ? 2 : 1) : [1, 1.5]}
       gl={{
-        antialias: Boolean(new1 || new2 || new3 || new4 || new5 || new6 || new62 || new7 || maze) || (!(xxx && xxxQuiet(xxx)) && (!defend || isDefend3(defend))),
+        antialias: !arena && (Boolean(new1 || new2 || new3 || new4 || new5 || new6 || new62 || new7 || maze) || (!(xxx && xxxQuiet(xxx)) && (!defend || isDefend3(defend)))),
         alpha: false,
         powerPreference: "high-performance",
         stencil: false,

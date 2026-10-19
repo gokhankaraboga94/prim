@@ -4,6 +4,7 @@ import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import * as THREE from "three";
 import { REEL_HOLD } from "../../recordCanvas";
+import { simplifySkinned } from "../../knightSoldier";
 import { HERO_URLS, HERO_YAW } from "../../heroReel";
 import {
   ARENA_FOES,
@@ -132,7 +133,40 @@ function buildFoe(root: THREE.Object3D) {
   return merged;
 }
 
+function cheapMaterial(src: THREE.Material) {
+  const mat = (Array.isArray(src) ? src[0] : src) as THREE.MeshStandardMaterial;
+  const next = new THREE.MeshLambertMaterial({
+    map: mat.map ?? null,
+    color: mat.color ? mat.color.clone() : "#ffffff",
+    side: mat.side,
+  });
+  mat.map = null;
+  mat.normalMap?.dispose();
+  mat.roughnessMap?.dispose();
+  mat.metalnessMap?.dispose();
+  mat.dispose();
+  return next;
+}
+
+function lightenMesh(mesh: THREE.Mesh, cellFrac: number) {
+  const geo = mesh.geometry;
+  geo.computeBoundingBox();
+  const box = geo.boundingBox;
+  const span = box ? Math.max(box.max.x - box.min.x, box.max.y - box.min.y, box.max.z - box.min.z) : 1;
+  const next = simplifySkinned(geo, Math.max(1e-4, span * cellFrac));
+  mesh.geometry = next;
+  geo.dispose();
+  mesh.material = cheapMaterial(Array.isArray(mesh.material) ? mesh.material[0] : mesh.material);
+  mesh.frustumCulled = false;
+  mesh.castShadow = false;
+  mesh.receiveShadow = false;
+}
+
 function fitHero(scene: THREE.Group, yaw: number) {
+  scene.traverse((obj) => {
+    const mesh = obj as THREE.Mesh;
+    if (mesh.isMesh) lightenMesh(mesh, 0.008);
+  });
   scene.rotation.y = yaw;
   scene.updateMatrixWorld(true);
   const box = new THREE.Box3().setFromObject(scene);
@@ -217,7 +251,7 @@ function ArenaModel() {
       model.position.set(0, -ARENA_FLOOR_Y * ARENA_SCALE, 0);
       model.traverse((obj) => {
         const mesh = obj as THREE.Mesh;
-        if (mesh.isMesh) mesh.frustumCulled = false;
+        if (mesh.isMesh) lightenMesh(mesh, 0.006);
       });
       host.add(model);
     });
