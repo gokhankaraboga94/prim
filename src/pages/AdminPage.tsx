@@ -1005,7 +1005,7 @@ export function AdminPage() {
             <p className="muted">DEV7 ile aynı kadro, can barı, çim ve şövalyeler. Dev, eklenen bigfoot modeli: tüylü dokusu duruyor, kılıç yok. Askerler Vaporworks Knight (CC-BY).</p>
           )}
           {isDev9(reelShot) && (
-            <p className="muted">DEV8 ile aynı kadro, can barı, çim ve şövalyeler. Dev, eklenen iblis model. Elindeki balta ile askerlere vurur. Askerler Vaporworks Knight (CC-BY).</p>
+            <p className="muted">DEV8 ile aynı kadro, can barı ve çim. Kamera biraz daha geride. Askerler knight klasöründeki zırhlı modelden, hepsi aynı ve daha büyük. İsimler siyah plaka içinde sarı. Dev, elindeki balta ile vurur.</p>
           )}
           {isWars(reelShot) && (
             <p className="muted">Tüm takipçiler sahada. Düşman iki kat. Şövalyeler Vaporworks Knight (CC-BY): parlak gri kask, mavi gövde. İsimler sarı. Düşman kazanır.</p>

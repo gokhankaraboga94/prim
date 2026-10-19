@@ -999,7 +999,7 @@ export function devFriendAt(i: number, n: number, recT: number, out: New1Pose, b
   out.s = 1;
 }
 
-export function sampleDevCam(recT: number, big = false, devs = false): ShotPose {
+export function sampleDevCam(recT: number, big = false, devs = false, backOff = 1): ShotPose {
   const t = Math.max(0, recT);
   const g = devGiantAt(t);
   const u = t <= 48 ? 0 : Math.min(1, (t - 48) / 6);
@@ -1007,13 +1007,17 @@ export function sampleDevCam(recT: number, big = false, devs = false): ShotPose 
   const side = (devs ? 36 : big ? 30 : 28) - e * (devs ? 1 : big ? 5 : 6);
   const back = (devs ? 66 : big ? 48 : 46) - e * (devs ? 1 : big ? 8 : 10);
   const height = (devs ? 41 : big ? 38 : 34) - e * (devs ? 1 : big ? 6 : 8);
+  const lx = g.x;
+  const ly = devs ? 4 : big ? 9.2 : 5.4;
+  const lz = g.z + 2;
+  const pull = backOff > 1 ? backOff : 1;
   return {
-    x: g.x + side,
-    y: height,
-    z: g.z - back,
-    lx: g.x,
-    ly: devs ? 4 : big ? 9.2 : 5.4,
-    lz: g.z + 2,
+    x: lx + (g.x + side - lx) * pull,
+    y: ly + (height - ly) * pull,
+    z: lz + (g.z - back - lz) * pull,
+    lx,
+    ly,
+    lz,
     fov: (devs ? 48 : big ? 44 : 42) - e * (devs ? 0.5 : big ? 3 : 4),
   };
 }
