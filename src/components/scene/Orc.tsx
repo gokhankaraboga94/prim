@@ -7,7 +7,7 @@ import { devMaceSwing } from "../../devReel";
 import { simplifySkinned } from "../../knightSoldier";
 
 const ORC_URL = "/models/orc.glb";
-const HEIGHT = 15.6;
+const HEIGHT = 15.6 * 0.7;
 const LEFT = new THREE.Vector3(-0.15, 0.6, 0.02);
 const RIGHT = new THREE.Vector3(0.15, 0.6, 0.02);
 const qLeft = new THREE.Quaternion();
