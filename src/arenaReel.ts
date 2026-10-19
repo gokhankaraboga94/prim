@@ -68,23 +68,27 @@ function foeHome(i: number) {
   return { ang, ring: inner ? 3.45 : 5.05 };
 }
 
-function swing(u: number) {
+export type ArmStrike = { lift: number; chop: number };
+
+const REST_STRIKE: ArmStrike = { lift: 0, chop: 0 };
+
+function swing(u: number): ArmStrike {
   const p = u - Math.floor(u);
   if (p < 0.36) {
     const k = p / 0.36;
-    return { a: -(k * k), lunge: 0 };
+    return { lift: k * k, chop: 0 };
   }
   if (p < 0.5) {
     const k = (p - 0.36) / 0.14;
     const e = k * k * (3 - 2 * k);
-    return { a: -1 + e * 2, lunge: e };
+    return { lift: 1 - e * 0.35, chop: e };
   }
   if (p < 0.74) {
     const k = (p - 0.5) / 0.24;
     const e = k * k * (3 - 2 * k);
-    return { a: 1 - e, lunge: 1 - e };
+    return { lift: 0.65 * (1 - e), chop: 1 - e };
   }
-  return { a: 0, lunge: 0 };
+  return REST_STRIKE;
 }
 
 function heroBlow(i: number, t: number) {
@@ -97,10 +101,16 @@ function foeBlow(i: number, t: number) {
   return swing(t / period + i * 0.17);
 }
 
-function heroOf(ang: number) {
-  const turns = ang / (Math.PI * 2);
-  const u = turns - Math.floor(turns);
-  return Math.round(u * ARENA_HEROES) % ARENA_HEROES;
+export function arenaHeroStrike(i: number, t: number): ArmStrike {
+  const kneel = i === 1 && t > 15 && t < 27;
+  const stumble = i === 3 && t > 33 && t < 40;
+  if (kneel || stumble) return REST_STRIKE;
+  return heroBlow(i, t);
+}
+
+export function arenaFoeStrike(i: number, t: number): ArmStrike {
+  if (t >= arenaDieAt(i)) return REST_STRIKE;
+  return foeBlow(i, t);
 }
 
 export function arenaFoe(i: number, t: number, out: ArenaPose) {
@@ -108,26 +118,18 @@ export function arenaFoe(i: number, t: number, out: ArenaPose) {
   const die = arenaDieAt(i);
   const rush = Math.max(0, Math.min(1, (t - 0.8) / 7.2));
   const ease = rush * rush * (3 - 2 * rush);
-  const fighting = t < die;
-  const mine = fighting ? foeBlow(i, t) : { a: 0, lunge: 0 };
-  const fromHero = fighting ? heroBlow(heroOf(home.ang), t) : { a: 0, lunge: 0 };
   const inner = home.ring < 4;
-  const connect = Math.max(0, fromHero.lunge) * (inner ? 1 : 0.32);
-  const stung = fighting && die - t < 0.16 ? (0.16 - (die - t)) / 0.16 : 0;
-  const knock = Math.max(connect * (inner ? 0.22 : 0.08), stung * 0.18);
-  const stepIn = mine.lunge * (inner ? 0.18 : 0.1) * (1 - connect);
-  const radius = home.ring - ease * (home.ring - (inner ? 2.45 : 3.85)) + Math.sin(t * 1.6 + i) * 0.05 - stepIn + knock;
-  const side = Math.cos(t * 1.15 + i * 0.8) * 0.06;
-  const x = Math.sin(home.ang) * radius + Math.cos(home.ang) * side;
-  const z = Math.cos(home.ang) * radius - Math.sin(home.ang) * side;
+  const radius = home.ring - ease * (home.ring - (inner ? 2.45 : 3.85));
+  const x = Math.sin(home.ang) * radius;
+  const z = Math.cos(home.ang) * radius;
   const face = Math.atan2(-x, -z) - Math.PI / 2;
   if (t < die) {
     out.x = x;
-    out.y = 0.02 + Math.abs(Math.sin(t * 2.6 + i)) * 0.02 + mine.lunge * 0.03;
+    out.y = 0;
     out.z = z;
-    out.rx = 0.05 + mine.a * 0.48 * (1 - connect) - connect * 0.62 - stung * 0.4;
-    out.ry = face - connect * 0.18;
-    out.rz = (i % 2 ? 1 : -1) * (Math.max(0, -mine.a) * 0.06 + connect * 0.1);
+    out.rx = 0;
+    out.ry = face;
+    out.rz = 0;
     out.s = 1;
     return;
   }
@@ -157,16 +159,12 @@ export function arenaHero(i: number, t: number, out: ArenaPose) {
   const radius = 1.65 * (0.74 + alive * 0.38);
   const kneel = i === 1 && t > 15 && t < 27;
   const stumble = i === 3 && t > 33 && t < 40;
-  const hit = kneel || stumble ? { a: 0, lunge: 0 } : heroBlow(i, t);
-  const wind = Math.max(0, -hit.a);
-  const step = hit.lunge * 0.28 - wind * 0.06;
-  const sway = Math.sin(t * 2.1 + i * 1.1) * 0.04 * alive;
-  out.x = Math.sin(ang) * (radius + step) + Math.cos(ang) * sway;
-  out.z = Math.cos(ang) * (radius + step) - Math.sin(ang) * sway;
-  out.ry = ang + hit.a * 0.24;
-  out.rz = wind * 0.1;
-  out.rx = hit.a * 0.82;
-  out.y = hit.lunge * 0.03 + Math.abs(Math.sin(t * 2.2 + i)) * 0.012;
+  out.x = Math.sin(ang) * radius;
+  out.z = Math.cos(ang) * radius;
+  out.ry = ang;
+  out.rx = 0;
+  out.rz = 0;
+  out.y = 0;
   out.s = 1;
   if (kneel) {
     const k = t < 17 ? (t - 15) / 2 : t > 24 ? (27 - t) / 3 : 1;

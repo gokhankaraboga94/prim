@@ -1,0 +1,9 @@
+---
+description: Karakter modellerindeki ek zemin ve savaşta kol vuruşu
+alwaysApply: true
+---
+
+# Zemin ve vuruş
+
+- Karakter modelinin ayakları altında, gövdeden geniş ve ince bir zemin plakası varsa o üçgenleri kaldır. Figürü bu plakaya göre ölçekleme. Arena kahramanlarında kesim `dropGroundSlab`. Yeni sahnelerde de aynı kesimi uygula.
+- Asker savaşırken gövdesi ileri geri sallanmasın, zıplamasın, adım atıp geri çekilmesin. Yalnızca kol kalkar ve vuruşta silah ya da el hedefe uzanır. Temas kolda görünür. Ölüm, diz çökme ve sendeleme gövdeyi oynatabilir.

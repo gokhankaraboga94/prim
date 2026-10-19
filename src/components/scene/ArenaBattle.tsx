@@ -11,8 +11,11 @@ import {
   ARENA_HEROES,
   arenaCam,
   arenaFoe,
+  arenaFoeStrike,
   arenaHero,
+  arenaHeroStrike,
   type ArenaPose,
+  type ArmStrike,
 } from "../../arenaReel";
 
 const ARENA_URL = "/models/arena.glb";
@@ -162,7 +165,241 @@ function lightenMesh(mesh: THREE.Mesh, cellFrac: number) {
   mesh.receiveShadow = false;
 }
 
+function dropGroundSlab(geo: THREE.BufferGeometry) {
+  const pos = geo.getAttribute("position") as THREE.BufferAttribute | undefined;
+  const index = geo.getIndex();
+  if (!pos || pos.count < 30) return geo;
+  let minY = Infinity;
+  let maxY = -Infinity;
+  for (let i = 0; i < pos.count; i++) {
+    minY = Math.min(minY, pos.getY(i));
+    maxY = Math.max(maxY, pos.getY(i));
+  }
+  const height = maxY - minY;
+  if (height < 1e-4) return geo;
+  const xs: number[] = [];
+  const zs: number[] = [];
+  for (let i = 0; i < pos.count; i++) {
+    const y = pos.getY(i);
+    if (y < minY + height * 0.38 || y > minY + height * 0.72) continue;
+    xs.push(pos.getX(i));
+    zs.push(pos.getZ(i));
+  }
+  if (xs.length < 20) return geo;
+  xs.sort((a, b) => a - b);
+  zs.sort((a, b) => a - b);
+  const torsoX = xs[Math.floor(xs.length * 0.92)] - xs[Math.floor(xs.length * 0.08)];
+  const torsoZ = zs[Math.floor(zs.length * 0.92)] - zs[Math.floor(zs.length * 0.08)];
+  if (torsoX < 1e-4 || torsoZ < 1e-4) return geo;
+  let cut: number | null = null;
+  for (let step = 1; step <= 8; step++) {
+    const y0 = minY + height * 0.025 * (step - 1);
+    const y1 = minY + height * 0.025 * step;
+    let n = 0;
+    let x0 = Infinity;
+    let x1 = -Infinity;
+    let z0 = Infinity;
+    let z1 = -Infinity;
+    for (let i = 0; i < pos.count; i++) {
+      const y = pos.getY(i);
+      if (y < y0 || y >= y1) continue;
+      n += 1;
+      x0 = Math.min(x0, pos.getX(i));
+      x1 = Math.max(x1, pos.getX(i));
+      z0 = Math.min(z0, pos.getZ(i));
+      z1 = Math.max(z1, pos.getZ(i));
+    }
+    if (n < pos.count * 0.012) break;
+    const wideX = x1 - x0 > torsoX * 1.35;
+    const wideZ = z1 - z0 > torsoZ * 1.35;
+    const thin = y1 - y0 < Math.max(x1 - x0, z1 - z0) * 0.35;
+    if (!(wideX && wideZ && thin)) break;
+    cut = y1;
+  }
+  if (cut == null) return geo;
+  const triCount = index ? index.count / 3 : pos.count / 3;
+  const at = (i: number) => (index ? index.getX(i) : i);
+  const kept: number[] = [];
+  for (let t = 0; t < triCount; t++) {
+    const a = at(t * 3);
+    const b = at(t * 3 + 1);
+    const c = at(t * 3 + 2);
+    if (Math.max(pos.getY(a), pos.getY(b), pos.getY(c)) < cut) continue;
+    kept.push(a, b, c);
+  }
+  if (!kept.length || kept.length === triCount * 3) return geo;
+  const uv = geo.getAttribute("uv") as THREE.BufferAttribute | undefined;
+  const map = new Map<number, number>();
+  const order: number[] = [];
+  const nextIndex: number[] = [];
+  for (const v of kept) {
+    let id = map.get(v);
+    if (id == null) {
+      id = order.length;
+      map.set(v, id);
+      order.push(v);
+    }
+    nextIndex.push(id);
+  }
+  const next = new THREE.BufferGeometry();
+  const positions = new Float32Array(order.length * 3);
+  for (let i = 0; i < order.length; i++) {
+    positions[i * 3] = pos.getX(order[i]);
+    positions[i * 3 + 1] = pos.getY(order[i]);
+    positions[i * 3 + 2] = pos.getZ(order[i]);
+  }
+  next.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+  if (uv) {
+    const uvs = new Float32Array(order.length * 2);
+    for (let i = 0; i < order.length; i++) {
+      uvs[i * 2] = uv.getX(order[i]);
+      uvs[i * 2 + 1] = uv.getY(order[i]);
+    }
+    next.setAttribute("uv", new THREE.BufferAttribute(uvs, 2));
+  }
+  next.setIndex(nextIndex);
+  geo.dispose();
+  return next;
+}
+
+type ArmRig = {
+  pos: THREE.BufferAttribute;
+  rest: Float32Array;
+  weights: Float32Array;
+  pivotX: number;
+  pivotY: number;
+  pivotZ: number;
+  side: number;
+  forwardX: boolean;
+  dirty: number;
+};
+
+function rigArm(mesh: THREE.Mesh, forwardX: boolean) {
+  const pos = mesh.geometry.getAttribute("position") as THREE.BufferAttribute;
+  if (!pos) return;
+  mesh.geometry.computeBoundingBox();
+  const box = mesh.geometry.boundingBox;
+  if (!box) return;
+  const minY = box.min.y;
+  const height = Math.max(0.001, box.max.y - minY);
+  const rest = new Float32Array(pos.count * 3);
+  let best = 0;
+  let side = 1;
+  for (let i = 0; i < pos.count; i++) {
+    const x = pos.getX(i);
+    const y = pos.getY(i);
+    const z = pos.getZ(i);
+    rest[i * 3] = x;
+    rest[i * 3 + 1] = y;
+    rest[i * 3 + 2] = z;
+    const band = y - minY;
+    if (band < height * 0.3 || band > height * 0.96) continue;
+    const lateral = forwardX ? z : x;
+    if (Math.abs(lateral) <= Math.abs(best)) continue;
+    best = lateral;
+    side = lateral < 0 ? -1 : 1;
+  }
+  const weights = new Float32Array(pos.count);
+  const gate = height * 0.05;
+  const span = height * 0.18;
+  for (let i = 0; i < pos.count; i++) {
+    const y = rest[i * 3 + 1] - minY;
+    if (y < height * 0.28 || y > height * 0.97) continue;
+    const lateral = (forwardX ? rest[i * 3 + 2] : rest[i * 3]) * side;
+    if (lateral < gate) continue;
+    const u = Math.min(1, (lateral - gate) / span);
+    weights[i] = u * u * (3 - 2 * u);
+  }
+  const rig: ArmRig = {
+    pos,
+    rest,
+    weights,
+    pivotX: forwardX ? height * 0.08 : side * height * 0.16,
+    pivotY: minY + height * 0.72,
+    pivotZ: forwardX ? side * height * 0.14 : 0,
+    side,
+    forwardX,
+    dirty: 0,
+  };
+  mesh.userData.arm = rig;
+}
+
+function poseArm(rig: ArmRig, strike: ArmStrike) {
+  const lift = strike.lift;
+  const chop = strike.chop;
+  if (lift === 0 && chop === 0) {
+    if (rig.dirty === 0) return false;
+    for (let i = 0; i < rig.weights.length; i++) rig.pos.setXYZ(i, rig.rest[i * 3], rig.rest[i * 3 + 1], rig.rest[i * 3 + 2]);
+    rig.pos.needsUpdate = true;
+    rig.dirty = 0;
+    return true;
+  }
+  rig.dirty = 1;
+  const rz = rig.forwardX ? -chop * 1.3 : rig.side * lift * 1.25;
+  const rx = rig.forwardX ? -rig.side * lift * 1.25 : chop * 1.25 - lift * 0.2;
+  const cz = Math.cos(rz);
+  const sz = Math.sin(rz);
+  const cx = Math.cos(rx);
+  const sx = Math.sin(rx);
+  const reach = chop * (rig.forwardX ? 0.12 : 0.18);
+  for (let i = 0; i < rig.weights.length; i++) {
+    const w = rig.weights[i];
+    const x0 = rig.rest[i * 3];
+    const y0 = rig.rest[i * 3 + 1];
+    const z0 = rig.rest[i * 3 + 2];
+    if (w < 0.001) {
+      rig.pos.setXYZ(i, x0, y0, z0);
+      continue;
+    }
+    let x = x0 - rig.pivotX;
+    let y = y0 - rig.pivotY;
+    let z = z0 - rig.pivotZ;
+    if (!rig.forwardX) {
+      const x1 = x * cz - y * sz;
+      const y1 = x * sz + y * cz;
+      x = x1;
+      y = y1;
+    } else {
+      const y1 = y * cx - z * sx;
+      const z1 = y * sx + z * cx;
+      y = y1;
+      z = z1;
+    }
+    if (!rig.forwardX) {
+      const y2 = y * cx - z * sx;
+      const z2 = y * sx + z * cx;
+      y = y2;
+      z = z2 + reach;
+    } else {
+      const x2 = x * cz - y * sz;
+      const y2 = x * sz + y * cz;
+      x = x2 + reach;
+      y = y2;
+    }
+    rig.pos.setXYZ(i, x0 + (rig.pivotX + x - x0) * w, y0 + (rig.pivotY + y - y0) * w, z0 + (rig.pivotZ + z - z0) * w);
+  }
+  rig.pos.needsUpdate = true;
+  return true;
+}
+
 function fitHero(scene: THREE.Group, yaw: number) {
+  scene.updateMatrixWorld(true);
+  scene.traverse((obj) => {
+    const mesh = obj as THREE.Mesh;
+    if (!mesh.isMesh) return;
+    const baked = mesh.geometry.clone();
+    baked.applyMatrix4(mesh.matrixWorld);
+    mesh.geometry.dispose();
+    mesh.geometry = dropGroundSlab(baked);
+    mesh.position.set(0, 0, 0);
+    mesh.quaternion.identity();
+    mesh.scale.set(1, 1, 1);
+    mesh.updateMatrix();
+  });
+  scene.position.set(0, 0, 0);
+  scene.quaternion.identity();
+  scene.scale.set(1, 1, 1);
+  scene.updateMatrixWorld(true);
   scene.traverse((obj) => {
     const mesh = obj as THREE.Mesh;
     if (mesh.isMesh) lightenMesh(mesh, 0.008);
@@ -177,7 +414,9 @@ function fitHero(scene: THREE.Group, yaw: number) {
   scene.position.set(-(fitted.min.x + fitted.max.x) / 2, -fitted.min.y, -(fitted.min.z + fitted.max.z) / 2);
   scene.traverse((obj) => {
     const mesh = obj as THREE.Mesh;
-    if (mesh.isMesh) mesh.frustumCulled = false;
+    if (!mesh.isMesh) return;
+    mesh.frustumCulled = false;
+    rigArm(mesh, false);
   });
   return scene;
 }
@@ -298,24 +537,116 @@ function ArenaClouds() {
   );
 }
 
+function romanArm(geo: THREE.BufferGeometry) {
+  const pos = geo.getAttribute("position") as THREE.BufferAttribute;
+  geo.computeBoundingBox();
+  const box = geo.boundingBox;
+  if (!pos || !box) return null;
+  const minY = box.min.y;
+  const height = Math.max(0.001, box.max.y - minY);
+  let best = 0;
+  let side = 1;
+  const weights = new Float32Array(pos.count);
+  for (let i = 0; i < pos.count; i++) {
+    const y = pos.getY(i) - minY;
+    if (y < height * 0.3 || y > height * 0.96) continue;
+    const lateral = pos.getZ(i);
+    if (Math.abs(lateral) <= Math.abs(best)) continue;
+    best = lateral;
+    side = lateral < 0 ? -1 : 1;
+  }
+  const gate = height * 0.05;
+  const span = height * 0.16;
+  for (let i = 0; i < pos.count; i++) {
+    const y = pos.getY(i) - minY;
+    if (y < height * 0.28 || y > height * 0.97) continue;
+    const lateral = pos.getZ(i) * side;
+    if (lateral < gate) continue;
+    const u = Math.min(1, (lateral - gate) / span);
+    weights[i] = u * u * (3 - 2 * u);
+  }
+  geo.setAttribute("armW", new THREE.BufferAttribute(weights, 1));
+  const strike = new THREE.InstancedBufferAttribute(new Float32Array(ARENA_FOES * 2), 2);
+  strike.setUsage(THREE.DynamicDrawUsage);
+  geo.setAttribute("aStrike", strike);
+  const pivot = new THREE.Vector3(height * 0.08, minY + height * 0.72, side * height * 0.14);
+  const material = new THREE.MeshLambertMaterial({ vertexColors: true });
+  material.customProgramCacheKey = () => "arena-roman-arm";
+  material.onBeforeCompile = (shader) => {
+    shader.uniforms.armSide = { value: side };
+    shader.uniforms.armPivot = { value: pivot };
+    shader.vertexShader = shader.vertexShader
+      .replace(
+        "#include <common>",
+        `#include <common>
+         attribute float armW;
+         attribute vec2 aStrike;
+         uniform float armSide;
+         uniform vec3 armPivot;`
+      )
+      .replace(
+        "#include <beginnormal_vertex>",
+        `#include <beginnormal_vertex>
+         float liftN = aStrike.x;
+         float chopN = aStrike.y;
+         float rxN = -armSide * liftN * 1.25;
+         float rzN = -chopN * 1.3;
+         vec3 nrm = objectNormal;
+         float cxN = cos(rxN);
+         float sxN = sin(rxN);
+         nrm = vec3(nrm.x, nrm.y * cxN - nrm.z * sxN, nrm.y * sxN + nrm.z * cxN);
+         float czN = cos(rzN);
+         float szN = sin(rzN);
+         nrm = vec3(nrm.x * czN - nrm.y * szN, nrm.x * szN + nrm.y * czN, nrm.z);
+         objectNormal = mix(objectNormal, nrm, armW);`
+      )
+      .replace(
+        "#include <begin_vertex>",
+        `#include <begin_vertex>
+         float liftA = aStrike.x;
+         float chopA = aStrike.y;
+         float rxA = -armSide * liftA * 1.25;
+         float rzA = -chopA * 1.3;
+         vec3 arm = transformed - armPivot;
+         float cxA = cos(rxA);
+         float sxA = sin(rxA);
+         arm = vec3(arm.x, arm.y * cxA - arm.z * sxA, arm.y * sxA + arm.z * cxA);
+         float czA = cos(rzA);
+         float szA = sin(rzA);
+         arm = vec3(arm.x * czA - arm.y * szA, arm.x * szA + arm.y * czA, arm.z);
+         arm.x += chopA * 0.12;
+         transformed = mix(transformed, arm + armPivot, armW);`
+      );
+  };
+  return { geo, material, strike };
+}
+
 function ArenaFoes() {
   const mesh = useRef<THREE.InstancedMesh>(null);
-  const [geo, setGeo] = useState<THREE.BufferGeometry | null>(null);
+  const [foe, setFoe] = useState<ReturnType<typeof romanArm>>(null);
   useEffect(() => {
     let drop = false;
     const loader = new GLTFLoader();
     loader.load("/models/roman.glb", (gltf) => {
       if (drop) return;
-      setGeo(buildFoe(gltf.scene));
+      const geo = buildFoe(gltf.scene);
+      setFoe(geo ? romanArm(geo) : null);
     });
     return () => {
       drop = true;
     };
   }, []);
-  useEffect(() => () => geo?.dispose(), [geo]);
+  useEffect(
+    () => () => {
+      foe?.geo.dispose();
+      foe?.material.dispose();
+    },
+    [foe]
+  );
   useFrame(({ clock }) => {
     const body = mesh.current;
-    if (!body) return;
+    const strike = foe?.strike;
+    if (!body || !strike) return;
     const t = Math.max(0, clock.elapsedTime - REEL_HOLD);
     let live = 0;
     for (let i = 0; i < ARENA_FOES; i++) {
@@ -326,17 +657,16 @@ function ArenaFoes() {
       dummy.scale.setScalar(1);
       dummy.updateMatrix();
       body.setMatrixAt(live, dummy.matrix);
+      const hit = arenaFoeStrike(i, t);
+      strike.setXY(live, hit.lift, hit.chop);
       live += 1;
     }
     body.count = live;
     body.instanceMatrix.needsUpdate = true;
+    strike.needsUpdate = true;
   });
-  if (!geo) return null;
-  return (
-    <instancedMesh ref={mesh} args={[geo, undefined, ARENA_FOES]} frustumCulled={false}>
-      <meshLambertMaterial vertexColors />
-    </instancedMesh>
-  );
+  if (!foe) return null;
+  return <instancedMesh ref={mesh} args={[foe.geo, foe.material, ARENA_FOES]} frustumCulled={false} />;
 }
 
 function ArenaHeroes() {
@@ -390,6 +720,14 @@ function ArenaHeroes() {
 
 function ArenaHero({ index, body }: { index: number; body: THREE.Object3D }) {
   const ref = useRef<THREE.Group>(null);
+  const arms = useMemo(() => {
+    const list: ArmRig[] = [];
+    body.traverse((obj) => {
+      const mesh = obj as THREE.Mesh;
+      if (mesh.isMesh && mesh.userData.arm) list.push(mesh.userData.arm as ArmRig);
+    });
+    return list;
+  }, [body]);
   useFrame(({ clock }) => {
     const node = ref.current;
     if (!node) return;
@@ -397,6 +735,15 @@ function ArenaHero({ index, body }: { index: number; body: THREE.Object3D }) {
     arenaHero(index, t, pose);
     node.position.set(pose.x, pose.y, pose.z);
     node.rotation.set(pose.rx, pose.ry, pose.rz);
+    const hit = arenaHeroStrike(index, t);
+    let moved = false;
+    for (const arm of arms) moved = poseArm(arm, hit) || moved;
+    if (moved) {
+      body.traverse((obj) => {
+        const mesh = obj as THREE.Mesh;
+        if (mesh.isMesh) mesh.geometry.computeVertexNormals();
+      });
+    }
   });
   return (
     <group ref={ref}>
