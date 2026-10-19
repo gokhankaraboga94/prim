@@ -1,18 +1,17 @@
-import { useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
+import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { REEL_HOLD } from "../../recordCanvas";
 import { SPEAR_HIT, SPEAR_LOOSE, dragonAt, dragonBreathIndex, dragonBreaths, dragonFriendAt, dragonIsArcher, riderAt } from "../../dragonReel";
 
-const DORSAL = new THREE.Color("#8a1e1a");
-const BELLY = new THREE.Color("#c45a48");
-const HORN = new THREE.Color("#c4b193");
-const BONE = new THREE.Color("#3a332b");
+const TRIPO_URL = "/models/tripo.glb";
+const SNOUT = new THREE.Vector3(0.1194, 0.4862, 0.4204);
 
 type Station = { x: number; y: number; z: number; rx: number; ry: number };
 
-function skinTube(stations: Station[], sides = 16, dorsal: THREE.Color = DORSAL, belly: THREE.Color = BELLY, ridgeAmt = 0.35, bumpAmt = 1) {
+function skinTube(stations: Station[], sides: number, dorsal: THREE.Color, belly: THREE.Color, ridgeAmt = 0.35, bumpAmt = 1) {
   const pos: number[] = [];
   const col: number[] = [];
   const idx: number[] = [];
@@ -106,162 +105,6 @@ function prepMerge(geos: THREE.BufferGeometry[]) {
     if (!g.getAttribute("normal")) g.computeVertexNormals();
   }
   return mergeGeometries(geos, false);
-}
-
-function buildBody() {
-  const stations: Station[] = [
-    { x: 0.04, y: 0.2, z: -11.2, rx: 0.02, ry: 0.015 },
-    { x: -0.05, y: 0.18, z: -9.4, rx: 0.04, ry: 0.028 },
-    { x: 0.04, y: 0.16, z: -7.6, rx: 0.07, ry: 0.045 },
-    { x: -0.02, y: 0.14, z: -5.8, rx: 0.12, ry: 0.075 },
-    { x: 0, y: 0.1, z: -4.0, rx: 0.2, ry: 0.13 },
-    { x: 0, y: 0.04, z: -2.3, rx: 0.32, ry: 0.21 },
-    { x: 0, y: 0, z: -0.7, rx: 0.44, ry: 0.3 },
-    { x: 0, y: 0.04, z: 0.55, rx: 0.4, ry: 0.28 },
-    { x: 0, y: 0.14, z: 1.4, rx: 0.22, ry: 0.16 },
-    { x: 0, y: 0.36, z: 1.95, rx: 0.14, ry: 0.11 },
-    { x: 0, y: 0.66, z: 2.35, rx: 0.12, ry: 0.095 },
-    { x: 0, y: 1.0, z: 2.68, rx: 0.1, ry: 0.085 },
-  ];
-  const tube = skinTube(stations, 12);
-  const cone = new THREE.ConeGeometry(0.07, 0.42, 5);
-  const extras: THREE.BufferGeometry[] = [tube];
-  stations.forEach((s, i) => {
-    if (i < 1 || i > stations.length - 2) return;
-    const h = 0.05 + s.ry * 1.25;
-    extras.push(placed(cone, new THREE.Color("#4a1410"), s.x, s.y + s.ry * 0.9 + h * 0.3, s.z, -0.5, 0, 0, 0.2, h / 0.42, 0.12));
-  });
-  const thigh = new THREE.CylinderGeometry(0.09, 0.12, 0.62, 7);
-  const shin = new THREE.CylinderGeometry(0.05, 0.07, 0.55, 6);
-  const claw = new THREE.ConeGeometry(0.028, 0.16, 4);
-  ([-1, 1] as const).forEach((sign) => {
-    extras.push(placed(thigh, new THREE.Color("#6a221c"), sign * 0.2, -0.04, -0.45, 0.8, 0, sign * 0.12, 1.15, 1.15, 1.15));
-    extras.push(placed(shin, new THREE.Color("#4a1612"), sign * 0.32, -0.4, -0.85, 1.25, 0, sign * 0.04, 0.85, 1.1, 0.85));
-    extras.push(placed(claw, new THREE.Color("#1a0c08"), sign * 0.38, -0.62, -1.2, 1.15, 0, sign * 0.1));
-    extras.push(placed(claw, new THREE.Color("#1a0c08"), sign * 0.24, -0.58, -1.08, 1.1, 0.35, sign * 0.15, 0.7, 0.7, 0.7));
-  });
-  thigh.dispose();
-  shin.dispose();
-  const merged = prepMerge(extras);
-  cone.dispose();
-  claw.dispose();
-  if (merged) extras.forEach((g) => g.dispose());
-  return merged ?? new THREE.BufferGeometry();
-}
-
-function buildSkull() {
-  const stations: Station[] = [
-    { x: 0, y: 0.02, z: -0.2, rx: 0.13, ry: 0.11 },
-    { x: 0, y: 0.12, z: 0.05, rx: 0.22, ry: 0.17 },
-    { x: 0, y: 0.06, z: 0.38, rx: 0.16, ry: 0.1 },
-    { x: 0, y: -0.02, z: 0.72, rx: 0.1, ry: 0.05 },
-    { x: 0, y: -0.03, z: 1.02, rx: 0.04, ry: 0.022 },
-  ];
-  const tube = skinTube(stations, 12);
-  const horn = new THREE.ConeGeometry(0.038, 0.46, 5);
-  const pit = new THREE.SphereGeometry(0.028, 6, 4);
-  const parts = [
-    tube,
-    placed(horn, HORN, -0.06, 0.32, -0.02, -1.05, 0.15, 0.35, 0.75, 1.45, 0.75),
-    placed(horn, HORN, 0.06, 0.32, -0.02, -1.05, -0.15, -0.35, 0.75, 1.45, 0.75),
-    placed(horn, HORN, -0.14, 0.2, 0.08, -0.7, 0.45, 0.85, 0.5, 1.05, 0.5),
-    placed(horn, HORN, 0.14, 0.2, 0.08, -0.7, -0.45, -0.85, 0.5, 1.05, 0.5),
-    placed(horn, HORN, 0, 0.28, 0.12, -0.85, 0, 0, 0.4, 0.85, 0.4),
-    placed(pit, new THREE.Color("#140808"), -0.035, -0.02, 0.9),
-    placed(pit, new THREE.Color("#140808"), 0.035, -0.02, 0.9),
-  ];
-  const merged = prepMerge(parts);
-  horn.dispose();
-  pit.dispose();
-  if (merged) parts.forEach((g) => g.dispose());
-  return merged ?? new THREE.BufferGeometry();
-}
-
-function buildJaw() {
-  const stations: Station[] = [
-    { x: 0, y: 0.01, z: 0.02, rx: 0.15, ry: 0.045 },
-    { x: 0, y: -0.015, z: 0.32, rx: 0.1, ry: 0.032 },
-    { x: 0, y: -0.02, z: 0.58, rx: 0.04, ry: 0.016 },
-  ];
-  const tube = skinTube(stations, 10);
-  const tooth = new THREE.ConeGeometry(0.018, 0.07, 4);
-  const teeth: THREE.BufferGeometry[] = [tube];
-  for (let i = 0; i < 5; i++) {
-    const z = 0.08 + i * 0.09;
-    teeth.push(placed(tooth, new THREE.Color("#f3ead8"), -0.045, 0.03, z, -0.4, 0, 0.15));
-    teeth.push(placed(tooth, new THREE.Color("#f3ead8"), 0.045, 0.03, z, -0.4, 0, -0.15));
-  }
-  const merged = prepMerge(teeth);
-  tooth.dispose();
-  if (merged) teeth.forEach((g) => g.dispose());
-  return merged ?? new THREE.BufferGeometry();
-}
-
-type WingParts = { skin: THREE.BufferGeometry; bone: THREE.BufferGeometry };
-
-function wingGeo(sign: number): WingParts {
-  const fingers = [
-    [[0, 0.06, 0.2], [sign * 0.85, 0.72, 0.15], [sign * 1.7, 0.42, -0.7], [sign * 2.45, 0.05, -1.85]],
-    [[0, 0.02, 0], [sign * 1.15, 0.28, -0.85], [sign * 2.45, 0.04, -2.45], [sign * 3.85, -0.16, -4.15]],
-    [[0, 0, -0.12], [sign * 0.7, 0.06, -1.15], [sign * 1.45, -0.08, -2.45], [sign * 2.15, -0.2, -3.7]],
-  ];
-  const steps = 4;
-  const chains = fingers.map((finger) => {
-    const pts: number[][] = [];
-    for (let i = 0; i < finger.length - 1; i++) {
-      for (let s = 0; s < steps; s++) {
-        const u = s / steps;
-        const a = finger[i];
-        const b = finger[i + 1];
-        pts.push([a[0] + (b[0] - a[0]) * u, a[1] + (b[1] - a[1]) * u, a[2] + (b[2] - a[2]) * u]);
-      }
-    }
-    pts.push(finger[finger.length - 1]);
-    return pts;
-  });
-  const between = 2;
-  const cols = chains[0].length;
-  const rowCount = (chains.length - 1) * between + 1;
-  const pos: number[] = [];
-  const idx: number[] = [];
-  for (let row = 0; row < rowCount; row++) {
-    const span = row / (rowCount - 1);
-    const f = span * (chains.length - 1);
-    const f0 = Math.min(chains.length - 2, Math.floor(f));
-    const v = f - f0;
-    for (let i = 0; i < cols; i++) {
-      const u = i / (cols - 1);
-      const a = chains[f0][i];
-      const b = chains[f0 + 1][i];
-      const sag = Math.sin(v * Math.PI) * Math.sin(u * Math.PI) * 0.22;
-      pos.push(a[0] + (b[0] - a[0]) * v, a[1] + (b[1] - a[1]) * v - sag, a[2] + (b[2] - a[2]) * v);
-    }
-  }
-  for (let row = 0; row < rowCount - 1; row++) {
-    for (let i = 0; i < cols - 1; i++) {
-      const a = row * cols + i;
-      const b = a + 1;
-      const c = a + cols;
-      const d = c + 1;
-      if (sign > 0) idx.push(a, c, b, b, c, d);
-      else idx.push(a, b, c, b, d, c);
-    }
-  }
-  const skin = new THREE.BufferGeometry();
-  skin.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
-  skin.setIndex(idx);
-  skin.computeVertexNormals();
-  const rod = new THREE.CylinderGeometry(0.007, 0.011, 1, 4);
-  const spars = [
-    placed(rod, BONE, sign * 1.2, 0.32, -0.45, 0.55, 0, sign * 0.55, 1, 2.7, 1),
-    placed(rod, BONE, sign * 1.9, 0.04, -1.9, 0.85, 0, sign * 0.42, 1, 4.3, 1),
-    placed(rod, BONE, sign * 1.05, -0.04, -1.85, 1.0, 0, sign * 0.35, 1, 3.6, 1),
-    placed(rod, BONE, sign * 0.22, 0.12, 0.04, 0.2, 0, sign * 0.85, 0.35, 0.55, 0.35),
-  ];
-  rod.dispose();
-  const bone = prepMerge(spars) ?? new THREE.BufferGeometry();
-  if (bone !== spars[0]) spars.forEach((g) => g.dispose());
-  return { skin, bone };
 }
 
 const flameVert = `
@@ -374,26 +217,8 @@ function GroundFire({ ax, az, t0, dur, armed, radius }: { ax: number; az: number
 
 const EMBER_N = 20;
 
-function Drake({
-  index,
-  soldiers,
-  body,
-  jawGeo,
-  wings,
-  bodyMat,
-}: {
-  index: number;
-  soldiers: number;
-  body: THREE.BufferGeometry | null;
-  jawGeo: THREE.BufferGeometry | null;
-  wings: readonly [WingParts, WingParts];
-  bodyMat: THREE.Material;
-}) {
+function Drake({ index, soldiers }: { index: number; soldiers: number }) {
   const root = useRef<THREE.Group>(null);
-  const left = useRef<THREE.Group>(null);
-  const right = useRef<THREE.Group>(null);
-  const jaw = useRef<THREE.Group>(null);
-  const eyes = useRef<THREE.Group>(null);
   const mouthAnchor = useRef<THREE.Object3D>(null);
   const flame = useRef<THREE.Group>(null);
   const embers = useRef<THREE.InstancedMesh>(null);
@@ -407,24 +232,48 @@ function Drake({
   const aimDir = useMemo(() => new THREE.Vector3(), []);
   const aimUp = useMemo(() => new THREE.Vector3(0, 1, 0), []);
   const scale = 1.88;
-  const skull = useMemo(() => buildSkull(), []);
-  const skinMat = useMemo(
-    () =>
-      new THREE.MeshStandardMaterial({
-        color: "#c4472a",
-        transparent: true,
-        opacity: 0.58,
-        roughness: 0.74,
-        metalness: 0,
-        side: THREE.DoubleSide,
-        depthWrite: false,
-      }),
-    []
-  );
-  const boneMat = useMemo(
-    () => new THREE.MeshStandardMaterial({ color: "#5c5144", roughness: 0.62, metalness: 0.08 }),
-    []
-  );
+  const [model, setModel] = useState<THREE.Group | null>(null);
+  useEffect(() => {
+    const loader = new GLTFLoader();
+    let drop = false;
+    let scene: THREE.Group | null = null;
+    loader.load(TRIPO_URL, (gltf) => {
+      if (drop) return;
+      scene = gltf.scene;
+      scene.updateMatrixWorld(true);
+      const box = new THREE.Box3().setFromObject(scene);
+      const size = box.getSize(new THREE.Vector3());
+      const center = box.getCenter(new THREE.Vector3());
+      const fit = 10 / Math.max(size.x, size.z, 0.001);
+      scene.scale.setScalar(fit);
+      scene.position.set(-center.x * fit, -center.y * fit, -center.z * fit);
+      scene.traverse((obj) => {
+        const mesh = obj as THREE.Mesh;
+        if (mesh.isMesh) mesh.frustumCulled = false;
+      });
+      if (mouthAnchor.current) {
+        mouthAnchor.current.position.set((SNOUT.x - center.x) * fit, (SNOUT.y - center.y) * fit, (SNOUT.z - center.z) * fit);
+      }
+      setModel(scene);
+    });
+    return () => {
+      drop = true;
+      scene?.traverse((obj) => {
+        const mesh = obj as THREE.Mesh;
+        if (!mesh.isMesh) return;
+        mesh.geometry?.dispose();
+        const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+        for (const mat of mats) {
+          const std = mat as THREE.MeshStandardMaterial;
+          std.map?.dispose();
+          std.normalMap?.dispose();
+          std.roughnessMap?.dispose();
+          std.metalnessMap?.dispose();
+          mat.dispose();
+        }
+      });
+    };
+  }, []);
 
   useFrame(({ clock }) => {
     const t = Math.max(0, clock.elapsedTime - REEL_HOLD);
@@ -438,23 +287,6 @@ function Drake({
       root.current.rotation.set(p.pitch, p.yaw, p.roll);
       root.current.updateMatrixWorld(true);
     }
-    const hurt = t > SPEAR_HIT;
-    const gliding = breath > 0.25 && !hurt;
-    const phase = t * (hurt ? 7.4 : gliding ? 1.6 : 4.2) + index;
-    const wave = Math.sin(phase);
-    const flap = wave < 0 ? wave * 1.15 : wave * 0.72;
-    const amp = hurt ? 0.58 : gliding ? 0.1 : 0.32;
-    if (left.current) {
-      left.current.rotation.z = 0.58 + flap * amp;
-      left.current.rotation.x = -0.16;
-    }
-    if (right.current) {
-      right.current.rotation.z = -0.58 - flap * amp;
-      right.current.rotation.x = -0.16;
-    }
-    const neck = Math.sin(t * 1.25 + index) * 0.05;
-    if (jaw.current) jaw.current.rotation.x = -0.16 - breath * 0.72;
-    if (eyes.current) eyes.current.position.x = neck;
     if (flame.current && mouthAnchor.current) {
       mouthAnchor.current.getWorldPosition(mouthPos);
       aimPos.set(p.aimX, 0.15, p.aimZ);
@@ -519,42 +351,8 @@ function Drake({
   return (
     <group>
       <group ref={root} scale={scale}>
-        {body && <mesh geometry={body} material={bodyMat} />}
-        <group ref={eyes} position={[0, 1.02, 2.78]}>
-          {skull && <mesh geometry={skull} material={bodyMat} />}
-          {([-1, 1] as const).map((side) => (
-            <group key={side} position={[side * 0.16, 0.1, 0.22]}>
-              <mesh>
-                <sphereGeometry args={[0.042, 10, 8]} />
-                <meshStandardMaterial color="#e6b15a" roughness={0.22} metalness={0.18} />
-              </mesh>
-              <mesh position={[0, 0, 0.02]} scale={[0.45, 0.16, 0.28]}>
-                <sphereGeometry args={[0.026, 6, 4]} />
-                <meshBasicMaterial color="#0c0604" />
-              </mesh>
-            </group>
-          ))}
-          <group ref={jaw} position={[0, -0.1, 0.32]}>
-            {jawGeo && (
-              <mesh geometry={jawGeo}>
-                <meshStandardMaterial vertexColors roughness={0.88} metalness={0.02} />
-              </mesh>
-            )}
-            <mesh position={[0, 0.02, 0.18]}>
-              <boxGeometry args={[0.16, 0.03, 0.22]} />
-              <meshBasicMaterial color="#14080a" />
-            </mesh>
-          </group>
-        </group>
-        <object3D ref={mouthAnchor} position={[0, 0.88, 3.72]} />
-        <group ref={left} position={[0.34, 0.28, 1.15]}>
-          <mesh geometry={wings[0].bone} material={boneMat} />
-          <mesh geometry={wings[0].skin} material={skinMat} renderOrder={2} />
-        </group>
-        <group ref={right} position={[-0.34, 0.28, 1.15]}>
-          <mesh geometry={wings[1].bone} material={boneMat} />
-          <mesh geometry={wings[1].skin} material={skinMat} renderOrder={2} />
-        </group>
+        {model && <primitive object={model} />}
+        <object3D ref={mouthAnchor} position={[0, 1.6, 4.3]} />
       </group>
       <group ref={flame}>
         {[0, 0.55, -0.55, 1.15, -1.15].map((spin) => (
@@ -902,39 +700,10 @@ function Lancer({ soldiers }: { soldiers: number }) {
 
 export function Dragon({ soldiers }: { soldiers: number }) {
   const n = Math.max(1, Math.floor(soldiers));
-  const body = useMemo(() => buildBody(), []);
-  const jawGeo = useMemo(() => buildJaw(), []);
-  const wings = useMemo(() => [wingGeo(1), wingGeo(-1)] as const, []);
-  const timeU = useRef<THREE.IUniform | null>(null);
-  const bodyMat = useMemo(() => {
-    const m = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9, metalness: 0.02 });
-    m.onBeforeCompile = (shader) => {
-      shader.uniforms.uTime = { value: 0 };
-      timeU.current = shader.uniforms.uTime;
-      if (!shader.vertexShader.includes("uniform float uTime")) {
-        shader.vertexShader = `uniform float uTime;\n${shader.vertexShader}`;
-      }
-      shader.vertexShader = shader.vertexShader.replace(
-        "#include <begin_vertex>",
-        `#include <begin_vertex>
-  float tailW = smoothstep(-0.8, -10.4, transformed.z);
-  float neckW = smoothstep(1.6, 2.6, transformed.z);
-  transformed.x += sin(uTime * 2.2 + transformed.z * 0.8) * tailW * 1.05;
-  transformed.y += cos(uTime * 1.6 + transformed.z * 0.5) * tailW * 0.32;
-  transformed.x += sin(uTime * 1.25) * neckW * 0.07;
-  transformed.y += sin(uTime * 1.6 + 0.4) * neckW * 0.05;`,
-      );
-    };
-    return m;
-  }, []);
-
-  useFrame(({ clock }) => {
-    if (timeU.current) timeU.current.value = Math.max(0, clock.elapsedTime - REEL_HOLD);
-  });
 
   return (
     <group>
-      <Drake index={0} soldiers={n} body={body} jawGeo={jawGeo} wings={wings} bodyMat={bodyMat} />
+      <Drake index={0} soldiers={n} />
       {dragonBreaths(n).map((b, i) => (
         <GroundFire key={i} ax={b.ax} az={b.az} t0={b.t0} dur={b.dur} armed radius={b.r} />
       ))}
