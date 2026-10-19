@@ -1005,7 +1005,7 @@ export function AdminPage() {
             <p className="muted">15 saniye. İlk kare tek isim, ok yüzüne bir karış. Okun karşısındaki kişi her kayıtta değişir. Üstteki isim hızlı döner, 100 askerin adı da orada görünür. Tutanlar yerinde kalır. Kimse ölmez. Şövalyeler Vaporworks Knight (CC-BY).</p>
           )}
           {isHero(reelShot) && (
-            <p className="muted">12 saniye, yakın çekim. 5 modelden 3’er tane, 15 kahraman. İsimler son takipçilerden, siyah plaka içinde sarı. Kimse ölmez.</p>
+            <p className="muted">12 saniye. Her modelden bir tane, 5 kahraman. Çim zemin, taş daire, gök arka plan. İsimler son takipçilerden, siyah plaka içinde sarı. Kimse ölmez.</p>
           )}
           {isSnake(reelShot) && (
             <p className="muted">DEV5 ile aynı kadro ve kamera. Yeşil-kahverengi yılan. Bekleyenler dairede. Çoğunluk başa, birkaç kişi gövdeye ve kuyruğa gider. Yılan hem onlara hem dairedeki bekleyen ve okçulara saldırır.</p>

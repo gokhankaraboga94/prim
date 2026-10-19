@@ -64,7 +64,7 @@ function HeroNames({ names }: { names: string[] }) {
       const mesh = cell ? refs.current[cell.sheet] : null;
       if (!cell || !mesh) continue;
       const slot = heroSlot(i);
-      const width = 0.96;
+      const width = 1.08;
       const size = width / Math.max(1.15, cell.sx);
       dummy.position.set(slot.x, 2.04, slot.z);
       dummy.scale.set(cell.sx * size, cell.sy * size, 1);
@@ -110,14 +110,10 @@ function HeroLine() {
         left -= 1;
         if (left > 0) return;
         keep.current = loaded;
-        const used = new Array(loaded.length).fill(false);
         const placed: THREE.Object3D[] = [];
         for (let i = 0; i < HERO_N; i++) {
-          const model = heroSlot(i).model;
-          const src = loaded[model];
-          if (!src) continue;
-          placed[i] = used[model] ? src.clone(true) : src;
-          used[model] = true;
+          const src = loaded[heroSlot(i).model];
+          if (src) placed[i] = src;
         }
         setBodies(placed);
       });
@@ -169,15 +165,61 @@ function HeroStand({ index, body }: { index: number; body: THREE.Object3D }) {
   );
 }
 
+function HeroSky() {
+  const mat = useMemo(
+    () =>
+      new THREE.ShaderMaterial({
+        side: THREE.BackSide,
+        depthWrite: false,
+        fog: false,
+        toneMapped: false,
+        vertexShader: `
+          varying vec3 vPos;
+          void main() {
+            vPos = position;
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+          }
+        `,
+        fragmentShader: `
+          varying vec3 vPos;
+          void main() {
+            float h = normalize(vPos).y;
+            vec3 zenith = vec3(0.20, 0.46, 0.90);
+            vec3 horizon = vec3(0.69, 0.84, 0.96);
+            vec3 col = mix(horizon, zenith, smoothstep(-0.05, 0.62, h));
+            gl_FragColor = vec4(col, 1.0);
+          }
+        `,
+      }),
+    []
+  );
+  useEffect(() => () => mat.dispose(), [mat]);
+  return (
+    <mesh material={mat} frustumCulled={false}>
+      <sphereGeometry args={[90, 20, 12]} />
+    </mesh>
+  );
+}
+
 export function HeroBattle({ names }: { names: string[] }) {
   return (
     <group>
-      <ambientLight intensity={0.62} />
-      <directionalLight position={[3.2, 6.4, 5.2]} intensity={2.6} color="#fff2e2" />
-      <directionalLight position={[-3.4, 3.2, -2.2]} intensity={0.7} color="#9eb4ff" />
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.02, -2.2]} receiveShadow={false}>
-        <circleGeometry args={[16, 40]} />
-        <meshStandardMaterial color="#2a221b" roughness={0.96} metalness={0} />
+      <HeroSky />
+      <hemisphereLight args={["#d7e8ff", "#6a8a48", 0.85]} />
+      <ambientLight intensity={0.35} />
+      <directionalLight position={[4.2, 8.2, 6.4]} intensity={2.4} color="#fff4e4" />
+      <directionalLight position={[-4.2, 3.4, -3]} intensity={0.55} color="#9eb6ff" />
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.04, 0]}>
+        <planeGeometry args={[160, 160]} />
+        <meshStandardMaterial color="#4f9a3c" roughness={0.96} metalness={0} />
+      </mesh>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.015, 0.2]}>
+        <circleGeometry args={[8.4, 48]} />
+        <meshStandardMaterial color="#c9a56a" roughness={0.9} metalness={0} />
+      </mesh>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.008, 0.2]}>
+        <ringGeometry args={[7.55, 8.15, 48]} />
+        <meshStandardMaterial color="#8d6a3e" roughness={0.92} metalness={0} />
       </mesh>
       <HeroLine />
       <HeroNames names={names} />
