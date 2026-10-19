@@ -20,8 +20,8 @@ import {
 
 const KONG_URL = "/models/bigfoot.glb";
 const ORC_URL = "/models/orc.glb";
-const KONG_L = new THREE.Vector3(-0.16, 0.64, 0.02);
-const KONG_R = new THREE.Vector3(0.16, 0.64, 0.02);
+const KONG_L = new THREE.Vector3(-0.13, 0.7, 0.02);
+const KONG_R = new THREE.Vector3(0.13, 0.7, 0.02);
 const ORC_L = new THREE.Vector3(-0.15, 0.6, 0.02);
 const ORC_R = new THREE.Vector3(0.15, 0.6, 0.02);
 const qSwing = new THREE.Quaternion();
@@ -84,9 +84,9 @@ function armWeights(pos: THREE.BufferAttribute, kong: boolean) {
   rest.set(pos.array as Float32Array);
   const weight = new Float32Array(pos.count);
   const side = new Float32Array(pos.count);
-  const y0 = kong ? 0.3 : 0.14;
-  const x0 = kong ? 0.18 : 0.16;
-  const span = kong ? 0.12 : 0.14;
+  const y0 = kong ? 0.22 : 0.14;
+  const x0 = kong ? 0.13 : 0.16;
+  const span = kong ? 0.1 : 0.14;
   for (let i = 0; i < pos.count; i++) {
     const x = rest[i * 3];
     const y = rest[i * 3 + 1];
@@ -188,8 +188,9 @@ function DuelKong() {
     const recoil = boutRecoil(t, ORC_HITS);
     const lunge = Math.max(0, punch.a);
     node.position.set(KONG_HOME + lunge * 2.05 - recoil * 0.28, Math.abs(Math.sin(t * 2.4)) * 0.08, punch.hand * lunge * 0.08);
+    const lift = Math.max(0, -punch.a) * 1.9 + Math.max(0, punch.a) * 1.15;
     node.rotation.set(lunge * 0.08, Math.PI / 2 + punch.hand * punch.a * 0.16, -recoil * 0.04);
-    swingVerts(swing, punch.a * 1.6, punch.hand, KONG_L, KONG_R, 0, lunge * 0.075);
+    swingVerts(swing, punch.a * 1.6, punch.hand, KONG_L, KONG_R, lift, lunge * 0.075);
   });
   return (
     <>

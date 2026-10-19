@@ -28,7 +28,7 @@ const ORC_DMG = chips(ORC_HITS.length, 74, 4);
 export const KONG_HOME = -4.5;
 export const ORC_HOME = 4.3;
 export const KONG_H = 15.6 * 1.52;
-export const ORC_H = 15.6 * 0.7 * 1.52;
+export const ORC_H = 15.6 * 0.7 * 1.52 * 1.15;
 export const ORC_FALL = 46.7;
 
 export function isBout(id: string | null | undefined): id is BoutId {
