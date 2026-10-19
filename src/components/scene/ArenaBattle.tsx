@@ -53,6 +53,52 @@ function paintRoman(geo: THREE.BufferGeometry, color: THREE.Color) {
   return next;
 }
 
+function withoutFootBase(geo: THREE.BufferGeometry) {
+  const srcPos = geo.getAttribute("position");
+  const srcNorm = geo.getAttribute("normal");
+  const index = geo.getIndex();
+  if (!srcPos) return geo;
+  geo.computeBoundingBox();
+  const bounds = geo.boundingBox;
+  if (!bounds) return geo;
+  const height = bounds.max.y - bounds.min.y;
+  const wide = bounds.max.x - bounds.min.x > 0.22 && bounds.max.z - bounds.min.z > 0.22;
+  if (wide && height < 0.05 && bounds.max.y < -0.15) return null;
+  const hasBase = bounds.min.y < -0.3 && bounds.max.y > 0;
+  if (!hasBase) return geo;
+  const kept: number[] = [];
+  const pushTri = (a: number, b: number, c: number) => {
+    const top = Math.max(srcPos.getY(a), srcPos.getY(b), srcPos.getY(c));
+    if (top < 0) return;
+    kept.push(a, b, c);
+  };
+  if (index) {
+    for (let i = 0; i < index.count; i += 3) pushTri(index.getX(i), index.getX(i + 1), index.getX(i + 2));
+  } else {
+    for (let i = 0; i < srcPos.count; i += 3) pushTri(i, i + 1, i + 2);
+  }
+  if (!kept.length) return null;
+  if (kept.length === (index ? index.count : srcPos.count)) return geo;
+  const next = new THREE.BufferGeometry();
+  const positions = new Float32Array(kept.length * 3);
+  const normals = srcNorm ? new Float32Array(kept.length * 3) : null;
+  for (let i = 0; i < kept.length; i++) {
+    const v = kept[i];
+    positions[i * 3] = srcPos.getX(v);
+    positions[i * 3 + 1] = srcPos.getY(v);
+    positions[i * 3 + 2] = srcPos.getZ(v);
+    if (normals && srcNorm) {
+      normals[i * 3] = srcNorm.getX(v);
+      normals[i * 3 + 1] = srcNorm.getY(v);
+      normals[i * 3 + 2] = srcNorm.getZ(v);
+    }
+  }
+  next.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+  if (normals) next.setAttribute("normal", new THREE.BufferAttribute(normals, 3));
+  geo.dispose();
+  return next;
+}
+
 function buildFoe(root: THREE.Object3D) {
   root.updateMatrixWorld(true);
   const pieces: THREE.BufferGeometry[] = [];
@@ -60,8 +106,13 @@ function buildFoe(root: THREE.Object3D) {
   root.traverse((obj) => {
     const mesh = obj as THREE.Mesh;
     if (!mesh.isMesh) return;
-    const geo = mesh.geometry.clone();
-    geo.applyMatrix4(mesh.matrixWorld);
+    const cloned = mesh.geometry.clone();
+    cloned.applyMatrix4(mesh.matrixWorld);
+    const geo = withoutFootBase(cloned);
+    if (!geo) {
+      cloned.dispose();
+      return;
+    }
     geo.computeBoundingBox();
     if (geo.boundingBox) box.union(geo.boundingBox);
     const src = mesh.material;
@@ -153,8 +204,8 @@ function ArenaSky() {
 }
 
 function ArenaCage() {
-  const posts = 40;
-  const rings = [0.55, 1.45, 2.35, 3.2];
+  const posts = 56;
+  const rings = [0.18, 0.42, 0.66, 0.9].map((k) => ARENA_CAGE_H * k);
   return (
     <group>
       <mesh position={[0, -0.18, 0]} receiveShadow>
@@ -188,7 +239,7 @@ function ArenaCage() {
         const a = (i / (posts / 2)) * Math.PI * 2;
         return (
           <mesh key={`x${i}`} position={[Math.sin(a) * ARENA_CAGE, ARENA_CAGE_H * 0.62, Math.cos(a) * ARENA_CAGE]} rotation={[0.9, a, 0]}>
-            <cylinderGeometry args={[0.008, 0.008, 1.55, 4]} />
+            <cylinderGeometry args={[0.008, 0.008, 1.85, 4]} />
             <meshStandardMaterial color="#aeb6be" metalness={0.8} roughness={0.24} />
           </mesh>
         );
