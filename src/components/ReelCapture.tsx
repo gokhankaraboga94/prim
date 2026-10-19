@@ -21,6 +21,7 @@ import type { WarsId } from "../warsReel";
 import type { OrduId } from "../orduReel";
 import type { OkId } from "../okReel";
 import type { KalkanId } from "../kalkanReel";
+import type { HeroId } from "../heroReel";
 
 type ReelCaptureProps = {
   soldiers: number;
@@ -59,6 +60,7 @@ type ReelCaptureProps = {
   ordu?: OrduId | null;
   ok?: OkId | null;
   kalkan?: KalkanId | null;
+  hero?: HeroId | null;
   mix?: MixId | null;
   xxx?: XxxId | null;
   rosterIds?: number[] | null;
@@ -66,7 +68,7 @@ type ReelCaptureProps = {
   onClose: () => void;
 };
 
-export function ReelCapture({ soldiers, names, commanders = [], level, pressure, hp, maxHp, seconds, showTitles = true, warLook = false, day = 0, skipCommander = false, shotMode = null, cinema = false, roster = null, saga = null, discover = null, countdown = null, defend = null, vs = null, new1 = null, new2 = null, new3 = null, new4 = null, new5 = null, new6 = null, new62 = null, new7 = null, maze = null, film = null, dragon = null, giant = null, wars = null, ordu = null, ok = null, kalkan = null, mix = null, xxx = null, rosterIds = null, onRecorded, onClose }: ReelCaptureProps) {
+export function ReelCapture({ soldiers, names, commanders = [], level, pressure, hp, maxHp, seconds, showTitles = true, warLook = false, day = 0, skipCommander = false, shotMode = null, cinema = false, roster = null, saga = null, discover = null, countdown = null, defend = null, vs = null, new1 = null, new2 = null, new3 = null, new4 = null, new5 = null, new6 = null, new62 = null, new7 = null, maze = null, film = null, dragon = null, giant = null, wars = null, ordu = null, ok = null, kalkan = null, hero = null, mix = null, xxx = null, rosterIds = null, onRecorded, onClose }: ReelCaptureProps) {
   const clip = roster && isJoin(roster) && rosterIds?.length ? rosterDuration(roster, rosterIds.length) : seconds;
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [phase, setPhase] = useState<"boot" | "rec" | "done" | "err">("boot");
@@ -160,8 +162,8 @@ export function ReelCapture({ soldiers, names, commanders = [], level, pressure,
             duration={clip}
             warLook={warLook}
             day={day}
-            skipCommander={skipCommander || Boolean(discover) || Boolean(countdown) || Boolean(defend) || Boolean(vs) || Boolean(new1) || Boolean(new2) || Boolean(new3) || Boolean(new4) || Boolean(new5) || Boolean(new6) || Boolean(new62) || Boolean(new7) || Boolean(maze) || Boolean(film) || Boolean(giant) || Boolean(wars) || Boolean(ordu) || Boolean(ok) || Boolean(kalkan) || Boolean(xxx && xxxHideCmd(xxx))}
-            shotMode={cinema || roster || saga || discover || countdown || defend || vs || new1 || new2 || new3 || new4 || new5 || new6 || new62 || new7 || maze || film || giant || wars || ordu || ok || kalkan || mix || xxx ? null : shotMode}
+            skipCommander={skipCommander || Boolean(discover) || Boolean(countdown) || Boolean(defend) || Boolean(vs) || Boolean(new1) || Boolean(new2) || Boolean(new3) || Boolean(new4) || Boolean(new5) || Boolean(new6) || Boolean(new62) || Boolean(new7) || Boolean(maze) || Boolean(film) || Boolean(giant) || Boolean(wars) || Boolean(ordu) || Boolean(ok) || Boolean(kalkan) || Boolean(hero) || Boolean(xxx && xxxHideCmd(xxx))}
+            shotMode={cinema || roster || saga || discover || countdown || defend || vs || new1 || new2 || new3 || new4 || new5 || new6 || new62 || new7 || maze || film || giant || wars || ordu || ok || kalkan || hero || mix || xxx ? null : shotMode}
             cinema={cinema}
             roster={roster}
             saga={saga}
@@ -185,9 +187,10 @@ export function ReelCapture({ soldiers, names, commanders = [], level, pressure,
             ordu={ordu}
             ok={ok}
             kalkan={kalkan}
+            hero={hero}
             mix={mix}
             xxx={xxx}
-            showTitles={showTitles && !mix && !xxx && !new1 && !new2 && !new3 && !new4 && !new5 && !new6 && !new62 && !new7 && !maze && !film && !dragon && !giant && !wars && !ordu && !ok && !kalkan}
+            showTitles={showTitles && !mix && !xxx && !new1 && !new2 && !new3 && !new4 && !new5 && !new6 && !new62 && !new7 && !maze && !film && !dragon && !giant && !wars && !ordu && !ok && !kalkan && !hero}
             rosterIds={rosterIds}
             onReady={(canvas) => {
               canvasRef.current = canvas;
