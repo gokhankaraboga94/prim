@@ -1,6 +1,6 @@
 import { ARENA_ID, ARENA_MODE, ARENA_SECONDS } from "./arenaReel";
 import { BOUT_ID, BOUT_MODE, BOUT_SECONDS } from "./boutReel";
-import { DEV10_ID, DEV10_MODE, DEV10_SECONDS, DEV4_ID, DEV4_MODE, DEV4_SECONDS, DEV5_ID, DEV5_MODE, DEV5_SECONDS, DEV6_ID, DEV6_MODE, DEV6_SECONDS, DEV7_ID, DEV7_MODE, DEV7_SECONDS, DEV8_ID, DEV8_MODE, DEV8_SECONDS, DEV9_ID, DEV9_MODE, DEV9_SECONDS, DEVS_ID, DEVS_MODE, DEVS_SECONDS, SNAKE_ID, SNAKE_MODE, SNAKE_SECONDS } from "./devReel";
+import { DEV10_ID, DEV10_MODE, DEV10_SECONDS, DEV11_ID, DEV11_MODE, DEV11_SECONDS, DEV4_ID, DEV4_MODE, DEV4_SECONDS, DEV5_ID, DEV5_MODE, DEV5_SECONDS, DEV6_ID, DEV6_MODE, DEV6_SECONDS, DEV7_ID, DEV7_MODE, DEV7_SECONDS, DEV8_ID, DEV8_MODE, DEV8_SECONDS, DEV9_ID, DEV9_MODE, DEV9_SECONDS, DEVS_ID, DEVS_MODE, DEVS_SECONDS, SNAKE_ID, SNAKE_MODE, SNAKE_SECONDS } from "./devReel";
 import { HERO_ID, HERO_MODE, HERO_SECONDS } from "./heroReel";
 import { DRAGON_ID, DRAGON_MODE, DRAGON_SECONDS } from "./dragonReel";
 import { KALKAN_ID, KALKAN_MODE, KALKAN_SECONDS } from "./kalkanReel";
@@ -9,12 +9,12 @@ import { ORDU_ID, ORDU_MODE, ORDU_SECONDS } from "./orduReel";
 import { WARS_ID, WARS_MODE, WARS_SECONDS } from "./warsReel";
 import { DEFEND5_ID, DEFEND5_MODE, DEFEND5_SECONDS } from "./defendReel";
 import { LAB_ID, LAB_MODE, LAB_SECONDS } from "./mazeReel";
-import { FILM_ID, FILM_MODE, FILM_SECONDS } from "./filmReel";
 
 export const RECENT_BUTTON_LIMIT = 20;
 
 /** Yeniden eskiye. Bir buton güncellenirse en üste alınır, en alttaki 20'nin dışına düşer. */
 export const RECENT_BUTTONS = [
+  { id: DEV11_ID, label: `${DEV11_MODE.label} — ${DEV11_SECONDS}s`, seconds: DEV11_SECONDS },
   { id: ARENA_ID, label: `${ARENA_MODE.label} — ${ARENA_SECONDS}s`, seconds: ARENA_SECONDS },
   { id: BOUT_ID, label: `${BOUT_MODE.label} — ${BOUT_SECONDS}s`, seconds: BOUT_SECONDS },
   { id: DEV10_ID, label: `${DEV10_MODE.label} — ${DEV10_SECONDS}s`, seconds: DEV10_SECONDS },
@@ -34,5 +34,4 @@ export const RECENT_BUTTONS = [
   { id: LAB_ID, label: `${LAB_MODE.label} — ${LAB_SECONDS}s`, seconds: LAB_SECONDS },
   { id: DEV5_ID, label: `${DEV5_MODE.label} — ${DEV5_SECONDS}s`, seconds: DEV5_SECONDS },
   { id: DEV4_ID, label: `${DEV4_MODE.label} — ${DEV4_SECONDS}s`, seconds: DEV4_SECONDS },
-  { id: FILM_ID, label: `${FILM_MODE.label} — ${FILM_SECONDS}s`, seconds: FILM_SECONDS },
 ] as const;

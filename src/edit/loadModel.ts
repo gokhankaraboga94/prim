@@ -158,6 +158,14 @@ export async function loadCharacter(def: CharacterDef): Promise<CharacterAsset> 
     if (mesh.isMesh) meshes.push(mesh);
   });
   if (!meshes.length) throw new Error(def.label);
+  if (meshes.length === 1 && def.id === "hulk") {
+    const mesh = meshes[0];
+    const geo = bake(mesh);
+    const radius = fit(geo, def.height);
+    const src = (Array.isArray(mesh.material) ? mesh.material[0] : mesh.material) as THREE.MeshStandardMaterial;
+    const material = src.clone();
+    return { id: def.id, geometry: geo, material, radius };
+  }
   if (meshes.length === 1 && def.id !== "colossus" && def.id !== "roman") {
     const mesh = meshes[0];
     let geo = lighten(dropGroundSlab(bake(mesh)));

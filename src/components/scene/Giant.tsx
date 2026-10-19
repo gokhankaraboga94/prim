@@ -9,6 +9,7 @@ import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { devAlive, devClubHit, devGiantAt, devMaceSwing, devSnakeBite, devSwordPose, devTailLash, devTroopHit, devTroopSlot, devWaitArrow, TROOP_N, TROOP_SCALE } from "../../devReel";
 import { KongModel } from "./Kong";
 import { DemonModel } from "./Demon";
+import { HulkModel } from "./Hulk";
 import { OrcModel } from "./Orc";
 
 const dummy = new THREE.Object3D();
@@ -666,7 +667,7 @@ function ColossusModel({ soldiers }: { soldiers: number }) {
   return <group ref={rig} scale={scale} position={[-COLOSSUS_CENTER_X * scale, -COLOSSUS_MIN_Y * scale, -COLOSSUS_CENTER_Z * scale]} />;
 }
 
-function GiantBody({ soldiers, big, sword, dread, flesh = false, ape = false, demon = false, orc = false, crown = false }: { soldiers: number; big: boolean; sword: boolean; dread: boolean; flesh?: boolean; ape?: boolean; demon?: boolean; orc?: boolean; crown?: boolean }) {
+function GiantBody({ soldiers, big, sword, dread, flesh = false, ape = false, demon = false, orc = false, hulk = false, crown = false }: { soldiers: number; big: boolean; sword: boolean; dread: boolean; flesh?: boolean; ape?: boolean; demon?: boolean; orc?: boolean; hulk?: boolean; crown?: boolean }) {
   const root = useRef<THREE.Group>(null);
   const arm = useRef<THREE.Group>(null);
   const mace = useRef<THREE.Group>(null);
@@ -727,7 +728,9 @@ function GiantBody({ soldiers, big, sword, dread, flesh = false, ape = false, de
   const spikes = [0, 45, 90, 135, 180, 225, 270, 315];
   return (
     <group ref={root} scale={big ? 1.52 : 1}>
-      {orc ? (
+      {hulk ? (
+        <HulkModel />
+      ) : orc ? (
         <OrcModel soldiers={soldiers} />
       ) : demon ? (
         <DemonModel soldiers={soldiers} />
@@ -791,7 +794,7 @@ function GiantBody({ soldiers, big, sword, dread, flesh = false, ape = false, de
       </mesh>
         </>
       )}
-      {!flesh && !ape && !demon && !orc && (
+      {!flesh && !ape && !demon && !orc && !hulk && (
         <>
       <group ref={arm} position={[-2.7, 10.4, 0.2]}>
         {dread ? (
@@ -1284,10 +1287,10 @@ function DevTroop({ soldiers }: { soldiers: number }) {
   );
 }
 
-export function Giant({ soldiers, big = false, sword = false, dread = false, flesh = false, ape = false, demon = false, orc = false, snake = false, devs = false, crown = false }: { soldiers: number; big?: boolean; sword?: boolean; dread?: boolean; flesh?: boolean; ape?: boolean; demon?: boolean; orc?: boolean; snake?: boolean; devs?: boolean; crown?: boolean }) {
+export function Giant({ soldiers, big = false, sword = false, dread = false, flesh = false, ape = false, demon = false, orc = false, hulk = false, snake = false, devs = false, crown = false }: { soldiers: number; big?: boolean; sword?: boolean; dread?: boolean; flesh?: boolean; ape?: boolean; demon?: boolean; orc?: boolean; hulk?: boolean; snake?: boolean; devs?: boolean; crown?: boolean }) {
   return (
     <group>
-      {devs ? <DevTroop soldiers={soldiers} /> : snake ? <SnakeBody soldiers={soldiers} /> : <GiantBody soldiers={soldiers} big={big} sword={sword} dread={dread} flesh={flesh} ape={ape} demon={demon} orc={orc} crown={crown} />}
+      {devs ? <DevTroop soldiers={soldiers} /> : snake ? <SnakeBody soldiers={soldiers} /> : <GiantBody soldiers={soldiers} big={big} sword={sword} dread={dread} flesh={flesh} ape={ape} demon={demon} orc={orc} hulk={hulk} crown={crown} />}
       <ArrowVolley big={big} snake={snake} devs={devs} soldiers={soldiers} />
     </group>
   );
