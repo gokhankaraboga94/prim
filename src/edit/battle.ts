@@ -507,23 +507,19 @@ export function stepUnits(store: EditStore, dt: number) {
     const face = Math.atan2(foeCenter.x - home.x, foeCenter.z - home.z);
     const ordered = lineUp(members, face);
     const gap = teamGap(ordered);
-    const { locals, depth } = slotLocals(ordered.length, gap);
+    const { locals } = slotLocals(ordered.length, gap);
     const { rx, rz, fx, fz } = basis(face);
-    let nearest = foes[0];
-    let nearestDist = Infinity;
-    for (const enemy of foes) {
-      const dist = Math.hypot(enemy.x - home.x, enemy.z - home.z);
-      if (dist < nearestDist) {
-        nearestDist = dist;
-        nearest = enemy;
+    let short = Infinity;
+    for (const unit of ordered) {
+      for (const enemy of foes) {
+        if (!enemy.alive) continue;
+        const dist = Math.hypot(enemy.x - unit.x, enemy.z - unit.z);
+        const reach = unit.radius + enemy.radius + 0.45;
+        short = Math.min(short, dist - reach);
       }
     }
-    const frontCount = Math.min(columnCount(ordered.length), ordered.length);
-    let frontRadius = ordered[0].radius;
-    for (let i = 1; i < frontCount; i++) frontRadius = Math.min(frontRadius, ordered[i].radius);
-    const stop = depth / 2 + frontRadius + nearest.radius + 0.45;
     const pace = ordered.reduce((min, unit) => Math.min(min, unit.speed), ordered[0].speed);
-    const advance = nearestDist > stop ? Math.min(pace * step, nearestDist - stop) : 0;
+    const advance = short > 0 ? Math.min(pace * step, short + 0.04) : 0;
     const cx = home.x + fx * advance;
     const cz = home.z + fz * advance;
     ordered.forEach((unit, index) => {
