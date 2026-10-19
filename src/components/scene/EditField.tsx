@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import { TEAMS } from "../../edit/catalog";
-import { stepUnits, type EditStore, type Unit } from "../../edit/battle";
+import { moveSelected, stepUnits, teamLabel, type EditStore, type Unit } from "../../edit/battle";
 import type { CharacterAsset } from "../../edit/loadModel";
 import { MAX_PER_MODEL, MAX_UNITS } from "../../edit/catalog";
 
@@ -216,43 +216,14 @@ function EditRig({ store, assets }: { store: EditStore; assets: Record<string, C
           store.selected.clear();
           store.selected.add(picked.id);
         }
-        store.note = `${store.selected.size} asker seçili. Yere tıklayınca oraya gider.`;
+        const mates = picked.team > 0 ? store.units.filter((unit) => unit.alive && unit.team === picked.team).length : 0;
+        store.note = mates > 1 ? `1 asker seçili. Yere tıklayınca ${teamLabel(picked.team)} takımının ${mates} askeri birlikte gider.` : `${store.selected.size} asker seçili. Yere tıklayınca oraya gider.`;
         store.bump();
         return;
       }
       if (!raycaster.ray.intersectPlane(plane, hit)) return;
       if (store.selected.size && !event.shiftKey) {
-        const pickedIds = [...store.selected];
-        const alive = pickedIds.map((id) => store.byId.get(id)).filter((unit): unit is Unit => Boolean(unit && unit.alive));
-        if (!alive.length || store.battle) {
-          if (store.battle) {
-            store.note = "Savaş sürüyor. Yerleştirmek için durdur.";
-            store.bump();
-          }
-          return;
-        }
-        let cx = 0;
-        let cz = 0;
-        for (const unit of alive) {
-          cx += unit.x;
-          cz += unit.z;
-        }
-        cx /= alive.length;
-        cz /= alive.length;
-        const dx = hit.x - cx;
-        const dz = hit.z - cz;
-        const face = Math.hypot(dx, dz) > 0.15 ? Math.atan2(dx, dz) : null;
-        for (const unit of alive) {
-          unit.x = Math.max(-320, Math.min(320, unit.x + dx));
-          unit.z = Math.max(-320, Math.min(320, unit.z + dz));
-          if (face != null) {
-            unit.yaw = face + unit.yawOffset;
-            unit.aimX = dx;
-            unit.aimZ = dz;
-          }
-        }
-        store.note = `${alive.length} asker konumlandı.`;
-        store.bump();
+        moveSelected(store, hit.x, hit.z);
         return;
       }
       if (!event.shiftKey && store.selected.size) {

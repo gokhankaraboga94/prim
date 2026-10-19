@@ -200,7 +200,7 @@ export function EditPage() {
       </header>
 
       <p className="edit-help">
-        Sol tık seçer, sürükleyince kutu olur, yere tıklayınca seçililer oraya gider. Sağ tuş kamerayı döndürür, tekerlek yakınlaştırır, orta tuş ve ok tuşları haritayı kaydırır. Takımsız asker savaşmaz.
+        Sol tık seçer, sürükleyince kutu olur. Takımdan birini seçip yere tıklayınca bütün takım askeri nizamda oraya gider. Savaşta ölenlerin yeri kapanır, kalanlar yeniden dizilir. Sağ tuş kamerayı döndürür, tekerlek yakınlaştırır, orta tuş ve ok tuşları haritayı kaydırır. Takımsız asker savaşmaz.
       </p>
 
       <div className="edit-stage">
