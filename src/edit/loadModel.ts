@@ -1,6 +1,7 @@
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import * as THREE from "three";
+import { dropGroundSlab } from "../groundSlab";
 import { simplifySkinned } from "../knightSoldier";
 import type { CharacterDef } from "./catalog";
 
@@ -159,7 +160,7 @@ export async function loadCharacter(def: CharacterDef): Promise<CharacterAsset> 
   if (!meshes.length) throw new Error(def.label);
   if (meshes.length === 1 && def.id !== "colossus" && def.id !== "roman") {
     const mesh = meshes[0];
-    let geo = lighten(bake(mesh));
+    let geo = lighten(dropGroundSlab(bake(mesh)));
     const radius = fit(geo, def.height);
     const map = materialMap(mesh.material as THREE.Material);
     const material = new THREE.MeshLambertMaterial({
