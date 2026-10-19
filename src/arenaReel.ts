@@ -11,10 +11,37 @@ export function isArena(id: string | null | undefined): id is ArenaId {
   return id === ARENA_ID;
 }
 
+const ARENA_DEATHS = (() => {
+  const times = new Array<number>(ARENA_FOES);
+  const order = Array.from({ length: ARENA_FOES }, (_, i) => i);
+  let seed = 91;
+  for (let i = order.length - 1; i > 0; i--) {
+    seed = (seed * 16807) % 2147483647;
+    const j = seed % (i + 1);
+    const swap = order[i];
+    order[i] = order[j];
+    order[j] = swap;
+  }
+  let t = 0.85;
+  let n = 0;
+  let beat = 0;
+  while (n < ARENA_FOES) {
+    const pair = beat % 2 === 0 && n + 1 < ARENA_FOES;
+    times[order[n]] = t;
+    n += 1;
+    if (pair) {
+      times[order[n]] = t + 0.18;
+      n += 1;
+    }
+    const wobble = ((beat * 3) % 5) * 0.08 - 0.16;
+    t += (pair ? 1.9 : 1.35) + wobble;
+    beat += 1;
+  }
+  return times;
+})();
+
 export function arenaDieAt(i: number) {
-  const u = ARENA_FOES <= 1 ? 1 : i / (ARENA_FOES - 1);
-  const e = Math.pow(u, 2.15);
-  return 11 + e * 43;
+  return ARENA_DEATHS[i] ?? ARENA_SECONDS;
 }
 
 export function arenaAlive(t: number) {
@@ -46,10 +73,11 @@ export function arenaFoe(i: number, t: number, out: ArenaPose) {
   const die = arenaDieAt(i);
   const rush = Math.max(0, Math.min(1, (t - 0.8) / 7.2));
   const ease = rush * rush * (3 - 2 * rush);
-  const radius = home.ring - ease * (home.ring - (home.ring < 4 ? 2.45 : 3.85));
+  const radius = home.ring - ease * (home.ring - (home.ring < 4 ? 2.45 : 3.85)) + Math.sin(t * 1.6 + i) * 0.1;
   const bob = Math.sin(t * 6.5 + i) * 0.03;
-  const x = Math.sin(home.ang) * radius;
-  const z = Math.cos(home.ang) * radius;
+  const side = Math.cos(t * 1.15 + i * 0.8) * 0.16;
+  const x = Math.sin(home.ang) * radius + Math.cos(home.ang) * side;
+  const z = Math.cos(home.ang) * radius - Math.sin(home.ang) * side;
   const face = Math.atan2(-x, -z) - Math.PI / 2;
   if (t < die) {
     out.x = x;
@@ -124,26 +152,26 @@ export type ArenaCam = {
 export function arenaCam(t: number): ArenaCam {
   const u = Math.max(0, Math.min(1, t / ARENA_SECONDS));
   const ang = u * Math.PI * 2 * 1.05;
-  let dist = 38.6;
-  let y = 8.2;
-  let lookY = 1.2;
-  let fov = 50;
-  if (t < 7) {
-    const k = t / 7;
+  let dist = 32;
+  let y = 16.8;
+  let lookY = 1.45;
+  let fov = 53;
+  if (t < 4.5) {
+    const k = t / 4.5;
     const e = k * k * (3 - 2 * k);
-    dist = 46 - e * 7.4;
-    y = 18.5 - e * 10.3;
-    lookY = 1.15;
-    fov = 52 - e * 2;
-  } else if (t > 51) {
-    const k = (t - 51) / 9;
+    dist = 42 - e * 10;
+    y = 26 - e * 9.2;
+    lookY = 1.25;
+    fov = 54 - e * 1;
+  } else if (t > 52) {
+    const k = (t - 52) / 8;
     const e = k * k * (3 - 2 * k);
-    dist = 38.6 + e * 6;
-    y = 8.2 + e * 5;
-    lookY = 1.45;
+    dist = 32 + e * 3.5;
+    y = 16.8 + e * 3.2;
+    lookY = 1.7;
   } else {
-    dist = 38.6 + Math.sin((t - 7) * 0.31) * 0.7;
-    y = 8.2 + Math.sin((t - 7) * 0.23) * 0.4;
+    dist = 32 + Math.sin((t - 4.5) * 0.28) * 0.4;
+    y = 16.8 + Math.sin((t - 4.5) * 0.21) * 0.3;
   }
   return {
     x: Math.sin(ang) * dist,
