@@ -1071,7 +1071,7 @@ export function AdminPage() {
             <p className="muted">36 saniye. Kamera aynı açıyla tam tur döner. Her modelden bir tane, yüzler kameraya bakar. İsimler bütün takipçileri hızla döner, siyah plaka içinde sarı. Çim, taş, gök. Kimse ölmez.</p>
           )}
           {isArena(reelShot) && (
-            <p className="muted">60 saniye. Kahramanların 5 modeli, yüksekte daha geniş bir daire. Etrafı telle kapalı, çıkış yok. İçeride 50 düşman. Ölenler bir kez aşağı düşer. Savaş uzar, bir kahraman diz çöker, sonra toparlanırlar. Bizimkiler kazanır. Düşman roman modeli.</p>
+            <p className="muted">60 saniye. Kahramanların 5 modeli, eklenen arena modelinin içinde. Eski tel zemin yok. İçeride 50 düşman. Ölenler bir kez aşağı düşer. Savaş uzar, bir kahraman diz çöker, sonra toparlanırlar. Bizimkiler kazanır. Düşman roman modeli.</p>
           )}
           {isSnake(reelShot) && (
             <p className="muted">DEV5 ile aynı kadro ve kamera. Yeşil-kahverengi yılan. Bekleyenler dairede. Çoğunluk başa, birkaç kişi gövdeye ve kuyruğa gider. Yılan hem onlara hem dairedeki bekleyen ve okçulara saldırır.</p>

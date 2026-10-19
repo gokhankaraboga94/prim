@@ -5,10 +5,6 @@ export const ARENA_SECONDS = 60;
 export const ARENA_FOES = 50;
 export const ARENA_HEROES = 5;
 
-export const ARENA_FLOOR = 5.7;
-export const ARENA_CAGE = 6.25;
-export const ARENA_CAGE_H = 4.15;
-
 const INNER = 22;
 
 export function isArena(id: string | null | undefined): id is ArenaId {
@@ -128,26 +124,26 @@ export type ArenaCam = {
 export function arenaCam(t: number): ArenaCam {
   const u = Math.max(0, Math.min(1, t / ARENA_SECONDS));
   const ang = u * Math.PI * 2 * 1.05;
-  let dist = 27.8;
-  let y = 6.2;
-  let lookY = 1.35;
+  let dist = 38.6;
+  let y = 8.2;
+  let lookY = 1.2;
   let fov = 50;
   if (t < 7) {
     const k = t / 7;
     const e = k * k * (3 - 2 * k);
-    dist = 31.2 - e * 3.4;
-    y = 13.4 - e * 7.2;
+    dist = 46 - e * 7.4;
+    y = 18.5 - e * 10.3;
     lookY = 1.15;
     fov = 52 - e * 2;
   } else if (t > 51) {
     const k = (t - 51) / 9;
     const e = k * k * (3 - 2 * k);
-    dist = 27.8 + e * 3.6;
-    y = 6.2 + e * 4.2;
-    lookY = 1.55;
+    dist = 38.6 + e * 6;
+    y = 8.2 + e * 5;
+    lookY = 1.45;
   } else {
-    dist = 27.8 + Math.sin((t - 7) * 0.31) * 0.6;
-    y = 6.2 + Math.sin((t - 7) * 0.23) * 0.45;
+    dist = 38.6 + Math.sin((t - 7) * 0.31) * 0.7;
+    y = 8.2 + Math.sin((t - 7) * 0.23) * 0.4;
   }
   return {
     x: Math.sin(ang) * dist,

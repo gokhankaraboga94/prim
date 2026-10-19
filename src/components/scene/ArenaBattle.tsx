@@ -6,9 +6,6 @@ import * as THREE from "three";
 import { REEL_HOLD } from "../../recordCanvas";
 import { HERO_URLS, HERO_YAW } from "../../heroReel";
 import {
-  ARENA_CAGE,
-  ARENA_CAGE_H,
-  ARENA_FLOOR,
   ARENA_FOES,
   ARENA_HEROES,
   arenaCam,
@@ -16,6 +13,10 @@ import {
   arenaHero,
   type ArenaPose,
 } from "../../arenaReel";
+
+const ARENA_URL = "/models/arena.glb";
+const ARENA_SCALE = 17;
+const ARENA_FLOOR_Y = 0.025;
 
 const HERO_H = 1.58;
 const FOE_H = 1.22;
@@ -203,49 +204,45 @@ function ArenaSky() {
   );
 }
 
-function ArenaCage() {
-  const posts = 56;
-  const rings = [0.18, 0.42, 0.66, 0.9].map((k) => ARENA_CAGE_H * k);
-  return (
-    <group>
-      <mesh position={[0, -0.18, 0]} receiveShadow>
-        <cylinderGeometry args={[ARENA_FLOOR, ARENA_FLOOR * 0.92, 0.36, 48]} />
-        <meshStandardMaterial color="#c2ad8b" roughness={0.86} metalness={0.04} />
-      </mesh>
-      <mesh position={[0, 0.02, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-        <circleGeometry args={[ARENA_FLOOR - 0.04, 48]} />
-        <meshStandardMaterial color="#d7c4a2" roughness={0.78} metalness={0.02} />
-      </mesh>
-      <mesh position={[0, 0.03, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-        <ringGeometry args={[ARENA_FLOOR - 0.28, ARENA_FLOOR - 0.02, 48]} />
-        <meshStandardMaterial color="#8d6a3e" roughness={0.7} />
-      </mesh>
-      {Array.from({ length: posts }, (_, i) => {
-        const a = (i / posts) * Math.PI * 2;
-        return (
-          <mesh key={i} position={[Math.sin(a) * ARENA_CAGE, ARENA_CAGE_H / 2, Math.cos(a) * ARENA_CAGE]}>
-            <cylinderGeometry args={[0.012, 0.012, ARENA_CAGE_H, 5]} />
-            <meshStandardMaterial color="#9aa3ad" metalness={0.82} roughness={0.22} />
-          </mesh>
-        );
-      })}
-      {rings.map((y) => (
-        <mesh key={y} position={[0, y, 0]} rotation={[Math.PI / 2, 0, 0]}>
-          <torusGeometry args={[ARENA_CAGE, 0.018, 6, 64]} />
-          <meshStandardMaterial color="#b7c0c8" metalness={0.86} roughness={0.18} />
-        </mesh>
-      ))}
-      {Array.from({ length: posts / 2 }, (_, i) => {
-        const a = (i / (posts / 2)) * Math.PI * 2;
-        return (
-          <mesh key={`x${i}`} position={[Math.sin(a) * ARENA_CAGE, ARENA_CAGE_H * 0.62, Math.cos(a) * ARENA_CAGE]} rotation={[0.9, a, 0]}>
-            <cylinderGeometry args={[0.008, 0.008, 1.85, 4]} />
-            <meshStandardMaterial color="#aeb6be" metalness={0.8} roughness={0.24} />
-          </mesh>
-        );
-      })}
-    </group>
-  );
+function ArenaModel() {
+  const rig = useRef<THREE.Group>(null);
+  useEffect(() => {
+    const loader = new GLTFLoader();
+    let drop = false;
+    loader.load(ARENA_URL, (gltf) => {
+      const host = rig.current;
+      if (drop || !host) return;
+      const model = gltf.scene;
+      model.scale.setScalar(ARENA_SCALE);
+      model.position.set(0, -ARENA_FLOOR_Y * ARENA_SCALE, 0);
+      model.traverse((obj) => {
+        const mesh = obj as THREE.Mesh;
+        if (mesh.isMesh) mesh.frustumCulled = false;
+      });
+      host.add(model);
+    });
+    return () => {
+      drop = true;
+      const host = rig.current;
+      if (!host) return;
+      host.traverse((obj) => {
+        const mesh = obj as THREE.Mesh;
+        if (!mesh.isMesh) return;
+        mesh.geometry?.dispose();
+        const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+        for (const mat of mats) {
+          const std = mat as THREE.MeshStandardMaterial;
+          std.map?.dispose();
+          std.normalMap?.dispose();
+          std.roughnessMap?.dispose();
+          std.metalnessMap?.dispose();
+          mat.dispose();
+        }
+      });
+      host.clear();
+    };
+  }, []);
+  return <group ref={rig} />;
 }
 
 function ArenaClouds() {
@@ -383,7 +380,7 @@ export function ArenaBattle() {
       <ambientLight intensity={0.28} />
       <directionalLight position={[6, 11, 4]} intensity={2.2} color="#fff2dc" />
       <directionalLight position={[-5, 4, -3]} intensity={0.45} color="#9eb6ff" />
-      <ArenaCage />
+      <ArenaModel />
       <ArenaFoes />
       <ArenaHeroes />
     </group>
