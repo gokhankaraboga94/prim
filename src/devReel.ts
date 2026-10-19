@@ -17,17 +17,20 @@ export const DEV6_ID = "dev6" as const;
 export type Dev6Id = typeof DEV6_ID;
 export const DEV7_ID = "dev7" as const;
 export type Dev7Id = typeof DEV7_ID;
+export const DEV8_ID = "dev8" as const;
+export type Dev8Id = typeof DEV8_ID;
 export const SNAKE_ID = "yilan1" as const;
 export type SnakeId = typeof SNAKE_ID;
 export const DEVS_ID = "devler" as const;
 export type DevsId = typeof DEVS_ID;
-export type GiantId = DevId | Dev2Id | Dev3Id | Dev4Id | Dev5Id | Dev6Id | Dev7Id | SnakeId | DevsId;
+export type GiantId = DevId | Dev2Id | Dev3Id | Dev4Id | Dev5Id | Dev6Id | Dev7Id | Dev8Id | SnakeId | DevsId;
 export const DEV2_MODE = { id: DEV2_ID, label: "DEV2" } as const;
 export const DEV3_MODE = { id: DEV3_ID, label: "DEV3" } as const;
 export const DEV4_MODE = { id: DEV4_ID, label: "DEV4" } as const;
 export const DEV5_MODE = { id: DEV5_ID, label: "DEV5" } as const;
 export const DEV6_MODE = { id: DEV6_ID, label: "DEV6" } as const;
 export const DEV7_MODE = { id: DEV7_ID, label: "DEV7" } as const;
+export const DEV8_MODE = { id: DEV8_ID, label: "DEV8" } as const;
 export const SNAKE_MODE = { id: SNAKE_ID, label: "yılan1" } as const;
 export const DEVS_MODE = { id: DEVS_ID, label: "devler" } as const;
 
@@ -59,6 +62,10 @@ export function isDev7(id: string | null | undefined): id is Dev7Id {
   return id === DEV7_ID;
 }
 
+export function isDev8(id: string | null | undefined): id is Dev8Id {
+  return id === DEV8_ID;
+}
+
 export function isDevDread(id: string | null | undefined) {
   return id === DEV5_ID || id === DEV6_ID;
 }
@@ -72,19 +79,19 @@ export function isDevs(id: string | null | undefined): id is DevsId {
 }
 
 export function isDevBig(id: string | null | undefined) {
-  return id === DEV2_ID || id === DEV3_ID || id === DEV4_ID || id === DEV5_ID || id === DEV6_ID || id === DEV7_ID || id === SNAKE_ID || id === DEVS_ID;
+  return id === DEV2_ID || id === DEV3_ID || id === DEV4_ID || id === DEV5_ID || id === DEV6_ID || id === DEV7_ID || id === DEV8_ID || id === SNAKE_ID || id === DEVS_ID;
 }
 
 export function isDevAll(id: string | null | undefined) {
-  return id === DEV3_ID || id === DEV4_ID || id === DEV5_ID || id === DEV6_ID || id === DEV7_ID || id === SNAKE_ID || id === DEVS_ID;
+  return id === DEV3_ID || id === DEV4_ID || id === DEV5_ID || id === DEV6_ID || id === DEV7_ID || id === DEV8_ID || id === SNAKE_ID || id === DEVS_ID;
 }
 
 export function isDevSword(id: string | null | undefined) {
-  return id === DEV4_ID || id === DEV5_ID || id === DEV6_ID || id === DEV7_ID || id === SNAKE_ID || id === DEVS_ID;
+  return id === DEV4_ID || id === DEV5_ID || id === DEV6_ID || id === DEV7_ID || id === DEV8_ID || id === SNAKE_ID || id === DEVS_ID;
 }
 
 export function isGiantShot(id: string | null | undefined): id is GiantId {
-  return id === DEV_ID || id === DEV2_ID || id === DEV3_ID || id === DEV4_ID || id === DEV5_ID || id === DEV6_ID || id === DEV7_ID || id === SNAKE_ID || id === DEVS_ID;
+  return id === DEV_ID || id === DEV2_ID || id === DEV3_ID || id === DEV4_ID || id === DEV5_ID || id === DEV6_ID || id === DEV7_ID || id === DEV8_ID || id === SNAKE_ID || id === DEVS_ID;
 }
 
 export const DEV_SECONDS = 58;
@@ -94,6 +101,7 @@ export const DEV4_SECONDS = DEV_SECONDS;
 export const DEV5_SECONDS = DEV_SECONDS;
 export const DEV6_SECONDS = DEV_SECONDS;
 export const DEV7_SECONDS = DEV_SECONDS;
+export const DEV8_SECONDS = DEV_SECONDS;
 export const SNAKE_SECONDS = DEV_SECONDS;
 export const DEVS_SECONDS = DEV_SECONDS;
 export const DEV_N = 300;
