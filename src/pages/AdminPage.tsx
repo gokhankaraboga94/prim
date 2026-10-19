@@ -41,6 +41,7 @@ import { OK_ID, OK_MODE, OK_SECONDS, isOk, type OkId } from "../okReel";
 import { KALKAN_ID, KALKAN_MODE, KALKAN_SECONDS, isKalkan, type KalkanId } from "../kalkanReel";
 import { HERO_ID, HERO_MODE, HERO_SECONDS, isHero, type HeroId } from "../heroReel";
 import { ARENA_ID, ARENA_MODE, ARENA_SECONDS, isArena, type ArenaId } from "../arenaReel";
+import { BOUT_ID, BOUT_MODE, BOUT_SECONDS, isBout, type BoutId } from "../boutReel";
 import { unlockReelSfx } from "../reelSfx";
 
 function skippedNote(skipped: string[]): string {
@@ -63,7 +64,7 @@ export function AdminPage() {
   const [reelSeconds, setReelSeconds] = useState<number>(7);
   const [reelText, setReelText] = useState(true);
   const [reelSkipCmd, setReelSkipCmd] = useState(false);
-  const [reelShot, setReelShot] = useState<ReelShot | PlanBId | SagaId | DiscoverId | MixId | CountdownId | DefendId | VsId | New1Id | New2Id | New3Id | New4Id | New5Id | New6Id | New62Id | New7Id | LabId | DevId | Dev2Id | Dev3Id | Dev4Id | Dev5Id | Dev6Id | Dev7Id | Dev8Id | Dev9Id | Dev10Id | SnakeId | DevsId | FilmId | DragonId | WarsId | OrduId | OkId | KalkanId | HeroId | ArenaId | XxxId | null>(null);
+  const [reelShot, setReelShot] = useState<ReelShot | PlanBId | SagaId | DiscoverId | MixId | CountdownId | DefendId | VsId | New1Id | New2Id | New3Id | New4Id | New5Id | New6Id | New62Id | New7Id | LabId | DevId | Dev2Id | Dev3Id | Dev4Id | Dev5Id | Dev6Id | Dev7Id | Dev8Id | Dev9Id | Dev10Id | SnakeId | DevsId | FilmId | DragonId | WarsId | OrduId | OkId | KalkanId | HeroId | ArenaId | BoutId | XxxId | null>(null);
   const [reelDay, setReelDay] = useState("1");
   const [capturing, setCapturing] = useState(false);
   const [editIndex, setEditIndex] = useState<number | null>(null);
@@ -574,6 +575,8 @@ export function AdminPage() {
                     ? [HERO_SECONDS]
                   : isArena(reelShot)
                     ? [ARENA_SECONDS]
+                  : isBout(reelShot)
+                    ? [BOUT_SECONDS]
                   : isKalkan(reelShot)
                     ? [KALKAN_SECONDS]
                   : isDragon(reelShot)
@@ -888,6 +891,18 @@ export function AdminPage() {
             </button>
             <button
               type="button"
+              className={reelShot === BOUT_ID ? "on" : ""}
+              onClick={() => {
+                setReelShot((cur) => (cur === BOUT_ID ? null : BOUT_ID));
+                setReelSeconds(BOUT_SECONDS);
+                setReelText(false);
+                setReelSkipCmd(true);
+              }}
+            >
+              {BOUT_MODE.label} — {BOUT_SECONDS}s
+            </button>
+            <button
+              type="button"
               className={reelShot === WARS_ID ? "on" : ""}
               onClick={() => {
                 setReelShot((cur) => (cur === WARS_ID ? null : WARS_ID));
@@ -1036,6 +1051,9 @@ export function AdminPage() {
           )}
           {isDev10(reelShot) && (
             <p className="muted">DEV8 ile aynı kadro, can barı, çim ve şövalyeler. Kamera yüzde 15 daha yakın. Dev, eklenen ork, yüzde 30 daha küçük. Elindeki baltalar ile askerlere vurur. Askerler Vaporworks Knight (CC-BY).</p>
+          )}
+          {isBout(reelShot) && (
+            <p className="muted">52 saniye. DEV9’daki çim. King Kong ile ork karşı karşıya. Kong’un elinde dikenli sopa, ork baltalarıyla vurur. İkisinin de üstünde can barı var. Kıyasıya dövüşürler, ork düşer.</p>
           )}
           {isWars(reelShot) && (
             <p className="muted">Tüm takipçiler sahada. Düşman iki kat. Şövalyeler Vaporworks Knight (CC-BY): parlak gri kask, mavi gövde. İsimler sarı. Düşman kazanır.</p>
@@ -1576,8 +1594,8 @@ export function AdminPage() {
           maxHp={maxHp}
           seconds={captureSec}
           showTitles={reelText}
-          skipCommander={reelSkipCmd || isDiscover(reelShot) || isCountdown(reelShot) || isDefend(reelShot) || isVsMode(reelShot) || isNewField(reelShot) || isLab(reelShot) || isGiantShot(reelShot) || isFilm(reelShot) || isDragon(reelShot) || isWars(reelShot) || isOrdu(reelShot) || isOk(reelShot) || isKalkan(reelShot) || isHero(reelShot) || isArena(reelShot) || (isXxx(reelShot) && xxxHideCmd(reelShot))}
-          shotMode={reelShot === CINEMA_ID || isPlanB(reelShot) || isSaga(reelShot) || isDiscover(reelShot) || isCountdown(reelShot) || isDefend(reelShot) || isVsMode(reelShot) || isNewField(reelShot) || isLab(reelShot) || isGiantShot(reelShot) || isFilm(reelShot) || isDragon(reelShot) || isWars(reelShot) || isOrdu(reelShot) || isOk(reelShot) || isKalkan(reelShot) || isHero(reelShot) || isArena(reelShot) || isMix(reelShot) || isXxx(reelShot) ? null : reelShot}
+          skipCommander={reelSkipCmd || isDiscover(reelShot) || isCountdown(reelShot) || isDefend(reelShot) || isVsMode(reelShot) || isNewField(reelShot) || isLab(reelShot) || isGiantShot(reelShot) || isFilm(reelShot) || isDragon(reelShot) || isWars(reelShot) || isOrdu(reelShot) || isOk(reelShot) || isKalkan(reelShot) || isHero(reelShot) || isArena(reelShot) || isBout(reelShot) || (isXxx(reelShot) && xxxHideCmd(reelShot))}
+          shotMode={reelShot === CINEMA_ID || isPlanB(reelShot) || isSaga(reelShot) || isDiscover(reelShot) || isCountdown(reelShot) || isDefend(reelShot) || isVsMode(reelShot) || isNewField(reelShot) || isLab(reelShot) || isGiantShot(reelShot) || isFilm(reelShot) || isDragon(reelShot) || isWars(reelShot) || isOrdu(reelShot) || isOk(reelShot) || isKalkan(reelShot) || isHero(reelShot) || isArena(reelShot) || isBout(reelShot) || isMix(reelShot) || isXxx(reelShot) ? null : reelShot}
           cinema={reelShot === CINEMA_ID}
           roster={isPlanB(reelShot) ? reelShot : null}
           saga={isSaga(reelShot) ? reelShot : null}
@@ -1603,6 +1621,7 @@ export function AdminPage() {
           kalkan={isKalkan(reelShot) ? reelShot : null}
           hero={isHero(reelShot) ? reelShot : null}
           arena={isArena(reelShot) ? reelShot : null}
+          bout={isBout(reelShot) ? reelShot : null}
           mix={isMix(reelShot) ? reelShot : null}
           xxx={isXxx(reelShot) ? reelShot : null}
           rosterIds={isJoin(reelShot) ? captureJoinIds.current : null}
