@@ -110,9 +110,8 @@ function foeBlow(i: number, t: number) {
 }
 
 export function arenaHeroStrike(i: number, t: number): ArmStrike {
-  const kneel = i === 1 && t > 15 && t < 27;
-  const stumble = i === 3 && t > 33 && t < 40;
-  if (kneel || stumble) return REST_STRIKE;
+  if (i === 1 && t > 15) return REST_STRIKE;
+  if (i === 3 && t > 33 && t < 40) return REST_STRIKE;
   return heroBlow(i, t);
 }
 
@@ -165,7 +164,6 @@ export function arenaHero(i: number, t: number, out: ArenaPose) {
   const ang = (i / ARENA_HEROES) * Math.PI * 2;
   const alive = arenaAlive(t) / ARENA_FOES;
   const radius = 1.65 * (0.74 + alive * 0.38);
-  const kneel = i === 1 && t > 15 && t < 27;
   const stumble = i === 3 && t > 33 && t < 40;
   out.x = Math.sin(ang) * radius;
   out.z = Math.cos(ang) * radius;
@@ -174,12 +172,15 @@ export function arenaHero(i: number, t: number, out: ArenaPose) {
   out.rz = 0;
   out.y = 0;
   out.s = 1;
-  if (kneel) {
-    const k = t < 17 ? (t - 15) / 2 : t > 24 ? (27 - t) / 3 : 1;
-    out.rx = 1.05 * k;
-    out.y = -0.28 * k;
-    out.rz = 0.18 * k;
-  } else if (stumble) {
+  if (i === 1 && t > 15) {
+    const u = Math.min(1, (t - 15) / 1.25);
+    const e = u * u * (3 - 2 * u);
+    out.rx = 1.4 * e;
+    out.y = -0.08 * e;
+    out.rz = 0.42 * e;
+    return;
+  }
+  if (stumble) {
     const k = t < 34.2 ? (t - 33) / 1.2 : t > 37.5 ? (40 - t) / 2.5 : 1;
     out.rx = -0.55 * k;
     out.y = 0.04;
