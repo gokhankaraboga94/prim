@@ -975,7 +975,7 @@ export function AdminPage() {
             <p className="muted">DEV6 ile aynı kadro, can barı ve çim. Dev, Darwin Yamamoto’nun Colossus modeli (CC-BY): metalik gri gövde, koyu baş el ayak, vuran elde kılıç. Askerler Vaporworks Knight (CC-BY): parlak gri kask, mavi gövde. Devin arkasındaki isimler görünmez.</p>
           )}
           {isDev8(reelShot) && (
-            <p className="muted">DEV7 ile aynı kadro, can barı, çim ve şövalyeler. Dev, görseldeki gri taş goril: geniş omuz, çıplak göğüs, kükreyen ağız, yumruklar. Önden, arkadan ve yanlardan aynı siluet. Askerler Vaporworks Knight (CC-BY).</p>
+            <p className="muted">DEV7 ile aynı kadro, can barı, çim ve şövalyeler. Dev, eklenen bigfoot modeli: tüylü dokusu duruyor, kılıç yok. Askerler Vaporworks Knight (CC-BY).</p>
           )}
           {isWars(reelShot) && (
             <p className="muted">Tüm takipçiler sahada. Düşman iki kat. Şövalyeler Vaporworks Knight (CC-BY): parlak gri kask, mavi gövde. İsimler sarı. Düşman kazanır.</p>
