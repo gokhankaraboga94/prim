@@ -185,12 +185,13 @@ function DuelKong() {
     if (!node) return;
     const t = Math.max(0, clock.elapsedTime - REEL_HOLD);
     const punch = boutPunch(t, KONG_HITS);
+    const hand = 1 as const;
     const recoil = boutRecoil(t, ORC_HITS);
     const lunge = Math.max(0, punch.a);
-    node.position.set(KONG_HOME + lunge * 2.05 - recoil * 0.28, Math.abs(Math.sin(t * 2.4)) * 0.08, punch.hand * lunge * 0.08);
+    node.position.set(KONG_HOME + lunge * 2.05 - recoil * 0.28, Math.abs(Math.sin(t * 2.4)) * 0.08, hand * lunge * 0.08);
     const lift = Math.max(0, -punch.a) * 1.9 + Math.max(0, punch.a) * 1.15;
-    node.rotation.set(lunge * 0.08, Math.PI / 2 + punch.hand * punch.a * 0.16, -recoil * 0.04);
-    swingVerts(swing, punch.a * 1.6, punch.hand, KONG_L, KONG_R, lift, lunge * 0.075);
+    node.rotation.set(lunge * 0.08, Math.PI / 2 + hand * punch.a * 0.16, -recoil * 0.04);
+    swingVerts(swing, punch.a * 1.6, hand, KONG_L, KONG_R, lift, lunge * 0.075);
   });
   return (
     <>
