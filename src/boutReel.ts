@@ -31,8 +31,71 @@ export const KONG_H = 15.6 * 1.52;
 export const ORC_H = 15.6 * 0.7 * 1.52 * 1.15;
 export const ORC_FALL = 46.7;
 
+export const BOUT2_ID = "1vs1-2" as const;
+export type Bout2Id = typeof BOUT2_ID;
+export const BOUT2_MODE = { id: BOUT2_ID, label: "1vs1(2)" } as const;
+export const BOUT2_SECONDS = BOUT_SECONDS;
+export const HULK_HITS = KONG_HITS;
+export const KONG2_HITS = ORC_HITS;
+const HULK_DMG = chips(HULK_HITS.length, 100, 8);
+const KONG2_DMG = chips(KONG2_HITS.length, 74, 4);
+export const HULK_HOME = KONG_HOME;
+export const KONG2_HOME = ORC_HOME;
+export const HULK_H = KONG_H;
+export const KONG2_H = KONG_H;
+export const KONG2_FALL = ORC_FALL;
+
 export function isBout(id: string | null | undefined): id is BoutId {
   return id === BOUT_ID;
+}
+
+export function isBout2(id: string | null | undefined): id is Bout2Id {
+  return id === BOUT2_ID;
+}
+
+export function bout2Hp(t: number) {
+  let hulk = 100;
+  let kong = 100;
+  for (let i = 0; i < HULK_HITS.length; i++) if (t >= HULK_HITS[i]) kong -= HULK_DMG[i];
+  for (let i = 0; i < KONG2_HITS.length; i++) if (t >= KONG2_HITS[i]) hulk -= KONG2_DMG[i];
+  return { hulk: Math.max(0, hulk), kong: Math.max(0, kong) };
+}
+
+export function hulkKickPose(t: number, hits: readonly number[]) {
+  const idle = { hip: 0, knee: 0, ankle: 0, lunge: 0 };
+  const cock = { hip: 0.46, knee: 0.9, ankle: -0.25, lunge: -0.35 };
+  const hit = { hip: -0.62, knee: 0.02, ankle: -0.05, lunge: 2.15 };
+  const wind = 0.32;
+  const snap = 0.12;
+  const back = 0.28;
+  let best = 1e9;
+  let phase = -1;
+  for (const stamp of hits) {
+    const start = stamp - wind - snap;
+    if (t < start || t > stamp + back) continue;
+    const dist = Math.abs(t - stamp);
+    if (dist < best) {
+      best = dist;
+      phase = t - start;
+    }
+  }
+  if (phase < 0) return idle;
+  if (phase < wind) {
+    const u = Math.sin((phase / wind) * Math.PI * 0.5);
+    return { hip: cock.hip * u, knee: cock.knee * u, ankle: cock.ankle * u, lunge: cock.lunge * u };
+  }
+  if (phase < wind + snap) {
+    const u = Math.pow((phase - wind) / snap, 1.35);
+    return {
+      hip: cock.hip + (hit.hip - cock.hip) * u,
+      knee: cock.knee + (hit.knee - cock.knee) * u,
+      ankle: cock.ankle + (hit.ankle - cock.ankle) * u,
+      lunge: cock.lunge + (hit.lunge - cock.lunge) * u,
+    };
+  }
+  const e = (phase - wind - snap) / back;
+  const s = e * e * (3 - 2 * e);
+  return { hip: hit.hip * (1 - s), knee: hit.knee * (1 - s), ankle: hit.ankle * (1 - s), lunge: hit.lunge * (1 - s) };
 }
 
 export function boutHp(t: number) {

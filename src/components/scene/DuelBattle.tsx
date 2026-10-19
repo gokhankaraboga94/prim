@@ -5,6 +5,13 @@ import * as THREE from "three";
 import { REEL_HOLD } from "../../recordCanvas";
 import { simplifySkinned } from "../../knightSoldier";
 import {
+  HULK_H,
+  HULK_HITS,
+  HULK_HOME,
+  KONG2_FALL,
+  KONG2_H,
+  KONG2_HITS,
+  KONG2_HOME,
   KONG_H,
   KONG_HITS,
   KONG_HOME,
@@ -12,14 +19,27 @@ import {
   ORC_H,
   ORC_HITS,
   ORC_HOME,
+  bout2Hp,
   boutCam,
   boutHp,
   boutPunch,
   boutRecoil,
+  hulkKickPose,
 } from "../../boutReel";
 
 const KONG_URL = "/models/bigfoot.glb";
 const ORC_URL = "/models/orc.glb";
+const HULK_URL = "/models/hulk+3d+model.glb";
+const HULK_HIP = new THREE.Vector3(-0.155, 0.43, 0.02);
+const HULK_KNEE = new THREE.Vector3(-0.145, 0.25, 0.005);
+const HULK_ANKLE = new THREE.Vector3(-0.17, 0.09, -0.04);
+const KICK_AXIS = new THREE.Vector3(1, 0, 0);
+const qHip = new THREE.Quaternion();
+const qKnee = new THREE.Quaternion();
+const qAnkle = new THREE.Quaternion();
+const relKnee = new THREE.Vector3();
+const kneeNow = new THREE.Vector3();
+const ankleNow = new THREE.Vector3();
 const KONG_L = new THREE.Vector3(-0.13, 0.7, 0.02);
 const KONG_R = new THREE.Vector3(0.13, 0.7, 0.02);
 const ORC_L = new THREE.Vector3(-0.15, 0.6, 0.02);
@@ -141,6 +161,9 @@ function dropHost(host: THREE.Object3D | null) {
     for (const mat of mats) {
       const std = mat as THREE.MeshStandardMaterial;
       std.map?.dispose();
+      std.normalMap?.dispose();
+      std.roughnessMap?.dispose();
+      std.metalnessMap?.dispose();
       mat.dispose();
     }
   });
@@ -255,16 +278,70 @@ function DuelOrc() {
   );
 }
 
+function fade(edge0: number, edge1: number, value: number) {
+  const t = Math.min(1, Math.max(0, (value - edge0) / (edge1 - edge0)));
+  return t * t * (3 - 2 * t);
+}
+
+function kickVerts(
+  pos: THREE.BufferAttribute,
+  rest: Float32Array,
+  hipW: Float32Array,
+  kneeW: Float32Array,
+  ankleW: Float32Array,
+  pose: { hip: number; knee: number; ankle: number }
+) {
+  qHip.setFromAxisAngle(KICK_AXIS, pose.hip);
+  qKnee.setFromAxisAngle(KICK_AXIS, pose.knee);
+  qAnkle.setFromAxisAngle(KICK_AXIS, pose.ankle);
+  relKnee.copy(HULK_KNEE).sub(HULK_HIP).applyQuaternion(qHip);
+  kneeNow.copy(relKnee).add(HULK_HIP);
+  ankleNow.copy(HULK_ANKLE).sub(HULK_HIP).applyQuaternion(qHip).sub(relKnee).applyQuaternion(qKnee).add(relKnee).add(HULK_HIP);
+  for (let i = 0; i < hipW.length; i++) {
+    const wh = hipW[i];
+    const o = i * 3;
+    const ox = rest[o];
+    const oy = rest[o + 1];
+    const oz = rest[o + 2];
+    if (wh <= 0) {
+      pos.setXYZ(i, ox, oy, oz);
+      continue;
+    }
+    tmp.set(ox - HULK_HIP.x, oy - HULK_HIP.y, oz - HULK_HIP.z).applyQuaternion(qHip);
+    let x = ox + (HULK_HIP.x + tmp.x - ox) * wh;
+    let y = oy + (HULK_HIP.y + tmp.y - oy) * wh;
+    let z = oz + (HULK_HIP.z + tmp.z - oz) * wh;
+    const wk = kneeW[i];
+    if (wk > 0) {
+      tmp.set(x - kneeNow.x, y - kneeNow.y, z - kneeNow.z).applyQuaternion(qKnee);
+      x += (kneeNow.x + tmp.x - x) * wk;
+      y += (kneeNow.y + tmp.y - y) * wk;
+      z += (kneeNow.z + tmp.z - z) * wk;
+    }
+    const wa = ankleW[i];
+    if (wa > 0) {
+      tmp.set(x - ankleNow.x, y - ankleNow.y, z - ankleNow.z).applyQuaternion(qAnkle);
+      x += (ankleNow.x + tmp.x - x) * wa;
+      y += (ankleNow.y + tmp.y - y) * wa;
+      z += (ankleNow.z + tmp.z - z) * wa;
+    }
+    pos.setXYZ(i, x, y, z);
+  }
+  pos.needsUpdate = true;
+}
+
 function HpPlate({
   host,
   lift,
   label,
   side,
+  read,
 }: {
   host: RefObject<THREE.Group | null>;
   lift: number;
   label: string;
-  side: "kong" | "orc";
+  side?: "kong" | "orc";
+  read?: (t: number) => number;
 }) {
   const mesh = useRef<THREE.Mesh>(null);
   const tex = useMemo(() => {
@@ -281,7 +358,7 @@ function HpPlate({
     const body = host.current;
     if (!node || !body) return;
     const t = Math.max(0, clock.elapsedTime - REEL_HOLD);
-    const hp = boutHp(t)[side];
+    const hp = read ? read(t) : boutHp(t)[side ?? "kong"];
     const canvas = tex.image as HTMLCanvasElement;
     const ctx = canvas.getContext("2d");
     if (ctx) {
@@ -335,11 +412,176 @@ export function DuelCam() {
   return null;
 }
 
+function BoutHulk() {
+  const root = useRef<THREE.Group>(null);
+  const leg = useMemo(
+    () => ({
+      geo: null as THREE.BufferGeometry | null,
+      pos: null as THREE.BufferAttribute | null,
+      rest: null as Float32Array | null,
+      hip: null as Float32Array | null,
+      knee: null as Float32Array | null,
+      ankle: null as Float32Array | null,
+      posed: false,
+    }),
+    []
+  );
+  useEffect(() => {
+    const loader = new GLTFLoader();
+    let drop = false;
+    loader.load(HULK_URL, (gltf) => {
+      const host = root.current;
+      if (drop || !host) return;
+      const model = gltf.scene;
+      let mesh: THREE.Mesh | null = null;
+      model.traverse((obj) => {
+        const item = obj as THREE.Mesh;
+        if (item.isMesh && !mesh) mesh = item;
+      });
+      if (!mesh) return;
+      const body = mesh as THREE.Mesh;
+      body.frustumCulled = false;
+      const attr = body.geometry.getAttribute("position") as THREE.BufferAttribute;
+      const rest = new Float32Array(attr.array.length);
+      rest.set(attr.array as Float32Array);
+      const hipW = new Float32Array(attr.count);
+      const kneeW = new Float32Array(attr.count);
+      const ankleW = new Float32Array(attr.count);
+      for (let i = 0; i < attr.count; i++) {
+        const x = rest[i * 3];
+        const y = rest[i * 3 + 1];
+        if (x > -0.04 || y > 0.5 || (y > 0.33 && x < -0.235)) continue;
+        const hip = fade(0.48, 0.37, y) * fade(-0.04, -0.1, x);
+        if (hip <= 0) continue;
+        hipW[i] = hip;
+        kneeW[i] = hip > 0.85 ? fade(0.3, 0.2, y) : 0;
+        ankleW[i] = kneeW[i] > 0.9 ? fade(0.13, 0.05, y) : 0;
+      }
+      leg.geo = body.geometry;
+      leg.pos = attr;
+      leg.rest = rest;
+      leg.hip = hipW;
+      leg.knee = kneeW;
+      leg.ankle = ankleW;
+      model.updateMatrixWorld(true);
+      const box = new THREE.Box3().setFromObject(model);
+      const fit = HULK_H / Math.max(0.001, box.max.y - box.min.y);
+      model.scale.setScalar(fit);
+      model.position.set(-((box.min.x + box.max.x) / 2) * fit, -box.min.y * fit, -((box.min.z + box.max.z) / 2) * fit);
+      host.add(model);
+    });
+    return () => {
+      drop = true;
+      leg.geo = null;
+      leg.pos = null;
+      leg.rest = null;
+      leg.hip = null;
+      leg.knee = null;
+      leg.ankle = null;
+      leg.posed = false;
+      dropHost(root.current);
+    };
+  }, [leg]);
+  useFrame(({ clock }) => {
+    const node = root.current;
+    const pos = leg.pos;
+    const rest = leg.rest;
+    const hipW = leg.hip;
+    const kneeW = leg.knee;
+    const ankleW = leg.ankle;
+    if (!node || !pos || !rest || !hipW || !kneeW || !ankleW) return;
+    const t = Math.max(0, clock.elapsedTime - REEL_HOLD);
+    const kick = hulkKickPose(t, HULK_HITS);
+    const recoil = boutRecoil(t, KONG2_HITS);
+    node.position.set(HULK_HOME + kick.lunge - recoil * 0.28, 0, 0);
+    node.rotation.set(0, Math.PI / 2, -recoil * 0.04);
+    const active = Math.abs(kick.hip) + Math.abs(kick.knee) + Math.abs(kick.ankle) > 0.001;
+    if (!active) {
+      if (!leg.posed) return;
+      (pos.array as Float32Array).set(rest);
+      pos.needsUpdate = true;
+      leg.geo?.computeVertexNormals();
+      leg.posed = false;
+      return;
+    }
+    kickVerts(pos, rest, hipW, kneeW, ankleW, kick);
+    leg.geo?.computeVertexNormals();
+    leg.posed = true;
+  });
+  return (
+    <>
+      <group ref={root} />
+      <HpPlate host={root} lift={HULK_H + 1.8} label="HULK" read={(t) => bout2Hp(t).hulk} />
+    </>
+  );
+}
+
+function BoutKong() {
+  const root = useRef<THREE.Group>(null);
+  const swing = useMemo<Swing>(() => ({ geo: null, pos: null, rest: null, weight: null, side: null }), []);
+  useEffect(() => {
+    const loader = new GLTFLoader();
+    let drop = false;
+    loader.load(KONG_URL, (gltf) => {
+      const host = root.current;
+      if (drop || !host) return;
+      const fitted = fittedBody(gltf.scene, KONG2_H);
+      if (!fitted) return;
+      swing.geo = fitted.geo;
+      swing.pos = fitted.geo.getAttribute("position") as THREE.BufferAttribute;
+      const arms = armWeights(swing.pos, true);
+      swing.rest = arms.rest;
+      swing.weight = arms.weight;
+      swing.side = arms.side;
+      host.add(fitted.host);
+    });
+    return () => {
+      drop = true;
+      swing.geo = null;
+      swing.pos = null;
+      swing.rest = null;
+      swing.weight = null;
+      swing.side = null;
+      dropHost(root.current);
+    };
+  }, [swing]);
+  useFrame(({ clock }) => {
+    const node = root.current;
+    if (!node) return;
+    const t = Math.max(0, clock.elapsedTime - REEL_HOLD);
+    const fallen = Math.max(0, Math.min(1, (t - KONG2_FALL) / 2.4));
+    const punch = fallen > 0 ? { a: 0, hand: 1 as const } : boutPunch(t, KONG2_HITS);
+    const hand = 1 as const;
+    const recoil = fallen > 0 ? 0 : boutRecoil(t, HULK_HITS);
+    const lunge = Math.max(0, punch.a);
+    const lift = Math.max(0, -punch.a) * 1.9 + Math.max(0, punch.a) * 1.15;
+    node.position.set(KONG2_HOME - lunge * 2.05 + recoil * 0.35, -fallen * 0.35, hand * lunge * 0.08);
+    node.rotation.order = "YXZ";
+    node.rotation.set(fallen * 1.5 + lunge * 0.08, -Math.PI / 2 - punch.a * 0.16, fallen * 0.42 + recoil * 0.05);
+    swingVerts(swing, punch.a * 1.6, hand, KONG_L, KONG_R, lift, lunge * 0.075);
+  });
+  return (
+    <>
+      <group ref={root} />
+      <HpPlate host={root} lift={KONG2_H + 1.8} label="KONG" read={(t) => bout2Hp(t).kong} />
+    </>
+  );
+}
+
 export function DuelBattle() {
   return (
     <group>
       <DuelKong />
       <DuelOrc />
+    </group>
+  );
+}
+
+export function HulkKongBattle() {
+  return (
+    <group>
+      <BoutHulk />
+      <BoutKong />
     </group>
   );
 }

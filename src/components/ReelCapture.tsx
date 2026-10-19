@@ -23,7 +23,7 @@ import type { OkId } from "../okReel";
 import type { KalkanId } from "../kalkanReel";
 import type { HeroId } from "../heroReel";
 import type { ArenaId } from "../arenaReel";
-import type { BoutId } from "../boutReel";
+import type { Bout2Id, BoutId } from "../boutReel";
 
 type ReelCaptureProps = {
   soldiers: number;
@@ -64,7 +64,7 @@ type ReelCaptureProps = {
   kalkan?: KalkanId | null;
   hero?: HeroId | null;
   arena?: ArenaId | null;
-  bout?: BoutId | null;
+  bout?: BoutId | Bout2Id | null;
   mix?: MixId | null;
   xxx?: XxxId | null;
   rosterIds?: number[] | null;

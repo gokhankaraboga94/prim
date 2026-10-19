@@ -32,8 +32,8 @@ import { HeroBattle, HeroCam } from "./HeroBattle";
 import { type HeroId } from "../../heroReel";
 import { ArenaBattle, ArenaCam } from "./ArenaBattle";
 import { type ArenaId } from "../../arenaReel";
-import { DuelBattle, DuelCam } from "./DuelBattle";
-import { type BoutId } from "../../boutReel";
+import { DuelBattle, DuelCam, HulkKongBattle } from "./DuelBattle";
+import { isBout2, type Bout2Id, type BoutId } from "../../boutReel";
 import { Dragon } from "./Dragon";
 import { DEV2_ID, DEV2_N, DEV_N, isDev6, isDev7, isDev8, isDev9, isDev10, isDev11, isDevAll, isDevBig, isDevDread, isDevSword, isDevs, isSnake, sampleDevCam, type GiantId } from "../../devReel";
 import { Maze } from "./Maze";
@@ -97,7 +97,7 @@ type BattleSceneProps = {
   kalkan?: KalkanId | null;
   hero?: HeroId | null;
   arena?: ArenaId | null;
-  bout?: BoutId | null;
+  bout?: BoutId | Bout2Id | null;
   mix?: MixId | null;
   xxx?: XxxId | null;
   rosterIds?: number[] | null;
@@ -955,7 +955,7 @@ function SceneContent({
       {ok && <OkBattle names={names} />}
       {hero && <HeroBattle names={names} />}
       {arena && <ArenaBattle />}
-      {bout && <DuelBattle />}
+      {bout && (isBout2(bout) ? <HulkKongBattle /> : <DuelBattle />)}
       {kalkan && <KalkanBattle names={names} />}
       {Boolean(xxx && xxxSquare(xxx)) && <Catapults soldiers={soldiers} square />}
       {Boolean(xxx && xxxScanHunt(xxx)) && <NameScanBeam soldiers={soldiers} />}
