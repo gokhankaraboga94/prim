@@ -4,6 +4,7 @@ import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { REEL_HOLD } from "../../recordCanvas";
 import { devKick } from "../../devReel";
+import { simplifySkinned } from "../../knightSoldier";
 
 const HULK_URL = "/models/hulk+3d+model.glb";
 const HEIGHT = 15.6;
@@ -24,20 +25,106 @@ function fade(edge0: number, edge1: number, value: number) {
   return t * t * (3 - 2 * t);
 }
 
+type Leg = {
+  pos: THREE.BufferAttribute;
+  nrm: THREE.BufferAttribute | null;
+  rest: Float32Array;
+  restN: Float32Array | null;
+  hip: Float32Array;
+  knee: Float32Array;
+  ankle: Float32Array;
+  ids: Uint32Array;
+  posed: boolean;
+};
+
+function splitBody(mesh: THREE.Mesh) {
+  const src = mesh.geometry;
+  const srcP = src.getAttribute("position") as THREE.BufferAttribute;
+  const srcN = src.getAttribute("normal") as THREE.BufferAttribute | null;
+  const srcU = src.getAttribute("uv") as THREE.BufferAttribute | null;
+  const index = src.getIndex();
+  const count = srcP.count;
+  const hip = new Float32Array(count);
+  const knee = new Float32Array(count);
+  const ankle = new Float32Array(count);
+  const dyn = new Uint8Array(count);
+  for (let i = 0; i < count; i++) {
+    const x = srcP.getX(i);
+    const y = srcP.getY(i);
+    if (x > -0.04 || y > 0.5 || (y > 0.33 && x < -0.235)) continue;
+    const w = fade(0.48, 0.37, y) * fade(-0.04, -0.1, x);
+    if (w <= 0) continue;
+    hip[i] = w;
+    dyn[i] = 1;
+    knee[i] = w > 0.85 ? fade(0.3, 0.2, y) : 0;
+    ankle[i] = knee[i] > 0.9 ? fade(0.13, 0.05, y) : 0;
+  }
+  const bodyTris: number[] = [];
+  const legTris: number[] = [];
+  const triCount = index ? index.count : count;
+  const at = (i: number) => (index ? index.getX(i) : i);
+  for (let i = 0; i < triCount; i += 3) {
+    const a = at(i);
+    const b = at(i + 1);
+    const c = at(i + 2);
+    const bag = dyn[a] || dyn[b] || dyn[c] ? legTris : bodyTris;
+    bag.push(a, b, c);
+  }
+  const bake = (tris: number[], moving: boolean) => {
+    const map = new Int32Array(count);
+    map.fill(-1);
+    const list: number[] = [];
+    const remapped = new Uint32Array(tris.length);
+    for (let i = 0; i < tris.length; i++) {
+      const v = tris[i];
+      let id = map[v];
+      if (id < 0) {
+        id = list.length;
+        map[v] = id;
+        list.push(v);
+      }
+      remapped[i] = id;
+    }
+    const positions = new Float32Array(list.length * 3);
+    const normals = srcN ? new Float32Array(list.length * 3) : null;
+    const uvs = srcU ? new Float32Array(list.length * 2) : null;
+    const hipW = new Float32Array(list.length);
+    const kneeW = new Float32Array(list.length);
+    const ankleW = new Float32Array(list.length);
+    const ids: number[] = [];
+    for (let i = 0; i < list.length; i++) {
+      const v = list[i];
+      positions[i * 3] = srcP.getX(v);
+      positions[i * 3 + 1] = srcP.getY(v);
+      positions[i * 3 + 2] = srcP.getZ(v);
+      if (normals && srcN) {
+        normals[i * 3] = srcN.getX(v);
+        normals[i * 3 + 1] = srcN.getY(v);
+        normals[i * 3 + 2] = srcN.getZ(v);
+      }
+      if (uvs && srcU) {
+        uvs[i * 2] = srcU.getX(v);
+        uvs[i * 2 + 1] = srcU.getY(v);
+      }
+      if (!moving) continue;
+      hipW[i] = hip[v];
+      kneeW[i] = knee[v];
+      ankleW[i] = ankle[v];
+      if (hipW[i] > 0) ids.push(i);
+    }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+    if (normals) geo.setAttribute("normal", new THREE.BufferAttribute(normals, 3));
+    if (uvs) geo.setAttribute("uv", new THREE.BufferAttribute(uvs, 2));
+    geo.setIndex(new THREE.BufferAttribute(remapped, 1));
+    return { geo, hipW, kneeW, ankleW, ids: new Uint32Array(ids), rest: positions.slice(), restN: normals ? normals.slice() : null };
+  };
+  return { body: bake(bodyTris, false).geo, leg: bake(legTris, true) };
+}
+
 export function HulkModel({ soldiers }: { soldiers: number }) {
   const rig = useRef<THREE.Group>(null);
-  const swing = useMemo(
-    () => ({
-      geo: null as THREE.BufferGeometry | null,
-      pos: null as THREE.BufferAttribute | null,
-      rest: null as Float32Array | null,
-      hip: null as Float32Array | null,
-      knee: null as Float32Array | null,
-      ankle: null as Float32Array | null,
-      posed: false,
-    }),
-    []
-  );
+  const swing = useMemo(() => ({ leg: null as Leg | null }), []);
   useEffect(() => {
     const loader = new GLTFLoader();
     let drop = false;
@@ -45,34 +132,39 @@ export function HulkModel({ soldiers }: { soldiers: number }) {
       const host = rig.current;
       if (drop || !host) return;
       const model = gltf.scene;
-      model.updateMatrixWorld(true);
+      let mesh: THREE.Mesh | null = null;
       model.traverse((obj) => {
-        const mesh = obj as THREE.Mesh;
-        if (!mesh.isMesh) return;
-        mesh.frustumCulled = false;
-        const attr = mesh.geometry.getAttribute("position") as THREE.BufferAttribute;
-        const rest = new Float32Array(attr.array.length);
-        rest.set(attr.array as Float32Array);
-        const hipW = new Float32Array(attr.count);
-        const kneeW = new Float32Array(attr.count);
-        const ankleW = new Float32Array(attr.count);
-        for (let i = 0; i < attr.count; i++) {
-          const x = rest[i * 3];
-          const y = rest[i * 3 + 1];
-          if (x > -0.04 || y > 0.5 || (y > 0.33 && x < -0.235)) continue;
-          const hip = fade(0.48, 0.37, y) * fade(-0.04, -0.1, x);
-          if (hip <= 0) continue;
-          hipW[i] = hip;
-          kneeW[i] = hip > 0.85 ? fade(0.3, 0.2, y) : 0;
-          ankleW[i] = kneeW[i] > 0.9 ? fade(0.13, 0.05, y) : 0;
-        }
-        swing.geo = mesh.geometry;
-        swing.pos = attr;
-        swing.rest = rest;
-        swing.hip = hipW;
-        swing.knee = kneeW;
-        swing.ankle = ankleW;
+        const item = obj as THREE.Mesh;
+        if (item.isMesh && !mesh) mesh = item;
       });
+      if (!mesh) return;
+      const body = mesh as THREE.Mesh;
+      const material = body.material;
+      const reduced = simplifySkinned(body.geometry.clone(), 0.006);
+      body.geometry.dispose();
+      body.geometry = reduced;
+      const parts = splitBody(body);
+      reduced.dispose();
+      const shell = new THREE.Mesh(parts.body, material);
+      const kicking = new THREE.Mesh(parts.leg.geo, material);
+      shell.frustumCulled = false;
+      kicking.frustumCulled = false;
+      const pos = parts.leg.geo.getAttribute("position") as THREE.BufferAttribute;
+      const nrm = parts.leg.geo.getAttribute("normal") as THREE.BufferAttribute | null;
+      swing.leg = {
+        pos,
+        nrm,
+        rest: parts.leg.rest,
+        restN: parts.leg.restN,
+        hip: parts.leg.hipW,
+        knee: parts.leg.kneeW,
+        ankle: parts.leg.ankleW,
+        ids: parts.leg.ids,
+        posed: false,
+      };
+      model.remove(body);
+      model.add(shell, kicking);
+      model.updateMatrixWorld(true);
       const box = new THREE.Box3().setFromObject(model);
       const span = Math.max(0.001, box.max.y - box.min.y);
       const fit = HEIGHT / span;
@@ -82,21 +174,18 @@ export function HulkModel({ soldiers }: { soldiers: number }) {
     });
     return () => {
       drop = true;
-      swing.geo = null;
-      swing.pos = null;
-      swing.rest = null;
-      swing.hip = null;
-      swing.knee = null;
-      swing.ankle = null;
-      swing.posed = false;
+      swing.leg = null;
       const host = rig.current;
       if (!host) return;
+      const seen = new Set<THREE.Material>();
       host.traverse((obj) => {
-        const mesh = obj as THREE.Mesh;
-        if (!mesh.isMesh) return;
-        mesh.geometry?.dispose();
-        const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+        const item = obj as THREE.Mesh;
+        if (!item.isMesh) return;
+        item.geometry?.dispose();
+        const mats = Array.isArray(item.material) ? item.material : [item.material];
         for (const mat of mats) {
+          if (seen.has(mat)) continue;
+          seen.add(mat);
           const std = mat as THREE.MeshStandardMaterial;
           std.map?.dispose();
           std.normalMap?.dispose();
@@ -109,20 +198,19 @@ export function HulkModel({ soldiers }: { soldiers: number }) {
     };
   }, [swing]);
   useFrame(({ clock }) => {
-    const pos = swing.pos;
-    const rest = swing.rest;
-    const hipW = swing.hip;
-    const kneeW = swing.knee;
-    const ankleW = swing.ankle;
-    if (!pos || !rest || !hipW || !kneeW || !ankleW) return;
+    const leg = swing.leg;
+    if (!leg) return;
     const kick = devKick(Math.max(0, clock.elapsedTime - REEL_HOLD), soldiers);
     const active = Math.abs(kick.hip) + Math.abs(kick.knee) + Math.abs(kick.ankle) > 0.001;
+    const pos = leg.pos.array as Float32Array;
+    const nrm = leg.nrm ? (leg.nrm.array as Float32Array) : null;
     if (!active) {
-      if (!swing.posed) return;
-      (pos.array as Float32Array).set(rest);
-      pos.needsUpdate = true;
-      swing.geo?.computeVertexNormals();
-      swing.posed = false;
+      if (!leg.posed) return;
+      pos.set(leg.rest);
+      if (nrm && leg.restN) nrm.set(leg.restN);
+      leg.pos.needsUpdate = true;
+      if (leg.nrm) leg.nrm.needsUpdate = true;
+      leg.posed = false;
       return;
     }
     qHip.setFromAxisAngle(AXIS, kick.hip);
@@ -131,16 +219,19 @@ export function HulkModel({ soldiers }: { soldiers: number }) {
     relKnee.copy(KNEE).sub(HIP).applyQuaternion(qHip);
     kneeNow.copy(relKnee).add(HIP);
     ankleNow.copy(ANKLE).sub(HIP).applyQuaternion(qHip).sub(relKnee).applyQuaternion(qKnee).add(relKnee).add(HIP);
-    for (let i = 0; i < hipW.length; i++) {
-      const wh = hipW[i];
+    const ids = leg.ids;
+    const rest = leg.rest;
+    const restN = leg.restN;
+    const hipW = leg.hip;
+    const kneeW = leg.knee;
+    const ankleW = leg.ankle;
+    for (let k = 0; k < ids.length; k++) {
+      const i = ids[k];
       const o = i * 3;
+      const wh = hipW[i];
       const ox = rest[o];
       const oy = rest[o + 1];
       const oz = rest[o + 2];
-      if (wh <= 0) {
-        pos.setXYZ(i, ox, oy, oz);
-        continue;
-      }
       tmp.set(ox - HIP.x, oy - HIP.y, oz - HIP.z).applyQuaternion(qHip);
       let x = ox + (HIP.x + tmp.x - ox) * wh;
       let y = oy + (HIP.y + tmp.y - oy) * wh;
@@ -159,11 +250,37 @@ export function HulkModel({ soldiers }: { soldiers: number }) {
         y += (ankleNow.y + tmp.y - y) * wa;
         z += (ankleNow.z + tmp.z - z) * wa;
       }
-      pos.setXYZ(i, x, y, z);
+      pos[o] = x;
+      pos[o + 1] = y;
+      pos[o + 2] = z;
+      if (!nrm || !restN) continue;
+      const nx = restN[o];
+      const ny = restN[o + 1];
+      const nz = restN[o + 2];
+      tmp.set(nx, ny, nz).applyQuaternion(qHip);
+      let rx = nx + (tmp.x - nx) * wh;
+      let ry = ny + (tmp.y - ny) * wh;
+      let rz = nz + (tmp.z - nz) * wh;
+      if (wk > 0) {
+        tmp.set(rx, ry, rz).applyQuaternion(qKnee);
+        rx += (tmp.x - rx) * wk;
+        ry += (tmp.y - ry) * wk;
+        rz += (tmp.z - rz) * wk;
+      }
+      if (wa > 0) {
+        tmp.set(rx, ry, rz).applyQuaternion(qAnkle);
+        rx += (tmp.x - rx) * wa;
+        ry += (tmp.y - ry) * wa;
+        rz += (tmp.z - rz) * wa;
+      }
+      const len = Math.hypot(rx, ry, rz) || 1;
+      nrm[o] = rx / len;
+      nrm[o + 1] = ry / len;
+      nrm[o + 2] = rz / len;
     }
-    pos.needsUpdate = true;
-    swing.geo?.computeVertexNormals();
-    swing.posed = true;
+    leg.pos.needsUpdate = true;
+    if (leg.nrm) leg.nrm.needsUpdate = true;
+    leg.posed = true;
   });
   return <group ref={rig} />;
 }

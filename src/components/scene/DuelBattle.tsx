@@ -303,10 +303,7 @@ function kickVerts(
     const ox = rest[o];
     const oy = rest[o + 1];
     const oz = rest[o + 2];
-    if (wh <= 0) {
-      pos.setXYZ(i, ox, oy, oz);
-      continue;
-    }
+    if (wh <= 0) continue;
     tmp.set(ox - HULK_HIP.x, oy - HULK_HIP.y, oz - HULK_HIP.z).applyQuaternion(qHip);
     let x = ox + (HULK_HIP.x + tmp.x - ox) * wh;
     let y = oy + (HULK_HIP.y + tmp.y - oy) * wh;
@@ -441,7 +438,10 @@ function BoutHulk() {
       if (!mesh) return;
       const body = mesh as THREE.Mesh;
       body.frustumCulled = false;
-      const attr = body.geometry.getAttribute("position") as THREE.BufferAttribute;
+      const reduced = simplifySkinned(body.geometry.clone(), 0.006);
+      body.geometry.dispose();
+      body.geometry = reduced;
+      const attr = reduced.getAttribute("position") as THREE.BufferAttribute;
       const rest = new Float32Array(attr.array.length);
       rest.set(attr.array as Float32Array);
       const hipW = new Float32Array(attr.count);
@@ -500,12 +500,10 @@ function BoutHulk() {
       if (!leg.posed) return;
       (pos.array as Float32Array).set(rest);
       pos.needsUpdate = true;
-      leg.geo?.computeVertexNormals();
       leg.posed = false;
       return;
     }
     kickVerts(pos, rest, hipW, kneeW, ankleW, kick);
-    leg.geo?.computeVertexNormals();
     leg.posed = true;
   });
   return (
