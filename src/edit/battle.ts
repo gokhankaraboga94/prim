@@ -257,13 +257,8 @@ export function stepUnits(store: EditStore, dt: number) {
   const fighting = store.units.filter((unit) => unit.alive && unit.team > 0);
   for (const unit of store.units) {
     if (!unit.alive) {
-      unit.fall += step;
-      unit.y = -unit.fall * unit.fall * 8;
-      unit.pitch = Math.min(1.35, unit.fall * 1.8);
-      if (unit.fall > 1.05) {
-        unit.gone = true;
-        changed = true;
-      }
+      unit.gone = true;
+      changed = true;
       continue;
     }
     if (unit.team <= 0) {
@@ -305,7 +300,7 @@ export function stepUnits(store: EditStore, dt: number) {
         if (foe.hp <= 0) {
           foe.hp = 0;
           foe.alive = false;
-          foe.fall = 0;
+          foe.gone = true;
           changed = true;
         }
       }
