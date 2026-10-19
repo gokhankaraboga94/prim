@@ -6,6 +6,7 @@ import { useGame } from "../hooks/useGame";
 import { CHARACTERS, TEAMS, characterById } from "../edit/catalog";
 import { assignNames, assignTeam, createStore, removeSelected, spawnUnits, startBattle } from "../edit/battle";
 import { disposeThumbRenderer, loadCharacter, snapshotCharacter, type CharacterAsset } from "../edit/loadModel";
+import { REEL_HEIGHT, REEL_WIDTH } from "../recordCanvas";
 
 export function EditPage() {
   const { game } = useGame();
@@ -121,12 +122,40 @@ export function EditPage() {
       store.bump();
       return;
     }
-    const mime = ["video/webm;codecs=vp9", "video/webm;codecs=vp8", "video/webm", "video/mp4"].find((item) => MediaRecorder.isTypeSupported(item)) || "";
-    const stream = canvas.captureStream(30);
+    const reel = document.createElement("canvas");
+    reel.width = REEL_WIDTH;
+    reel.height = REEL_HEIGHT;
+    const flat = reel.getContext("2d", { alpha: false });
+    if (!flat) {
+      store.note = "Bu tarayıcı kaydı desteklemiyor.";
+      store.bump();
+      return;
+    }
+    let copying = true;
+    const copyFrame = () => {
+      if (!copying) return;
+      const sw = canvas.width;
+      const sh = canvas.height;
+      const rect = canvas.getBoundingClientRect();
+      if (sw > 0 && sh > 0 && rect.width > 0 && rect.height > 0) {
+        const frameW = Math.min(rect.width, (rect.height * 9) / 16);
+        const frameH = Math.min(rect.height, (rect.width * 16) / 9);
+        const sWidth = (frameW / rect.width) * sw;
+        const sHeight = (frameH / rect.height) * sh;
+        const sx = (sw - sWidth) / 2;
+        const sy = (sh - sHeight) / 2;
+        flat.drawImage(canvas, sx, sy, sWidth, sHeight, 0, 0, REEL_WIDTH, REEL_HEIGHT);
+      }
+      requestAnimationFrame(copyFrame);
+    };
+    copyFrame();
+    const mime = ["video/mp4", "video/webm;codecs=vp9", "video/webm;codecs=vp8", "video/webm"].find((item) => MediaRecorder.isTypeSupported(item)) || "";
+    const stream = reel.captureStream(30);
     let rec: MediaRecorder;
     try {
       rec = new MediaRecorder(stream, mime ? { mimeType: mime, videoBitsPerSecond: 8_000_000 } : undefined);
     } catch {
+      copying = false;
       store.note = "Kayıt başlatılamadı.";
       store.bump();
       stream.getTracks().forEach((track) => track.stop());
@@ -137,23 +166,25 @@ export function EditPage() {
       if (event.data.size) chunks.push(event.data);
     };
     rec.onstop = () => {
-      const blob = new Blob(chunks, { type: rec.mimeType || "video/webm" });
+      copying = false;
+      const type = rec.mimeType || mime || "video/webm";
+      const blob = new Blob(chunks, { type });
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = "wargame-edit.webm";
+      link.download = type.includes("mp4") ? "wargame-edit.mp4" : "wargame-edit.webm";
       link.click();
       window.setTimeout(() => URL.revokeObjectURL(url), 5000);
       stream.getTracks().forEach((track) => track.stop());
       setRecording(false);
       recorder.current = null;
-      store.note = "Kayıt indirildi.";
+      store.note = "9:16 kayıt indirildi.";
       store.bump();
     };
     rec.start(250);
     recorder.current = rec;
     setRecording(true);
-    store.note = "Kayıt alınıyor.";
+    store.note = "9:16 Reels kaydı alınıyor.";
     store.bump();
   }
 
@@ -200,10 +231,11 @@ export function EditPage() {
       </header>
 
       <p className="edit-help">
-        Sol tık seçer, sürükleyince kutu olur. Takımdan birini seçip yere tıklayınca bütün takım askeri nizamda oraya gider. Savaşta ölenlerin yeri kapanır, kalanlar yeniden dizilir. Sağ tuş kamerayı döndürür, tekerlek yakınlaştırır, orta tuş ve ok tuşları haritayı kaydırır. Takımsız asker savaşmaz.
+        Sol tık seçer, sürükleyince kutu olur. Çift tık, aynı modelden yakındakileri de seçer. Takımdan birini seçip yere tıklayınca bütün takım askeri nizamda oraya gider. Savaşta ölenlerin yeri kapanır, kalanlar yeniden dizilir. Kayıt 9:16 Reels kadrajıdır. Sağ tuş kamerayı döndürür, tekerlek yakınlaştırır, orta tuş ve ok tuşları haritayı kaydırır. Takımsız asker savaşmaz.
       </p>
 
       <div className="edit-stage">
+        {recording && <div className="edit-reel-frame" aria-hidden="true" />}
         {open && (
           <section className="edit-roster" aria-label="Karakter listesi">
             {CHARACTERS.map((def) => {

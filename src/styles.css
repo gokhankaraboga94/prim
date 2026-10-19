@@ -1134,6 +1134,20 @@ body.edit-route .seo-doc {
   position: relative;
   flex: 1;
   min-height: 0;
+  container-type: size;
+}
+
+.edit-reel-frame {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  z-index: 1;
+  width: min(100cqw, calc(100cqh * 9 / 16));
+  height: min(100cqh, calc(100cqw * 16 / 9));
+  transform: translate(-50%, -50%);
+  border: 1px solid rgba(246, 231, 178, 0.9);
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.55);
+  pointer-events: none;
 }
 
 .edit-stage canvas {

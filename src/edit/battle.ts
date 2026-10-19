@@ -1,4 +1,4 @@
-import { MAX_PER_MODEL, MAX_UNITS, TEAMS, type CharacterDef } from "./catalog";
+import { MAX_PER_MODEL, MAX_UNITS, TEAMS, characterById, type CharacterDef } from "./catalog";
 
 export type Unit = {
   id: number;
@@ -324,6 +324,33 @@ function shiftLoose(units: Unit[], face: number, cx: number, cz: number, turn: b
     unit.aimX = Math.sin(face);
     unit.aimZ = Math.cos(face);
   }
+}
+
+export function selectNearby(store: EditStore, id: number, additive: boolean) {
+  const seed = store.byId.get(id);
+  if (!seed || !seed.alive) return;
+  const same = store.units.filter((unit) => unit.alive && unit.model === seed.model);
+  const reach = Math.max(2.6, seed.radius * 3.6);
+  const reach2 = reach * reach;
+  const chosen = new Set<number>([seed.id]);
+  const queue = [seed];
+  while (queue.length) {
+    const current = queue.pop();
+    if (!current) break;
+    for (const other of same) {
+      if (chosen.has(other.id)) continue;
+      const dx = other.x - current.x;
+      const dz = other.z - current.z;
+      if (dx * dx + dz * dz > reach2) continue;
+      chosen.add(other.id);
+      queue.push(other);
+    }
+  }
+  if (!additive) store.selected.clear();
+  for (const pick of chosen) store.selected.add(pick);
+  const label = characterById(seed.model)?.label ?? "asker";
+  store.note = chosen.size > 1 ? `${chosen.size} yakın ${label} seçildi.` : `${store.selected.size} asker seçili. Yere tıklayınca oraya gider.`;
+  store.bump();
 }
 
 export function assignTeam(store: EditStore, team: number) {

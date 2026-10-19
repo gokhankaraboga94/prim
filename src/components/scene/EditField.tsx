@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import { TEAMS } from "../../edit/catalog";
-import { moveSelected, stepUnits, teamLabel, type EditStore, type Unit } from "../../edit/battle";
+import { moveSelected, selectNearby, stepUnits, teamLabel, type EditStore, type Unit } from "../../edit/battle";
 import type { CharacterAsset } from "../../edit/loadModel";
 import { MAX_PER_MODEL, MAX_UNITS } from "../../edit/catalog";
 
@@ -181,6 +181,7 @@ function EditRig({ store, assets }: { store: EditStore; assets: Record<string, C
         }
       }
     };
+    let lastTap = { id: -1, t: 0 };
     const onUp = (event: PointerEvent) => {
       const mark = document.getElementById("edit-marquee");
       if (mark) mark.style.display = "none";
@@ -209,6 +210,13 @@ function EditRig({ store, assets }: { store: EditStore; assets: Record<string, C
         }
       }
       if (picked) {
+        const now = performance.now();
+        const dbl = lastTap.id === picked.id && now - lastTap.t < 380;
+        lastTap = { id: picked.id, t: now };
+        if (dbl) {
+          selectNearby(store, picked.id, event.shiftKey);
+          return;
+        }
         if (event.shiftKey) {
           if (store.selected.has(picked.id)) store.selected.delete(picked.id);
           else store.selected.add(picked.id);
@@ -297,11 +305,7 @@ function EditRig({ store, assets }: { store: EditStore; assets: Record<string, C
       list.forEach((unit, index) => {
         placeUnit(unit);
         mesh.setMatrixAt(index, dummy.matrix);
-        const team = teamColor.get(unit.team);
-        tint.copy(team ?? white);
-        if (store.selected.has(unit.id)) tint.lerp(gold, 0.55);
-        else if (team) tint.lerp(white, 0.8);
-        mesh.setColorAt(index, tint);
+        mesh.setColorAt(index, white);
       });
       mesh.instanceMatrix.needsUpdate = true;
       if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
