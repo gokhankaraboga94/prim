@@ -838,6 +838,40 @@ select:focus {
   padding: 7px 10px;
 }
 
+.recent-buttons {
+  margin: 4px 0 14px;
+}
+
+.recent-buttons > .btn-ghost {
+  width: 100%;
+  text-align: left;
+}
+
+.recent-buttons-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.recent-buttons-list button {
+  appearance: none;
+  border: 1px solid var(--line);
+  background: rgba(0, 0, 0, 0.35);
+  color: var(--ink);
+  border-radius: 12px;
+  padding: 10px 12px;
+  cursor: pointer;
+  font-weight: 600;
+  text-align: left;
+}
+
+.recent-buttons-list button.on {
+  border-color: var(--gold);
+  background: linear-gradient(180deg, #f0d48a, #b8892d);
+  color: #1a1308;
+}
+
 .check-row {
   display: flex;
   align-items: center;

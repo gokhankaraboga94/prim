@@ -43,6 +43,7 @@ import { HERO_ID, HERO_MODE, HERO_SECONDS, isHero, type HeroId } from "../heroRe
 import { ARENA_ID, ARENA_MODE, ARENA_SECONDS, isArena, type ArenaId } from "../arenaReel";
 import { BOUT_ID, BOUT_MODE, BOUT_SECONDS, isBout, type BoutId } from "../boutReel";
 import { unlockReelSfx } from "../reelSfx";
+import { RECENT_BUTTONS, RECENT_BUTTON_LIMIT } from "../recentButtons";
 
 function skippedNote(skipped: string[]): string {
   if (!skipped.length) return "";
@@ -66,6 +67,7 @@ export function AdminPage() {
   const [reelSkipCmd, setReelSkipCmd] = useState(false);
   const [reelShot, setReelShot] = useState<ReelShot | PlanBId | SagaId | DiscoverId | MixId | CountdownId | DefendId | VsId | New1Id | New2Id | New3Id | New4Id | New5Id | New6Id | New62Id | New7Id | LabId | DevId | Dev2Id | Dev3Id | Dev4Id | Dev5Id | Dev6Id | Dev7Id | Dev8Id | Dev9Id | Dev10Id | SnakeId | DevsId | FilmId | DragonId | WarsId | OrduId | OkId | KalkanId | HeroId | ArenaId | BoutId | XxxId | null>(null);
   const [reelDay, setReelDay] = useState("1");
+  const [recentOpen, setRecentOpen] = useState(false);
   const [capturing, setCapturing] = useState(false);
   const [editIndex, setEditIndex] = useState<number | null>(null);
   const [editValue, setEditValue] = useState("");
@@ -655,6 +657,30 @@ export function AdminPage() {
             İşaretlersen kayıt komutan yakın planı olmadan, kamera dönüşünden başlar. “X. GÜN” ve
             “KALE KUŞATILDI” o anda çıkar. İşaretlemezsen eski usül komutanla başlar.
           </p>
+          <div className="recent-buttons">
+            <button type="button" className="btn-ghost" onClick={() => setRecentOpen((open) => !open)}>
+              Butonlar — {recentOpen ? "gizle" : "göster"}
+            </button>
+            {recentOpen && (
+              <div className="recent-buttons-list">
+                {RECENT_BUTTONS.slice(0, RECENT_BUTTON_LIMIT).map((mode) => (
+                  <button
+                    key={mode.id}
+                    type="button"
+                    className={reelShot === mode.id ? "on" : ""}
+                    onClick={() => {
+                      setReelShot((cur) => (cur === mode.id ? null : mode.id));
+                      setReelSeconds(mode.seconds);
+                      setReelText(false);
+                      setReelSkipCmd(true);
+                    }}
+                  >
+                    {mode.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
           <label>new1 — {NEW1_SECONDS}s</label>
           <p className="muted">
             Yazı yok. Kuş bakışı açık arazi. Düşman önden ve arkadan kalabalık basar, bizimkiler tek tek düşer.
