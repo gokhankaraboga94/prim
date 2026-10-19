@@ -6,7 +6,7 @@ import { formatCount } from "../../game";
 import { REEL_HOLD } from "../../recordCanvas";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
-import { devAlive, devClubHit, devGiantAt, devMaceSwing, devSnakeBite, devSwordPose, devTailLash, devTroopHit, devTroopSlot, devWaitArrow, TROOP_N, TROOP_SCALE } from "../../devReel";
+import { devAlive, devClubHit, devGiantAt, devKick, devMaceSwing, devSnakeBite, devSwordPose, devTailLash, devTroopHit, devTroopSlot, devWaitArrow, TROOP_N, TROOP_SCALE } from "../../devReel";
 import { KongModel } from "./Kong";
 import { DemonModel } from "./Demon";
 import { HulkModel } from "./Hulk";
@@ -108,10 +108,10 @@ function DreadShell({ plate, iron, eye, horn }: { plate: THREE.Material; iron: T
 
 const HEAD_BAR = 2.5;
 
-function HeadHp({ soldiers }: { soldiers: number }) {
+function HeadHp({ soldiers, kick = false }: { soldiers: number; kick?: boolean }) {
   const fill = useRef<THREE.Mesh>(null);
   useFrame(({ clock }) => {
-    const alive = devAlive(Math.max(0, clock.elapsedTime - REEL_HOLD), soldiers, true, true, false, false);
+    const alive = devAlive(Math.max(0, clock.elapsedTime - REEL_HOLD), soldiers, true, !kick, false, false, kick);
     const u = Math.max(0, Math.min(1, alive / Math.max(1, soldiers)));
     const mesh = fill.current;
     if (!mesh) return;
@@ -680,7 +680,17 @@ function GiantBody({ soldiers, big, sword, dread, flesh = false, ape = false, de
   useFrame(({ clock }) => {
     const t = Math.max(0, clock.elapsedTime - REEL_HOLD);
     const g = devGiantAt(t);
-    if (big) {
+    if (hulk) {
+      const kick = devKick(t, soldiers);
+      const fx = Math.sin(g.yaw);
+      const fz = Math.cos(g.yaw);
+      if (root.current) {
+        root.current.position.set(g.x + fx * kick.lunge, 0, g.z + fz * kick.lunge);
+        root.current.rotation.y = g.yaw;
+        root.current.rotation.x = 0;
+        root.current.rotation.z = 0;
+      }
+    } else if (big) {
       const s = devMaceSwing(t, soldiers);
       const step = Math.abs(Math.sin(t * 5.6)) * 0.18;
       const fx = Math.sin(g.yaw);
@@ -729,7 +739,7 @@ function GiantBody({ soldiers, big, sword, dread, flesh = false, ape = false, de
   return (
     <group ref={root} scale={big ? 1.52 : 1}>
       {hulk ? (
-        <HulkModel />
+        <HulkModel soldiers={soldiers} />
       ) : orc ? (
         <OrcModel soldiers={soldiers} />
       ) : demon ? (
@@ -864,7 +874,7 @@ function GiantBody({ soldiers, big, sword, dread, flesh = false, ape = false, de
       </group>
         </>
       )}
-      {crown && <HeadHp soldiers={soldiers} />}
+      {crown && <HeadHp soldiers={soldiers} kick={hulk} />}
     </group>
   );
 }
@@ -1296,16 +1306,16 @@ export function Giant({ soldiers, big = false, sword = false, dread = false, fle
   );
 }
 
-export function DevHealthBar({ soldiers, big = false, sword = false, snake = false, devs = false }: { soldiers: number; big?: boolean; sword?: boolean; snake?: boolean; devs?: boolean }) {
+export function DevHealthBar({ soldiers, big = false, sword = false, snake = false, devs = false, kick = false }: { soldiers: number; big?: boolean; sword?: boolean; snake?: boolean; devs?: boolean; kick?: boolean }) {
   return (
     <Hud renderPriority={3}>
       <OrthographicCamera makeDefault position={[0, 0, 10]} />
-      <DevHealthPlate soldiers={soldiers} big={big} sword={sword} snake={snake} devs={devs} />
+      <DevHealthPlate soldiers={soldiers} big={big} sword={sword} snake={snake} devs={devs} kick={kick} />
     </Hud>
   );
 }
 
-function DevHealthPlate({ soldiers, big, sword, snake, devs }: { soldiers: number; big: boolean; sword: boolean; snake: boolean; devs: boolean }) {
+function DevHealthPlate({ soldiers, big, sword, snake, devs, kick }: { soldiers: number; big: boolean; sword: boolean; snake: boolean; devs: boolean; kick: boolean }) {
   const size = useThree((s) => s.size);
   const tex = useMemo(() => {
     const canvas = document.createElement("canvas");
@@ -1316,7 +1326,7 @@ function DevHealthPlate({ soldiers, big, sword, snake, devs }: { soldiers: numbe
     return map;
   }, []);
   useFrame(({ clock }) => {
-    const alive = devAlive(Math.max(0, clock.elapsedTime - REEL_HOLD), soldiers, big, sword, snake, devs);
+    const alive = devAlive(Math.max(0, clock.elapsedTime - REEL_HOLD), soldiers, big, sword, snake, devs, kick);
     const canvas = tex.image as HTMLCanvasElement;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;

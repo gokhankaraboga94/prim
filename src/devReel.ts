@@ -308,9 +308,8 @@ export function devClubHit(t: number, soldiers: number) {
   return Math.max(burst(0.03, 0.045), burst(0.46, 0.04));
 }
 
-export function devMaceSwing(t: number, soldiers: number) {
+function swingClock(t: number, soldiers: number) {
   const period = planOf(Math.max(1, soldiers)).period;
-  const guard = { pitch: -0.18, sweep: 0.04, twist: 0, dip: 0, lunge: 0 };
   const span = 0.808;
   const fit = period >= span ? 1 : period / span;
   const windStart = 0.438 * fit;
@@ -318,14 +317,86 @@ export function devMaceSwing(t: number, soldiers: number) {
   const followEnd = 0.269 * fit;
   const idleAfter = 0.37 * fit;
   let dt: number;
-  if (t < FIGHT) {
-    dt = t - FIGHT;
-  } else if (t > LAST + 0.22) {
-    return guard;
-  } else {
+  if (t < FIGHT) dt = t - FIGHT;
+  else if (t > LAST + 0.22) dt = 999;
+  else {
     const into = (t - FIGHT) % period;
     dt = into > period * 0.55 ? into - period : into;
   }
+  return { dt, period, windStart, snapStart, followEnd, idleAfter };
+}
+
+export function devKick(t: number, soldiers: number) {
+  const idle = { hip: 0, knee: 0, ankle: 0, lunge: 0 };
+  const clock = swingClock(t, soldiers);
+  if (clock.dt > 100) return idle;
+  const { dt, period, windStart, snapStart } = clock;
+  const recover = Math.min(0.62, Math.max(0.02, period - windStart - 0.08));
+  if (dt < -windStart || dt > recover) return idle;
+  const cock = { hip: 0.46, knee: 0.9, ankle: -0.25, lunge: -0.5 };
+  const hit = { hip: -0.62, knee: 0.02, ankle: -0.05, lunge: 6.4 };
+  if (dt < -snapStart) {
+    const u = Math.sin((Math.min(1, (dt + windStart) / (windStart - snapStart))) * Math.PI * 0.5);
+    return { hip: cock.hip * u, knee: cock.knee * u, ankle: cock.ankle * u, lunge: cock.lunge * u };
+  }
+  if (dt < 0) {
+    const u = Math.pow((dt + snapStart) / snapStart, 1.45);
+    return {
+      hip: cock.hip + (hit.hip - cock.hip) * u,
+      knee: cock.knee + (hit.knee - cock.knee) * u,
+      ankle: cock.ankle + (hit.ankle - cock.ankle) * u,
+      lunge: cock.lunge + (hit.lunge - cock.lunge) * u,
+    };
+  }
+  const e = Math.min(1, dt / recover);
+  const s = e * e * (3 - 2 * e);
+  return { hip: hit.hip * (1 - s), knee: hit.knee * (1 - s), ankle: hit.ankle * (1 - s), lunge: hit.lunge * (1 - s) };
+}
+
+const kickPlans = new Map<string, Float64Array>();
+
+function kickPlan(n: number) {
+  const key = String(n);
+  const hit = kickPlans.get(key);
+  if (hit) return hit;
+  const base = planOf(n, true);
+  const countAt = new Map<number, number>();
+  for (let i = 0; i < n; i++) countAt.set(base.die[i], (countAt.get(base.die[i]) ?? 0) + 1);
+  const die = new Float64Array(n);
+  const used = new Uint8Array(n);
+  for (const t of [...countAt.keys()].sort((a, b) => a - b)) {
+    const batch = countAt.get(t) ?? 0;
+    const g = devGiantAt(t);
+    const fx = Math.sin(g.yaw);
+    const fz = Math.cos(g.yaw);
+    const rx = -Math.cos(g.yaw);
+    const rz = Math.sin(g.yaw);
+    const tx = g.x + fx * 13.2 + rx * 3.6;
+    const tz = g.z + fz * 13.2 + rz * 3.6;
+    const scored: { i: number; s: number }[] = [];
+    for (let i = 0; i < n; i++) {
+      if (used[i]) continue;
+      const live = ringAt(i, n, t, true, false);
+      const forward = (live.x - g.x) * fx + (live.z - g.z) * fz;
+      const dx = live.x - tx;
+      const dz = live.z - tz;
+      scored.push({ i, s: dx * dx + dz * dz + (forward < 2 ? 420 : 0) });
+    }
+    scored.sort((a, b) => a.s - b.s || a.i - b.i);
+    for (let j = 0; j < batch && j < scored.length; j++) {
+      die[scored[j].i] = t;
+      used[scored[j].i] = 1;
+    }
+  }
+  kickPlans.set(key, die);
+  return die;
+}
+
+export function devMaceSwing(t: number, soldiers: number) {
+  const guard = { pitch: -0.18, sweep: 0.04, twist: 0, dip: 0, lunge: 0 };
+  const clock = swingClock(t, soldiers);
+  if (clock.dt > 100) return guard;
+  const { dt, windStart, snapStart, followEnd, idleAfter } = clock;
   if (dt < -windStart || dt > idleAfter) {
     const bob = Math.sin(t * 2.6) * 0.04;
     return { pitch: guard.pitch + bob, sweep: bob, twist: 0, dip: 0, lunge: 0 };
@@ -912,9 +983,16 @@ function tailHits(n: number) {
   return at;
 }
 
-export function devAlive(recT: number, soldiers: number, big = false, sword = false, snake = false, devs = false) {
+export function devAlive(recT: number, soldiers: number, big = false, sword = false, snake = false, devs = false, kick = false) {
   const n = Math.max(0, Math.floor(soldiers));
   if (n <= 0) return 0;
+  if (kick) {
+    const die = kickPlan(n);
+    const t = Math.max(0, recT);
+    let alive = 0;
+    for (let i = 0; i < n; i++) if (t < die[i]) alive += 1;
+    return alive;
+  }
   if (snake || devs) {
     const plan = snakePlan(n);
     const t = Math.max(0, recT);
@@ -936,7 +1014,7 @@ export function devAlive(recT: number, soldiers: number, big = false, sword = fa
   return alive;
 }
 
-export function devFriendAt(i: number, n: number, recT: number, out: New1Pose, big = false, sword = false, snake = false, devs = false) {
+export function devFriendAt(i: number, n: number, recT: number, out: New1Pose, big = false, sword = false, snake = false, devs = false, kick = false) {
   const count = Math.max(0, Math.floor(n));
   const t = Math.max(0, recT);
   if (i < 0 || i >= count) {
@@ -953,8 +1031,8 @@ export function devFriendAt(i: number, n: number, recT: number, out: New1Pose, b
     snakeFriendAt(i, count, t, out, devs);
     return;
   }
-  const dieAt = planOf(count, big).die[i];
-  const slashAt = sword ? swordHits(count, big, snake)[i] : 1e9;
+  const dieAt = kick ? kickPlan(count)[i] : planOf(count, big).die[i];
+  const slashAt = sword && !kick ? swordHits(count, big, snake)[i] : 1e9;
   const tailAt = snake ? tailHits(count)[i] : 1e9;
   if (snake && t >= tailAt && t < tailAt + FLING) {
     const live = ringAt(i, count, tailAt, big, true);
@@ -972,6 +1050,22 @@ export function devFriendAt(i: number, n: number, recT: number, out: New1Pose, b
     out.rx = 0.4 + u * 2.4;
     out.ry = live.ry + u * 5;
     out.rz = (i % 2 ? 1 : -1) * u * 1.6;
+    out.s = 1;
+    return;
+  }
+  if (kick && t >= dieAt && t < dieAt + FLING) {
+    const live = ringAt(i, count, dieAt, big, false);
+    const g = live.g;
+    const fx = Math.sin(g.yaw);
+    const fz = Math.cos(g.yaw);
+    const u = (t - dieAt) / FLING;
+    const dist = u * u * 16;
+    out.x = live.x + fx * dist;
+    out.z = live.z + fz * dist;
+    out.y = Math.sin(u * Math.PI) * 2.4;
+    out.rx = 0.35 + u * 1.85;
+    out.ry = live.ry + u * 0.4;
+    out.rz = (i % 2 ? 0.55 : -0.55) * u;
     out.s = 1;
     return;
   }

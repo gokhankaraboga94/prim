@@ -94,6 +94,7 @@ type ArmyProps = {
   giantSnake?: boolean;
   giantDevs?: boolean;
   giantKnight?: boolean;
+  giantKick?: boolean;
   knight?: boolean;
   nameGold?: boolean;
   nameAlert?: boolean;
@@ -967,7 +968,7 @@ function NameLayers({
 }
 
 
-export function Army({ count, names = [], commanders = [], cinematic, duration = 8, skipCommander = false, roster = null, discover = null, countdown = false, defend = false, defend2 = false, defend3 = false, loose = false, blue = false, vs = false, vs2 = false, new1 = false, new2 = false, blade = false, bridge = false, cross = false, wide = false, relief = false, maze = false, film = false, dragon = false, giant = false, giantBig = false, giantAll = false, giantSword = false, giantSnake = false, giantDevs = false, giantKnight = false, knight = false, nameGold = false, nameAlert = false, mix = false, mixSlow = false, nameHunt = false, quiet = false, square = false, readNames = false, scanHunt = false, level = 1, rosterIds = null }: ArmyProps) {
+export function Army({ count, names = [], commanders = [], cinematic, duration = 8, skipCommander = false, roster = null, discover = null, countdown = false, defend = false, defend2 = false, defend3 = false, loose = false, blue = false, vs = false, vs2 = false, new1 = false, new2 = false, blade = false, bridge = false, cross = false, wide = false, relief = false, maze = false, film = false, dragon = false, giant = false, giantBig = false, giantAll = false, giantSword = false, giantSnake = false, giantDevs = false, giantKnight = false, giantKick = false, knight = false, nameGold = false, nameAlert = false, mix = false, mixSlow = false, nameHunt = false, quiet = false, square = false, readNames = false, scanHunt = false, level = 1, rosterIds = null }: ArmyProps) {
   const bodies = useRef<THREE.InstancedMesh>(null);
   const knightHelms = useRef<THREE.InstancedMesh>(null);
   const [knightGeo, setKnightGeo] = useState<{ body: THREE.BufferGeometry; helm: THREE.BufferGeometry } | null>(null);
@@ -1189,7 +1190,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
 
   function poseSoldier(soldier: number, t: number) {
     if (giant) {
-      devFriendAt(soldier, layout.rest.length, t - REEL_HOLD, vsPose, giantBig, giantSword, giantSnake || giantDevs, giantDevs);
+      devFriendAt(soldier, layout.rest.length, t - REEL_HOLD, vsPose, giantBig, giantSword, giantSnake || giantDevs, giantDevs, giantKick);
       pos.set(vsPose.x, vsPose.y, vsPose.z);
       return;
     }
@@ -1451,7 +1452,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
           continue;
         }
         if (giant) {
-          devFriendAt(i, n, recT, vsPose, giantBig, giantSword, giantSnake || giantDevs, giantDevs);
+          devFriendAt(i, n, recT, vsPose, giantBig, giantSword, giantSnake || giantDevs, giantDevs, giantKick);
           if ((vsPose.s ?? 1) <= 0) continue;
           dummy.position.set(vsPose.x, vsPose.y, vsPose.z);
           dummy.rotation.set(vsPose.rx, vsPose.ry, vsPose.rz);

@@ -1091,7 +1091,7 @@ export function AdminPage() {
             <p className="muted">DEV8 ile aynı kadro, can barı, çim ve şövalyeler. Kamera yüzde 15 daha yakın. Dev, eklenen ork, yüzde 30 daha küçük. Elindeki baltalar ile askerlere vurur. Askerler Vaporworks Knight (CC-BY).</p>
           )}
           {isDev11(reelShot) && (
-            <p className="muted">DEV10 ile aynı kadro, can barı, çim, şövalyeler ve kamera. Dev, eklenen Hulk modeli: dokusu sadeleştirilmez, boyu diğer devler kadar. Askerler Vaporworks Knight (CC-BY).</p>
+            <p className="muted">DEV10 ile aynı kadro, can barı, çim, şövalyeler ve kamera. Dev, eklenen Hulk modeli: dokusu sadeleştirilmez, boyu diğer devler kadar. Sağ ayağıyla tekme atar, öndeki askerler o vuruşta ölür. Askerler Vaporworks Knight (CC-BY).</p>
           )}
           {isBout(reelShot) && (
             <p className="muted">52 saniye. DEV9’daki çim. King Kong sadece ekrandan uzak olan sol eliyle yumruk atar, ork baltalarıyla karşılık verir. Vuruşlar seri. İkisinin de üstünde kırmızı can barı var. Kıyasıya dövüşürler, ork düşer.</p>
