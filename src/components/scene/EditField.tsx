@@ -86,7 +86,7 @@ function EditRig({ store, assets }: { store: EditStore; assets: Record<string, C
   const ringGeo = useMemo(() => new THREE.RingGeometry(0.78, 1, 28), []);
   const barGeo = useMemo(() => new THREE.PlaneGeometry(1, 1), []);
   const ringMat = useMemo(() => new THREE.MeshBasicMaterial({ color: "#ffffff", transparent: true, opacity: 0.9, side: THREE.DoubleSide, depthWrite: false }), []);
-  const barMat = useMemo(() => new THREE.MeshBasicMaterial({ color: "#e10600", transparent: true, opacity: 0.95, depthTest: false }), []);
+  const barMat = useMemo(() => new THREE.MeshBasicMaterial({ color: "#ffffff", transparent: true, opacity: 0.95, depthTest: false }), []);
 
   useEffect(() => {
     const host = bodies.current;
@@ -381,8 +381,10 @@ function EditRig({ store, assets }: { store: EditStore; assets: Record<string, C
         dummy.scale.set(width, 0.08, 1);
         dummy.updateMatrix();
         bar.setMatrixAt(index, dummy.matrix);
+        bar.setColorAt(index, teamColor.get(unit.team) ?? white);
       });
       bar.instanceMatrix.needsUpdate = true;
+      if (bar.instanceColor) bar.instanceColor.needsUpdate = true;
     }
 
     const nameHost = names.current;
