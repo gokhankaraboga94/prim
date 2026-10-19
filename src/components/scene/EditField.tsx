@@ -1,0 +1,440 @@
+import { useEffect, useMemo, useRef } from "react";
+import { useFrame, useThree } from "@react-three/fiber";
+import * as THREE from "three";
+import { TEAMS } from "../../edit/catalog";
+import { stepUnits, type EditStore, type Unit } from "../../edit/battle";
+import type { CharacterAsset } from "../../edit/loadModel";
+import { MAX_PER_MODEL, MAX_UNITS } from "../../edit/catalog";
+
+const teamColor = new Map<number, THREE.Color>(TEAMS.map((team) => [team.id, new THREE.Color(team.color)]));
+const white = new THREE.Color("#ffffff");
+const gold = new THREE.Color("#ffe08a");
+const dummy = new THREE.Object3D();
+const tint = new THREE.Color();
+const aim = new THREE.Vector3();
+const ndc = new THREE.Vector2();
+const hit = new THREE.Vector3();
+const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+const raycaster = new THREE.Raycaster();
+const nameCache = new Map<string, THREE.Texture>();
+
+function nameTexture(text: string) {
+  const cached = nameCache.get(text);
+  if (cached) return cached;
+  const canvas = document.createElement("canvas");
+  canvas.width = 256;
+  canvas.height = 64;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return null;
+  ctx.clearRect(0, 0, 256, 64);
+  ctx.font = "600 34px Outfit, sans-serif";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.lineWidth = 8;
+  ctx.strokeStyle = "rgba(0,0,0,0.75)";
+  ctx.strokeText(text, 128, 34, 240);
+  ctx.fillStyle = "#f6e7b2";
+  ctx.fillText(text, 128, 34, 240);
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  nameCache.set(text, tex);
+  return tex;
+}
+
+function grassTexture() {
+  const canvas = document.createElement("canvas");
+  canvas.width = 2048;
+  canvas.height = 2048;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return null;
+  ctx.fillStyle = "#4e9a38";
+  ctx.fillRect(0, 0, 2048, 2048);
+  for (let i = 0; i < 18000; i++) {
+    const n = i % 7;
+    ctx.fillStyle = n === 0 ? "#7ec85a" : n === 1 ? "#3d8228" : n === 2 ? "#68b448" : n === 3 ? "#357820" : n === 4 ? "#96d868" : n === 5 ? "#5aa838" : "#2c681c";
+    ctx.fillRect(Math.random() * 2048, Math.random() * 2048, 2 + Math.random() * 7, 2 + Math.random() * 6);
+  }
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.wrapS = THREE.RepeatWrapping;
+  tex.wrapT = THREE.RepeatWrapping;
+  tex.repeat.set(12, 12);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
+function placeUnit(unit: Unit) {
+  const reach = Math.sin(unit.swing * Math.PI);
+  const len = Math.hypot(unit.aimX, unit.aimZ) || 1;
+  const lunge = reach * Math.min(0.45, unit.radius * 0.28);
+  dummy.position.set(unit.x + (unit.aimX / len) * lunge, unit.y, unit.z + (unit.aimZ / len) * lunge);
+  dummy.rotation.set(unit.pitch + reach * 0.5, unit.yaw, 0);
+  dummy.scale.setScalar(unit.alive || unit.fall < 1 ? 1 : 0.001);
+  dummy.updateMatrix();
+}
+
+function EditRig({ store, assets }: { store: EditStore; assets: Record<string, CharacterAsset> }) {
+  const { camera, gl } = useThree();
+  const bodies = useRef<THREE.Group>(null);
+  const rings = useRef<THREE.InstancedMesh>(null);
+  const bars = useRef<THREE.InstancedMesh>(null);
+  const names = useRef<THREE.Group>(null);
+  const meshes = useRef(new Map<string, THREE.InstancedMesh>());
+  const keys = useRef(new Set<string>());
+  const look = useRef({ yaw: 0.45, pitch: 0.78, dist: 38 });
+  const drag = useRef<{ x: number; y: number; button: number; moved: boolean; sx: number; sy: number } | null>(null);
+  const ringGeo = useMemo(() => new THREE.RingGeometry(0.78, 1, 28), []);
+  const barGeo = useMemo(() => new THREE.PlaneGeometry(1, 1), []);
+  const ringMat = useMemo(() => new THREE.MeshBasicMaterial({ color: "#ffffff", transparent: true, opacity: 0.9, side: THREE.DoubleSide, depthWrite: false }), []);
+  const barMat = useMemo(() => new THREE.MeshBasicMaterial({ color: "#e10600", transparent: true, opacity: 0.95, depthTest: false }), []);
+
+  useEffect(() => {
+    const host = bodies.current;
+    if (!host) return;
+    for (const [id, asset] of Object.entries(assets)) {
+      if (meshes.current.has(id)) continue;
+      const mesh = new THREE.InstancedMesh(asset.geometry, asset.material, MAX_PER_MODEL);
+      mesh.count = 0;
+      mesh.frustumCulled = false;
+      mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+      host.add(mesh);
+      meshes.current.set(id, mesh);
+    }
+  }, [assets]);
+
+  useEffect(() => {
+    const keysRef = keys.current;
+    const down = (event: KeyboardEvent) => {
+      const tag = (event.target as HTMLElement | null)?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA") return;
+      if (!event.key.startsWith("Arrow")) return;
+      event.preventDefault();
+      keysRef.add(event.key);
+    };
+    const up = (event: KeyboardEvent) => keysRef.delete(event.key);
+    window.addEventListener("keydown", down);
+    window.addEventListener("keyup", up);
+    return () => {
+      window.removeEventListener("keydown", down);
+      window.removeEventListener("keyup", up);
+    };
+  }, []);
+
+  useEffect(() => {
+    const canvas = gl.domElement;
+    const finishBox = (event: PointerEvent) => {
+      const box = drag.current;
+      drag.current = null;
+      if (!box || box.button !== 0 || !box.moved) return;
+      const left = Math.min(box.sx, event.clientX);
+      const right = Math.max(box.sx, event.clientX);
+      const top = Math.min(box.sy, event.clientY);
+      const bottom = Math.max(box.sy, event.clientY);
+      const rect = canvas.getBoundingClientRect();
+      if (!event.shiftKey) store.selected.clear();
+      for (const unit of store.units) {
+        if (!unit.alive) continue;
+        aim.set(unit.x, unit.height * 0.55, unit.z).project(camera);
+        if (aim.z > 1) continue;
+        const sx = (aim.x * 0.5 + 0.5) * rect.width + rect.left;
+        const sy = (-aim.y * 0.5 + 0.5) * rect.height + rect.top;
+        if (sx >= left && sx <= right && sy >= top && sy <= bottom) store.selected.add(unit.id);
+      }
+      store.note = store.selected.size ? `${store.selected.size} asker seçildi.` : "Seçim boş.";
+      store.bump();
+    };
+    const onDown = (event: PointerEvent) => {
+      if (event.button === 0 || event.button === 1 || event.button === 2) {
+        drag.current = { x: event.clientX, y: event.clientY, button: event.button, moved: false, sx: event.clientX, sy: event.clientY };
+        canvas.setPointerCapture(event.pointerId);
+      }
+    };
+    const onMove = (event: PointerEvent) => {
+      const box = drag.current;
+      if (!box) return;
+      const dx = event.clientX - box.x;
+      const dy = event.clientY - box.y;
+      if (Math.hypot(event.clientX - box.sx, event.clientY - box.sy) > 6) box.moved = true;
+      box.x = event.clientX;
+      box.y = event.clientY;
+      if (box.button === 2) {
+        look.current.yaw -= dx * 0.005;
+        look.current.pitch = Math.max(0.12, Math.min(1.32, look.current.pitch + dy * 0.004));
+      } else if (box.button === 1) {
+        const e = camera.matrixWorld.elements;
+        const rx = e[0];
+        const rz = e[2];
+        const fx = -e[8];
+        const fz = -e[10];
+        const scale = look.current.dist * 0.0016;
+        store.viewX -= (rx * dx + fx * dy) * scale;
+        store.viewZ -= (rz * dx + fz * dy) * scale;
+      } else if (box.moved) {
+        const mark = document.getElementById("edit-marquee");
+        if (mark) {
+          const left = Math.min(box.sx, event.clientX);
+          const top = Math.min(box.sy, event.clientY);
+          mark.style.display = "block";
+          mark.style.left = `${left}px`;
+          mark.style.top = `${top}px`;
+          mark.style.width = `${Math.abs(event.clientX - box.sx)}px`;
+          mark.style.height = `${Math.abs(event.clientY - box.sy)}px`;
+        }
+      }
+    };
+    const onUp = (event: PointerEvent) => {
+      const mark = document.getElementById("edit-marquee");
+      if (mark) mark.style.display = "none";
+      const box = drag.current;
+      if (!box) return;
+      if (box.button === 0 && box.moved) {
+        finishBox(event);
+        return;
+      }
+      drag.current = null;
+      if (box.button !== 0 || box.moved) return;
+      const rect = canvas.getBoundingClientRect();
+      ndc.set(((event.clientX - rect.left) / rect.width) * 2 - 1, -((event.clientY - rect.top) / rect.height) * 2 + 1);
+      raycaster.setFromCamera(ndc, camera);
+      let picked: Unit | null = null;
+      let best = Infinity;
+      for (const unit of store.units) {
+        if (!unit.alive) continue;
+        aim.set(unit.x, unit.height * 0.45, unit.z);
+        const gap = raycaster.ray.distanceToPoint(aim);
+        const along = raycaster.ray.origin.distanceTo(aim);
+        const allowance = Math.max(unit.radius, 1.5);
+        if (gap < allowance && along < best) {
+          best = along;
+          picked = unit;
+        }
+      }
+      if (picked) {
+        if (event.shiftKey) {
+          if (store.selected.has(picked.id)) store.selected.delete(picked.id);
+          else store.selected.add(picked.id);
+        } else {
+          store.selected.clear();
+          store.selected.add(picked.id);
+        }
+        store.note = `${store.selected.size} asker seçili. Yere tıklayınca oraya gider.`;
+        store.bump();
+        return;
+      }
+      if (!raycaster.ray.intersectPlane(plane, hit)) return;
+      if (store.selected.size && !event.shiftKey) {
+        const pickedIds = [...store.selected];
+        const alive = pickedIds.map((id) => store.byId.get(id)).filter((unit): unit is Unit => Boolean(unit && unit.alive));
+        if (!alive.length || store.battle) {
+          if (store.battle) {
+            store.note = "Savaş sürüyor. Yerleştirmek için durdur.";
+            store.bump();
+          }
+          return;
+        }
+        let cx = 0;
+        let cz = 0;
+        for (const unit of alive) {
+          cx += unit.x;
+          cz += unit.z;
+        }
+        cx /= alive.length;
+        cz /= alive.length;
+        const dx = hit.x - cx;
+        const dz = hit.z - cz;
+        const face = Math.hypot(dx, dz) > 0.15 ? Math.atan2(dx, dz) : null;
+        for (const unit of alive) {
+          unit.x = Math.max(-320, Math.min(320, unit.x + dx));
+          unit.z = Math.max(-320, Math.min(320, unit.z + dz));
+          if (face != null) {
+            unit.yaw = face + unit.yawOffset;
+            unit.aimX = dx;
+            unit.aimZ = dz;
+          }
+        }
+        store.note = `${alive.length} asker konumlandı.`;
+        store.bump();
+        return;
+      }
+      if (!event.shiftKey && store.selected.size) {
+        store.selected.clear();
+        store.bump();
+      }
+    };
+    canvas.addEventListener("pointerdown", onDown);
+    canvas.addEventListener("pointermove", onMove);
+    canvas.addEventListener("pointerup", onUp);
+    canvas.addEventListener("contextmenu", (event) => event.preventDefault());
+    return () => {
+      canvas.removeEventListener("pointerdown", onDown);
+      canvas.removeEventListener("pointermove", onMove);
+      canvas.removeEventListener("pointerup", onUp);
+    };
+  }, [camera, gl, store]);
+
+  useFrame((_, dt) => {
+    const shot = look.current;
+    const speed = (18 + shot.dist * 0.35) * Math.min(0.05, dt);
+    const e = camera.matrixWorld.elements;
+    const rx = e[0];
+    const rz = e[2];
+    const fx = -e[8];
+    const fz = -e[10];
+    const fl = Math.hypot(fx, fz) || 1;
+    const rl = Math.hypot(rx, rz) || 1;
+    if (keys.current.has("ArrowUp")) {
+      store.viewX += (fx / fl) * speed;
+      store.viewZ += (fz / fl) * speed;
+    }
+    if (keys.current.has("ArrowDown")) {
+      store.viewX -= (fx / fl) * speed;
+      store.viewZ -= (fz / fl) * speed;
+    }
+    if (keys.current.has("ArrowLeft")) {
+      store.viewX -= (rx / rl) * speed;
+      store.viewZ -= (rz / rl) * speed;
+    }
+    if (keys.current.has("ArrowRight")) {
+      store.viewX += (rx / rl) * speed;
+      store.viewZ += (rz / rl) * speed;
+    }
+    store.viewX = Math.max(-320, Math.min(320, store.viewX));
+    store.viewZ = Math.max(-320, Math.min(320, store.viewZ));
+    camera.position.set(
+      store.viewX + Math.sin(shot.yaw) * Math.cos(shot.pitch) * shot.dist,
+      Math.sin(shot.pitch) * shot.dist,
+      store.viewZ + Math.cos(shot.yaw) * Math.cos(shot.pitch) * shot.dist
+    );
+    camera.lookAt(store.viewX, 0, store.viewZ);
+    if (camera instanceof THREE.PerspectiveCamera) {
+      camera.fov = 42;
+      camera.near = 0.2;
+      camera.far = 900;
+      camera.updateProjectionMatrix();
+    }
+
+    if (stepUnits(store, dt)) store.bump();
+
+    const grouped = new Map<string, Unit[]>();
+    for (const unit of store.units) {
+      const list = grouped.get(unit.model);
+      if (list) list.push(unit);
+      else grouped.set(unit.model, [unit]);
+    }
+    for (const [id, mesh] of meshes.current) {
+      const list = grouped.get(id) ?? [];
+      mesh.count = list.length;
+      list.forEach((unit, index) => {
+        placeUnit(unit);
+        mesh.setMatrixAt(index, dummy.matrix);
+        const team = teamColor.get(unit.team);
+        tint.copy(team ?? white);
+        if (store.selected.has(unit.id)) tint.lerp(gold, 0.55);
+        else if (team) tint.lerp(white, 0.8);
+        mesh.setColorAt(index, tint);
+      });
+      mesh.instanceMatrix.needsUpdate = true;
+      if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+    }
+
+    const ring = rings.current;
+    if (ring) {
+      const shown = store.units.filter((unit) => unit.alive);
+      ring.count = shown.length;
+      shown.forEach((unit, index) => {
+        const scale = Math.max(0.45, unit.radius);
+        dummy.position.set(unit.x, 0.06, unit.z);
+        dummy.rotation.set(-Math.PI / 2, 0, 0);
+        dummy.scale.set(scale, scale, 1);
+        dummy.updateMatrix();
+        ring.setMatrixAt(index, dummy.matrix);
+        tint.copy(store.selected.has(unit.id) ? gold : teamColor.get(unit.team) ?? white);
+        ring.setColorAt(index, tint);
+      });
+      ring.instanceMatrix.needsUpdate = true;
+      if (ring.instanceColor) ring.instanceColor.needsUpdate = true;
+    }
+
+    const bar = bars.current;
+    if (bar) {
+      const shown = store.battle ? store.units.filter((unit) => unit.alive && unit.team > 0) : [];
+      bar.count = shown.length;
+      shown.forEach((unit, index) => {
+        aim.set(unit.x, unit.height + 0.28, unit.z);
+        dummy.position.copy(aim);
+        dummy.quaternion.copy(camera.quaternion);
+        const width = Math.min(2.4, Math.max(0.7, unit.height * 0.16)) * Math.max(0.05, unit.hp / unit.maxHp);
+        dummy.scale.set(width, 0.08, 1);
+        dummy.updateMatrix();
+        bar.setMatrixAt(index, dummy.matrix);
+      });
+      bar.instanceMatrix.needsUpdate = true;
+    }
+
+    const nameHost = names.current;
+    if (nameHost) {
+      const have = new Set<number>();
+      for (const unit of store.units) {
+        if (!unit.name || !unit.alive) continue;
+        have.add(unit.id);
+        let sprite = nameHost.children.find((child) => child.userData.id === unit.id) as THREE.Sprite | undefined;
+        if (!sprite) {
+          const map = nameTexture(unit.name);
+          if (!map) continue;
+          sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map, transparent: true, depthTest: false }));
+          sprite.userData.id = unit.id;
+          sprite.userData.label = unit.name;
+          sprite.renderOrder = 3;
+          nameHost.add(sprite);
+        } else if (sprite.userData.label !== unit.name) {
+          const map = nameTexture(unit.name);
+          if (map) (sprite.material as THREE.SpriteMaterial).map = map;
+          sprite.userData.label = unit.name;
+        }
+        sprite.position.set(unit.x, unit.height + Math.min(1.4, unit.height * 0.12) + 0.35, unit.z);
+        const width = Math.min(6, Math.max(1.3, unit.height * 0.34));
+        sprite.scale.set(width, width * 0.25, 1);
+      }
+      for (let i = nameHost.children.length - 1; i >= 0; i--) {
+        const child = nameHost.children[i];
+        if (!have.has(child.userData.id as number)) nameHost.remove(child);
+      }
+    }
+  });
+
+  useEffect(() => {
+    const onWheel = (event: WheelEvent) => {
+      event.preventDefault();
+      look.current.dist = Math.max(5, Math.min(170, look.current.dist * Math.exp(event.deltaY * 0.0011)));
+    };
+    gl.domElement.addEventListener("wheel", onWheel, { passive: false });
+    return () => gl.domElement.removeEventListener("wheel", onWheel);
+  }, [gl]);
+
+  return (
+    <group>
+      <group ref={bodies} />
+      <instancedMesh ref={rings} args={[ringGeo, ringMat, MAX_UNITS]} frustumCulled={false} />
+      <instancedMesh ref={bars} args={[barGeo, barMat, MAX_UNITS]} frustumCulled={false} renderOrder={2} />
+      <group ref={names} />
+    </group>
+  );
+}
+
+export function EditField({ store, assets }: { store: EditStore; assets: Record<string, CharacterAsset> }) {
+  const grass = useMemo(() => grassTexture(), []);
+  useEffect(() => () => grass?.dispose(), [grass]);
+  return (
+    <>
+      <color attach="background" args={["#7eb6ee"]} />
+      <fog attach="fog" args={["#d5e4f2", 70, 420]} />
+      <hemisphereLight args={["#d7ecff", "#6d8a45", 0.85]} />
+      <ambientLight intensity={0.28} />
+      <directionalLight position={[24, 36, 12]} intensity={2.1} color="#fff4e2" />
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
+        <planeGeometry args={[760, 760]} />
+        <meshLambertMaterial map={grass} color="#68b44a" />
+      </mesh>
+      <EditRig store={store} assets={assets} />
+    </>
+  );
+}
