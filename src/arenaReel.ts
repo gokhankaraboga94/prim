@@ -27,6 +27,29 @@ export const ARENA2_HEROES = ARENA2_HERO_URLS.length;
 /** Arena2 only: foes stand one step further out so the 9 heroes have room. */
 export const ARENA2_FOE_PUSH = 0.6;
 
+/**
+ * Arena3: same fight as arena2 on packed models. The source GLBs are 0.5–1.1M
+ * vertices each (330 MB for 9 heroes), which phones cannot download, parse and
+ * simplify inside the reel. These copies were built offline with gltf-transform
+ * (weld, simplify to ~6% with 1% error, textures 1024 WebP): about 27 MB total.
+ */
+export const ARENA3_ID = "arena3" as const;
+export type Arena3Id = typeof ARENA3_ID;
+export const ARENA3_MODE = { id: ARENA3_ID, label: "arena3" } as const;
+export const ARENA3_SECONDS = ARENA_SECONDS;
+export const ARENA3_ARENA_URL = "/models/arena3/arena.glb";
+export const ARENA3_HERO_URLS = [
+  "/models/arena3/armored.glb",
+  "/models/arena3/fantasy-a.glb",
+  "/models/arena3/fantasy-b.glb",
+  "/models/arena3/fantasy.glb",
+  "/models/arena3/medieval.glb",
+  "/models/arena3/mavi.glb",
+  "/models/arena3/1.glb",
+  "/models/arena3/2.glb",
+  "/models/arena3/3.glb",
+] as const;
+
 const INNER = 22;
 
 export function isArena(id: string | null | undefined): id is ArenaId {
@@ -35,6 +58,10 @@ export function isArena(id: string | null | undefined): id is ArenaId {
 
 export function isArena2(id: string | null | undefined): id is Arena2Id {
   return id === ARENA2_ID;
+}
+
+export function isArena3(id: string | null | undefined): id is Arena3Id {
+  return id === ARENA3_ID;
 }
 
 /** Newest joiners, one plate per hero. A later recording reads the list again. */

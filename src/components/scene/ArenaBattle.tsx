@@ -155,14 +155,17 @@ function cheapMaterial(src: THREE.Material) {
   return next;
 }
 
+/** cellFrac 0 keeps the geometry (already packed offline) and only swaps the material. */
 function lightenMesh(mesh: THREE.Mesh, cellFrac: number) {
-  const geo = mesh.geometry;
-  geo.computeBoundingBox();
-  const box = geo.boundingBox;
-  const span = box ? Math.max(box.max.x - box.min.x, box.max.y - box.min.y, box.max.z - box.min.z) : 1;
-  const next = simplifySkinned(geo, Math.max(1e-4, span * cellFrac));
-  mesh.geometry = next;
-  geo.dispose();
+  if (cellFrac > 0) {
+    const geo = mesh.geometry;
+    geo.computeBoundingBox();
+    const box = geo.boundingBox;
+    const span = box ? Math.max(box.max.x - box.min.x, box.max.y - box.min.y, box.max.z - box.min.z) : 1;
+    const next = simplifySkinned(geo, Math.max(1e-4, span * cellFrac));
+    mesh.geometry = next;
+    geo.dispose();
+  }
   mesh.material = cheapMaterial(Array.isArray(mesh.material) ? mesh.material[0] : mesh.material);
   mesh.frustumCulled = false;
   mesh.castShadow = false;
@@ -318,7 +321,7 @@ function poseArm(rig: ArmRig, strike: ArmStrike) {
   return true;
 }
 
-function fitHero(scene: THREE.Group, yaw: number) {
+function fitHero(scene: THREE.Group, yaw: number, light = false) {
   scene.updateMatrixWorld(true);
   scene.traverse((obj) => {
     const mesh = obj as THREE.Mesh;
@@ -338,7 +341,7 @@ function fitHero(scene: THREE.Group, yaw: number) {
   scene.updateMatrixWorld(true);
   scene.traverse((obj) => {
     const mesh = obj as THREE.Mesh;
-    if (mesh.isMesh) lightenMesh(mesh, 0.008);
+    if (mesh.isMesh) lightenMesh(mesh, light ? 0 : 0.008);
   });
   scene.rotation.y = yaw;
   scene.updateMatrixWorld(true);
@@ -413,12 +416,12 @@ function ArenaSky() {
   );
 }
 
-function ArenaModel() {
+function ArenaModel({ url = ARENA_URL, light = false }: { url?: string; light?: boolean }) {
   const rig = useRef<THREE.Group>(null);
   useEffect(() => {
     const loader = new GLTFLoader();
     let drop = false;
-    loader.load(ARENA_URL, (gltf) => {
+    loader.load(url, (gltf) => {
       const host = rig.current;
       if (drop || !host) return;
       const model = gltf.scene;
@@ -426,7 +429,7 @@ function ArenaModel() {
       model.position.set(0, -ARENA_FLOOR_Y * ARENA_SCALE, 0);
       model.traverse((obj) => {
         const mesh = obj as THREE.Mesh;
-        if (mesh.isMesh) lightenMesh(mesh, 0.006);
+        if (mesh.isMesh) lightenMesh(mesh, light ? 0 : 0.006);
       });
       host.add(model);
     });
@@ -450,7 +453,7 @@ function ArenaModel() {
       });
       host.clear();
     };
-  }, []);
+  }, [url, light]);
   return <group ref={rig} />;
 }
 
@@ -642,23 +645,40 @@ function ArenaNames({ names, heroes = ARENA_HEROES }: { names: string[]; heroes?
   );
 }
 
-function ArenaHeroes({ urls }: { urls: readonly string[] }) {
-  const [bodies, setBodies] = useState<THREE.Object3D[] | null>(null);
+/**
+ * `light`: packed models (arena3). Each hero appears as soon as it loads and a
+ * failed file only loses that hero; the heavy modes wait for the full set.
+ */
+function ArenaHeroes({ urls, light = false }: { urls: readonly string[]; light?: boolean }) {
+  const [bodies, setBodies] = useState<(THREE.Object3D | null)[] | null>(null);
   const keep = useRef<THREE.Group[]>([]);
   useEffect(() => {
     let drop = false;
     const loader = new GLTFLoader();
     let left = urls.length;
-    const loaded: THREE.Group[] = [];
-    urls.forEach((url, index) => {
-      loader.load(url, (gltf) => {
-        if (drop) return;
-        loaded[index] = fitHero(gltf.scene, HERO_YAW[index] ?? 0);
-        left -= 1;
-        if (left > 0) return;
-        keep.current = loaded;
+    const loaded: (THREE.Group | null)[] = new Array(urls.length).fill(null);
+    const settle = () => {
+      left -= 1;
+      if (light || left <= 0) {
+        keep.current = loaded.filter((g): g is THREE.Group => Boolean(g));
         setBodies(loaded.slice(0, urls.length));
-      });
+      }
+    };
+    urls.forEach((url, index) => {
+      loader.load(
+        url,
+        (gltf) => {
+          if (drop) return;
+          loaded[index] = fitHero(gltf.scene, HERO_YAW[index] ?? 0, light);
+          settle();
+        },
+        undefined,
+        (err) => {
+          if (drop) return;
+          console.warn("arena hero failed", url, err);
+          settle();
+        }
+      );
     });
     return () => {
       drop = true;
@@ -680,13 +700,11 @@ function ArenaHeroes({ urls }: { urls: readonly string[] }) {
       }
       keep.current = [];
     };
-  }, [urls]);
+  }, [urls, light]);
   if (!bodies) return null;
   return (
     <group>
-      {bodies.map((body, i) => (
-        <ArenaHero key={i} index={i} body={body} heroes={urls.length} />
-      ))}
+      {bodies.map((body, i) => (body ? <ArenaHero key={i} index={i} body={body} heroes={urls.length} /> : null))}
     </group>
   );
 }
@@ -725,7 +743,19 @@ function ArenaHero({ index, body, heroes }: { index: number; body: THREE.Object3
   );
 }
 
-export function ArenaBattle({ names = [], urls = ARENA_HERO_URLS, foePush = 0 }: { names?: string[]; urls?: readonly string[]; foePush?: number }) {
+export function ArenaBattle({
+  names = [],
+  urls = ARENA_HERO_URLS,
+  foePush = 0,
+  arenaUrl = ARENA_URL,
+  light = false,
+}: {
+  names?: string[];
+  urls?: readonly string[];
+  foePush?: number;
+  arenaUrl?: string;
+  light?: boolean;
+}) {
   return (
     <group>
       <ArenaSky />
@@ -734,9 +764,9 @@ export function ArenaBattle({ names = [], urls = ARENA_HERO_URLS, foePush = 0 }:
       <ambientLight intensity={0.28} />
       <directionalLight position={[6, 11, 4]} intensity={2.2} color="#fff2dc" />
       <directionalLight position={[-5, 4, -3]} intensity={0.45} color="#9eb6ff" />
-      <ArenaModel />
+      <ArenaModel url={arenaUrl} light={light} />
       <ArenaFoes push={foePush} />
-      <ArenaHeroes urls={urls} />
+      <ArenaHeroes urls={urls} light={light} />
       <ArenaNames names={names} heroes={urls.length} />
     </group>
   );

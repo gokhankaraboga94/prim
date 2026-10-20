@@ -1,6 +1,6 @@
-import { ARENA2_ID, ARENA2_MODE, ARENA2_SECONDS, ARENA_ID, ARENA_MODE, ARENA_SECONDS } from "./arenaReel";
+import { ARENA2_ID, ARENA2_MODE, ARENA2_SECONDS, ARENA3_ID, ARENA3_MODE, ARENA3_SECONDS, ARENA_ID, ARENA_MODE, ARENA_SECONDS } from "./arenaReel";
 import { BOUT2_ID, BOUT2_MODE, BOUT2_SECONDS, BOUT_ID, BOUT_MODE, BOUT_SECONDS } from "./boutReel";
-import { DEV10_ID, DEV10_MODE, DEV10_SECONDS, DEV11_ID, DEV11_MODE, DEV11_SECONDS, DEV6_ID, DEV6_MODE, DEV6_SECONDS, DEV7_ID, DEV7_MODE, DEV7_SECONDS, DEV8_ID, DEV8_MODE, DEV8_SECONDS, DEV9_ID, DEV9_MODE, DEV9_SECONDS, DEVS_ID, DEVS_MODE, DEVS_SECONDS, SNAKE_ID, SNAKE_MODE, SNAKE_SECONDS } from "./devReel";
+import { DEV10_ID, DEV10_MODE, DEV10_SECONDS, DEV11_ID, DEV11_MODE, DEV11_SECONDS, DEV6_ID, DEV6_MODE, DEV6_SECONDS, DEV7_ID, DEV7_MODE, DEV7_SECONDS, DEV8_ID, DEV8_MODE, DEV8_SECONDS, DEV9_ID, DEV9_MODE, DEV9_SECONDS, DEVS_ID, DEVS_MODE, DEVS_SECONDS } from "./devReel";
 import { KAYIT_ID, KAYIT_MODE, KAYIT_SECONDS } from "./kayitReel";
 import { HERO_ID, HERO_MODE, HERO_SECONDS } from "./heroReel";
 import { DRAGON_ID, DRAGON_MODE, DRAGON_SECONDS } from "./dragonReel";
@@ -14,6 +14,7 @@ export const RECENT_BUTTON_LIMIT = 20;
 
 /** Yeniden eskiye. Bir buton güncellenirse en üste alınır, en alttaki 20'nin dışına düşer. */
 export const RECENT_BUTTONS = [
+  { id: ARENA3_ID, label: `${ARENA3_MODE.label} — ${ARENA3_SECONDS}s`, seconds: ARENA3_SECONDS },
   { id: ARENA2_ID, label: `${ARENA2_MODE.label} — ${ARENA2_SECONDS}s`, seconds: ARENA2_SECONDS },
   { id: KAYIT_ID, label: `${KAYIT_MODE.label} — ${KAYIT_SECONDS}s`, seconds: KAYIT_SECONDS },
   { id: BOUT2_ID, label: `${BOUT2_MODE.label} — ${BOUT2_SECONDS}s`, seconds: BOUT2_SECONDS },
@@ -33,5 +34,4 @@ export const RECENT_BUTTONS = [
   { id: DEV6_ID, label: `${DEV6_MODE.label} — ${DEV6_SECONDS}s`, seconds: DEV6_SECONDS },
   { id: DEFEND5_ID, label: `${DEFEND5_MODE.label} — ${DEFEND5_SECONDS}s`, seconds: DEFEND5_SECONDS },
   { id: DEVS_ID, label: `${DEVS_MODE.label} — ${DEVS_SECONDS}s`, seconds: DEVS_SECONDS },
-  { id: SNAKE_ID, label: `${SNAKE_MODE.label} — ${SNAKE_SECONDS}s`, seconds: SNAKE_SECONDS },
 ] as const;

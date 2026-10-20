@@ -31,7 +31,7 @@ import { type KalkanId } from "../../kalkanReel";
 import { HeroBattle, HeroCam } from "./HeroBattle";
 import { type HeroId } from "../../heroReel";
 import { ArenaBattle, ArenaCam } from "./ArenaBattle";
-import { ARENA2_FOE_PUSH, ARENA2_HERO_URLS, ARENA_HERO_URLS, type Arena2Id, type ArenaId } from "../../arenaReel";
+import { ARENA2_FOE_PUSH, ARENA2_HERO_URLS, ARENA3_ARENA_URL, ARENA3_HERO_URLS, ARENA_HERO_URLS, type Arena2Id, type Arena3Id, type ArenaId } from "../../arenaReel";
 import { DuelBattle, DuelCam, HulkKongBattle } from "./DuelBattle";
 import { isBout2, type Bout2Id, type BoutId } from "../../boutReel";
 import { KAYIT_FIELD, sampleKayitCam, type KayitId } from "../../kayitReel";
@@ -99,6 +99,7 @@ type BattleSceneProps = {
   hero?: HeroId | null;
   arena?: ArenaId | null;
   arena2?: Arena2Id | null;
+  arena3?: Arena3Id | null;
   bout?: BoutId | Bout2Id | null;
   kayit?: KayitId | null;
   mix?: MixId | null;
@@ -887,6 +888,7 @@ function SceneContent({
   hero = null,
   arena = null,
   arena2 = null,
+  arena3 = null,
   bout = null,
   kayit = null,
   mix = null,
@@ -894,7 +896,7 @@ function SceneContent({
   rosterIds = null,
 }: BattleSceneProps) {
   const chiefs = effectiveCommanders(commanders, names);
-  const pit = Boolean(arena || arena2);
+  const pit = Boolean(arena || arena2 || arena3);
   const hideCmd = skipCommander || Boolean(discover) || Boolean(countdown) || Boolean(defend) || Boolean(vs) || Boolean(new1) || Boolean(new2) || Boolean(new3) || Boolean(new4) || Boolean(new5) || Boolean(new6) || Boolean(new62) || Boolean(new7) || Boolean(maze) || Boolean(film) || Boolean(dragon) || Boolean(giant) || Boolean(ok) || Boolean(kalkan) || Boolean(hero) || pit || Boolean(bout) || Boolean(kayit) || Boolean(xxx && xxxHideCmd(xxx));
   const chiefN = hideCmd ? 0 : chiefs.length;
   const split = Boolean(mix);
@@ -968,7 +970,15 @@ function SceneContent({
       {ordu && <OrduBattle names={names} soldiers={soldiers} />}
       {ok && <OkBattle names={names} />}
       {hero && <HeroBattle names={names} />}
-      {pit && <ArenaBattle names={names} urls={arena2 ? ARENA2_HERO_URLS : ARENA_HERO_URLS} foePush={arena2 ? ARENA2_FOE_PUSH : 0} />}
+      {pit && (
+        <ArenaBattle
+          names={names}
+          urls={arena3 ? ARENA3_HERO_URLS : arena2 ? ARENA2_HERO_URLS : ARENA_HERO_URLS}
+          foePush={arena2 || arena3 ? ARENA2_FOE_PUSH : 0}
+          arenaUrl={arena3 ? ARENA3_ARENA_URL : undefined}
+          light={Boolean(arena3)}
+        />
+      )}
       {bout && (isBout2(bout) ? <HulkKongBattle /> : <DuelBattle />)}
       {kalkan && <KalkanBattle names={names} />}
       {Boolean(xxx && xxxSquare(xxx)) && <Catapults soldiers={soldiers} square />}
@@ -1121,6 +1131,7 @@ function BattleSceneInner({
   hero = null,
   arena = null,
   arena2 = null,
+  arena3 = null,
   bout = null,
   kayit = null,
   mix = null,
@@ -1129,7 +1140,7 @@ function BattleSceneInner({
   onReady,
 }: BattleSceneProps) {
   const [active, setActive] = useState(() => typeof document === "undefined" || !document.hidden);
-  const pit = Boolean(arena || arena2);
+  const pit = Boolean(arena || arena2 || arena3);
   const hideCmd = skipCommander || Boolean(discover) || Boolean(countdown) || Boolean(defend) || Boolean(vs) || Boolean(new1) || Boolean(new2) || Boolean(new3) || Boolean(new4) || Boolean(new5) || Boolean(new6) || Boolean(new62) || Boolean(new7) || Boolean(maze) || Boolean(film) || Boolean(dragon) || Boolean(giant) || Boolean(ok) || Boolean(kalkan) || Boolean(hero) || pit || Boolean(bout) || Boolean(kayit) || Boolean(xxx && xxxHideCmd(xxx));
 
   useLayoutEffect(() => {
@@ -1252,6 +1263,7 @@ function BattleSceneInner({
         hero={hero}
         arena={arena}
         arena2={arena2}
+        arena3={arena3}
         bout={bout}
         kayit={kayit}
         mix={mix}
