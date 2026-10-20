@@ -31,7 +31,7 @@ import { type KalkanId } from "../../kalkanReel";
 import { HeroBattle, HeroCam } from "./HeroBattle";
 import { type HeroId } from "../../heroReel";
 import { ArenaBattle, ArenaCam } from "./ArenaBattle";
-import { ARENA2_HEROES, ARENA2_HERO_URLS, ARENA_HEROES, ARENA_HERO_URLS, type Arena2Id, type ArenaId } from "../../arenaReel";
+import { ARENA2_FOE_PUSH, ARENA2_HERO_URLS, ARENA_HERO_URLS, type Arena2Id, type ArenaId } from "../../arenaReel";
 import { DuelBattle, DuelCam, HulkKongBattle } from "./DuelBattle";
 import { isBout2, type Bout2Id, type BoutId } from "../../boutReel";
 import { KAYIT_FIELD, sampleKayitCam, type KayitId } from "../../kayitReel";
@@ -968,7 +968,7 @@ function SceneContent({
       {ordu && <OrduBattle names={names} soldiers={soldiers} />}
       {ok && <OkBattle names={names} />}
       {hero && <HeroBattle names={names} />}
-      {pit && <ArenaBattle names={names} urls={arena2 ? ARENA2_HERO_URLS : ARENA_HERO_URLS} />}
+      {pit && <ArenaBattle names={names} urls={arena2 ? ARENA2_HERO_URLS : ARENA_HERO_URLS} foePush={arena2 ? ARENA2_FOE_PUSH : 0} />}
       {bout && (isBout2(bout) ? <HulkKongBattle /> : <DuelBattle />)}
       {kalkan && <KalkanBattle names={names} />}
       {Boolean(xxx && xxxSquare(xxx)) && <Catapults soldiers={soldiers} square />}
@@ -980,7 +980,7 @@ function SceneContent({
       ) : ok ? (
         <OkCam />
       ) : pit ? (
-        <ArenaCam heroes={arena2 ? ARENA2_HEROES : ARENA_HEROES} />
+        <ArenaCam />
       ) : bout ? (
         <DuelCam />
       ) : hero ? (

@@ -24,6 +24,8 @@ export const ARENA2_HERO_URLS = [
   "/models/3.glb",
 ] as const;
 export const ARENA2_HEROES = ARENA2_HERO_URLS.length;
+/** Arena2 only: foes stand one step further out so the 9 heroes have room. */
+export const ARENA2_FOE_PUSH = 0.6;
 
 const INNER = 22;
 
@@ -151,13 +153,13 @@ export function arenaFoeStrike(i: number, t: number): ArmStrike {
   return foeBlow(i, t);
 }
 
-export function arenaFoe(i: number, t: number, out: ArenaPose) {
+export function arenaFoe(i: number, t: number, out: ArenaPose, push = 0) {
   const home = foeHome(i);
   const die = arenaDieAt(i);
   const rush = Math.max(0, Math.min(1, (t - 0.8) / 7.2));
   const ease = rush * rush * (3 - 2 * rush);
   const inner = home.ring < 4;
-  const radius = home.ring - ease * (home.ring - (inner ? 2.45 : 3.85));
+  const radius = push + home.ring - ease * (home.ring - (inner ? 2.45 : 3.85));
   const x = Math.sin(home.ang) * radius;
   const z = Math.cos(home.ang) * radius;
   const face = Math.atan2(-x, -z) - Math.PI / 2;
@@ -195,8 +197,7 @@ export function arenaHero(i: number, t: number, out: ArenaPose, heroes: number =
   const count = Math.max(1, heroes);
   const ang = (i / count) * Math.PI * 2;
   const alive = arenaAlive(t) / ARENA_FOES;
-  const spread = count / ARENA_HEROES;
-  const radius = 1.65 * spread * (0.74 + alive * 0.38);
+  const radius = 1.65 * (0.74 + alive * 0.38);
   const stumble = i === 3 && t > 33 && t < 40;
   out.x = Math.sin(ang) * radius;
   out.z = Math.cos(ang) * radius;
@@ -231,7 +232,7 @@ export type ArenaCam = {
   fov: number;
 };
 
-export function arenaCam(t: number, heroes: number = ARENA_HEROES): ArenaCam {
+export function arenaCam(t: number): ArenaCam {
   const u = Math.max(0, Math.min(1, t / ARENA_SECONDS));
   const ang = u * Math.PI * 2 * 1.05;
   let dist = 10.8;
@@ -255,11 +256,10 @@ export function arenaCam(t: number, heroes: number = ARENA_HEROES): ArenaCam {
     dist = 10.8 + Math.sin((t - 4.5) * 0.28) * 0.125;
     y = 6.025 + Math.sin((t - 4.5) * 0.21) * 0.08;
   }
-  const spread = Math.max(1, heroes) / ARENA_HEROES;
   return {
-    x: Math.sin(ang) * dist * spread,
-    y: lookY + (y - lookY) * spread,
-    z: Math.cos(ang) * dist * spread,
+    x: Math.sin(ang) * dist,
+    y,
+    z: Math.cos(ang) * dist,
     lx: 0,
     ly: lookY,
     lz: 0,

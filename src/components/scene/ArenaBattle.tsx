@@ -328,13 +328,13 @@ function fitHero(scene: THREE.Group, yaw: number) {
   return scene;
 }
 
-function ArenaCam({ heroes = ARENA_HEROES }: { heroes?: number }) {
+function ArenaCam() {
   const perspCam = useRef<THREE.PerspectiveCamera | null>(null);
   useFrame(({ camera, clock }) => {
     if ((camera as THREE.PerspectiveCamera).isPerspectiveCamera) perspCam.current = camera as THREE.PerspectiveCamera;
     const persp = perspCam.current;
     if (!persp) return;
-    const shot = arenaCam(Math.max(0, clock.elapsedTime - REEL_HOLD), heroes);
+    const shot = arenaCam(Math.max(0, clock.elapsedTime - REEL_HOLD));
     persp.fov = shot.fov;
     persp.near = 0.15;
     persp.far = 280;
@@ -528,7 +528,7 @@ function romanArm(geo: THREE.BufferGeometry) {
   return { geo, material, strike };
 }
 
-function ArenaFoes() {
+function ArenaFoes({ push = 0 }: { push?: number }) {
   const mesh = useRef<THREE.InstancedMesh>(null);
   const [foe, setFoe] = useState<ReturnType<typeof romanArm>>(null);
   useEffect(() => {
@@ -557,7 +557,7 @@ function ArenaFoes() {
     const t = Math.max(0, clock.elapsedTime - REEL_HOLD);
     let live = 0;
     for (let i = 0; i < ARENA_FOES; i++) {
-      arenaFoe(i, t, pose);
+      arenaFoe(i, t, pose, push);
       if (pose.s <= 0) continue;
       dummy.position.set(pose.x, pose.y, pose.z);
       dummy.rotation.set(pose.rx, pose.ry, pose.rz);
@@ -720,7 +720,7 @@ function ArenaHero({ index, body, heroes }: { index: number; body: THREE.Object3
   );
 }
 
-export function ArenaBattle({ names = [], urls = ARENA_HERO_URLS }: { names?: string[]; urls?: readonly string[] }) {
+export function ArenaBattle({ names = [], urls = ARENA_HERO_URLS, foePush = 0 }: { names?: string[]; urls?: readonly string[]; foePush?: number }) {
   return (
     <group>
       <ArenaSky />
@@ -730,7 +730,7 @@ export function ArenaBattle({ names = [], urls = ARENA_HERO_URLS }: { names?: st
       <directionalLight position={[6, 11, 4]} intensity={2.2} color="#fff2dc" />
       <directionalLight position={[-5, 4, -3]} intensity={0.45} color="#9eb6ff" />
       <ArenaModel />
-      <ArenaFoes />
+      <ArenaFoes push={foePush} />
       <ArenaHeroes urls={urls} />
       <ArenaNames names={names} heroes={urls.length} />
     </group>
