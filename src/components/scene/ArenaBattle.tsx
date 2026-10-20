@@ -606,7 +606,7 @@ function ArenaNames({ names }: { names: string[] }) {
       const mesh = cell ? refs.current[cell.sheet] : null;
       if (!cell || !mesh) continue;
       arenaHero(i, t, plate);
-      const width = 2.35;
+      const width = 2.35 * 0.55;
       const size = width / Math.max(1.15, cell.sx);
       dummy.position.set(plate.x, plate.y + HERO_H + 0.82, plate.z);
       dummy.scale.set(cell.sx * size, cell.sy * size, 1);
