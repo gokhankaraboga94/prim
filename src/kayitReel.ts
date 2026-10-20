@@ -4,8 +4,8 @@ export const KAYIT_ID = "kayit" as const;
 export type KayitId = typeof KAYIT_ID;
 export const KAYIT_MODE = { id: KAYIT_ID, label: "kayıt" } as const;
 export const KAYIT_SECONDS = 15;
-/** Green field big enough that the pull-back stays inside the grass. */
-export const KAYIT_FIELD = 16000;
+/** Green field big enough that the high pull-back stays inside the grass. */
+export const KAYIT_FIELD = 36000;
 
 export function isKayit(id: string | null | undefined): id is KayitId {
   return id === KAYIT_ID;
@@ -55,16 +55,19 @@ function openPose(ctx: ShotCtx, aspect: number): ShotPose {
 
 function widePose(ctx: ShotCtx, aspect: number, distMul: number): ShotPose {
   const aspectClamped = Math.max(0.35, aspect);
-  const span = Math.min(900, Math.max(16, ctx.form.width * 1.08));
-  const fov = span > 320 ? 64 : span > 140 ? 58 : 52;
-  const tanH = Math.tan((fov * Math.PI) / 360) * aspectClamped;
-  const dist = Math.max(22, span / 2 / Math.max(0.12, tanH)) * distMul;
+  const depth = Math.max(8, ctx.form.back - ctx.form.front);
+  const rows = Math.max(1, Math.round(depth / 2.55) + 1);
+  const nameTop = (2.5 + Math.max(0, rows - 1) * 1.22) * 1.28;
+  const fov = 50;
+  const hHalf = Math.tan((fov * Math.PI) / 360) * aspectClamped;
+  const half = Math.max(ctx.form.width, depth, nameTop) * 0.62;
+  const dist = Math.max(24, half / Math.max(0.08, hHalf)) * distMul;
   return {
-    x: Math.min(18, ctx.form.width * 0.04),
-    y: 8 + dist * 0.32,
-    z: ctx.form.back + dist * 0.84,
+    x: 0,
+    y: nameTop + dist,
+    z: ctx.form.midZ + dist * 0.2,
     lx: 0,
-    ly: 3.2,
+    ly: nameTop * 0.22,
     lz: ctx.form.midZ,
     fov,
   };
@@ -83,7 +86,7 @@ export function sampleKayitCam(t: number, ctx: ShotCtx, aspect = 1080 / 1920): S
   const open = openPose(ctx, aspect);
   const wide = widePose(ctx, aspect, 1);
   const castle = castlePose(ctx);
-  const back = widePose(ctx, aspect, 0.8);
+  const back = widePose(ctx, aspect, 1);
   if (t <= 3.2) return open;
   if (t <= 6.6) return mixPose(open, wide, (t - 3.2) / 3.4);
   if (t <= 7.3) return wide;

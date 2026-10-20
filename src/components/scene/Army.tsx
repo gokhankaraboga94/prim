@@ -1973,7 +1973,10 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
         } else if (dragon) {
           lift = 1.55;
           nx = pos.x;
-        } else if (namePlate) lift = 2.28 + Math.min(row, 5) * 0.48 + (col % 2) * 0.32;
+        } else if (namePlate) {
+          lift = 2.5 + row * 1.22;
+          nx = pos.x + (row % 2) * 0.62 - 0.31;
+        }
         else if (film) {
           lift = 1.32;
           nx = pos.x;
@@ -2030,7 +2033,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
       if (cam) {
         nockOff.copy(cam.position).sub(pos);
         const len = nockOff.length() || 1;
-        const pull = giant || maze || film || dragon ? 0.04 : bridge || cross || relief ? 0.08 : new2 ? Math.min(2.4, Math.max(0.4, len * 0.055)) : defend || vs || vs2 || new1 ? Math.min(14, Math.max(7, len * 0.12)) : Math.min(4.5, Math.max(1.2, len * 0.04));
+        const pull = namePlate ? 0.22 : giant || maze || film || dragon ? 0.04 : bridge || cross || relief ? 0.08 : new2 ? Math.min(2.4, Math.max(0.4, len * 0.055)) : defend || vs || vs2 || new1 ? Math.min(14, Math.max(7, len * 0.12)) : Math.min(4.5, Math.max(1.2, len * 0.04));
         px = nx + (nockOff.x / len) * pull;
         py = baseY + (nockOff.y / len) * pull;
         pz = pos.z + (nockOff.z / len) * pull;

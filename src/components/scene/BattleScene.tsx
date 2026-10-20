@@ -288,7 +288,7 @@ function CinematicCam({
       persp.fov = pose.fov;
       if (kayit) {
         persp.near = 0.55;
-        persp.far = 22000;
+        persp.far = 64000;
       } else if (defend || vs || new1 || new2 || new3 || new4 || new5 || new6 || new62 || new7 || maze || xxx) {
         persp.near = 0.8;
         persp.far = 6000;
@@ -748,7 +748,7 @@ function New4Peak() {
   );
 }
 
-function GrassField({ span = 2400, y = 0 }: { span?: number; y?: number }) {
+function GrassField({ span = 2400, y = 0, depthWrite = true }: { span?: number; y?: number; depthWrite?: boolean }) {
   const source = useGroundTexture();
   const ground = useMemo(() => {
     if (!source) return null;
@@ -763,7 +763,7 @@ function GrassField({ span = 2400, y = 0 }: { span?: number; y?: number }) {
   return (
     <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, y, 0]} receiveShadow>
       <planeGeometry args={[span, span]} />
-      <meshStandardMaterial map={ground} color="#68b44a" roughness={0.92} envMapIntensity={0.2} />
+      <meshStandardMaterial map={ground} color="#68b44a" roughness={0.92} envMapIntensity={0.2} depthWrite={depthWrite} />
     </mesh>
   );
 }
@@ -935,12 +935,12 @@ function SceneContent({
   return (
     <>
       <color attach="background" args={[arena ? "#8ec6f4" : hero ? "#7eb6ee" : kalkan ? "#07080d" : dragon ? "#7f97ad" : film ? "#9eb4c8" : maze ? "#9eb0c4" : slaughter ? "#8f9aa0" : "#7eb6ee"]} />
-      <fog attach="fog" args={kayit ? ["#9ec8ee", 14000, 24000] : arena ? ["#c5e4f8", 40, 180] : hero ? ["#b9d6f2", 36, 150] : kalkan ? ["#07080d", 24, 72] : ok ? ["#c5dff2", 140, 820] : wars ? ["#c8c4ba", 180 * warsScale, 780 * warsScale] : ordu ? ["#d5e4f2", orduFog?.near ?? 78, orduFog?.far ?? 420] : dragon ? ["#c5d4e2", 70, 420] : film ? ["#d5e4f2", 80, 460] : giant || bout ? ["#d5e4f2", 90, 520] : maze ? ["#c6d0da", 340, 720] : slaughter ? ["#c4b89a", 240, 980] : defend ? (isDefend3(defend) ? ["#9ec8ee", 1100, 3200] : sortie ? ["#9ec8ee", 600, 2200] : ["#9ec8ee", 1400, 4200]) : field ? ["#9ec8ee", 140, 720] : ["#9ec8ee", 380, 1500]} />
+      <fog attach="fog" args={kayit ? ["#9ec8ee", 28000, 70000] : arena ? ["#c5e4f8", 40, 180] : hero ? ["#b9d6f2", 36, 150] : kalkan ? ["#07080d", 24, 72] : ok ? ["#c5dff2", 140, 820] : wars ? ["#c8c4ba", 180 * warsScale, 780 * warsScale] : ordu ? ["#d5e4f2", orduFog?.near ?? 78, orduFog?.far ?? 420] : dragon ? ["#c5d4e2", 70, 420] : film ? ["#d5e4f2", 80, 460] : giant || bout ? ["#d5e4f2", 90, 520] : maze ? ["#c6d0da", 340, 720] : slaughter ? ["#c4b89a", 240, 980] : defend ? (isDefend3(defend) ? ["#9ec8ee", 1100, 3200] : sortie ? ["#9ec8ee", 600, 2200] : ["#9ec8ee", 1400, 4200]) : field ? ["#9ec8ee", 140, 720] : ["#9ec8ee", 380, 1500]} />
       {!maze && !kalkan && !hero && !arena && <SkyDome cheap={Boolean(defend) && !isDefend3(defend)} />}
       {!maze && !kalkan && !hero && !arena && <SteelSky />}
       {!maze && !kalkan && !hero && !arena && <DayLights cinematic={cinematic} slim={Boolean(defend) && !isDefend3(defend)} warm={slaughter || Boolean(dragon)} />}
       {orduField && <GrassField span={Math.max(2400, orduField.width * 8 + orduField.depth * 8)} />}
-      {kayit ? <GrassField span={KAYIT_FIELD} y={-0.04} /> : !wars && !ordu && !ok && !kalkan && !hero && !arena && (grass ? <GrassField /> : film || dragon || giant ? <New1Terrain /> : maze ? <Maze soldiers={soldiers} /> : cross ? <New6Cross /> : chase ? <New5Bridge /> : new4 ? <New4Peak /> : slaughter || isDefend4(defend) ? <New1Terrain /> : <Terrain road={!defend && !field} cheap={Boolean(defend)} />)}
+      {kayit ? <GrassField span={KAYIT_FIELD} y={-0.04} depthWrite={false} /> : !wars && !ordu && !ok && !kalkan && !hero && !arena && (grass ? <GrassField /> : film || dragon || giant ? <New1Terrain /> : maze ? <Maze soldiers={soldiers} /> : cross ? <New6Cross /> : chase ? <New5Bridge /> : new4 ? <New4Peak /> : slaughter || isDefend4(defend) ? <New1Terrain /> : <Terrain road={!defend && !field} cheap={Boolean(defend)} />)}
       {!wars && !ordu && !ok && !kalkan && !hero && !arena && !defend && !field && !slaughter && !maze && !film && !dragon && !giant && !bout && <Castle level={level} pressure={pressure} gateClosed={Boolean(countdown) || split || climb || Boolean(xxx)} wallFight={climb} />}
       {sortie && (
         <TimedVisible until={DEFEND2_SORTIE + 0.85}>
