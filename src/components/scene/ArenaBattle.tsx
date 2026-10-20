@@ -4,6 +4,7 @@ import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import * as THREE from "three";
 import { REEL_HOLD } from "../../recordCanvas";
+import { buildNameAtlas, type NameAtlas, type NameCell } from "../../nameAtlas";
 import { dropGroundSlab } from "../../groundSlab";
 import { simplifySkinned } from "../../knightSoldier";
 import { HERO_YAW } from "../../heroReel";
@@ -15,6 +16,7 @@ import {
   arenaFoe,
   arenaFoeStrike,
   arenaHero,
+  arenaHeroNames,
   arenaHeroStrike,
   type ArenaPose,
   type ArmStrike,
@@ -574,6 +576,67 @@ function ArenaFoes() {
   return <instancedMesh ref={mesh} args={[foe.geo, foe.material, ARENA_FOES]} frustumCulled={false} />;
 }
 
+function ArenaNames({ names }: { names: string[] }) {
+  const labels = useMemo(() => arenaHeroNames(names), [names]);
+  const atlas = useMemo<NameAtlas | null>(() => {
+    if (!labels.length) return null;
+    const items = labels.map((text) => ({ text, commander: false, plain: true, fill: "#ffe14a", frame: true }));
+    try {
+      return buildNameAtlas(items, true);
+    } catch {
+      return buildNameAtlas(items);
+    }
+  }, [labels]);
+  const refs = useRef<(THREE.InstancedMesh | null)[]>([]);
+  const plate = useMemo<ArenaPose>(() => ({ x: 0, y: 0, z: 0, rx: 0, ry: 0, rz: 0, s: 1 }), []);
+  useEffect(() => () => atlas?.dispose(), [atlas]);
+  useFrame(({ camera, clock }) => {
+    if (!atlas) return;
+    const t = Math.max(0, clock.elapsedTime - REEL_HOLD);
+    dummy.quaternion.copy(camera.quaternion);
+    dummy.position.set(0, -40, 0);
+    dummy.scale.set(0, 0, 1);
+    dummy.updateMatrix();
+    for (const cell of atlas.cells) {
+      const mesh = refs.current[cell.sheet];
+      if (mesh) mesh.setMatrixAt(cell.local, dummy.matrix);
+    }
+    for (let i = 0; i < labels.length; i++) {
+      const cell: NameCell | undefined = atlas.cells[i];
+      const mesh = cell ? refs.current[cell.sheet] : null;
+      if (!cell || !mesh) continue;
+      arenaHero(i, t, plate);
+      const width = 0.92;
+      const size = width / Math.max(1.15, cell.sx);
+      dummy.position.set(plate.x, plate.y + HERO_H + 0.36, plate.z);
+      dummy.scale.set(cell.sx * size, cell.sy * size, 1);
+      dummy.updateMatrix();
+      mesh.setMatrixAt(cell.local, dummy.matrix);
+    }
+    for (const mesh of refs.current) {
+      if (mesh) mesh.instanceMatrix.needsUpdate = true;
+    }
+  });
+  if (!atlas) return null;
+  return (
+    <group>
+      {atlas.sheets.map((sheet, s) =>
+        sheet.count > 0 ? (
+          <instancedMesh
+            key={s}
+            ref={(node) => {
+              refs.current[s] = node;
+            }}
+            args={[sheet.geometry, sheet.material, sheet.count]}
+            frustumCulled={false}
+            renderOrder={24}
+          />
+        ) : null
+      )}
+    </group>
+  );
+}
+
 function ArenaHeroes() {
   const [bodies, setBodies] = useState<THREE.Object3D[] | null>(null);
   const keep = useRef<THREE.Group[]>([]);
@@ -657,7 +720,7 @@ function ArenaHero({ index, body }: { index: number; body: THREE.Object3D }) {
   );
 }
 
-export function ArenaBattle() {
+export function ArenaBattle({ names = [] }: { names?: string[] }) {
   return (
     <group>
       <ArenaSky />
@@ -669,6 +732,7 @@ export function ArenaBattle() {
       <ArenaModel />
       <ArenaFoes />
       <ArenaHeroes />
+      <ArenaNames names={names} />
     </group>
   );
 }

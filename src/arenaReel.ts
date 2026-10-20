@@ -19,6 +19,21 @@ export function isArena(id: string | null | undefined): id is ArenaId {
   return id === ARENA_ID;
 }
 
+/** Newest joiners, one plate per hero. A later recording reads the list again. */
+export function arenaHeroNames(names: string[]): string[] {
+  const picked: string[] = [];
+  const seen = new Set<string>();
+  for (let i = names.length - 1; i >= 0 && picked.length < ARENA_HEROES; i--) {
+    const raw = String(names[i] || "").trim().replace(/^@+/, "");
+    if (!raw) continue;
+    const key = raw.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    picked.push(raw);
+  }
+  return picked;
+}
+
 const ARENA_DEATHS = (() => {
   const times = new Array<number>(ARENA_FOES);
   const order = Array.from({ length: ARENA_FOES }, (_, i) => i);

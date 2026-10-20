@@ -965,7 +965,7 @@ function SceneContent({
       {ordu && <OrduBattle names={names} soldiers={soldiers} />}
       {ok && <OkBattle names={names} />}
       {hero && <HeroBattle names={names} />}
-      {arena && <ArenaBattle />}
+      {arena && <ArenaBattle names={names} />}
       {bout && (isBout2(bout) ? <HulkKongBattle /> : <DuelBattle />)}
       {kalkan && <KalkanBattle names={names} />}
       {Boolean(xxx && xxxSquare(xxx)) && <Catapults soldiers={soldiers} square />}
