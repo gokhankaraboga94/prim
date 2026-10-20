@@ -1,6 +1,7 @@
 import { ARENA_ID, ARENA_MODE, ARENA_SECONDS } from "./arenaReel";
 import { BOUT2_ID, BOUT2_MODE, BOUT2_SECONDS, BOUT_ID, BOUT_MODE, BOUT_SECONDS } from "./boutReel";
-import { DEV10_ID, DEV10_MODE, DEV10_SECONDS, DEV11_ID, DEV11_MODE, DEV11_SECONDS, DEV5_ID, DEV5_MODE, DEV5_SECONDS, DEV6_ID, DEV6_MODE, DEV6_SECONDS, DEV7_ID, DEV7_MODE, DEV7_SECONDS, DEV8_ID, DEV8_MODE, DEV8_SECONDS, DEV9_ID, DEV9_MODE, DEV9_SECONDS, DEVS_ID, DEVS_MODE, DEVS_SECONDS, SNAKE_ID, SNAKE_MODE, SNAKE_SECONDS } from "./devReel";
+import { DEV10_ID, DEV10_MODE, DEV10_SECONDS, DEV11_ID, DEV11_MODE, DEV11_SECONDS, DEV6_ID, DEV6_MODE, DEV6_SECONDS, DEV7_ID, DEV7_MODE, DEV7_SECONDS, DEV8_ID, DEV8_MODE, DEV8_SECONDS, DEV9_ID, DEV9_MODE, DEV9_SECONDS, DEVS_ID, DEVS_MODE, DEVS_SECONDS, SNAKE_ID, SNAKE_MODE, SNAKE_SECONDS } from "./devReel";
+import { KAYIT_ID, KAYIT_MODE, KAYIT_SECONDS } from "./kayitReel";
 import { HERO_ID, HERO_MODE, HERO_SECONDS } from "./heroReel";
 import { DRAGON_ID, DRAGON_MODE, DRAGON_SECONDS } from "./dragonReel";
 import { KALKAN_ID, KALKAN_MODE, KALKAN_SECONDS } from "./kalkanReel";
@@ -14,6 +15,7 @@ export const RECENT_BUTTON_LIMIT = 20;
 
 /** Yeniden eskiye. Bir buton güncellenirse en üste alınır, en alttaki 20'nin dışına düşer. */
 export const RECENT_BUTTONS = [
+  { id: KAYIT_ID, label: `${KAYIT_MODE.label} — ${KAYIT_SECONDS}s`, seconds: KAYIT_SECONDS },
   { id: BOUT2_ID, label: `${BOUT2_MODE.label} — ${BOUT2_SECONDS}s`, seconds: BOUT2_SECONDS },
   { id: DEV11_ID, label: `${DEV11_MODE.label} — ${DEV11_SECONDS}s`, seconds: DEV11_SECONDS },
   { id: ARENA_ID, label: `${ARENA_MODE.label} — ${ARENA_SECONDS}s`, seconds: ARENA_SECONDS },
@@ -33,5 +35,4 @@ export const RECENT_BUTTONS = [
   { id: DEVS_ID, label: `${DEVS_MODE.label} — ${DEVS_SECONDS}s`, seconds: DEVS_SECONDS },
   { id: SNAKE_ID, label: `${SNAKE_MODE.label} — ${SNAKE_SECONDS}s`, seconds: SNAKE_SECONDS },
   { id: LAB_ID, label: `${LAB_MODE.label} — ${LAB_SECONDS}s`, seconds: LAB_SECONDS },
-  { id: DEV5_ID, label: `${DEV5_MODE.label} — ${DEV5_SECONDS}s`, seconds: DEV5_SECONDS },
 ] as const;

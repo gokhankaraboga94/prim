@@ -98,6 +98,7 @@ type ArmyProps = {
   knight?: boolean;
   nameGold?: boolean;
   nameAlert?: boolean;
+  namePlate?: boolean;
   mix?: boolean;
   mixSlow?: boolean;
   nameHunt?: boolean;
@@ -199,7 +200,7 @@ export function armyFrame(count: number, commanderCount = 0, square = false) {
   return { width, front, back, midZ: (front + back) / 2, height: 4.2 };
 }
 
-function unitPos(i: number, t: number, sizes: number[], out: THREE.Vector3, square = false) {
+function unitPos(i: number, t: number, sizes: number[], out: THREE.Vector3, square = false, still = false) {
   let row = 0;
   let col = i;
   while (row < sizes.length - 1 && col >= sizes[row]) {
@@ -211,7 +212,7 @@ function unitPos(i: number, t: number, sizes: number[], out: THREE.Vector3, squa
   const rowStep = square ? GRID : RANK;
   const x = (col - (rowCols - 1) / 2) * step;
   const z = FRONT_Z + row * rowStep;
-  if (square) {
+  if (square || still) {
     out.set(x, 0, z);
     return;
   }
@@ -968,7 +969,7 @@ function NameLayers({
 }
 
 
-export function Army({ count, names = [], commanders = [], cinematic, duration = 8, skipCommander = false, roster = null, discover = null, countdown = false, defend = false, defend2 = false, defend3 = false, loose = false, blue = false, vs = false, vs2 = false, new1 = false, new2 = false, blade = false, bridge = false, cross = false, wide = false, relief = false, maze = false, film = false, dragon = false, giant = false, giantBig = false, giantAll = false, giantSword = false, giantSnake = false, giantDevs = false, giantKnight = false, giantKick = false, knight = false, nameGold = false, nameAlert = false, mix = false, mixSlow = false, nameHunt = false, quiet = false, square = false, readNames = false, scanHunt = false, level = 1, rosterIds = null }: ArmyProps) {
+export function Army({ count, names = [], commanders = [], cinematic, duration = 8, skipCommander = false, roster = null, discover = null, countdown = false, defend = false, defend2 = false, defend3 = false, loose = false, blue = false, vs = false, vs2 = false, new1 = false, new2 = false, blade = false, bridge = false, cross = false, wide = false, relief = false, maze = false, film = false, dragon = false, giant = false, giantBig = false, giantAll = false, giantSword = false, giantSnake = false, giantDevs = false, giantKnight = false, giantKick = false, knight = false, nameGold = false, nameAlert = false, namePlate = false, mix = false, mixSlow = false, nameHunt = false, quiet = false, square = false, readNames = false, scanHunt = false, level = 1, rosterIds = null }: ArmyProps) {
   const bodies = useRef<THREE.InstancedMesh>(null);
   const knightHelms = useRef<THREE.InstancedMesh>(null);
   const [knightGeo, setKnightGeo] = useState<{ body: THREE.BufferGeometry; helm: THREE.BufferGeometry } | null>(null);
@@ -1173,12 +1174,14 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
         labeled.map((i) => ({
           text: i < 0 ? DEFAULT_COMMANDER : names[i],
           commander: !defend && !vs && !vs2 && !openField && (i < 0 || isCommander(names[i], chiefsList)),
-          plain: Boolean(countdown || defend || vs || vs2 || openField || roster || square || film),
-          fill: nameAlert || nameGold ? "#ffe14a" : undefined,
+          plain: Boolean(countdown || defend || vs || vs2 || openField || roster || square || film || namePlate),
+          fill: namePlate || nameAlert || nameGold ? "#ffe14a" : undefined,
+          frame: namePlate || undefined,
         })),
-        giant || dragon
+        Boolean(giant || dragon || namePlate),
+        Boolean(namePlate)
       ),
-    [labeled, names, chiefsList, countdown, defend, vs, vs2, openField, roster, square, film, nameGold, nameAlert, giant, dragon]
+    [labeled, names, chiefsList, countdown, defend, vs, vs2, openField, roster, square, film, nameGold, nameAlert, namePlate, giant, dragon]
   );
   useEffect(() => () => nameAtlas.dispose(), [nameAtlas]);
 
@@ -1253,7 +1256,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
       return;
     }
     const slot = layout.slotOf[soldier];
-    unitPos(slot >= 0 ? slot : soldier, t + seeds[soldier], form.sizes, pos, form.square);
+    unitPos(slot >= 0 ? slot : soldier, t + seeds[soldier], form.sizes, pos, form.square, namePlate);
   }
 
   function bowCycle(soldier: number, t: number) {
@@ -1920,6 +1923,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
       else if (giant) nameScale = (giantDevs ? 2.02 : giantBig ? 1.58 : 0.96) * (nameAlert ? 1.25 : 1);
       else if (maze) nameScale = 1.05;
       else if (dragon) nameScale = 1.22;
+      else if (namePlate) nameScale = 1.7;
       else if (film) nameScale = 1.48;
       else if (cross) nameScale = 1.112;
       else if (bridge && !relief) nameScale = 1.112 * 0.56;
@@ -1969,7 +1973,8 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
         } else if (dragon) {
           lift = 1.55;
           nx = pos.x;
-        } else if (film) {
+        } else if (namePlate) lift = 2.2 + row * 1.62 + (col % 2) * 0.42;
+        else if (film) {
           lift = 1.32;
           nx = pos.x;
         } else if (bridge || cross || relief) {
@@ -2012,7 +2017,12 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
       else if (openField && staggered) sx = Math.min(sx, FILE * 1.12);
       else if ((vs || vs2) && staggered) sx = Math.min(sx, FILE * (vs2 ? 0.92 : 1.05));
       else if (staggered) sx = Math.min(sx, FILE * 0.78);
-      const sy = cell.sy * nameScale;
+      let sy = cell.sy * nameScale;
+      if (namePlate && sx > FILE * 0.86) {
+        const fit = (FILE * 0.86) / sx;
+        sx *= fit;
+        sy *= fit;
+      }
       const baseY = pos.y + lift * scale;
       let px = nx;
       let py = baseY;
@@ -2114,7 +2124,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
     const volley = countdown ? countdownVolley(recT) : null;
 
     acc.current += dt;
-    if (!mixSlow && (defend || vs || vs2 || openField || roster || countdown || acc.current >= 1 / 40)) {
+    if (!mixSlow && (defend || vs || vs2 || openField || roster || countdown || namePlate || acc.current >= 1 / 40)) {
       acc.current = 0;
       placeBodies(t, state.camera);
     }

@@ -24,6 +24,7 @@ import type { KalkanId } from "../kalkanReel";
 import type { HeroId } from "../heroReel";
 import type { ArenaId } from "../arenaReel";
 import type { Bout2Id, BoutId } from "../boutReel";
+import type { KayitId } from "../kayitReel";
 
 type ReelCaptureProps = {
   soldiers: number;
@@ -65,6 +66,7 @@ type ReelCaptureProps = {
   hero?: HeroId | null;
   arena?: ArenaId | null;
   bout?: BoutId | Bout2Id | null;
+  kayit?: KayitId | null;
   mix?: MixId | null;
   xxx?: XxxId | null;
   rosterIds?: number[] | null;
@@ -72,7 +74,7 @@ type ReelCaptureProps = {
   onClose: () => void;
 };
 
-export function ReelCapture({ soldiers, names, commanders = [], level, pressure, hp, maxHp, seconds, showTitles = true, warLook = false, day = 0, skipCommander = false, shotMode = null, cinema = false, roster = null, saga = null, discover = null, countdown = null, defend = null, vs = null, new1 = null, new2 = null, new3 = null, new4 = null, new5 = null, new6 = null, new62 = null, new7 = null, maze = null, film = null, dragon = null, giant = null, wars = null, ordu = null, ok = null, kalkan = null, hero = null, arena = null, bout = null, mix = null, xxx = null, rosterIds = null, onRecorded, onClose }: ReelCaptureProps) {
+export function ReelCapture({ soldiers, names, commanders = [], level, pressure, hp, maxHp, seconds, showTitles = true, warLook = false, day = 0, skipCommander = false, shotMode = null, cinema = false, roster = null, saga = null, discover = null, countdown = null, defend = null, vs = null, new1 = null, new2 = null, new3 = null, new4 = null, new5 = null, new6 = null, new62 = null, new7 = null, maze = null, film = null, dragon = null, giant = null, wars = null, ordu = null, ok = null, kalkan = null, hero = null, arena = null, bout = null, kayit = null, mix = null, xxx = null, rosterIds = null, onRecorded, onClose }: ReelCaptureProps) {
   const clip = roster && isJoin(roster) && rosterIds?.length ? rosterDuration(roster, rosterIds.length) : seconds;
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [phase, setPhase] = useState<"boot" | "rec" | "done" | "err">("boot");
@@ -166,8 +168,8 @@ export function ReelCapture({ soldiers, names, commanders = [], level, pressure,
             duration={clip}
             warLook={warLook}
             day={day}
-            skipCommander={skipCommander || Boolean(discover) || Boolean(countdown) || Boolean(defend) || Boolean(vs) || Boolean(new1) || Boolean(new2) || Boolean(new3) || Boolean(new4) || Boolean(new5) || Boolean(new6) || Boolean(new62) || Boolean(new7) || Boolean(maze) || Boolean(film) || Boolean(giant) || Boolean(wars) || Boolean(ordu) || Boolean(ok) || Boolean(kalkan) || Boolean(hero) || Boolean(arena) || Boolean(bout) || Boolean(xxx && xxxHideCmd(xxx))}
-            shotMode={cinema || roster || saga || discover || countdown || defend || vs || new1 || new2 || new3 || new4 || new5 || new6 || new62 || new7 || maze || film || giant || wars || ordu || ok || kalkan || hero || arena || bout || mix || xxx ? null : shotMode}
+            skipCommander={skipCommander || Boolean(discover) || Boolean(countdown) || Boolean(defend) || Boolean(vs) || Boolean(new1) || Boolean(new2) || Boolean(new3) || Boolean(new4) || Boolean(new5) || Boolean(new6) || Boolean(new62) || Boolean(new7) || Boolean(maze) || Boolean(film) || Boolean(giant) || Boolean(wars) || Boolean(ordu) || Boolean(ok) || Boolean(kalkan) || Boolean(hero) || Boolean(arena) || Boolean(bout) || Boolean(kayit) || Boolean(xxx && xxxHideCmd(xxx))}
+            shotMode={cinema || roster || saga || discover || countdown || defend || vs || new1 || new2 || new3 || new4 || new5 || new6 || new62 || new7 || maze || film || giant || wars || ordu || ok || kalkan || hero || arena || bout || kayit || mix || xxx ? null : shotMode}
             cinema={cinema}
             roster={roster}
             saga={saga}
@@ -194,9 +196,10 @@ export function ReelCapture({ soldiers, names, commanders = [], level, pressure,
             hero={hero}
             arena={arena}
             bout={bout}
+            kayit={kayit}
             mix={mix}
             xxx={xxx}
-            showTitles={showTitles && !mix && !xxx && !new1 && !new2 && !new3 && !new4 && !new5 && !new6 && !new62 && !new7 && !maze && !film && !dragon && !giant && !wars && !ordu && !ok && !kalkan && !hero && !arena && !bout}
+            showTitles={showTitles && !mix && !xxx && !new1 && !new2 && !new3 && !new4 && !new5 && !new6 && !new62 && !new7 && !maze && !film && !dragon && !giant && !wars && !ordu && !ok && !kalkan && !hero && !arena && !bout && !kayit}
             rosterIds={rosterIds}
             onReady={(canvas) => {
               canvasRef.current = canvas;
