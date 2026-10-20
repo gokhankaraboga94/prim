@@ -328,13 +328,13 @@ function fitHero(scene: THREE.Group, yaw: number) {
   return scene;
 }
 
-function ArenaCam() {
+function ArenaCam({ heroes = ARENA_HEROES }: { heroes?: number }) {
   const perspCam = useRef<THREE.PerspectiveCamera | null>(null);
   useFrame(({ camera, clock }) => {
     if ((camera as THREE.PerspectiveCamera).isPerspectiveCamera) perspCam.current = camera as THREE.PerspectiveCamera;
     const persp = perspCam.current;
     if (!persp) return;
-    const shot = arenaCam(Math.max(0, clock.elapsedTime - REEL_HOLD));
+    const shot = arenaCam(Math.max(0, clock.elapsedTime - REEL_HOLD), heroes);
     persp.fov = shot.fov;
     persp.near = 0.15;
     persp.far = 280;
@@ -576,8 +576,8 @@ function ArenaFoes() {
   return <instancedMesh ref={mesh} args={[foe.geo, foe.material, ARENA_FOES]} frustumCulled={false} />;
 }
 
-function ArenaNames({ names }: { names: string[] }) {
-  const labels = useMemo(() => arenaHeroNames(names), [names]);
+function ArenaNames({ names, heroes = ARENA_HEROES }: { names: string[]; heroes?: number }) {
+  const labels = useMemo(() => arenaHeroNames(names, heroes), [names, heroes]);
   const atlas = useMemo<NameAtlas | null>(() => {
     if (!labels.length) return null;
     const items = labels.map((text) => ({ text, commander: false, plain: true, fill: "#ffe14a", frame: true }));
@@ -605,7 +605,7 @@ function ArenaNames({ names }: { names: string[] }) {
       const cell: NameCell | undefined = atlas.cells[i];
       const mesh = cell ? refs.current[cell.sheet] : null;
       if (!cell || !mesh) continue;
-      arenaHero(i, t, plate);
+      arenaHero(i, t, plate, heroes);
       const width = 2.35 * 0.55;
       const size = width / Math.max(1.15, cell.sx);
       dummy.position.set(plate.x, plate.y + HERO_H + 0.82, plate.z);
@@ -637,22 +637,22 @@ function ArenaNames({ names }: { names: string[] }) {
   );
 }
 
-function ArenaHeroes() {
+function ArenaHeroes({ urls }: { urls: readonly string[] }) {
   const [bodies, setBodies] = useState<THREE.Object3D[] | null>(null);
   const keep = useRef<THREE.Group[]>([]);
   useEffect(() => {
     let drop = false;
     const loader = new GLTFLoader();
-    let left = ARENA_HERO_URLS.length;
+    let left = urls.length;
     const loaded: THREE.Group[] = [];
-    ARENA_HERO_URLS.forEach((url, index) => {
+    urls.forEach((url, index) => {
       loader.load(url, (gltf) => {
         if (drop) return;
         loaded[index] = fitHero(gltf.scene, HERO_YAW[index] ?? 0);
         left -= 1;
         if (left > 0) return;
         keep.current = loaded;
-        setBodies(loaded.slice(0, ARENA_HEROES));
+        setBodies(loaded.slice(0, urls.length));
       });
     });
     return () => {
@@ -675,18 +675,18 @@ function ArenaHeroes() {
       }
       keep.current = [];
     };
-  }, []);
+  }, [urls]);
   if (!bodies) return null;
   return (
     <group>
       {bodies.map((body, i) => (
-        <ArenaHero key={i} index={i} body={body} />
+        <ArenaHero key={i} index={i} body={body} heroes={urls.length} />
       ))}
     </group>
   );
 }
 
-function ArenaHero({ index, body }: { index: number; body: THREE.Object3D }) {
+function ArenaHero({ index, body, heroes }: { index: number; body: THREE.Object3D; heroes: number }) {
   const ref = useRef<THREE.Group>(null);
   const arms = useMemo(() => {
     const list: ArmRig[] = [];
@@ -700,7 +700,7 @@ function ArenaHero({ index, body }: { index: number; body: THREE.Object3D }) {
     const node = ref.current;
     if (!node) return;
     const t = Math.max(0, clock.elapsedTime - REEL_HOLD);
-    arenaHero(index, t, pose);
+    arenaHero(index, t, pose, heroes);
     node.position.set(pose.x, pose.y, pose.z);
     node.rotation.set(pose.rx, pose.ry, pose.rz);
     const hit = arenaHeroStrike(index, t);
@@ -720,7 +720,7 @@ function ArenaHero({ index, body }: { index: number; body: THREE.Object3D }) {
   );
 }
 
-export function ArenaBattle({ names = [] }: { names?: string[] }) {
+export function ArenaBattle({ names = [], urls = ARENA_HERO_URLS }: { names?: string[]; urls?: readonly string[] }) {
   return (
     <group>
       <ArenaSky />
@@ -731,8 +731,8 @@ export function ArenaBattle({ names = [] }: { names?: string[] }) {
       <directionalLight position={[-5, 4, -3]} intensity={0.45} color="#9eb6ff" />
       <ArenaModel />
       <ArenaFoes />
-      <ArenaHeroes />
-      <ArenaNames names={names} />
+      <ArenaHeroes urls={urls} />
+      <ArenaNames names={names} heroes={urls.length} />
     </group>
   );
 }

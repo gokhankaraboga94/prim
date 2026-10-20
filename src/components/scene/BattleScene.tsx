@@ -31,7 +31,7 @@ import { type KalkanId } from "../../kalkanReel";
 import { HeroBattle, HeroCam } from "./HeroBattle";
 import { type HeroId } from "../../heroReel";
 import { ArenaBattle, ArenaCam } from "./ArenaBattle";
-import { type ArenaId } from "../../arenaReel";
+import { ARENA2_HEROES, ARENA2_HERO_URLS, ARENA_HEROES, ARENA_HERO_URLS, type Arena2Id, type ArenaId } from "../../arenaReel";
 import { DuelBattle, DuelCam, HulkKongBattle } from "./DuelBattle";
 import { isBout2, type Bout2Id, type BoutId } from "../../boutReel";
 import { KAYIT_FIELD, sampleKayitCam, type KayitId } from "../../kayitReel";
@@ -98,6 +98,7 @@ type BattleSceneProps = {
   kalkan?: KalkanId | null;
   hero?: HeroId | null;
   arena?: ArenaId | null;
+  arena2?: Arena2Id | null;
   bout?: BoutId | Bout2Id | null;
   kayit?: KayitId | null;
   mix?: MixId | null;
@@ -885,6 +886,7 @@ function SceneContent({
   kalkan = null,
   hero = null,
   arena = null,
+  arena2 = null,
   bout = null,
   kayit = null,
   mix = null,
@@ -892,7 +894,8 @@ function SceneContent({
   rosterIds = null,
 }: BattleSceneProps) {
   const chiefs = effectiveCommanders(commanders, names);
-  const hideCmd = skipCommander || Boolean(discover) || Boolean(countdown) || Boolean(defend) || Boolean(vs) || Boolean(new1) || Boolean(new2) || Boolean(new3) || Boolean(new4) || Boolean(new5) || Boolean(new6) || Boolean(new62) || Boolean(new7) || Boolean(maze) || Boolean(film) || Boolean(dragon) || Boolean(giant) || Boolean(ok) || Boolean(kalkan) || Boolean(hero) || Boolean(arena) || Boolean(bout) || Boolean(kayit) || Boolean(xxx && xxxHideCmd(xxx));
+  const pit = Boolean(arena || arena2);
+  const hideCmd = skipCommander || Boolean(discover) || Boolean(countdown) || Boolean(defend) || Boolean(vs) || Boolean(new1) || Boolean(new2) || Boolean(new3) || Boolean(new4) || Boolean(new5) || Boolean(new6) || Boolean(new62) || Boolean(new7) || Boolean(maze) || Boolean(film) || Boolean(dragon) || Boolean(giant) || Boolean(ok) || Boolean(kalkan) || Boolean(hero) || pit || Boolean(bout) || Boolean(kayit) || Boolean(xxx && xxxHideCmd(xxx));
   const chiefN = hideCmd ? 0 : chiefs.length;
   const split = Boolean(mix);
   const sortie = isDefendSortie(defend);
@@ -934,14 +937,14 @@ function SceneContent({
   }
   return (
     <>
-      <color attach="background" args={[arena ? "#8ec6f4" : hero ? "#7eb6ee" : kalkan ? "#07080d" : dragon ? "#7f97ad" : film ? "#9eb4c8" : maze ? "#9eb0c4" : slaughter ? "#8f9aa0" : "#7eb6ee"]} />
-      <fog attach="fog" args={kayit ? ["#9ec8ee", 28000, 70000] : arena ? ["#c5e4f8", 40, 180] : hero ? ["#b9d6f2", 36, 150] : kalkan ? ["#07080d", 24, 72] : ok ? ["#c5dff2", 140, 820] : wars ? ["#c8c4ba", 180 * warsScale, 780 * warsScale] : ordu ? ["#d5e4f2", orduFog?.near ?? 78, orduFog?.far ?? 420] : dragon ? ["#c5d4e2", 70, 420] : film ? ["#d5e4f2", 80, 460] : giant || bout ? ["#d5e4f2", 90, 520] : maze ? ["#c6d0da", 340, 720] : slaughter ? ["#c4b89a", 240, 980] : defend ? (isDefend3(defend) ? ["#9ec8ee", 1100, 3200] : sortie ? ["#9ec8ee", 600, 2200] : ["#9ec8ee", 1400, 4200]) : field ? ["#9ec8ee", 140, 720] : ["#9ec8ee", 380, 1500]} />
-      {!maze && !kalkan && !hero && !arena && <SkyDome cheap={Boolean(defend) && !isDefend3(defend)} />}
-      {!maze && !kalkan && !hero && !arena && <SteelSky />}
-      {!maze && !kalkan && !hero && !arena && <DayLights cinematic={cinematic} slim={Boolean(defend) && !isDefend3(defend)} warm={slaughter || Boolean(dragon)} />}
+      <color attach="background" args={[pit ? "#8ec6f4" : hero ? "#7eb6ee" : kalkan ? "#07080d" : dragon ? "#7f97ad" : film ? "#9eb4c8" : maze ? "#9eb0c4" : slaughter ? "#8f9aa0" : "#7eb6ee"]} />
+      <fog attach="fog" args={kayit ? ["#9ec8ee", 28000, 70000] : pit ? ["#c5e4f8", 40, 180] : hero ? ["#b9d6f2", 36, 150] : kalkan ? ["#07080d", 24, 72] : ok ? ["#c5dff2", 140, 820] : wars ? ["#c8c4ba", 180 * warsScale, 780 * warsScale] : ordu ? ["#d5e4f2", orduFog?.near ?? 78, orduFog?.far ?? 420] : dragon ? ["#c5d4e2", 70, 420] : film ? ["#d5e4f2", 80, 460] : giant || bout ? ["#d5e4f2", 90, 520] : maze ? ["#c6d0da", 340, 720] : slaughter ? ["#c4b89a", 240, 980] : defend ? (isDefend3(defend) ? ["#9ec8ee", 1100, 3200] : sortie ? ["#9ec8ee", 600, 2200] : ["#9ec8ee", 1400, 4200]) : field ? ["#9ec8ee", 140, 720] : ["#9ec8ee", 380, 1500]} />
+      {!maze && !kalkan && !hero && !pit && <SkyDome cheap={Boolean(defend) && !isDefend3(defend)} />}
+      {!maze && !kalkan && !hero && !pit && <SteelSky />}
+      {!maze && !kalkan && !hero && !pit && <DayLights cinematic={cinematic} slim={Boolean(defend) && !isDefend3(defend)} warm={slaughter || Boolean(dragon)} />}
       {orduField && <GrassField span={Math.max(2400, orduField.width * 8 + orduField.depth * 8)} />}
-      {kayit ? <GrassField span={KAYIT_FIELD} y={-0.04} depthWrite={false} /> : !wars && !ordu && !ok && !kalkan && !hero && !arena && (grass ? <GrassField /> : film || dragon || giant ? <New1Terrain /> : maze ? <Maze soldiers={soldiers} /> : cross ? <New6Cross /> : chase ? <New5Bridge /> : new4 ? <New4Peak /> : slaughter || isDefend4(defend) ? <New1Terrain /> : <Terrain road={!defend && !field} cheap={Boolean(defend)} />)}
-      {!wars && !ordu && !ok && !kalkan && !hero && !arena && !defend && !field && !slaughter && !maze && !film && !dragon && !giant && !bout && <Castle level={level} pressure={pressure} gateClosed={Boolean(countdown) || split || climb || Boolean(xxx)} wallFight={climb} />}
+      {kayit ? <GrassField span={KAYIT_FIELD} y={-0.04} depthWrite={false} /> : !wars && !ordu && !ok && !kalkan && !hero && !pit && (grass ? <GrassField /> : film || dragon || giant ? <New1Terrain /> : maze ? <Maze soldiers={soldiers} /> : cross ? <New6Cross /> : chase ? <New5Bridge /> : new4 ? <New4Peak /> : slaughter || isDefend4(defend) ? <New1Terrain /> : <Terrain road={!defend && !field} cheap={Boolean(defend)} />)}
+      {!wars && !ordu && !ok && !kalkan && !hero && !pit && !defend && !field && !slaughter && !maze && !film && !dragon && !giant && !bout && <Castle level={level} pressure={pressure} gateClosed={Boolean(countdown) || split || climb || Boolean(xxx)} wallFight={climb} />}
       {sortie && (
         <TimedVisible until={DEFEND2_SORTIE + 0.85}>
           <Castle level={level} pressure={pressure} forceGateOpen />
@@ -954,18 +957,18 @@ function SceneContent({
       ) : slaughter ? (
         <New1Foes soldiers={soldiers} duel={duel} swords={blades} bridge={chase} cross={cross} wide={wide} packed={Boolean(new5)} />
       ) : (
-        !wars && !ordu && !ok && !kalkan && !hero && !arena && !roster && !split && !countdown && !vs && !xxx && !film && !dragon && !giant && !bout && !kayit && <SallyRaid soldiers={soldiers} commanders={chiefN} />
+        !wars && !ordu && !ok && !kalkan && !hero && !pit && !roster && !split && !countdown && !vs && !xxx && !film && !dragon && !giant && !bout && !kayit && <SallyRaid soldiers={soldiers} commanders={chiefN} />
       )}
       {climb && <VsLadders level={level} />}
       {film && <FilmFoes />}
       {dragon && <Dragon soldiers={Math.max(1, soldiers)} />}
       {giant && <Giant soldiers={isDevAll(giant) ? Math.max(1, soldiers) : Math.min(giant === DEV2_ID ? DEV2_N : DEV_N, Math.max(1, soldiers))} big={isDevBig(giant)} sword={isDevSword(giant)} dread={isDevDread(giant)} flesh={isDev7(giant)} ape={isDev8(giant)} demon={isDev9(giant)} orc={isDev10(giant)} hulk={isDev11(giant)} snake={isSnake(giant)} devs={isDevs(giant)} crown={devLive} />}
-      {!wars && !ordu && !ok && !kalkan && !hero && !arena && !bout && <Army count={friendN} names={names} commanders={commanders} cinematic={cinematic} duration={duration} skipCommander={hideCmd} roster={roster} discover={discover} countdown={Boolean(countdown)} defend={Boolean(defend)} defend2={sortie} defend3={isDefend3(defend)} loose={isDefend5(defend)} blue={isDefend4(defend) || isDefend5(defend)} vs={field} vs2={climb} new1={Boolean(new1)} new2={duel} blade={blades || Boolean(maze)} bridge={chase} cross={cross} wide={wide} relief={relief} maze={Boolean(maze)} film={Boolean(film)} dragon={Boolean(dragon)} giant={Boolean(giant)} giantBig={isDevBig(giant)} giantAll={isDevAll(giant)} giantSword={isDevSword(giant)} giantSnake={isSnake(giant)} giantDevs={isDevs(giant)} giantKnight={isDev7(giant) || isDev8(giant) || isDev9(giant) || isDev10(giant) || isDev11(giant)} giantKick={isDev11(giant)} knight={!cinematic} nameGold={isDevDread(giant) || isSnake(giant) || isDevs(giant)} nameAlert={devLive || isDefend5(defend)} namePlate={Boolean(kayit)} mix={split} mixSlow={isMix9(mix)} nameHunt={Boolean(xxx)} quiet={Boolean(xxx && xxxQuiet(xxx)) || slaughter || Boolean(maze) || Boolean(film) || Boolean(dragon) || Boolean(giant) || Boolean(kayit)} square={Boolean(kayit) || Boolean(xxx && xxxSquare(xxx))} readNames={Boolean(xxx && xxxCloseNames(xxx))} scanHunt={Boolean(xxx && xxxScanHunt(xxx))} level={level} rosterIds={rosterIds} />}
+      {!wars && !ordu && !ok && !kalkan && !hero && !pit && !bout && <Army count={friendN} names={names} commanders={commanders} cinematic={cinematic} duration={duration} skipCommander={hideCmd} roster={roster} discover={discover} countdown={Boolean(countdown)} defend={Boolean(defend)} defend2={sortie} defend3={isDefend3(defend)} loose={isDefend5(defend)} blue={isDefend4(defend) || isDefend5(defend)} vs={field} vs2={climb} new1={Boolean(new1)} new2={duel} blade={blades || Boolean(maze)} bridge={chase} cross={cross} wide={wide} relief={relief} maze={Boolean(maze)} film={Boolean(film)} dragon={Boolean(dragon)} giant={Boolean(giant)} giantBig={isDevBig(giant)} giantAll={isDevAll(giant)} giantSword={isDevSword(giant)} giantSnake={isSnake(giant)} giantDevs={isDevs(giant)} giantKnight={isDev7(giant) || isDev8(giant) || isDev9(giant) || isDev10(giant) || isDev11(giant)} giantKick={isDev11(giant)} knight={!cinematic} nameGold={isDevDread(giant) || isSnake(giant) || isDevs(giant)} nameAlert={devLive || isDefend5(defend)} namePlate={Boolean(kayit)} mix={split} mixSlow={isMix9(mix)} nameHunt={Boolean(xxx)} quiet={Boolean(xxx && xxxQuiet(xxx)) || slaughter || Boolean(maze) || Boolean(film) || Boolean(dragon) || Boolean(giant) || Boolean(kayit)} square={Boolean(kayit) || Boolean(xxx && xxxSquare(xxx))} readNames={Boolean(xxx && xxxCloseNames(xxx))} scanHunt={Boolean(xxx && xxxScanHunt(xxx))} level={level} rosterIds={rosterIds} />}
       {wars && <WarsBattle names={names} soldiers={soldiers} />}
       {ordu && <OrduBattle names={names} soldiers={soldiers} />}
       {ok && <OkBattle names={names} />}
       {hero && <HeroBattle names={names} />}
-      {arena && <ArenaBattle names={names} />}
+      {pit && <ArenaBattle names={names} urls={arena2 ? ARENA2_HERO_URLS : ARENA_HERO_URLS} />}
       {bout && (isBout2(bout) ? <HulkKongBattle /> : <DuelBattle />)}
       {kalkan && <KalkanBattle names={names} />}
       {Boolean(xxx && xxxSquare(xxx)) && <Catapults soldiers={soldiers} square />}
@@ -976,8 +979,8 @@ function SceneContent({
         <OrduCam soldiers={soldiers} />
       ) : ok ? (
         <OkCam />
-      ) : arena ? (
-        <ArenaCam />
+      ) : pit ? (
+        <ArenaCam heroes={arena2 ? ARENA2_HEROES : ARENA_HEROES} />
       ) : bout ? (
         <DuelCam />
       ) : hero ? (
@@ -1037,10 +1040,10 @@ function SceneContent({
           <LiveOpening shot={opening} />
         </>
       )}
-      {cinematic && !wars && !ordu && !ok && !kalkan && !hero && !arena && !bout && !kayit && !split && !countdown && !defend && !vs && !slaughter && !xxx && maxHp != null && hp != null && (
+      {cinematic && !wars && !ordu && !ok && !kalkan && !hero && !pit && !bout && !kayit && !split && !countdown && !defend && !vs && !slaughter && !xxx && maxHp != null && hp != null && (
         <CaptureHpHud hp={hp} maxHp={maxHp} soldiers={soldiers} duration={duration ?? 8} skipCommander={hideCmd} cinema={cinema} roster={roster} discover={discover} />
       )}
-      {cinematic && !wars && !ordu && !ok && !kalkan && !hero && !arena && !bout && !kayit && showTitles && !split && !vs && !slaughter && !xxx && (
+      {cinematic && !wars && !ordu && !ok && !kalkan && !hero && !pit && !bout && !kayit && showTitles && !split && !vs && !slaughter && !xxx && (
         <ReelTitles soldiers={soldiers} duration={duration ?? 8} day={day} skipCommander={hideCmd} cinema={cinema} roster={roster} saga={saga} discover={discover} countdown={countdown} defend={defend} names={names} rosterIds={rosterIds} />
       )}
       {cinematic && xxx && xxxHasHook(xxx) && (
@@ -1052,7 +1055,7 @@ function SceneContent({
       {cinematic && giant && <DevHealthBar soldiers={isDevAll(giant) ? Math.max(1, soldiers) : Math.min(giant === DEV2_ID ? DEV2_N : DEV_N, Math.max(1, soldiers))} big={isDevBig(giant)} sword={isDevSword(giant)} snake={isSnake(giant) || isDevs(giant)} devs={isDevs(giant)} kick={isDev11(giant)} />}
       {cinematic && !split && !kayit && <ReelVignette />}
       {countdown && <CountdownFlash />}
-      {cinematic && !wars && !ordu && !ok && !kalkan && !hero && !arena && !bout && !kayit && !discover && !countdown && !defend && !vs && !slaughter && !split && <ReelFade duration={duration ?? 8} />}
+      {cinematic && !wars && !ordu && !ok && !kalkan && !hero && !pit && !bout && !kayit && !discover && !countdown && !defend && !vs && !slaughter && !split && <ReelFade duration={duration ?? 8} />}
     </>
   );
 }
@@ -1117,6 +1120,7 @@ function BattleSceneInner({
   kalkan = null,
   hero = null,
   arena = null,
+  arena2 = null,
   bout = null,
   kayit = null,
   mix = null,
@@ -1125,7 +1129,8 @@ function BattleSceneInner({
   onReady,
 }: BattleSceneProps) {
   const [active, setActive] = useState(() => typeof document === "undefined" || !document.hidden);
-  const hideCmd = skipCommander || Boolean(discover) || Boolean(countdown) || Boolean(defend) || Boolean(vs) || Boolean(new1) || Boolean(new2) || Boolean(new3) || Boolean(new4) || Boolean(new5) || Boolean(new6) || Boolean(new62) || Boolean(new7) || Boolean(maze) || Boolean(film) || Boolean(dragon) || Boolean(giant) || Boolean(ok) || Boolean(kalkan) || Boolean(hero) || Boolean(arena) || Boolean(bout) || Boolean(kayit) || Boolean(xxx && xxxHideCmd(xxx));
+  const pit = Boolean(arena || arena2);
+  const hideCmd = skipCommander || Boolean(discover) || Boolean(countdown) || Boolean(defend) || Boolean(vs) || Boolean(new1) || Boolean(new2) || Boolean(new3) || Boolean(new4) || Boolean(new5) || Boolean(new6) || Boolean(new62) || Boolean(new7) || Boolean(maze) || Boolean(film) || Boolean(dragon) || Boolean(giant) || Boolean(ok) || Boolean(kalkan) || Boolean(hero) || pit || Boolean(bout) || Boolean(kayit) || Boolean(xxx && xxxHideCmd(xxx));
 
   useLayoutEffect(() => {
     if (cinematic && (mix || xxx)) {
@@ -1178,7 +1183,7 @@ function BattleSceneInner({
       shadows={!cinematic}
       dpr={cinematic ? (xxx && xxxHiRes(xxx) ? 2 : 1) : [1, 1.5]}
       gl={{
-        antialias: !arena && (Boolean(new1 || new2 || new3 || new4 || new5 || new6 || new62 || new7 || maze) || (!(xxx && xxxQuiet(xxx)) && (!defend || isDefend3(defend)))),
+        antialias: !pit && (Boolean(new1 || new2 || new3 || new4 || new5 || new6 || new62 || new7 || maze) || (!(xxx && xxxQuiet(xxx)) && (!defend || isDefend3(defend)))),
         alpha: false,
         powerPreference: "high-performance",
         stencil: false,
@@ -1196,7 +1201,7 @@ function BattleSceneInner({
         gl.outputColorSpace = THREE.SRGBColorSpace;
         gl.shadowMap.enabled = !cinematic;
         gl.shadowMap.type = THREE.PCFSoftShadowMap;
-        gl.setClearColor(arena ? "#8ec6f4" : hero ? "#7eb6ee" : kalkan ? "#07080d" : xxx && xxxSpin(xxx) ? "#000000" : maze ? "#9eb0c4" : new1 || new2 || new3 || new4 || new5 || new6 || new62 || new7 ? "#8f9aa0" : "#7eb6ee", 1);
+        gl.setClearColor(pit ? "#8ec6f4" : hero ? "#7eb6ee" : kalkan ? "#07080d" : xxx && xxxSpin(xxx) ? "#000000" : maze ? "#9eb0c4" : new1 || new2 || new3 || new4 || new5 || new6 || new62 || new7 ? "#8f9aa0" : "#7eb6ee", 1);
         if (cinematic) {
           const dpr = xxx && xxxHiRes(xxx) ? 2 : 1;
           gl.setPixelRatio(dpr);
@@ -1246,6 +1251,7 @@ function BattleSceneInner({
         kalkan={kalkan}
         hero={hero}
         arena={arena}
+        arena2={arena2}
         bout={bout}
         kayit={kayit}
         mix={mix}

@@ -13,17 +13,33 @@ export const ARENA_HERO_URLS = [
 ] as const;
 export const ARENA_HEROES = ARENA_HERO_URLS.length;
 
+export const ARENA2_ID = "arena2" as const;
+export type Arena2Id = typeof ARENA2_ID;
+export const ARENA2_MODE = { id: ARENA2_ID, label: "arena2" } as const;
+export const ARENA2_SECONDS = ARENA_SECONDS;
+export const ARENA2_HERO_URLS = [
+  ...ARENA_HERO_URLS,
+  "/models/1.glb",
+  "/models/2.glb",
+  "/models/3.glb",
+] as const;
+export const ARENA2_HEROES = ARENA2_HERO_URLS.length;
+
 const INNER = 22;
 
 export function isArena(id: string | null | undefined): id is ArenaId {
   return id === ARENA_ID;
 }
 
+export function isArena2(id: string | null | undefined): id is Arena2Id {
+  return id === ARENA2_ID;
+}
+
 /** Newest joiners, one plate per hero. A later recording reads the list again. */
-export function arenaHeroNames(names: string[]): string[] {
+export function arenaHeroNames(names: string[], count: number = ARENA_HEROES): string[] {
   const picked: string[] = [];
   const seen = new Set<string>();
-  for (let i = names.length - 1; i >= 0 && picked.length < ARENA_HEROES; i--) {
+  for (let i = names.length - 1; i >= 0 && picked.length < count; i--) {
     const raw = String(names[i] || "").trim().replace(/^@+/, "");
     if (!raw) continue;
     const key = raw.toLowerCase();
@@ -175,10 +191,12 @@ export function arenaFoe(i: number, t: number, out: ArenaPose) {
   out.s = 1;
 }
 
-export function arenaHero(i: number, t: number, out: ArenaPose) {
-  const ang = (i / ARENA_HEROES) * Math.PI * 2;
+export function arenaHero(i: number, t: number, out: ArenaPose, heroes: number = ARENA_HEROES) {
+  const count = Math.max(1, heroes);
+  const ang = (i / count) * Math.PI * 2;
   const alive = arenaAlive(t) / ARENA_FOES;
-  const radius = 1.65 * (0.74 + alive * 0.38);
+  const spread = count / ARENA_HEROES;
+  const radius = 1.65 * spread * (0.74 + alive * 0.38);
   const stumble = i === 3 && t > 33 && t < 40;
   out.x = Math.sin(ang) * radius;
   out.z = Math.cos(ang) * radius;
@@ -213,7 +231,7 @@ export type ArenaCam = {
   fov: number;
 };
 
-export function arenaCam(t: number): ArenaCam {
+export function arenaCam(t: number, heroes: number = ARENA_HEROES): ArenaCam {
   const u = Math.max(0, Math.min(1, t / ARENA_SECONDS));
   const ang = u * Math.PI * 2 * 1.05;
   let dist = 10.8;
@@ -237,10 +255,11 @@ export function arenaCam(t: number): ArenaCam {
     dist = 10.8 + Math.sin((t - 4.5) * 0.28) * 0.125;
     y = 6.025 + Math.sin((t - 4.5) * 0.21) * 0.08;
   }
+  const spread = Math.max(1, heroes) / ARENA_HEROES;
   return {
-    x: Math.sin(ang) * dist,
-    y,
-    z: Math.cos(ang) * dist,
+    x: Math.sin(ang) * dist * spread,
+    y: lookY + (y - lookY) * spread,
+    z: Math.cos(ang) * dist * spread,
     lx: 0,
     ly: lookY,
     lz: 0,

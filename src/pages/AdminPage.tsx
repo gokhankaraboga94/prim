@@ -40,7 +40,7 @@ import { ORDU_ID, ORDU_MODE, ORDU_SECONDS, isOrdu, type OrduId } from "../orduRe
 import { OK_ID, OK_MODE, OK_SECONDS, isOk, type OkId } from "../okReel";
 import { KALKAN_ID, KALKAN_MODE, KALKAN_SECONDS, isKalkan, type KalkanId } from "../kalkanReel";
 import { HERO_ID, HERO_MODE, HERO_SECONDS, isHero, type HeroId } from "../heroReel";
-import { ARENA_ID, ARENA_MODE, ARENA_SECONDS, isArena, type ArenaId } from "../arenaReel";
+import { ARENA2_ID, ARENA2_MODE, ARENA2_SECONDS, ARENA_ID, ARENA_MODE, ARENA_SECONDS, isArena, isArena2, type Arena2Id, type ArenaId } from "../arenaReel";
 import { BOUT2_ID, BOUT2_MODE, BOUT2_SECONDS, BOUT_ID, BOUT_MODE, BOUT_SECONDS, isBout, isBout2, type Bout2Id, type BoutId } from "../boutReel";
 import { KAYIT_ID, KAYIT_MODE, KAYIT_SECONDS, isKayit, type KayitId } from "../kayitReel";
 import { unlockReelSfx } from "../reelSfx";
@@ -66,7 +66,7 @@ export function AdminPage() {
   const [reelSeconds, setReelSeconds] = useState<number>(7);
   const [reelText, setReelText] = useState(true);
   const [reelSkipCmd, setReelSkipCmd] = useState(false);
-  const [reelShot, setReelShot] = useState<ReelShot | PlanBId | SagaId | DiscoverId | MixId | CountdownId | DefendId | VsId | New1Id | New2Id | New3Id | New4Id | New5Id | New6Id | New62Id | New7Id | LabId | DevId | Dev2Id | Dev3Id | Dev4Id | Dev5Id | Dev6Id | Dev7Id | Dev8Id | Dev9Id | Dev10Id | Dev11Id | SnakeId | DevsId | FilmId | DragonId | WarsId | OrduId | OkId | KalkanId | HeroId | ArenaId | BoutId | Bout2Id | KayitId | XxxId | null>(null);
+  const [reelShot, setReelShot] = useState<ReelShot | PlanBId | SagaId | DiscoverId | MixId | CountdownId | DefendId | VsId | New1Id | New2Id | New3Id | New4Id | New5Id | New6Id | New62Id | New7Id | LabId | DevId | Dev2Id | Dev3Id | Dev4Id | Dev5Id | Dev6Id | Dev7Id | Dev8Id | Dev9Id | Dev10Id | Dev11Id | SnakeId | DevsId | FilmId | DragonId | WarsId | OrduId | OkId | KalkanId | HeroId | ArenaId | Arena2Id | BoutId | Bout2Id | KayitId | XxxId | null>(null);
   const [reelDay, setReelDay] = useState("1");
   const [recentOpen, setRecentOpen] = useState(false);
   const [capturing, setCapturing] = useState(false);
@@ -576,6 +576,8 @@ export function AdminPage() {
                     ? [OK_SECONDS]
                   : isHero(reelShot)
                     ? [HERO_SECONDS]
+                  : isArena2(reelShot)
+                    ? [ARENA2_SECONDS]
                   : isArena(reelShot)
                     ? [ARENA_SECONDS]
                   : isBout2(reelShot)
@@ -1042,6 +1044,18 @@ export function AdminPage() {
             </button>
             <button
               type="button"
+              className={reelShot === ARENA2_ID ? "on" : ""}
+              onClick={() => {
+                setReelShot((cur) => (cur === ARENA2_ID ? null : ARENA2_ID));
+                setReelSeconds(ARENA2_SECONDS);
+                setReelText(false);
+                setReelSkipCmd(true);
+              }}
+            >
+              {ARENA2_MODE.label} — {ARENA2_SECONDS}s
+            </button>
+            <button
+              type="button"
               className={reelShot === SNAKE_ID ? "on" : ""}
               onClick={() => {
                 setReelShot((cur) => (cur === SNAKE_ID ? null : SNAKE_ID));
@@ -1148,6 +1162,9 @@ export function AdminPage() {
           )}
           {isArena(reelShot) && (
             <p className="muted">60 saniye. Kahramanların 5 modeli ve mavi püsküllü şövalye, eklenen arena modelinin içinde. Her kahramanın üstünde son katılan 6 askerin adı, siyah plakada sarı. Yeni takipçi ekleyip butonu tekrar açınca yine listenin son 6 adı kullanılır. Ortaçağ modelinin altındaki ek zemin yok. Kamera yüzde 50 daha yakın. Gövde sallanmaz; kol kalkar ve vuruş hedefe değer. 50 düşman ilk saniyeden birer ikişer düşer. Savaş uzar, bir kahraman yere düşer ve kalkmaz. Bizimkiler kazanır. Düşman roman modeli.</p>
+          )}
+          {isArena2(reelShot) && (
+            <p className="muted">60 saniye. Arena ile aynı savaş. Kahramanların 5 modeli, mavi püsküllü şövalye ve eklenen 1, 2, 3 modelleri: toplam 9 kahraman. Her kahramanın üstünde son katılan 9 askerin adı, siyah plakada sarı. Yeni takipçi ekleyip butonu tekrar açınca yine listenin son 9 adı kullanılır. Halka 9 kişi sığsın diye biraz genişler, kamera aynı oranda uzaklaşır. 50 düşman ilk saniyeden birer ikişer düşer. Bir kahraman yere düşer ve kalkmaz. Bizimkiler kazanır. Düşman roman modeli.</p>
           )}
           {isSnake(reelShot) && (
             <p className="muted">DEV5 ile aynı kadro ve kamera. Yeşil-kahverengi yılan. Bekleyenler dairede. Çoğunluk başa, birkaç kişi gövdeye ve kuyruğa gider. Yılan hem onlara hem dairedeki bekleyen ve okçulara saldırır.</p>
@@ -1670,8 +1687,8 @@ export function AdminPage() {
           maxHp={maxHp}
           seconds={captureSec}
           showTitles={reelText}
-          skipCommander={reelSkipCmd || isDiscover(reelShot) || isCountdown(reelShot) || isDefend(reelShot) || isVsMode(reelShot) || isNewField(reelShot) || isLab(reelShot) || isGiantShot(reelShot) || isFilm(reelShot) || isDragon(reelShot) || isWars(reelShot) || isOrdu(reelShot) || isOk(reelShot) || isKalkan(reelShot) || isHero(reelShot) || isArena(reelShot) || isBout(reelShot) || isBout2(reelShot) || isKayit(reelShot) || (isXxx(reelShot) && xxxHideCmd(reelShot))}
-          shotMode={reelShot === CINEMA_ID || isPlanB(reelShot) || isSaga(reelShot) || isDiscover(reelShot) || isCountdown(reelShot) || isDefend(reelShot) || isVsMode(reelShot) || isNewField(reelShot) || isLab(reelShot) || isGiantShot(reelShot) || isFilm(reelShot) || isDragon(reelShot) || isWars(reelShot) || isOrdu(reelShot) || isOk(reelShot) || isKalkan(reelShot) || isHero(reelShot) || isArena(reelShot) || isBout(reelShot) || isBout2(reelShot) || isKayit(reelShot) || isMix(reelShot) || isXxx(reelShot) ? null : reelShot}
+          skipCommander={reelSkipCmd || isDiscover(reelShot) || isCountdown(reelShot) || isDefend(reelShot) || isVsMode(reelShot) || isNewField(reelShot) || isLab(reelShot) || isGiantShot(reelShot) || isFilm(reelShot) || isDragon(reelShot) || isWars(reelShot) || isOrdu(reelShot) || isOk(reelShot) || isKalkan(reelShot) || isHero(reelShot) || isArena(reelShot) || isArena2(reelShot) || isBout(reelShot) || isBout2(reelShot) || isKayit(reelShot) || (isXxx(reelShot) && xxxHideCmd(reelShot))}
+          shotMode={reelShot === CINEMA_ID || isPlanB(reelShot) || isSaga(reelShot) || isDiscover(reelShot) || isCountdown(reelShot) || isDefend(reelShot) || isVsMode(reelShot) || isNewField(reelShot) || isLab(reelShot) || isGiantShot(reelShot) || isFilm(reelShot) || isDragon(reelShot) || isWars(reelShot) || isOrdu(reelShot) || isOk(reelShot) || isKalkan(reelShot) || isHero(reelShot) || isArena(reelShot) || isArena2(reelShot) || isBout(reelShot) || isBout2(reelShot) || isKayit(reelShot) || isMix(reelShot) || isXxx(reelShot) ? null : reelShot}
           cinema={reelShot === CINEMA_ID}
           roster={isPlanB(reelShot) ? reelShot : null}
           saga={isSaga(reelShot) ? reelShot : null}
@@ -1697,6 +1714,7 @@ export function AdminPage() {
           kalkan={isKalkan(reelShot) ? reelShot : null}
           hero={isHero(reelShot) ? reelShot : null}
           arena={isArena(reelShot) ? reelShot : null}
+          arena2={isArena2(reelShot) ? reelShot : null}
           bout={isBout(reelShot) || isBout2(reelShot) ? reelShot : null}
           kayit={isKayit(reelShot) ? reelShot : null}
           mix={isMix(reelShot) ? reelShot : null}
