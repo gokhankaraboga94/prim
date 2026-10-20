@@ -181,6 +181,60 @@ type ArmRig = {
   dirty: number;
 };
 
+/**
+ * Arm cut, in body heights. Measured on the arena models: legs, skirts and capes
+ * reach 0.20–0.33 wide below 0.35h, the hanging hand sits near 0.45h, the shoulder
+ * top near 0.80h, torso half-width about 0.11h. So the arm is: above 0.40h, below
+ * 0.88h, further out than 0.11h. Everything else keeps its rest position.
+ */
+const ARM_Y_LO = 0.4;
+const ARM_Y_IN = 0.47;
+const ARM_Y_FADE = 0.8;
+const ARM_Y_HI = 0.88;
+const ARM_GATE = 0.11;
+const ARM_FULL = 0.18;
+const ARM_PIVOT_Y = 0.8;
+const ARM_PIVOT_X = 0.14;
+
+function smooth01(a: number, b: number, v: number) {
+  const k = Math.max(0, Math.min(1, (v - a) / (b - a)));
+  return k * k * (3 - 2 * k);
+}
+
+function armWeight(yN: number, latN: number) {
+  if (yN < ARM_Y_LO || yN > ARM_Y_HI || latN < ARM_GATE) return 0;
+  return smooth01(ARM_GATE, ARM_FULL, latN) * smooth01(ARM_Y_LO, ARM_Y_IN, yN) * (1 - smooth01(ARM_Y_FADE, ARM_Y_HI, yN));
+}
+
+/** Pick the weapon side: the furthest lateral vertex inside the arm band. */
+function armSide(getLat: (i: number) => number, getY: (i: number) => number, count: number, minY: number, height: number) {
+  let best = 0;
+  let side = 1;
+  for (let i = 0; i < count; i++) {
+    const yN = (getY(i) - minY) / height;
+    if (yN < ARM_Y_LO || yN > ARM_Y_FADE) continue;
+    const lateral = getLat(i);
+    if (Math.abs(lateral) <= Math.abs(best)) continue;
+    best = lateral;
+    side = lateral < 0 ? -1 : 1;
+  }
+  return side;
+}
+
+/**
+ * Shoulder angles for a strike, in the hero frame (lateral x toward the weapon
+ * side, up y, forward z). Windup cocks the arm out and back; the chop sweeps it
+ * over the outside and lands pointing forward, slightly down, with a short reach.
+ * Recovery scales both inputs together so the arm returns straight to rest.
+ */
+function strikeAngles(side: number, strike: ArmStrike) {
+  return {
+    rz: side * (strike.lift * 0.9 - strike.chop * 0.5),
+    rx: strike.lift * 0.9 - strike.chop * 2.0,
+    reach: strike.chop * 0.2,
+  };
+}
+
 function rigArm(mesh: THREE.Mesh, forwardX: boolean) {
   const pos = mesh.geometry.getAttribute("position") as THREE.BufferAttribute;
   if (!pos) return;
@@ -190,40 +244,24 @@ function rigArm(mesh: THREE.Mesh, forwardX: boolean) {
   const minY = box.min.y;
   const height = Math.max(0.001, box.max.y - minY);
   const rest = new Float32Array(pos.count * 3);
-  let best = 0;
-  let side = 1;
   for (let i = 0; i < pos.count; i++) {
-    const x = pos.getX(i);
-    const y = pos.getY(i);
-    const z = pos.getZ(i);
-    rest[i * 3] = x;
-    rest[i * 3 + 1] = y;
-    rest[i * 3 + 2] = z;
-    const band = y - minY;
-    if (band < height * 0.3 || band > height * 0.96) continue;
-    const lateral = forwardX ? z : x;
-    if (Math.abs(lateral) <= Math.abs(best)) continue;
-    best = lateral;
-    side = lateral < 0 ? -1 : 1;
+    rest[i * 3] = pos.getX(i);
+    rest[i * 3 + 1] = pos.getY(i);
+    rest[i * 3 + 2] = pos.getZ(i);
   }
+  const lat = (i: number) => (forwardX ? rest[i * 3 + 2] : rest[i * 3]);
+  const side = armSide(lat, (i) => rest[i * 3 + 1], pos.count, minY, height);
   const weights = new Float32Array(pos.count);
-  const gate = height * 0.05;
-  const span = height * 0.18;
   for (let i = 0; i < pos.count; i++) {
-    const y = rest[i * 3 + 1] - minY;
-    if (y < height * 0.28 || y > height * 0.97) continue;
-    const lateral = (forwardX ? rest[i * 3 + 2] : rest[i * 3]) * side;
-    if (lateral < gate) continue;
-    const u = Math.min(1, (lateral - gate) / span);
-    weights[i] = u * u * (3 - 2 * u);
+    weights[i] = armWeight((rest[i * 3 + 1] - minY) / height, (lat(i) * side) / height);
   }
   const rig: ArmRig = {
     pos,
     rest,
     weights,
-    pivotX: forwardX ? height * 0.08 : side * height * 0.16,
-    pivotY: minY + height * 0.72,
-    pivotZ: forwardX ? side * height * 0.14 : 0,
+    pivotX: forwardX ? height * 0.04 : side * height * ARM_PIVOT_X,
+    pivotY: minY + height * ARM_PIVOT_Y,
+    pivotZ: forwardX ? side * height * ARM_PIVOT_X : 0,
     side,
     forwardX,
     dirty: 0,
@@ -242,13 +280,12 @@ function poseArm(rig: ArmRig, strike: ArmStrike) {
     return true;
   }
   rig.dirty = 1;
-  const rz = rig.forwardX ? -chop * 1.3 : rig.side * lift * 1.25;
-  const rx = rig.forwardX ? -rig.side * lift * 1.25 : chop * 1.25 - lift * 0.2;
+  const { rz, rx, reach } = strikeAngles(rig.side, strike);
   const cz = Math.cos(rz);
   const sz = Math.sin(rz);
   const cx = Math.cos(rx);
   const sx = Math.sin(rx);
-  const reach = chop * (rig.forwardX ? 0.12 : 0.18);
+  const swap = rig.forwardX;
   for (let i = 0; i < rig.weights.length; i++) {
     const w = rig.weights[i];
     const x0 = rig.rest[i * 3];
@@ -258,32 +295,24 @@ function poseArm(rig: ArmRig, strike: ArmStrike) {
       rig.pos.setXYZ(i, x0, y0, z0);
       continue;
     }
-    let x = x0 - rig.pivotX;
+    // Into the hero frame: lateral x, up y, forward z. Roman swaps x and z.
+    const dx = x0 - rig.pivotX;
+    const dz = z0 - rig.pivotZ;
+    let x = swap ? dz : dx;
     let y = y0 - rig.pivotY;
-    let z = z0 - rig.pivotZ;
-    if (!rig.forwardX) {
-      const x1 = x * cz - y * sz;
-      const y1 = x * sz + y * cz;
-      x = x1;
-      y = y1;
-    } else {
-      const y1 = y * cx - z * sx;
-      const z1 = y * sx + z * cx;
-      y = y1;
-      z = z1;
-    }
-    if (!rig.forwardX) {
-      const y2 = y * cx - z * sx;
-      const z2 = y * sx + z * cx;
-      y = y2;
-      z = z2 + reach;
-    } else {
-      const x2 = x * cz - y * sz;
-      const y2 = x * sz + y * cz;
-      x = x2 + reach;
-      y = y2;
-    }
-    rig.pos.setXYZ(i, x0 + (rig.pivotX + x - x0) * w, y0 + (rig.pivotY + y - y0) * w, z0 + (rig.pivotZ + z - z0) * w);
+    let z = swap ? dx : dz;
+    // Raise out (about z), then swing back/forward (about x), then reach.
+    const x1 = x * cz - y * sz;
+    const y1 = x * sz + y * cz;
+    x = x1;
+    y = y1;
+    const y2 = y * cx - z * sx;
+    const z2 = y * sx + z * cx + reach;
+    y = y2;
+    z = z2;
+    const ox = swap ? z : x;
+    const oz = swap ? x : z;
+    rig.pos.setXYZ(i, x0 + (rig.pivotX + ox - x0) * w, y0 + (rig.pivotY + y - y0) * w, z0 + (rig.pivotZ + oz - z0) * w);
   }
   rig.pos.needsUpdate = true;
   return true;
@@ -451,34 +480,19 @@ function romanArm(geo: THREE.BufferGeometry) {
   if (!pos || !box) return null;
   const minY = box.min.y;
   const height = Math.max(0.001, box.max.y - minY);
-  let best = 0;
-  let side = 1;
+  // Roman faces +X, so its lateral axis is z.
+  const side = armSide((i) => pos.getZ(i), (i) => pos.getY(i), pos.count, minY, height);
   const weights = new Float32Array(pos.count);
   for (let i = 0; i < pos.count; i++) {
-    const y = pos.getY(i) - minY;
-    if (y < height * 0.3 || y > height * 0.96) continue;
-    const lateral = pos.getZ(i);
-    if (Math.abs(lateral) <= Math.abs(best)) continue;
-    best = lateral;
-    side = lateral < 0 ? -1 : 1;
-  }
-  const gate = height * 0.05;
-  const span = height * 0.16;
-  for (let i = 0; i < pos.count; i++) {
-    const y = pos.getY(i) - minY;
-    if (y < height * 0.28 || y > height * 0.97) continue;
-    const lateral = pos.getZ(i) * side;
-    if (lateral < gate) continue;
-    const u = Math.min(1, (lateral - gate) / span);
-    weights[i] = u * u * (3 - 2 * u);
+    weights[i] = armWeight((pos.getY(i) - minY) / height, (pos.getZ(i) * side) / height);
   }
   geo.setAttribute("armW", new THREE.BufferAttribute(weights, 1));
   const strike = new THREE.InstancedBufferAttribute(new Float32Array(ARENA_FOES * 2), 2);
   strike.setUsage(THREE.DynamicDrawUsage);
   geo.setAttribute("aStrike", strike);
-  const pivot = new THREE.Vector3(height * 0.08, minY + height * 0.72, side * height * 0.14);
+  const pivot = new THREE.Vector3(height * 0.04, minY + height * ARM_PIVOT_Y, side * height * ARM_PIVOT_X);
   const material = new THREE.MeshLambertMaterial({ vertexColors: true });
-  material.customProgramCacheKey = () => "arena-roman-arm";
+  material.customProgramCacheKey = () => "arena-roman-arm-v2";
   material.onBeforeCompile = (shader) => {
     shader.uniforms.armSide = { value: side };
     shader.uniforms.armPivot = { value: pivot };
@@ -489,39 +503,30 @@ function romanArm(geo: THREE.BufferGeometry) {
          attribute float armW;
          attribute vec2 aStrike;
          uniform float armSide;
-         uniform vec3 armPivot;`
+         uniform vec3 armPivot;
+         // Same strike as strikeAngles(): hero frame is (lateral, up, forward); roman swaps x/z.
+         vec3 armSwing(vec3 v, float lift, float chop, float reach) {
+           vec3 h = vec3(v.z, v.y, v.x);
+           float rz = armSide * (lift * 0.9 - chop * 0.5);
+           float rx = lift * 0.9 - chop * 2.0;
+           float cz = cos(rz);
+           float sz = sin(rz);
+           h = vec3(h.x * cz - h.y * sz, h.x * sz + h.y * cz, h.z);
+           float cx = cos(rx);
+           float sx = sin(rx);
+           h = vec3(h.x, h.y * cx - h.z * sx, h.y * sx + h.z * cx + reach);
+           return vec3(h.z, h.y, h.x);
+         }`
       )
       .replace(
         "#include <beginnormal_vertex>",
         `#include <beginnormal_vertex>
-         float liftN = aStrike.x;
-         float chopN = aStrike.y;
-         float rxN = -armSide * liftN * 1.25;
-         float rzN = -chopN * 1.3;
-         vec3 nrm = objectNormal;
-         float cxN = cos(rxN);
-         float sxN = sin(rxN);
-         nrm = vec3(nrm.x, nrm.y * cxN - nrm.z * sxN, nrm.y * sxN + nrm.z * cxN);
-         float czN = cos(rzN);
-         float szN = sin(rzN);
-         nrm = vec3(nrm.x * czN - nrm.y * szN, nrm.x * szN + nrm.y * czN, nrm.z);
-         objectNormal = mix(objectNormal, nrm, armW);`
+         objectNormal = mix(objectNormal, armSwing(objectNormal, aStrike.x, aStrike.y, 0.0), armW);`
       )
       .replace(
         "#include <begin_vertex>",
         `#include <begin_vertex>
-         float liftA = aStrike.x;
-         float chopA = aStrike.y;
-         float rxA = -armSide * liftA * 1.25;
-         float rzA = -chopA * 1.3;
-         vec3 arm = transformed - armPivot;
-         float cxA = cos(rxA);
-         float sxA = sin(rxA);
-         arm = vec3(arm.x, arm.y * cxA - arm.z * sxA, arm.y * sxA + arm.z * cxA);
-         float czA = cos(rzA);
-         float szA = sin(rzA);
-         arm = vec3(arm.x * czA - arm.y * szA, arm.x * szA + arm.y * czA, arm.z);
-         arm.x += chopA * 0.12;
+         vec3 arm = armSwing(transformed - armPivot, aStrike.x, aStrike.y, aStrike.y * 0.2);
          transformed = mix(transformed, arm + armPivot, armW);`
       );
   };

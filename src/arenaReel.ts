@@ -113,32 +113,42 @@ export type ArmStrike = { lift: number; chop: number };
 
 const REST_STRIKE: ArmStrike = { lift: 0, chop: 0 };
 
+/**
+ * One strike per cycle. Windup 0–30% cocks the arm, the chop lands in the next
+ * 10% (about 70 ms), contact holds 8%, recovery flows back by 90%, then a short
+ * breath. Every other cycle is a lighter cut (lower windup) so the rhythm reads
+ * as a fight, not a metronome.
+ */
 function swing(u: number): ArmStrike {
-  const p = u - Math.floor(u);
-  if (p < 0.36) {
-    const k = p / 0.36;
-    return { lift: k * k, chop: 0 };
-  }
-  if (p < 0.5) {
-    const k = (p - 0.36) / 0.14;
+  const cycle = Math.floor(u);
+  const p = u - cycle;
+  const amp = cycle % 2 === 0 ? 1 : 0.78;
+  if (p < 0.3) {
+    const k = p / 0.3;
     const e = k * k * (3 - 2 * k);
-    return { lift: 1 - e * 0.35, chop: e };
+    return { lift: amp * e, chop: 0 };
   }
-  if (p < 0.74) {
-    const k = (p - 0.5) / 0.24;
+  if (p < 0.4) {
+    const k = (p - 0.3) / 0.1;
+    const e = 1 - (1 - k) * (1 - k) * (1 - k);
+    return { lift: amp * (1 - e * 0.3), chop: e };
+  }
+  if (p < 0.48) return { lift: amp * 0.7, chop: 1 };
+  if (p < 0.9) {
+    const k = (p - 0.48) / 0.42;
     const e = k * k * (3 - 2 * k);
-    return { lift: 0.65 * (1 - e), chop: 1 - e };
+    return { lift: amp * 0.7 * (1 - e), chop: 1 - e };
   }
   return REST_STRIKE;
 }
 
 function heroBlow(i: number, t: number) {
-  const period = 0.86 + (i % 3) * 0.07;
+  const period = 0.66 + (i % 3) * 0.06;
   return swing(t / period + i * 0.41);
 }
 
 function foeBlow(i: number, t: number) {
-  const period = 1.08 + (i % 4) * 0.06;
+  const period = 0.84 + (i % 4) * 0.06;
   return swing(t / period + i * 0.17);
 }
 
