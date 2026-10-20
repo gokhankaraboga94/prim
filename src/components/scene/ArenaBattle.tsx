@@ -6,6 +6,7 @@ import * as THREE from "three";
 import { REEL_HOLD } from "../../recordCanvas";
 import { buildNameAtlas, type NameAtlas, type NameCell } from "../../nameAtlas";
 import { dropGroundSlab } from "../../groundSlab";
+import { preloadedGlb } from "../../arenaPreload";
 import { simplifySkinned } from "../../knightSoldier";
 import { HERO_YAW } from "../../heroReel";
 import {
@@ -28,6 +29,15 @@ const ARENA_FLOOR_Y = 0.025;
 
 const HERO_H = 1.58;
 const FOE_H = 1.22;
+
+type Gltf = Parameters<Parameters<GLTFLoader["load"]>[1]>[0];
+
+/** Parses a preloaded buffer when arena3 fetched it ahead; otherwise streams the file. */
+function loadGlb(loader: GLTFLoader, url: string, ok: (gltf: Gltf) => void, fail: (err: unknown) => void) {
+  const buf = preloadedGlb(url);
+  if (buf) loader.parse(buf.slice(0), "", ok, fail);
+  else loader.load(url, ok, undefined, fail);
+}
 const dummy = new THREE.Object3D();
 const pose: ArenaPose = { x: 0, y: 0, z: 0, rx: 0, ry: 0, rz: 0, s: 1 };
 
@@ -172,18 +182,6 @@ function lightenMesh(mesh: THREE.Mesh, cellFrac: number) {
   mesh.receiveShadow = false;
 }
 
-type ArmRig = {
-  pos: THREE.BufferAttribute;
-  rest: Float32Array;
-  weights: Float32Array;
-  pivotX: number;
-  pivotY: number;
-  pivotZ: number;
-  side: number;
-  forwardX: boolean;
-  dirty: number;
-};
-
 /**
  * Arm cut, in body heights. Measured on the arena models: legs, skirts and capes
  * reach 0.20–0.33 wide below 0.35h, the hanging hand sits near 0.45h, the shoulder
@@ -198,6 +196,9 @@ const ARM_GATE = 0.11;
 const ARM_FULL = 0.18;
 const ARM_PIVOT_Y = 0.8;
 const ARM_PIVOT_X = 0.14;
+/** Elbow sits 0.17h below the shoulder; vertices under it are forearm and hand. */
+const ARM_ELBOW_DROP = 0.17;
+const ARM_ELBOW_Y = ARM_PIVOT_Y - ARM_ELBOW_DROP;
 
 function smooth01(a: number, b: number, v: number) {
   const k = Math.max(0, Math.min(1, (v - a) / (b - a)));
@@ -207,6 +208,114 @@ function smooth01(a: number, b: number, v: number) {
 function armWeight(yN: number, latN: number) {
   if (yN < ARM_Y_LO || yN > ARM_Y_HI || latN < ARM_GATE) return 0;
   return smooth01(ARM_GATE, ARM_FULL, latN) * smooth01(ARM_Y_LO, ARM_Y_IN, yN) * (1 - smooth01(ARM_Y_FADE, ARM_Y_HI, yN));
+}
+
+function forearmWeight(yN: number) {
+  return 1 - smooth01(ARM_ELBOW_Y - 0.03, ARM_ELBOW_Y + 0.03, yN);
+}
+
+/**
+ * The strike runs on the GPU. Per vertex: armW (whole arm) and armE (forearm);
+ * per draw: lift/chop. Hero frame is (lateral toward the weapon side, up,
+ * forward); armSwap=1 maps the roman, which faces +X, into that frame.
+ * Windup: elbow flexes and the shoulder cocks the arm out and back. Chop: the
+ * shoulder sweeps forward over the outside while the elbow extends, and the
+ * hand reaches. Recovery scales both inputs together, so the arm returns straight.
+ */
+const ARM_GLSL = `
+  attribute float armW;
+  attribute float armE;
+  uniform float armSide;
+  uniform float armSwap;
+  uniform vec3 armPivot;
+  uniform float armElbow;
+  vec3 armFrame(vec3 v) { return mix(v, v.zyx, armSwap); }
+  vec3 armRotX(vec3 v, float a) { float c = cos(a); float s = sin(a); return vec3(v.x, v.y * c - v.z * s, v.y * s + v.z * c); }
+  vec3 armRotZ(vec3 v, float a) { float c = cos(a); float s = sin(a); return vec3(v.x * c - v.y * s, v.x * s + v.y * c, v.z); }
+  vec3 armSwing(vec3 rel, float wE, float lift, float chop, float reach) {
+    vec3 h = armFrame(rel);
+    float bend = -(lift * 1.15 - chop * 0.8);
+    vec3 elbow = vec3(0.0, -armElbow, 0.0);
+    vec3 fore = armRotX(h - elbow, bend) + elbow;
+    h = mix(h, fore, wE);
+    h = armRotZ(h, armSide * (lift * 0.9 - chop * 0.5));
+    h = armRotX(h, lift * 0.9 - chop * 2.0);
+    h.z += reach;
+    return armFrame(h);
+  }
+  vec3 armSwingNormal(vec3 n, float wE, float lift, float chop) {
+    vec3 h = armFrame(n);
+    float bend = -(lift * 1.15 - chop * 0.8);
+    h = mix(h, armRotX(h, bend), wE);
+    h = armRotZ(h, armSide * (lift * 0.9 - chop * 0.5));
+    h = armRotX(h, lift * 0.9 - chop * 2.0);
+    return armFrame(h);
+  }
+`;
+
+type ArmUniforms = {
+  uStrike: { value: THREE.Vector2 };
+  armSide: { value: number };
+  armSwap: { value: number };
+  armPivot: { value: THREE.Vector3 };
+  armElbow: { value: number };
+};
+
+/** Writes armW/armE onto the geometry and returns the weapon side. */
+function paintArmWeights(geo: THREE.BufferGeometry, forwardX: boolean) {
+  const pos = geo.getAttribute("position") as THREE.BufferAttribute;
+  geo.computeBoundingBox();
+  const box = geo.boundingBox;
+  if (!pos || !box) return null;
+  const minY = box.min.y;
+  const height = Math.max(0.001, box.max.y - minY);
+  const lat = (i: number) => (forwardX ? pos.getZ(i) : pos.getX(i));
+  const side = armSide(lat, (i) => pos.getY(i), pos.count, minY, height);
+  const armW = new Float32Array(pos.count);
+  const armE = new Float32Array(pos.count);
+  for (let i = 0; i < pos.count; i++) {
+    const yN = (pos.getY(i) - minY) / height;
+    armW[i] = armWeight(yN, (lat(i) * side) / height);
+    armE[i] = armW[i] > 0 ? forearmWeight(yN) : 0;
+  }
+  geo.setAttribute("armW", new THREE.BufferAttribute(armW, 1));
+  geo.setAttribute("armE", new THREE.BufferAttribute(armE, 1));
+  const pivot = forwardX
+    ? new THREE.Vector3(height * 0.04, minY + height * ARM_PIVOT_Y, side * height * ARM_PIVOT_X)
+    : new THREE.Vector3(side * height * ARM_PIVOT_X, minY + height * ARM_PIVOT_Y, 0);
+  return { side, pivot, elbow: height * ARM_ELBOW_DROP };
+}
+
+function armUniforms(side: number, pivot: THREE.Vector3, elbow: number, forwardX: boolean): ArmUniforms {
+  return {
+    uStrike: { value: new THREE.Vector2(0, 0) },
+    armSide: { value: side },
+    armSwap: { value: forwardX ? 1 : 0 },
+    armPivot: { value: pivot },
+    armElbow: { value: elbow },
+  };
+}
+
+/** `strikeExpr` reads the strike for this vertex: a uniform for heroes, an instance attribute for foes. */
+function installArmShader(material: THREE.Material, uniforms: ArmUniforms, strikeExpr: string, key: string) {
+  material.customProgramCacheKey = () => key;
+  material.onBeforeCompile = (shader) => {
+    Object.assign(shader.uniforms, uniforms);
+    shader.vertexShader = shader.vertexShader
+      .replace("#include <common>", `#include <common>\n${ARM_GLSL}\n${strikeExpr}`)
+      .replace(
+        "#include <beginnormal_vertex>",
+        `#include <beginnormal_vertex>
+         vec2 armHit = armStrike();
+         objectNormal = normalize(mix(objectNormal, armSwingNormal(objectNormal, armE, armHit.x, armHit.y), armW));`
+      )
+      .replace(
+        "#include <begin_vertex>",
+        `#include <begin_vertex>
+         vec3 armSwung = armSwing(transformed - armPivot, armE, armHit.x, armHit.y, armHit.y * 0.2) + armPivot;
+         transformed = mix(transformed, armSwung, armW);`
+      );
+  };
 }
 
 /** Pick the weapon side: the furthest lateral vertex inside the arm band. */
@@ -224,101 +333,15 @@ function armSide(getLat: (i: number) => number, getY: (i: number) => number, cou
   return side;
 }
 
-/**
- * Shoulder angles for a strike, in the hero frame (lateral x toward the weapon
- * side, up y, forward z). Windup cocks the arm out and back; the chop sweeps it
- * over the outside and lands pointing forward, slightly down, with a short reach.
- * Recovery scales both inputs together so the arm returns straight to rest.
- */
-function strikeAngles(side: number, strike: ArmStrike) {
-  return {
-    rz: side * (strike.lift * 0.9 - strike.chop * 0.5),
-    rx: strike.lift * 0.9 - strike.chop * 2.0,
-    reach: strike.chop * 0.2,
-  };
-}
-
+/** Heroes: one draw each, strike comes in as a uniform the frame loop updates. */
 function rigArm(mesh: THREE.Mesh, forwardX: boolean) {
-  const pos = mesh.geometry.getAttribute("position") as THREE.BufferAttribute;
-  if (!pos) return;
-  mesh.geometry.computeBoundingBox();
-  const box = mesh.geometry.boundingBox;
-  if (!box) return;
-  const minY = box.min.y;
-  const height = Math.max(0.001, box.max.y - minY);
-  const rest = new Float32Array(pos.count * 3);
-  for (let i = 0; i < pos.count; i++) {
-    rest[i * 3] = pos.getX(i);
-    rest[i * 3 + 1] = pos.getY(i);
-    rest[i * 3 + 2] = pos.getZ(i);
-  }
-  const lat = (i: number) => (forwardX ? rest[i * 3 + 2] : rest[i * 3]);
-  const side = armSide(lat, (i) => rest[i * 3 + 1], pos.count, minY, height);
-  const weights = new Float32Array(pos.count);
-  for (let i = 0; i < pos.count; i++) {
-    weights[i] = armWeight((rest[i * 3 + 1] - minY) / height, (lat(i) * side) / height);
-  }
-  const rig: ArmRig = {
-    pos,
-    rest,
-    weights,
-    pivotX: forwardX ? height * 0.04 : side * height * ARM_PIVOT_X,
-    pivotY: minY + height * ARM_PIVOT_Y,
-    pivotZ: forwardX ? side * height * ARM_PIVOT_X : 0,
-    side,
-    forwardX,
-    dirty: 0,
-  };
-  mesh.userData.arm = rig;
-}
-
-function poseArm(rig: ArmRig, strike: ArmStrike) {
-  const lift = strike.lift;
-  const chop = strike.chop;
-  if (lift === 0 && chop === 0) {
-    if (rig.dirty === 0) return false;
-    for (let i = 0; i < rig.weights.length; i++) rig.pos.setXYZ(i, rig.rest[i * 3], rig.rest[i * 3 + 1], rig.rest[i * 3 + 2]);
-    rig.pos.needsUpdate = true;
-    rig.dirty = 0;
-    return true;
-  }
-  rig.dirty = 1;
-  const { rz, rx, reach } = strikeAngles(rig.side, strike);
-  const cz = Math.cos(rz);
-  const sz = Math.sin(rz);
-  const cx = Math.cos(rx);
-  const sx = Math.sin(rx);
-  const swap = rig.forwardX;
-  for (let i = 0; i < rig.weights.length; i++) {
-    const w = rig.weights[i];
-    const x0 = rig.rest[i * 3];
-    const y0 = rig.rest[i * 3 + 1];
-    const z0 = rig.rest[i * 3 + 2];
-    if (w < 0.001) {
-      rig.pos.setXYZ(i, x0, y0, z0);
-      continue;
-    }
-    // Into the hero frame: lateral x, up y, forward z. Roman swaps x and z.
-    const dx = x0 - rig.pivotX;
-    const dz = z0 - rig.pivotZ;
-    let x = swap ? dz : dx;
-    let y = y0 - rig.pivotY;
-    let z = swap ? dx : dz;
-    // Raise out (about z), then swing back/forward (about x), then reach.
-    const x1 = x * cz - y * sz;
-    const y1 = x * sz + y * cz;
-    x = x1;
-    y = y1;
-    const y2 = y * cx - z * sx;
-    const z2 = y * sx + z * cx + reach;
-    y = y2;
-    z = z2;
-    const ox = swap ? z : x;
-    const oz = swap ? x : z;
-    rig.pos.setXYZ(i, x0 + (rig.pivotX + ox - x0) * w, y0 + (rig.pivotY + y - y0) * w, z0 + (rig.pivotZ + oz - z0) * w);
-  }
-  rig.pos.needsUpdate = true;
-  return true;
+  const cut = paintArmWeights(mesh.geometry, forwardX);
+  if (!cut) return;
+  const uniforms = armUniforms(cut.side, cut.pivot, cut.elbow, forwardX);
+  const material = Array.isArray(mesh.material) ? mesh.material[0] : mesh.material;
+  installArmShader(material, uniforms, "uniform vec2 uStrike;\nvec2 armStrike() { return uStrike; }", "arena-hero-arm");
+  material.needsUpdate = true;
+  mesh.userData.armStrike = uniforms.uStrike.value;
 }
 
 function fitHero(scene: THREE.Group, yaw: number, light = false) {
@@ -341,7 +364,10 @@ function fitHero(scene: THREE.Group, yaw: number, light = false) {
   scene.updateMatrixWorld(true);
   scene.traverse((obj) => {
     const mesh = obj as THREE.Mesh;
-    if (mesh.isMesh) lightenMesh(mesh, light ? 0 : 0.008);
+    if (!mesh.isMesh) return;
+    // Packed models keep their geometry unless they are still heavy (split shells resist offline simplify).
+    const heavy = mesh.geometry.getAttribute("position").count > 70000;
+    lightenMesh(mesh, light ? (heavy ? 0.006 : 0) : 0.008);
   });
   scene.rotation.y = yaw;
   scene.updateMatrixWorld(true);
@@ -421,18 +447,23 @@ function ArenaModel({ url = ARENA_URL, light = false }: { url?: string; light?: 
   useEffect(() => {
     const loader = new GLTFLoader();
     let drop = false;
-    loader.load(url, (gltf) => {
-      const host = rig.current;
-      if (drop || !host) return;
-      const model = gltf.scene;
-      model.scale.setScalar(ARENA_SCALE);
-      model.position.set(0, -ARENA_FLOOR_Y * ARENA_SCALE, 0);
-      model.traverse((obj) => {
-        const mesh = obj as THREE.Mesh;
-        if (mesh.isMesh) lightenMesh(mesh, light ? 0 : 0.006);
-      });
-      host.add(model);
-    });
+    loadGlb(
+      loader,
+      url,
+      (gltf) => {
+        const host = rig.current;
+        if (drop || !host) return;
+        const model = gltf.scene;
+        model.scale.setScalar(ARENA_SCALE);
+        model.position.set(0, -ARENA_FLOOR_Y * ARENA_SCALE, 0);
+        model.traverse((obj) => {
+          const mesh = obj as THREE.Mesh;
+          if (mesh.isMesh) lightenMesh(mesh, light ? 0 : 0.006);
+        });
+        host.add(model);
+      },
+      (err) => console.warn("arena model failed", url, err)
+    );
     return () => {
       drop = true;
       const host = rig.current;
@@ -481,58 +512,14 @@ function romanArm(geo: THREE.BufferGeometry) {
   geo.computeBoundingBox();
   const box = geo.boundingBox;
   if (!pos || !box) return null;
-  const minY = box.min.y;
-  const height = Math.max(0.001, box.max.y - minY);
-  // Roman faces +X, so its lateral axis is z.
-  const side = armSide((i) => pos.getZ(i), (i) => pos.getY(i), pos.count, minY, height);
-  const weights = new Float32Array(pos.count);
-  for (let i = 0; i < pos.count; i++) {
-    weights[i] = armWeight((pos.getY(i) - minY) / height, (pos.getZ(i) * side) / height);
-  }
-  geo.setAttribute("armW", new THREE.BufferAttribute(weights, 1));
+  // Roman faces +X, so its lateral axis is z; the shader swaps into the hero frame.
+  const cut = paintArmWeights(geo, true);
+  if (!cut) return null;
   const strike = new THREE.InstancedBufferAttribute(new Float32Array(ARENA_FOES * 2), 2);
   strike.setUsage(THREE.DynamicDrawUsage);
   geo.setAttribute("aStrike", strike);
-  const pivot = new THREE.Vector3(height * 0.04, minY + height * ARM_PIVOT_Y, side * height * ARM_PIVOT_X);
   const material = new THREE.MeshLambertMaterial({ vertexColors: true });
-  material.customProgramCacheKey = () => "arena-roman-arm-v2";
-  material.onBeforeCompile = (shader) => {
-    shader.uniforms.armSide = { value: side };
-    shader.uniforms.armPivot = { value: pivot };
-    shader.vertexShader = shader.vertexShader
-      .replace(
-        "#include <common>",
-        `#include <common>
-         attribute float armW;
-         attribute vec2 aStrike;
-         uniform float armSide;
-         uniform vec3 armPivot;
-         // Same strike as strikeAngles(): hero frame is (lateral, up, forward); roman swaps x/z.
-         vec3 armSwing(vec3 v, float lift, float chop, float reach) {
-           vec3 h = vec3(v.z, v.y, v.x);
-           float rz = armSide * (lift * 0.9 - chop * 0.5);
-           float rx = lift * 0.9 - chop * 2.0;
-           float cz = cos(rz);
-           float sz = sin(rz);
-           h = vec3(h.x * cz - h.y * sz, h.x * sz + h.y * cz, h.z);
-           float cx = cos(rx);
-           float sx = sin(rx);
-           h = vec3(h.x, h.y * cx - h.z * sx, h.y * sx + h.z * cx + reach);
-           return vec3(h.z, h.y, h.x);
-         }`
-      )
-      .replace(
-        "#include <beginnormal_vertex>",
-        `#include <beginnormal_vertex>
-         objectNormal = mix(objectNormal, armSwing(objectNormal, aStrike.x, aStrike.y, 0.0), armW);`
-      )
-      .replace(
-        "#include <begin_vertex>",
-        `#include <begin_vertex>
-         vec3 arm = armSwing(transformed - armPivot, aStrike.x, aStrike.y, aStrike.y * 0.2);
-         transformed = mix(transformed, arm + armPivot, armW);`
-      );
-  };
+  installArmShader(material, armUniforms(cut.side, cut.pivot, cut.elbow, true), "attribute vec2 aStrike;\nvec2 armStrike() { return aStrike; }", "arena-roman-arm-v3");
   return { geo, material, strike };
 }
 
@@ -665,14 +652,14 @@ function ArenaHeroes({ urls, light = false }: { urls: readonly string[]; light?:
       }
     };
     urls.forEach((url, index) => {
-      loader.load(
+      loadGlb(
+        loader,
         url,
         (gltf) => {
           if (drop) return;
           loaded[index] = fitHero(gltf.scene, HERO_YAW[index] ?? 0, light);
           settle();
         },
-        undefined,
         (err) => {
           if (drop) return;
           console.warn("arena hero failed", url, err);
@@ -712,10 +699,10 @@ function ArenaHeroes({ urls, light = false }: { urls: readonly string[]; light?:
 function ArenaHero({ index, body, heroes }: { index: number; body: THREE.Object3D; heroes: number }) {
   const ref = useRef<THREE.Group>(null);
   const arms = useMemo(() => {
-    const list: ArmRig[] = [];
+    const list: THREE.Vector2[] = [];
     body.traverse((obj) => {
       const mesh = obj as THREE.Mesh;
-      if (mesh.isMesh && mesh.userData.arm) list.push(mesh.userData.arm as ArmRig);
+      if (mesh.isMesh && mesh.userData.armStrike) list.push(mesh.userData.armStrike as THREE.Vector2);
     });
     return list;
   }, [body]);
@@ -726,15 +713,8 @@ function ArenaHero({ index, body, heroes }: { index: number; body: THREE.Object3
     arenaHero(index, t, pose, heroes);
     node.position.set(pose.x, pose.y, pose.z);
     node.rotation.set(pose.rx, pose.ry, pose.rz);
-    const hit = arenaHeroStrike(index, t);
-    let moved = false;
-    for (const arm of arms) moved = poseArm(arm, hit) || moved;
-    if (moved) {
-      body.traverse((obj) => {
-        const mesh = obj as THREE.Mesh;
-        if (mesh.isMesh) mesh.geometry.computeVertexNormals();
-      });
-    }
+    const hit: ArmStrike = arenaHeroStrike(index, t);
+    for (const arm of arms) arm.set(hit.lift, hit.chop);
   });
   return (
     <group ref={ref}>

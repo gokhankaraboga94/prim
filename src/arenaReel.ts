@@ -140,43 +140,61 @@ export type ArmStrike = { lift: number; chop: number };
 
 const REST_STRIKE: ArmStrike = { lift: 0, chop: 0 };
 
+/** Between strikes a fighter holds the weapon half raised in front, never hanging. */
+const GUARD_STRIKE: ArmStrike = { lift: 0.38, chop: 0.22 };
+
+function mixStrike(a: ArmStrike, b: ArmStrike, k: number): ArmStrike {
+  return { lift: a.lift + (b.lift - a.lift) * k, chop: a.chop + (b.chop - a.chop) * k };
+}
+
 /**
- * One strike per cycle. Windup 0–30% cocks the arm, the chop lands in the next
- * 10% (about 70 ms), contact holds 8%, recovery flows back by 90%, then a short
- * breath. Every other cycle is a lighter cut (lower windup) so the rhythm reads
- * as a fight, not a metronome.
+ * One strike, from guard back to guard. Windup 0–28% cocks the arm out and back
+ * (elbow bent), the chop lands over the next 16% (about 120 ms at 0.75 s), the
+ * hand holds on the target 8%, recovery eases back into guard by 85%. `amp`
+ * lowers the windup for a lighter cut.
  */
-function swing(u: number): ArmStrike {
-  const cycle = Math.floor(u);
-  const p = u - cycle;
-  const amp = cycle % 2 === 0 ? 1 : 0.78;
-  if (p < 0.3) {
-    const k = p / 0.3;
-    const e = k * k * (3 - 2 * k);
-    return { lift: amp * e, chop: 0 };
+function swing(p: number, amp: number): ArmStrike {
+  const cocked: ArmStrike = { lift: amp, chop: 0 };
+  const impact: ArmStrike = { lift: amp * 0.7, chop: 1 };
+  if (p < 0.28) {
+    const k = p / 0.28;
+    return mixStrike(GUARD_STRIKE, cocked, k * k * (3 - 2 * k));
   }
-  if (p < 0.4) {
-    const k = (p - 0.3) / 0.1;
-    const e = 1 - (1 - k) * (1 - k) * (1 - k);
-    return { lift: amp * (1 - e * 0.3), chop: e };
+  if (p < 0.44) {
+    const k = (p - 0.28) / 0.16;
+    return mixStrike(cocked, impact, 1 - (1 - k) * (1 - k) * (1 - k));
   }
-  if (p < 0.48) return { lift: amp * 0.7, chop: 1 };
-  if (p < 0.9) {
-    const k = (p - 0.48) / 0.42;
-    const e = k * k * (3 - 2 * k);
-    return { lift: amp * 0.7 * (1 - e), chop: 1 - e };
+  if (p < 0.52) return impact;
+  if (p < 0.85) {
+    const k = (p - 0.52) / 0.33;
+    return mixStrike(impact, GUARD_STRIKE, k * k * (3 - 2 * k));
   }
-  return REST_STRIKE;
+  return GUARD_STRIKE;
+}
+
+/**
+ * Combos, not a metronome: `blows` quick strikes of `dur` seconds each, then
+ * guard until the bar of `bar` seconds ends. Every other strike is lighter.
+ */
+function combo(t: number, bar: number, blows: number, dur: number, phase: number): ArmStrike {
+  const local = (((t + phase) % bar) + bar) % bar;
+  const n = Math.floor(local / dur);
+  if (n >= blows) return GUARD_STRIKE;
+  const beat = Math.floor((t + phase) / bar) * blows + n;
+  return swing((local - n * dur) / dur, beat % 2 === 0 ? 1 : 0.8);
 }
 
 function heroBlow(i: number, t: number) {
-  const period = 0.66 + (i % 3) * 0.06;
-  return swing(t / period + i * 0.41);
+  const blows = 2 + (i % 2);
+  const dur = 0.72 + (i % 3) * 0.05;
+  const bar = blows * dur + 0.7 + (i % 4) * 0.22;
+  return combo(t, bar, blows, dur, i * 0.53);
 }
 
 function foeBlow(i: number, t: number) {
-  const period = 0.84 + (i % 4) * 0.06;
-  return swing(t / period + i * 0.17);
+  const dur = 0.86 + (i % 4) * 0.05;
+  const bar = dur + 0.9 + (i % 5) * 0.21;
+  return combo(t, bar, 1, dur, i * 0.37);
 }
 
 export function arenaHeroStrike(i: number, t: number): ArmStrike {

@@ -22,7 +22,8 @@ import type { OrduId } from "../orduReel";
 import type { OkId } from "../okReel";
 import type { KalkanId } from "../kalkanReel";
 import type { HeroId } from "../heroReel";
-import type { Arena2Id, Arena3Id, ArenaId } from "../arenaReel";
+import { ARENA3_ARENA_URL, ARENA3_HERO_URLS, type Arena2Id, type Arena3Id, type ArenaId } from "../arenaReel";
+import { preloadGlbs } from "../arenaPreload";
 import type { Bout2Id, BoutId } from "../boutReel";
 import type { KayitId } from "../kayitReel";
 
@@ -84,8 +85,24 @@ export function ReelCapture({ soldiers, names, commanders = [], level, pressure,
   const [preview, setPreview] = useState("");
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
+  // Arena3 fetches its packed models first; the scene mounts once they are in memory.
+  const [assets, setAssets] = useState(() => (arena3 ? { ready: false, done: 0, total: ARENA3_HERO_URLS.length + 1 } : { ready: true, done: 0, total: 0 }));
 
   useEffect(() => {
+    if (!arena3) return;
+    let stop = false;
+    void preloadGlbs([...ARENA3_HERO_URLS, ARENA3_ARENA_URL], (done, total) => {
+      if (!stop) setAssets({ ready: false, done, total });
+    }).then(() => {
+      if (!stop) setAssets((cur) => ({ ...cur, ready: true }));
+    });
+    return () => {
+      stop = true;
+    };
+  }, [arena3]);
+
+  useEffect(() => {
+    if (!assets.ready) return;
     let stop = false;
     (async () => {
       const start = performance.now();
@@ -127,7 +144,7 @@ export function ReelCapture({ soldiers, names, commanders = [], level, pressure,
     return () => {
       stop = true;
     };
-  }, [clip]);
+  }, [clip, assets.ready]);
 
   useEffect(() => {
     return () => {
@@ -151,7 +168,7 @@ export function ReelCapture({ soldiers, names, commanders = [], level, pressure,
     <div className="reel-capture">
       <div className="reel-capture-scene">
         <div className="reel-capture-frame">
-        {phase !== "done" && (
+        {phase !== "done" && assets.ready && (
         <SceneErrorBoundary
           onError={(e) => {
             setErr(e.message || "Sahne çöktü.");
@@ -216,7 +233,7 @@ export function ReelCapture({ soldiers, names, commanders = [], level, pressure,
 
       {(phase === "boot" || phase === "rec") && (
         <div className="reel-capture-hud">
-          <p>{phase === "boot" ? "Sahne hazırlanıyor…" : "Kayıt alınıyor…"}</p>
+          <p>{phase === "boot" ? (assets.ready ? "Sahne hazırlanıyor…" : `Modeller yükleniyor… ${assets.done}/${assets.total}`) : "Kayıt alınıyor…"}</p>
         </div>
       )}
 
