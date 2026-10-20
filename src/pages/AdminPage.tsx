@@ -1129,7 +1129,7 @@ export function AdminPage() {
             <p className="muted">52 saniye. 1vs1 ile aynı çim ve kamera. Hulk, King Kong ile dövüşür. Hulk sağ ayağıyla tekme atar, Kong yumruklar. İkisinin de üstünde kırmızı can barı var. Hulk kazanır, Kong düşer. Hulk dokusu duruyor.</p>
           )}
           {isKayit(reelShot) && (
-            <p className="muted">15 saniye. Açılışta bir karede otuz kadar asker, isimler siyah plakada sarı ve net. Kamera geri çekilince ordunun büyük bölümü görünür, sonra kaleye döner. Kale birkaç saniye durur, kamera tekrar askerlere döner.</p>
+            <p className="muted">15 saniye. Askerler kare dizilir, arkaya doğru. Açılışta bir karede otuz kadar asker, isimler siyah plakada sarı ve net. Kamera geri çekilince ordunun büyük bölümü görünür, yeşil zemin kadrajın dışına taşar. Sonra kaleye döner. Kale birkaç saniye durur, kamera tekrar askerlere döner.</p>
           )}
           {isWars(reelShot) && (
             <p className="muted">Tüm takipçiler sahada. Düşman iki kat. Şövalyeler Vaporworks Knight (CC-BY): parlak gri kask, mavi gövde. İsimler sarı. Düşman kazanır.</p>

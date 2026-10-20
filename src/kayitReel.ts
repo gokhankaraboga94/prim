@@ -4,6 +4,8 @@ export const KAYIT_ID = "kayit" as const;
 export type KayitId = typeof KAYIT_ID;
 export const KAYIT_MODE = { id: KAYIT_ID, label: "kayıt" } as const;
 export const KAYIT_SECONDS = 15;
+/** Green field big enough that the pull-back stays inside the grass. */
+export const KAYIT_FIELD = 16000;
 
 export function isKayit(id: string | null | undefined): id is KayitId {
   return id === KAYIT_ID;

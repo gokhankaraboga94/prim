@@ -1973,7 +1973,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
         } else if (dragon) {
           lift = 1.55;
           nx = pos.x;
-        } else if (namePlate) lift = 2.2 + row * 1.62 + (col % 2) * 0.42;
+        } else if (namePlate) lift = 2.28 + Math.min(row, 5) * 0.48 + (col % 2) * 0.32;
         else if (film) {
           lift = 1.32;
           nx = pos.x;
