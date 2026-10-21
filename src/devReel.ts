@@ -25,11 +25,15 @@ export const DEV10_ID = "dev10" as const;
 export type Dev10Id = typeof DEV10_ID;
 export const DEV11_ID = "dev11" as const;
 export type Dev11Id = typeof DEV11_ID;
+export const DEV12_ID = "dev12" as const;
+export type Dev12Id = typeof DEV12_ID;
+export const DEV13_ID = "dev13" as const;
+export type Dev13Id = typeof DEV13_ID;
 export const SNAKE_ID = "yilan1" as const;
 export type SnakeId = typeof SNAKE_ID;
 export const DEVS_ID = "devler" as const;
 export type DevsId = typeof DEVS_ID;
-export type GiantId = DevId | Dev2Id | Dev3Id | Dev4Id | Dev5Id | Dev6Id | Dev7Id | Dev8Id | Dev9Id | Dev10Id | Dev11Id | SnakeId | DevsId;
+export type GiantId = DevId | Dev2Id | Dev3Id | Dev4Id | Dev5Id | Dev6Id | Dev7Id | Dev8Id | Dev9Id | Dev10Id | Dev11Id | Dev12Id | Dev13Id | SnakeId | DevsId;
 export const DEV2_MODE = { id: DEV2_ID, label: "DEV2" } as const;
 export const DEV3_MODE = { id: DEV3_ID, label: "DEV3" } as const;
 export const DEV4_MODE = { id: DEV4_ID, label: "DEV4" } as const;
@@ -40,6 +44,8 @@ export const DEV8_MODE = { id: DEV8_ID, label: "DEV8" } as const;
 export const DEV9_MODE = { id: DEV9_ID, label: "DEV9" } as const;
 export const DEV10_MODE = { id: DEV10_ID, label: "DEV10" } as const;
 export const DEV11_MODE = { id: DEV11_ID, label: "DEV11" } as const;
+export const DEV12_MODE = { id: DEV12_ID, label: "DEV12" } as const;
+export const DEV13_MODE = { id: DEV13_ID, label: "DEV13" } as const;
 export const SNAKE_MODE = { id: SNAKE_ID, label: "yılan1" } as const;
 export const DEVS_MODE = { id: DEVS_ID, label: "devler" } as const;
 
@@ -87,6 +93,25 @@ export function isDev11(id: string | null | undefined): id is Dev11Id {
   return id === DEV11_ID;
 }
 
+export function isDev12(id: string | null | undefined): id is Dev12Id {
+  return id === DEV12_ID;
+}
+
+export function isDev13(id: string | null | undefined): id is Dev13Id {
+  return id === DEV13_ID;
+}
+
+/** DEV11 and its copies: one giant that kicks instead of swinging. Only the model differs. */
+export function isKicker(id: string | null | undefined) {
+  return id === DEV11_ID || id === DEV12_ID || id === DEV13_ID;
+}
+
+export type KickModel = "hulk" | "alien" | "alien-lite";
+
+export function kickModel(id: string | null | undefined): KickModel {
+  return id === DEV13_ID ? "alien-lite" : id === DEV12_ID ? "alien" : "hulk";
+}
+
 export function isDevDread(id: string | null | undefined) {
   return id === DEV5_ID || id === DEV6_ID;
 }
@@ -100,19 +125,19 @@ export function isDevs(id: string | null | undefined): id is DevsId {
 }
 
 export function isDevBig(id: string | null | undefined) {
-  return id === DEV2_ID || id === DEV3_ID || id === DEV4_ID || id === DEV5_ID || id === DEV6_ID || id === DEV7_ID || id === DEV8_ID || id === DEV9_ID || id === DEV10_ID || id === DEV11_ID || id === SNAKE_ID || id === DEVS_ID;
+  return id === DEV2_ID || id === DEV3_ID || id === DEV4_ID || id === DEV5_ID || id === DEV6_ID || id === DEV7_ID || id === DEV8_ID || id === DEV9_ID || id === DEV10_ID || id === DEV11_ID || id === DEV12_ID || id === DEV13_ID || id === SNAKE_ID || id === DEVS_ID;
 }
 
 export function isDevAll(id: string | null | undefined) {
-  return id === DEV3_ID || id === DEV4_ID || id === DEV5_ID || id === DEV6_ID || id === DEV7_ID || id === DEV8_ID || id === DEV9_ID || id === DEV10_ID || id === DEV11_ID || id === SNAKE_ID || id === DEVS_ID;
+  return id === DEV3_ID || id === DEV4_ID || id === DEV5_ID || id === DEV6_ID || id === DEV7_ID || id === DEV8_ID || id === DEV9_ID || id === DEV10_ID || id === DEV11_ID || id === DEV12_ID || id === DEV13_ID || id === SNAKE_ID || id === DEVS_ID;
 }
 
 export function isDevSword(id: string | null | undefined) {
-  return id === DEV4_ID || id === DEV5_ID || id === DEV6_ID || id === DEV7_ID || id === DEV8_ID || id === DEV9_ID || id === DEV10_ID || id === DEV11_ID || id === SNAKE_ID || id === DEVS_ID;
+  return id === DEV4_ID || id === DEV5_ID || id === DEV6_ID || id === DEV7_ID || id === DEV8_ID || id === DEV9_ID || id === DEV10_ID || id === DEV11_ID || id === DEV12_ID || id === DEV13_ID || id === SNAKE_ID || id === DEVS_ID;
 }
 
 export function isGiantShot(id: string | null | undefined): id is GiantId {
-  return id === DEV_ID || id === DEV2_ID || id === DEV3_ID || id === DEV4_ID || id === DEV5_ID || id === DEV6_ID || id === DEV7_ID || id === DEV8_ID || id === DEV9_ID || id === DEV10_ID || id === DEV11_ID || id === SNAKE_ID || id === DEVS_ID;
+  return id === DEV_ID || id === DEV2_ID || id === DEV3_ID || id === DEV4_ID || id === DEV5_ID || id === DEV6_ID || id === DEV7_ID || id === DEV8_ID || id === DEV9_ID || id === DEV10_ID || id === DEV11_ID || id === DEV12_ID || id === DEV13_ID || id === SNAKE_ID || id === DEVS_ID;
 }
 
 export const DEV_SECONDS = 58;
@@ -126,6 +151,8 @@ export const DEV8_SECONDS = DEV_SECONDS;
 export const DEV9_SECONDS = DEV_SECONDS;
 export const DEV10_SECONDS = DEV_SECONDS;
 export const DEV11_SECONDS = DEV_SECONDS;
+export const DEV12_SECONDS = DEV_SECONDS;
+export const DEV13_SECONDS = DEV_SECONDS;
 export const SNAKE_SECONDS = DEV_SECONDS;
 export const DEVS_SECONDS = DEV_SECONDS;
 export const DEV_N = 300;

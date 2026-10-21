@@ -3,15 +3,74 @@ import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { REEL_HOLD } from "../../recordCanvas";
-import { devKick } from "../../devReel";
+import { devKick, type KickModel } from "../../devReel";
 import { simplifySkinned } from "../../knightSoldier";
+import { dropGroundSlab } from "../../groundSlab";
 
-const HULK_URL = "/models/hulk+3d+model.glb";
 const HEIGHT = 15.6;
-const HIP = new THREE.Vector3(-0.155, 0.43, 0.02);
-const KNEE = new THREE.Vector3(-0.145, 0.25, 0.005);
-const ANKLE = new THREE.Vector3(-0.17, 0.09, -0.04);
 const AXIS = new THREE.Vector3(1, 0, 0);
+
+type LegWeights = { hip: number; knee: number; ankle: number };
+
+/** Joints and the kicking-leg cut, in the model's own units (both models face +z, about 1 unit tall). */
+type KickRig = {
+  url: string;
+  hip: THREE.Vector3;
+  knee: THREE.Vector3;
+  ankle: THREE.Vector3;
+  /** Grid cell for the runtime merge; 0 when the file is already packed offline. */
+  cell: number;
+  /** Bake node transforms and strip a ground slab before cutting (Tripo exports). */
+  bake: boolean;
+  leg: (x: number, y: number, z: number) => LegWeights | null;
+};
+
+const HULK_RIG: KickRig = {
+  url: "/models/hulk+3d+model.glb",
+  hip: new THREE.Vector3(-0.155, 0.43, 0.02),
+  knee: new THREE.Vector3(-0.145, 0.25, 0.005),
+  ankle: new THREE.Vector3(-0.17, 0.09, -0.04),
+  cell: 0.006,
+  bake: false,
+  leg: (x, y) => {
+    if (x > -0.04 || y > 0.5 || (y > 0.33 && x < -0.235)) return null;
+    const hip = fade(0.48, 0.37, y) * fade(-0.04, -0.1, x);
+    if (hip <= 0) return null;
+    const knee = hip > 0.85 ? fade(0.3, 0.2, y) : 0;
+    const ankle = knee > 0.9 ? fade(0.13, 0.05, y) : 0;
+    return { hip, knee, ankle };
+  },
+};
+
+/**
+ * Alien kicks with its rear (+x) leg. Measured on the mesh: that foot sits at
+ * z −0.21, knee near (0.1, 0.45, −0.04), hip joint near (0.09, 0.6, −0.11). The
+ * +x arm hangs beside it but always at z > 0.03, so z < 0 cleanly separates leg
+ * from arm; the front (−x) leg never crosses x 0.02.
+ */
+const ALIEN_LEG: KickRig["leg"] = (x, y, z) => {
+  if (x < 0.02 || y > 0.66 || z > 0.03) return null;
+  const hip = fade(0.66, 0.55, y) * fade(0.02, 0.05, x) * fade(0.03, -0.005, z);
+  if (hip <= 0) return null;
+  const knee = hip > 0.85 ? fade(0.5, 0.4, y) : 0;
+  const ankle = knee > 0.9 ? fade(0.11, 0.04, y) : 0;
+  return { hip, knee, ankle };
+};
+
+const ALIEN_RIG: KickRig = {
+  url: "/models/alien.glb",
+  hip: new THREE.Vector3(0.09, 0.6, -0.11),
+  knee: new THREE.Vector3(0.1, 0.45, -0.04),
+  ankle: new THREE.Vector3(0.12, 0.07, -0.2),
+  cell: 0.006,
+  bake: true,
+  leg: ALIEN_LEG,
+};
+
+/** Same rig on the offline-packed copy (59 MB → 4.4 MB, 92k vertices): what a phone can load. */
+const ALIEN_LITE_RIG: KickRig = { ...ALIEN_RIG, url: "/models/dev13/alien.glb", cell: 0 };
+
+const RIGS: Record<KickModel, KickRig> = { hulk: HULK_RIG, alien: ALIEN_RIG, "alien-lite": ALIEN_LITE_RIG };
 const qHip = new THREE.Quaternion();
 const qKnee = new THREE.Quaternion();
 const qAnkle = new THREE.Quaternion();
@@ -37,8 +96,7 @@ type Leg = {
   posed: boolean;
 };
 
-function splitBody(mesh: THREE.Mesh) {
-  const src = mesh.geometry;
+function splitBody(src: THREE.BufferGeometry, rig: KickRig) {
   const srcP = src.getAttribute("position") as THREE.BufferAttribute;
   const srcN = src.getAttribute("normal") as THREE.BufferAttribute | null;
   const srcU = src.getAttribute("uv") as THREE.BufferAttribute | null;
@@ -49,15 +107,12 @@ function splitBody(mesh: THREE.Mesh) {
   const ankle = new Float32Array(count);
   const dyn = new Uint8Array(count);
   for (let i = 0; i < count; i++) {
-    const x = srcP.getX(i);
-    const y = srcP.getY(i);
-    if (x > -0.04 || y > 0.5 || (y > 0.33 && x < -0.235)) continue;
-    const w = fade(0.48, 0.37, y) * fade(-0.04, -0.1, x);
-    if (w <= 0) continue;
-    hip[i] = w;
+    const w = rig.leg(srcP.getX(i), srcP.getY(i), srcP.getZ(i));
+    if (!w) continue;
+    hip[i] = w.hip;
     dyn[i] = 1;
-    knee[i] = w > 0.85 ? fade(0.3, 0.2, y) : 0;
-    ankle[i] = knee[i] > 0.9 ? fade(0.13, 0.05, y) : 0;
+    knee[i] = w.knee;
+    ankle[i] = w.ankle;
   }
   const bodyTris: number[] = [];
   const legTris: number[] = [];
@@ -122,16 +177,18 @@ function splitBody(mesh: THREE.Mesh) {
   return { body: bake(bodyTris, false).geo, leg: bake(legTris, true) };
 }
 
-export function HulkModel({ soldiers }: { soldiers: number }) {
+export function HulkModel({ soldiers, model: kind = "hulk" }: { soldiers: number; model?: KickModel }) {
   const rig = useRef<THREE.Group>(null);
+  const spec = RIGS[kind];
   const swing = useMemo(() => ({ leg: null as Leg | null }), []);
   useEffect(() => {
     const loader = new GLTFLoader();
     let drop = false;
-    loader.load(HULK_URL, (gltf) => {
+    loader.load(spec.url, (gltf) => {
       const host = rig.current;
       if (drop || !host) return;
       const model = gltf.scene;
+      model.updateMatrixWorld(true);
       let mesh: THREE.Mesh | null = null;
       model.traverse((obj) => {
         const item = obj as THREE.Mesh;
@@ -140,11 +197,17 @@ export function HulkModel({ soldiers }: { soldiers: number }) {
       if (!mesh) return;
       const body = mesh as THREE.Mesh;
       const material = body.material;
-      const reduced = simplifySkinned(body.geometry.clone(), 0.006);
+      let source = body.geometry;
+      if (spec.bake) {
+        const baked = source.clone();
+        baked.applyMatrix4(body.matrixWorld);
+        source = dropGroundSlab(baked);
+      }
+      const reduced = spec.cell > 0 ? simplifySkinned(spec.bake ? source : source.clone(), spec.cell) : source;
+      if (reduced !== source && source !== body.geometry) source.dispose();
+      const parts = splitBody(reduced, spec);
       body.geometry.dispose();
-      body.geometry = reduced;
-      const parts = splitBody(body);
-      reduced.dispose();
+      if (reduced !== body.geometry) reduced.dispose();
       const shell = new THREE.Mesh(parts.body, material);
       const kicking = new THREE.Mesh(parts.leg.geo, material);
       shell.frustumCulled = false;
@@ -196,7 +259,7 @@ export function HulkModel({ soldiers }: { soldiers: number }) {
       });
       host.clear();
     };
-  }, [swing]);
+  }, [swing, spec]);
   useFrame(({ clock }) => {
     const leg = swing.leg;
     if (!leg) return;
@@ -216,6 +279,9 @@ export function HulkModel({ soldiers }: { soldiers: number }) {
     qHip.setFromAxisAngle(AXIS, kick.hip);
     qKnee.setFromAxisAngle(AXIS, kick.knee);
     qAnkle.setFromAxisAngle(AXIS, kick.ankle);
+    const HIP = spec.hip;
+    const KNEE = spec.knee;
+    const ANKLE = spec.ankle;
     relKnee.copy(KNEE).sub(HIP).applyQuaternion(qHip);
     kneeNow.copy(relKnee).add(HIP);
     ankleNow.copy(ANKLE).sub(HIP).applyQuaternion(qHip).sub(relKnee).applyQuaternion(qKnee).add(relKnee).add(HIP);
