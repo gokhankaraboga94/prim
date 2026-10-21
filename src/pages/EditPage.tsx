@@ -4,7 +4,7 @@ import { SceneErrorBoundary } from "../components/SceneErrorBoundary";
 import { EditField } from "../components/scene/EditField";
 import { useGame } from "../hooks/useGame";
 import { CHARACTERS, TEAMS, characterById } from "../edit/catalog";
-import { assignNames, assignTeam, createStore, removeSelected, spawnUnits, startBattle } from "../edit/battle";
+import { assignNames, assignTeam, clearField, createStore, removeSelected, selectAll, spawnUnits, startBattle, unassignTeam } from "../edit/battle";
 import { disposeThumbRenderer, loadCharacter, snapshotCharacter, type CharacterAsset } from "../edit/loadModel";
 import { REEL_HEIGHT, REEL_WIDTH, reelWindow } from "../recordCanvas";
 
@@ -21,6 +21,7 @@ export function EditPage() {
   const [failed, setFailed] = useState<Record<string, boolean>>({});
   const [recording, setRecording] = useState(false);
   const recorder = useRef<MediaRecorder | null>(null);
+  const loaded = useRef<CharacterAsset[]>([]);
 
   useEffect(() => {
     const fn = () => setRev((n) => n + 1);
@@ -42,16 +43,22 @@ export function EditPage() {
 
   useEffect(() => {
     let stop = false;
-    (async () => {
-      for (const def of CHARACTERS) {
-        if (stop) return;
+    const queue = [...CHARACTERS];
+    const dispose = (asset: CharacterAsset) => {
+      asset.geometry.dispose();
+      asset.material.dispose();
+    };
+    // Three downloads at a time: the light packed heroes land while the big ones stream.
+    const worker = async () => {
+      while (queue.length && !stop) {
+        const def = queue.shift()!;
         try {
           const asset = await loadCharacter(def);
           if (stop) {
-            asset.geometry.dispose();
-            asset.material.dispose();
+            dispose(asset);
             return;
           }
+          loaded.current.push(asset);
           let thumb = "";
           try {
             thumb = snapshotCharacter(asset);
@@ -64,10 +71,13 @@ export function EditPage() {
           if (!stop) setFailed((prev) => ({ ...prev, [def.id]: true }));
         }
       }
-    })();
+    };
+    void Promise.all([worker(), worker(), worker()]);
     return () => {
       stop = true;
       disposeThumbRenderer();
+      for (const asset of loaded.current) dispose(asset);
+      loaded.current = [];
     };
   }, []);
 
@@ -78,6 +88,9 @@ export function EditPage() {
       if (event.key === "Delete" || event.key === "Backspace") {
         event.preventDefault();
         removeSelected(store);
+      } else if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "a") {
+        event.preventDefault();
+        selectAll(store);
       } else if (event.key === "Escape") {
         store.selected.clear();
         store.note = "Seçim kalktı.";
@@ -95,6 +108,8 @@ export function EditPage() {
   }, []);
 
   const selected = store.selected.size;
+  const standing = store.units.filter((unit) => unit.alive).length;
+  const selectedInTeam = store.units.some((unit) => unit.alive && unit.team > 0 && store.selected.has(unit.id));
   const teamCounts = TEAMS.map((item) => ({
     ...item,
     n: store.units.filter((unit) => unit.alive && unit.team === item.id).length,
@@ -203,14 +218,23 @@ export function EditPage() {
         <button type="button" onClick={() => assignTeam(store, team)} disabled={!selected}>
           Takım olsun
         </button>
+        <button type="button" onClick={() => unassignTeam(store)} disabled={!selectedInTeam}>
+          Takımdan çıkar
+        </button>
         <button type="button" className="edit-vs" onClick={() => startBattle(store)}>
-          {store.battle ? "Durdur" : "VS"}
+          {store.battle ? "Savaşı durdur" : "VS"}
         </button>
         <button type="button" className={recording ? "edit-rec on" : "edit-rec"} onClick={toggleRecord}>
-          {recording ? "Durdur" : "Kayıt"}
+          {recording ? "Kaydı durdur" : "Kayıt"}
+        </button>
+        <button type="button" onClick={() => selectAll(store)} disabled={!standing}>
+          Hepsini seç
         </button>
         <button type="button" onClick={() => removeSelected(store)} disabled={!selected}>
           Sil
+        </button>
+        <button type="button" onClick={() => clearField(store)} disabled={!store.units.length || recording}>
+          Haritayı temizle
         </button>
         <button type="button" onClick={() => assignNames(store, game.names, "")} disabled={!selected}>
           Rastgele ad
@@ -228,7 +252,7 @@ export function EditPage() {
       </header>
 
       <p className="edit-help">
-        Sol tık seçer, sürükleyince kutu olur. Çift tık, aynı modelden yakındakileri de seçer. Takımdan birini seçip yere tıklayınca bütün takım askeri nizamda oraya gider. Savaşta ölenlerin yeri kapanır, kalanlar yeniden dizilir. Kayıt 9:16 kadrajı savaşın olduğu yeri ortalar. Sağ tuş kamerayı döndürür, tekerlek yakınlaştırır, orta tuş ve ok tuşları haritayı kaydırır. Takımsız asker savaşmaz.
+        Sol tık seçer, sürükleyince kutu olur; Shift ekler. Çift tık, aynı modelden yakındakileri de seçer. Takımdan birini seçip yere tıklayınca bütün takım askeri nizamda oraya gider. Savaşta vurulan yere düşer, yeri kapanır, kalanlar yeniden dizilir. Kayıt 9:16 kadrajı savaşın olduğu yeri ortalar. Sağ tuş kamerayı döndürür, tekerlek yakınlaştırır, orta tuş ve ok tuşları haritayı kaydırır. Telefonda iki parmak yakınlaştırır ve kaydırır. Ctrl+A hepsini seçer, Delete siler, Esc seçimi bırakır. Takımsız asker savaşmaz.
       </p>
 
       <div className="edit-stage">

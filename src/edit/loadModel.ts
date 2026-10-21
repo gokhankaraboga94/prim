@@ -168,7 +168,8 @@ export async function loadCharacter(def: CharacterDef): Promise<CharacterAsset> 
   }
   if (meshes.length === 1 && def.id !== "colossus" && def.id !== "roman") {
     const mesh = meshes[0];
-    let geo = lighten(dropGroundSlab(bake(mesh)));
+    const slabFree = dropGroundSlab(bake(mesh));
+    const geo = def.packed ? slabFree : lighten(slabFree);
     const radius = fit(geo, def.height);
     const map = materialMap(mesh.material as THREE.Material);
     const material = new THREE.MeshLambertMaterial({

@@ -99,19 +99,20 @@ export function spawnUnits(store: EditStore, def: CharacterDef, radius: number, 
   }
   const fit = stats(def, radius);
   const cols = Math.ceil(Math.sqrt(n));
+  const rows = Math.ceil(n / cols);
   const gap = Math.max(1.15, radius * 2.2);
-  let originX = store.viewX;
-  const originZ = store.viewZ + 6;
-  if (store.units.length) originX = store.units.reduce((max, unit) => Math.max(max, unit.x), store.viewX) + gap + 1.4;
+  const origin = freeSpot(store, (cols - 1) * gap + radius * 2, (rows - 1) * gap + radius * 2);
+  // The fresh block becomes the selection so a team button applies to it straight away.
+  store.selected.clear();
   for (let i = 0; i < n; i++) {
     const col = i % cols;
     const row = Math.floor(i / cols);
     const unit: Unit = {
       id: store.nextId++,
       model: def.id,
-      x: originX + (col - (cols - 1) / 2) * gap,
+      x: clampMap(origin.x + (col - (cols - 1) / 2) * gap),
       y: 0,
-      z: originZ + row * gap,
+      z: clampMap(origin.z + (row - (rows - 1) / 2) * gap),
       yaw: def.yaw,
       yawOffset: def.yaw,
       team: 0,
@@ -133,9 +134,10 @@ export function spawnUnits(store: EditStore, def: CharacterDef, radius: number, 
     };
     store.units.push(unit);
     store.byId.set(unit.id, unit);
+    store.selected.add(unit.id);
   }
   store.nameStamp += 1;
-  store.note = n < count ? `${n} ${def.label} eklendi. Sınır doldu.` : `${n} ${def.label} eklendi.`;
+  store.note = n < count ? `${n} ${def.label} eklendi, seçili. Sınır doldu.` : `${n} ${def.label} eklendi, seçili. Takım ver.`;
   store.bump();
   return n;
 }
@@ -144,6 +146,75 @@ const MAP_LIMIT = 320;
 
 function clampMap(value: number) {
   return Math.max(-MAP_LIMIT, Math.min(MAP_LIMIT, value));
+}
+
+/**
+ * Centre of a block `w` × `d` that does not overlap standing units, searched in
+ * rings around what the camera is looking at. New troops therefore appear on
+ * screen instead of marching off to the right of the previous batch.
+ */
+function freeSpot(store: EditStore, w: number, d: number) {
+  const standing = store.units.filter((unit) => unit.alive);
+  const clear = (x: number, z: number) => {
+    for (const unit of standing) {
+      if (Math.abs(unit.x - x) < w / 2 + unit.radius + 0.6 && Math.abs(unit.z - z) < d / 2 + unit.radius + 0.6) return false;
+    }
+    return true;
+  };
+  const stepX = w + 1.6;
+  const stepZ = d + 1.6;
+  for (let ring = 0; ring < 12; ring++) {
+    const spots: [number, number][] = [];
+    for (let i = -ring; i <= ring; i++) {
+      for (let j = -ring; j <= ring; j++) {
+        if (Math.max(Math.abs(i), Math.abs(j)) !== ring) continue;
+        spots.push([i, j]);
+      }
+    }
+    spots.sort((a, b) => a[0] * a[0] + a[1] * a[1] * 0.5 - (b[0] * b[0] + b[1] * b[1] * 0.5));
+    for (const [i, j] of spots) {
+      const x = clampMap(store.viewX + i * stepX);
+      const z = clampMap(store.viewZ + j * stepZ);
+      if (clear(x, z)) return { x, z };
+    }
+  }
+  return { x: clampMap(store.viewX), z: clampMap(store.viewZ) };
+}
+
+export function selectAll(store: EditStore) {
+  store.selected.clear();
+  for (const unit of store.units) if (unit.alive) store.selected.add(unit.id);
+  store.note = store.selected.size ? `${store.selected.size} asker seçildi.` : "Haritada asker yok.";
+  store.bump();
+}
+
+export function clearField(store: EditStore) {
+  if (!store.units.length) return;
+  const n = store.units.length;
+  store.battle = false;
+  store.units = [];
+  store.byId.clear();
+  store.selected.clear();
+  store.nameStamp += 1;
+  store.note = `${n} asker kaldırıldı. Harita boş.`;
+  store.bump();
+}
+
+export function unassignTeam(store: EditStore) {
+  const picked = store.units.filter((unit) => unit.alive && store.selected.has(unit.id) && unit.team > 0);
+  if (!picked.length) {
+    store.note = "Takımdan çıkarmak için takımlı asker seç.";
+    store.bump();
+    return;
+  }
+  const touched = new Set(picked.map((unit) => unit.team));
+  for (const unit of picked) {
+    unit.team = 0;
+    unit.rank = -1;
+  }
+  for (const team of touched) dressTeam(store, team);
+  store.note = `${picked.length} asker takımdan çıktı.`;
+  store.bump();
 }
 
 function basis(face: number) {
@@ -469,19 +540,34 @@ function removeGone(store: EditStore) {
   store.nameStamp += 1;
 }
 
+const FALL_SECONDS = 0.9;
+
+/** A struck soldier pitches forward and sinks before the slot closes. Runs with or without a battle. */
+function advanceFalls(store: EditStore, step: number) {
+  let done = false;
+  for (const unit of store.units) {
+    if (unit.alive || unit.gone) continue;
+    unit.fall = Math.min(1, unit.fall + step / FALL_SECONDS);
+    const k = Math.min(1, unit.fall * 1.6);
+    unit.pitch = 1.5 * k * k * (3 - 2 * k);
+    unit.y = -unit.height * 0.12 * Math.max(0, unit.fall - 0.55) * 2.2;
+    unit.swing = 0;
+    if (unit.fall >= 1) {
+      unit.gone = true;
+      done = true;
+    }
+  }
+  if (done) removeGone(store);
+  return done;
+}
+
 export function stepUnits(store: EditStore, dt: number) {
   const step = Math.min(0.05, Math.max(0, dt));
-  let changed = false;
+  let changed = advanceFalls(store, step);
   if (!store.battle) {
-    for (const unit of store.units) unit.swing = Math.max(0, unit.swing - step * 3);
-    return false;
+    for (const unit of store.units) if (unit.alive) unit.swing = Math.max(0, unit.swing - step * 3);
+    return changed;
   }
-  for (const unit of store.units) {
-    if (unit.alive) continue;
-    unit.gone = true;
-    changed = true;
-  }
-  if (changed) removeGone(store);
   const groups = new Map<number, Unit[]>();
   for (const unit of store.units) {
     if (!unit.alive) continue;
@@ -566,7 +652,8 @@ export function stepUnits(store: EditStore, dt: number) {
           if (target.hp <= 0) {
             target.hp = 0;
             target.alive = false;
-            target.gone = true;
+            target.fall = 0;
+            store.selected.delete(target.id);
             changed = true;
           }
         }
@@ -593,10 +680,6 @@ export function stepUnits(store: EditStore, dt: number) {
       b.x = clampMap(b.x + nx * push);
       b.z = clampMap(b.z + nz * push);
     }
-  }
-  if (store.units.some((unit) => unit.gone)) {
-    removeGone(store);
-    changed = true;
   }
   const left = new Set(store.units.filter((unit) => unit.alive && unit.team > 0).map((unit) => unit.team));
   if (left.size <= 1) {

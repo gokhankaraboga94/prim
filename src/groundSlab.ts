@@ -64,6 +64,7 @@ export function dropGroundSlab(geo: THREE.BufferGeometry) {
   }
   if (!kept.length || kept.length === triCount * 3) return geo;
   const uv = geo.getAttribute("uv") as THREE.BufferAttribute | undefined;
+  const normal = geo.getAttribute("normal") as THREE.BufferAttribute | undefined;
   const map = new Map<number, number>();
   const order: number[] = [];
   const nextIndex: number[] = [];
@@ -93,6 +94,18 @@ export function dropGroundSlab(geo: THREE.BufferGeometry) {
     next.setAttribute("uv", new THREE.BufferAttribute(uvs, 2));
   }
   next.setIndex(nextIndex);
+  // Without normals a lit material renders solid black; keep the authored ones or rebuild them.
+  if (normal) {
+    const normals = new Float32Array(order.length * 3);
+    for (let i = 0; i < order.length; i++) {
+      normals[i * 3] = normal.getX(order[i]);
+      normals[i * 3 + 1] = normal.getY(order[i]);
+      normals[i * 3 + 2] = normal.getZ(order[i]);
+    }
+    next.setAttribute("normal", new THREE.BufferAttribute(normals, 3));
+  } else {
+    next.computeVertexNormals();
+  }
   geo.dispose();
   return next;
 }

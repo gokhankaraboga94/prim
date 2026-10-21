@@ -11,6 +11,10 @@ const teamColor = new Map<number, THREE.Color>(TEAMS.map((team) => [team.id, new
 const white = new THREE.Color("#ffffff");
 const gold = new THREE.Color("#ffe08a");
 const dummy = new THREE.Object3D();
+const UP = new THREE.Vector3(0, 1, 0);
+const sideAxis = new THREE.Vector3();
+const qYaw = new THREE.Quaternion();
+const qPitch = new THREE.Quaternion();
 const tint = new THREE.Color();
 const aim = new THREE.Vector3();
 const ndc = new THREE.Vector2();
@@ -68,7 +72,14 @@ function placeUnit(unit: Unit) {
   const len = Math.hypot(unit.aimX, unit.aimZ) || 1;
   const lunge = reach * Math.min(0.45, unit.radius * 0.28);
   dummy.position.set(unit.x + (unit.aimX / len) * lunge, unit.y, unit.z + (unit.aimZ / len) * lunge);
-  dummy.rotation.set(unit.pitch + reach * 0.5, unit.yaw, 0);
+  // Pitch about the model's own side axis (its local forward is rotated by -yawOffset), then yaw in the world.
+  // A lunge nods and a death falls forward for every model, whichever axis it was authored along.
+  const fx = Math.sin(-unit.yawOffset);
+  const fz = Math.cos(-unit.yawOffset);
+  sideAxis.set(fz, 0, -fx);
+  qPitch.setFromAxisAngle(sideAxis, unit.pitch + reach * 0.5);
+  qYaw.setFromAxisAngle(UP, unit.yaw);
+  dummy.quaternion.copy(qYaw).multiply(qPitch);
   dummy.scale.setScalar(unit.alive || unit.fall < 1 ? 1 : 0.001);
   dummy.updateMatrix();
 }
@@ -101,6 +112,15 @@ function EditRig({ store, assets }: { store: EditStore; assets: Record<string, C
       meshes.current.set(id, mesh);
     }
   }, [assets]);
+
+  useEffect(() => {
+    const pool = meshes.current;
+    return () => {
+      // Geometry and material belong to the asset; only the instance buffers go here.
+      for (const mesh of pool.values()) mesh.dispose();
+      pool.clear();
+    };
+  }, []);
 
   useEffect(() => {
     const keysRef = keys.current;
@@ -143,13 +163,56 @@ function EditRig({ store, assets }: { store: EditStore; assets: Record<string, C
       store.note = store.selected.size ? `${store.selected.size} asker seçildi.` : "Seçim boş.";
       store.bump();
     };
+    const hideMarquee = () => {
+      const mark = document.getElementById("edit-marquee");
+      if (mark) mark.style.display = "none";
+    };
+    const panView = (dx: number, dy: number) => {
+      const e = camera.matrixWorld.elements;
+      const rx = e[0];
+      const rz = e[2];
+      const fx = -e[8];
+      const fz = -e[10];
+      const scale = look.current.dist * 0.0016;
+      store.viewX -= (rx * dx + fx * dy) * scale;
+      store.viewZ -= (rz * dx + fz * dy) * scale;
+    };
+    // Touch: one finger taps and box-selects like the mouse; two fingers pinch to zoom and drag to pan.
+    const fingers = new Map<number, { x: number; y: number }>();
+    let pinch: { dist: number; cx: number; cy: number } | null = null;
+    let pinched = false;
+    const fingerPair = () => {
+      const [a, b] = [...fingers.values()];
+      return { dist: Math.max(1, Math.hypot(b.x - a.x, b.y - a.y)), cx: (a.x + b.x) / 2, cy: (a.y + b.y) / 2 };
+    };
     const onDown = (event: PointerEvent) => {
+      if (event.pointerType === "touch") {
+        fingers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+        canvas.setPointerCapture(event.pointerId);
+        if (fingers.size >= 2) {
+          drag.current = null;
+          hideMarquee();
+          pinch = fingerPair();
+          pinched = true;
+          return;
+        }
+      }
       if (event.button === 0 || event.button === 1 || event.button === 2) {
         drag.current = { x: event.clientX, y: event.clientY, button: event.button, moved: false, sx: event.clientX, sy: event.clientY };
         canvas.setPointerCapture(event.pointerId);
       }
     };
     const onMove = (event: PointerEvent) => {
+      if (fingers.has(event.pointerId)) {
+        fingers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+        if (fingers.size >= 2 && pinch) {
+          const next = fingerPair();
+          look.current.dist = Math.max(5, Math.min(170, (look.current.dist * pinch.dist) / next.dist));
+          panView(next.cx - pinch.cx, next.cy - pinch.cy);
+          pinch = next;
+          return;
+        }
+      }
       const box = drag.current;
       if (!box) return;
       const dx = event.clientX - box.x;
@@ -161,14 +224,7 @@ function EditRig({ store, assets }: { store: EditStore; assets: Record<string, C
         look.current.yaw -= dx * 0.005;
         look.current.pitch = Math.max(0.12, Math.min(1.32, look.current.pitch + dy * 0.004));
       } else if (box.button === 1) {
-        const e = camera.matrixWorld.elements;
-        const rx = e[0];
-        const rz = e[2];
-        const fx = -e[8];
-        const fz = -e[10];
-        const scale = look.current.dist * 0.0016;
-        store.viewX -= (rx * dx + fx * dy) * scale;
-        store.viewZ -= (rz * dx + fz * dy) * scale;
+        panView(dx, dy);
       } else if (box.moved) {
         const mark = document.getElementById("edit-marquee");
         if (mark) {
@@ -183,9 +239,29 @@ function EditRig({ store, assets }: { store: EditStore; assets: Record<string, C
       }
     };
     let lastTap = { id: -1, t: 0 };
+    const liftFinger = (event: PointerEvent) => {
+      if (!fingers.has(event.pointerId)) return false;
+      fingers.delete(event.pointerId);
+      if (fingers.size < 2) pinch = null;
+      if (!fingers.size) {
+        const skip = pinched;
+        pinched = false;
+        if (skip) {
+          drag.current = null;
+          hideMarquee();
+          return true;
+        }
+      }
+      return pinched;
+    };
+    const onCancel = (event: PointerEvent) => {
+      liftFinger(event);
+      drag.current = null;
+      hideMarquee();
+    };
     const onUp = (event: PointerEvent) => {
-      const mark = document.getElementById("edit-marquee");
-      if (mark) mark.style.display = "none";
+      hideMarquee();
+      if (liftFinger(event)) return;
       const box = drag.current;
       if (!box) return;
       if (box.button === 0 && box.moved) {
@@ -240,14 +316,24 @@ function EditRig({ store, assets }: { store: EditStore; assets: Record<string, C
         store.bump();
       }
     };
+    const swallow = (event: Event) => event.preventDefault();
+    // Middle button would otherwise start the browser's autoscroll on Windows.
+    const noAutoscroll = (event: MouseEvent) => {
+      if (event.button === 1) event.preventDefault();
+    };
     canvas.addEventListener("pointerdown", onDown);
     canvas.addEventListener("pointermove", onMove);
     canvas.addEventListener("pointerup", onUp);
-    canvas.addEventListener("contextmenu", (event) => event.preventDefault());
+    canvas.addEventListener("pointercancel", onCancel);
+    canvas.addEventListener("contextmenu", swallow);
+    canvas.addEventListener("mousedown", noAutoscroll);
     return () => {
       canvas.removeEventListener("pointerdown", onDown);
       canvas.removeEventListener("pointermove", onMove);
       canvas.removeEventListener("pointerup", onUp);
+      canvas.removeEventListener("pointercancel", onCancel);
+      canvas.removeEventListener("contextmenu", swallow);
+      canvas.removeEventListener("mousedown", noAutoscroll);
     };
   }, [camera, gl, store]);
 
@@ -331,7 +417,15 @@ function EditRig({ store, assets }: { store: EditStore; assets: Record<string, C
       frame.style.top = `${(crop.cy / rect.height) * 100}%`;
     }
 
-    if (stepUnits(store, dt)) store.bump();
+    // Sub-step so a slow phone still fights in real time instead of slow motion; cap keeps tab-switch jumps sane.
+    let left = Math.min(0.25, Math.max(0, dt));
+    let changed = false;
+    do {
+      const slice = Math.min(0.05, left);
+      left -= slice;
+      changed = stepUnits(store, slice) || changed;
+    } while (left > 1e-4);
+    if (changed) store.bump();
 
     const grouped = new Map<string, Unit[]>();
     for (const unit of store.units) {
