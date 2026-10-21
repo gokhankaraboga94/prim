@@ -70,7 +70,29 @@ const ALIEN_RIG: KickRig = {
 /** Same rig on the offline-packed copy (59 MB → 4.4 MB, 92k vertices): what a phone can load. */
 const ALIEN_LITE_RIG: KickRig = { ...ALIEN_RIG, url: "/models/dev13/alien.glb", cell: 0 };
 
-const RIGS: Record<KickModel, KickRig> = { hulk: HULK_RIG, alien: ALIEN_RIG, "alien-lite": ALIEN_LITE_RIG };
+/**
+ * Red monster (25k vertices, 1.5 MB: loads on a phone as is). Legs stand at x ±0.18 and only
+ * part below y 0.15; above that the skirt covers both thighs. The +x side kicks, and the x
+ * fade runs from the centre line to 0.12 so that skirt half bends with the thigh instead of tearing.
+ */
+const MONSTER_RIG: KickRig = {
+  url: "/models/dev14/red-monster.glb",
+  hip: new THREE.Vector3(0.18, 0.3, 0.02),
+  knee: new THREE.Vector3(0.18, 0.15, 0.02),
+  ankle: new THREE.Vector3(0.18, 0.04, 0),
+  cell: 0,
+  bake: true,
+  leg: (x, y) => {
+    if (x < 0 || y > 0.36) return null;
+    const hip = fade(0.36, 0.22, y) * fade(0, 0.12, x);
+    if (hip <= 0) return null;
+    const knee = hip > 0.85 ? fade(0.17, 0.11, y) : 0;
+    const ankle = knee > 0.9 ? fade(0.07, 0.03, y) : 0;
+    return { hip, knee, ankle };
+  },
+};
+
+const RIGS: Record<KickModel, KickRig> = { hulk: HULK_RIG, alien: ALIEN_RIG, "alien-lite": ALIEN_LITE_RIG, "red-monster": MONSTER_RIG };
 const qHip = new THREE.Quaternion();
 const qKnee = new THREE.Quaternion();
 const qAnkle = new THREE.Quaternion();
@@ -177,7 +199,7 @@ function splitBody(src: THREE.BufferGeometry, rig: KickRig) {
   return { body: bake(bodyTris, false).geo, leg: bake(legTris, true) };
 }
 
-export function HulkModel({ soldiers, model: kind = "hulk" }: { soldiers: number; model?: KickModel }) {
+export function HulkModel({ soldiers, model: kind = "hulk", fast = false }: { soldiers: number; model?: KickModel; fast?: boolean }) {
   const rig = useRef<THREE.Group>(null);
   const spec = RIGS[kind];
   const swing = useMemo(() => ({ leg: null as Leg | null }), []);
@@ -263,7 +285,7 @@ export function HulkModel({ soldiers, model: kind = "hulk" }: { soldiers: number
   useFrame(({ clock }) => {
     const leg = swing.leg;
     if (!leg) return;
-    const kick = devKick(Math.max(0, clock.elapsedTime - REEL_HOLD), soldiers);
+    const kick = devKick(Math.max(0, clock.elapsedTime - REEL_HOLD), soldiers, fast);
     const active = Math.abs(kick.hip) + Math.abs(kick.knee) + Math.abs(kick.ankle) > 0.001;
     const pos = leg.pos.array as Float32Array;
     const nrm = leg.nrm ? (leg.nrm.array as Float32Array) : null;

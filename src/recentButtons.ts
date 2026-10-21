@@ -1,6 +1,6 @@
 import { ARENA2_ID, ARENA2_MODE, ARENA2_SECONDS, ARENA3_ID, ARENA3_MODE, ARENA3_SECONDS, ARENA_ID, ARENA_MODE, ARENA_SECONDS } from "./arenaReel";
 import { BOUT2_ID, BOUT2_MODE, BOUT2_SECONDS, BOUT_ID, BOUT_MODE, BOUT_SECONDS } from "./boutReel";
-import { DEV10_ID, DEV10_MODE, DEV10_SECONDS, DEV11_ID, DEV11_MODE, DEV11_SECONDS, DEV12_ID, DEV12_MODE, DEV12_SECONDS, DEV13_ID, DEV13_MODE, DEV13_SECONDS, DEV6_ID, DEV6_MODE, DEV6_SECONDS, DEV7_ID, DEV7_MODE, DEV7_SECONDS, DEV8_ID, DEV8_MODE, DEV8_SECONDS, DEV9_ID, DEV9_MODE, DEV9_SECONDS } from "./devReel";
+import { DEV10_ID, DEV10_MODE, DEV10_SECONDS, DEV11_ID, DEV11_MODE, DEV11_SECONDS, DEV12_ID, DEV12_MODE, DEV12_SECONDS, DEV13_ID, DEV13_MODE, DEV13_SECONDS, DEV14_ID, DEV14_MODE, DEV14_SECONDS, DEV7_ID, DEV7_MODE, DEV7_SECONDS, DEV8_ID, DEV8_MODE, DEV8_SECONDS, DEV9_ID, DEV9_MODE, DEV9_SECONDS } from "./devReel";
 import { KAYIT_ID, KAYIT_MODE, KAYIT_SECONDS } from "./kayitReel";
 import { HERO_ID, HERO_MODE, HERO_SECONDS } from "./heroReel";
 import { DRAGON_ID, DRAGON_MODE, DRAGON_SECONDS } from "./dragonReel";
@@ -12,6 +12,7 @@ export const RECENT_BUTTON_LIMIT = 20;
 
 /** Yeniden eskiye. Bir buton güncellenirse en üste alınır, en alttaki 20'nin dışına düşer. */
 export const RECENT_BUTTONS = [
+  { id: DEV14_ID, label: `${DEV14_MODE.label} — ${DEV14_SECONDS}s`, seconds: DEV14_SECONDS },
   { id: DEV13_ID, label: `${DEV13_MODE.label} — ${DEV13_SECONDS}s`, seconds: DEV13_SECONDS },
   { id: DEV12_ID, label: `${DEV12_MODE.label} — ${DEV12_SECONDS}s`, seconds: DEV12_SECONDS },
   { id: ARENA3_ID, label: `${ARENA3_MODE.label} — ${ARENA3_SECONDS}s`, seconds: ARENA3_SECONDS },
@@ -31,5 +32,4 @@ export const RECENT_BUTTONS = [
   { id: ORDU_ID, label: `${ORDU_MODE.label} — ${ORDU_SECONDS}s`, seconds: ORDU_SECONDS },
   { id: WARS_ID, label: `${WARS_MODE.label} — ${WARS_SECONDS}s`, seconds: WARS_SECONDS },
   { id: DEV7_ID, label: `${DEV7_MODE.label} — ${DEV7_SECONDS}s`, seconds: DEV7_SECONDS },
-  { id: DEV6_ID, label: `${DEV6_MODE.label} — ${DEV6_SECONDS}s`, seconds: DEV6_SECONDS },
 ] as const;

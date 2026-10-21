@@ -32,7 +32,7 @@ import { DEFEND_ID, DEFEND2_ID, DEFEND3_ID, DEFEND4_ID, DEFEND5_ID, DEFEND_MODE,
 import { VS_ID, VS2_ID, VS_MODE, VS2_MODE, VS_SECONDS, VS2_SECONDS, isVs, isVs2, isVsMode, type VsId } from "../vsReel";
 import { NEW1_ID, NEW1_MODE, NEW1_SECONDS, NEW2_ID, NEW2_MODE, NEW2_SECONDS, NEW3_ID, NEW3_MODE, NEW3_SECONDS, NEW4_ID, NEW4_MODE, NEW4_SECONDS, NEW5_ID, NEW5_MODE, NEW5_SECONDS, NEW6_ID, NEW6_MODE, NEW6_SECONDS, NEW62_ID, NEW62_MODE, NEW62_SECONDS, NEW7_ID, NEW7_MODE, NEW7_SECONDS, isNew1, isNew2, isNew3, isNew4, isNew5, isNew6, isNew62, isNew7, isNewField, type New1Id, type New2Id, type New3Id, type New4Id, type New5Id, type New6Id, type New62Id, type New7Id } from "../new1Reel";
 import { LAB_ID, LAB_MODE, LAB_SECONDS, isLab, type LabId } from "../mazeReel";
-import { DEV2_ID, DEV2_MODE, DEV2_SECONDS, DEV3_ID, DEV3_MODE, DEV3_SECONDS, DEV4_ID, DEV4_MODE, DEV4_SECONDS, DEV5_ID, DEV5_MODE, DEV5_SECONDS, DEV6_ID, DEV6_MODE, DEV6_SECONDS, DEV7_ID, DEV7_MODE, DEV7_SECONDS, DEV8_ID, DEV8_MODE, DEV8_SECONDS, DEV9_ID, DEV9_MODE, DEV9_SECONDS, DEV10_ID, DEV10_MODE, DEV10_SECONDS, DEV11_ID, DEV11_MODE, DEV11_SECONDS, DEV12_ID, DEV12_MODE, DEV12_SECONDS, DEV13_ID, DEV13_MODE, DEV13_SECONDS, DEV_ID, DEV_MODE, DEV_SECONDS, DEVS_ID, DEVS_MODE, DEVS_SECONDS, SNAKE_ID, SNAKE_MODE, SNAKE_SECONDS, isDev, isDev2, isDev3, isDev4, isDev5, isDev6, isDev7, isDev8, isDev9, isDev10, isDev11, isDev12, isDev13, isDevs, isGiantShot, isSnake, type Dev2Id, type Dev3Id, type Dev4Id, type Dev5Id, type Dev6Id, type Dev7Id, type Dev8Id, type Dev9Id, type Dev10Id, type Dev11Id, type Dev12Id, type Dev13Id, type DevId, type DevsId, type SnakeId } from "../devReel";
+import { DEV2_ID, DEV2_MODE, DEV2_SECONDS, DEV3_ID, DEV3_MODE, DEV3_SECONDS, DEV4_ID, DEV4_MODE, DEV4_SECONDS, DEV5_ID, DEV5_MODE, DEV5_SECONDS, DEV6_ID, DEV6_MODE, DEV6_SECONDS, DEV7_ID, DEV7_MODE, DEV7_SECONDS, DEV8_ID, DEV8_MODE, DEV8_SECONDS, DEV9_ID, DEV9_MODE, DEV9_SECONDS, DEV10_ID, DEV10_MODE, DEV10_SECONDS, DEV11_ID, DEV11_MODE, DEV11_SECONDS, DEV12_ID, DEV12_MODE, DEV12_SECONDS, DEV13_ID, DEV13_MODE, DEV13_SECONDS, DEV14_ID, DEV14_MODE, DEV14_SECONDS, DEV_ID, DEV_MODE, DEV_SECONDS, DEVS_ID, DEVS_MODE, DEVS_SECONDS, SNAKE_ID, SNAKE_MODE, SNAKE_SECONDS, isDev, isDev2, isDev3, isDev4, isDev5, isDev6, isDev7, isDev8, isDev9, isDev10, isDev11, isDev12, isDev13, isDev14, isDevs, isGiantShot, isSnake, type Dev2Id, type Dev3Id, type Dev4Id, type Dev5Id, type Dev6Id, type Dev7Id, type Dev8Id, type Dev9Id, type Dev10Id, type Dev11Id, type Dev12Id, type Dev13Id, type Dev14Id, type DevId, type DevsId, type SnakeId } from "../devReel";
 import { FILM_ID, FILM_MODE, FILM_SECONDS, isFilm, type FilmId } from "../filmReel";
 import { DRAGON_ID, DRAGON_MODE, DRAGON_SECONDS, isDragon, type DragonId } from "../dragonReel";
 import { WARS_ID, WARS_MODE, WARS_SECONDS, isWars, type WarsId } from "../warsReel";
@@ -66,7 +66,7 @@ export function AdminPage() {
   const [reelSeconds, setReelSeconds] = useState<number>(7);
   const [reelText, setReelText] = useState(true);
   const [reelSkipCmd, setReelSkipCmd] = useState(false);
-  const [reelShot, setReelShot] = useState<ReelShot | PlanBId | SagaId | DiscoverId | MixId | CountdownId | DefendId | VsId | New1Id | New2Id | New3Id | New4Id | New5Id | New6Id | New62Id | New7Id | LabId | DevId | Dev2Id | Dev3Id | Dev4Id | Dev5Id | Dev6Id | Dev7Id | Dev8Id | Dev9Id | Dev10Id | Dev11Id | Dev12Id | Dev13Id | SnakeId | DevsId | FilmId | DragonId | WarsId | OrduId | OkId | KalkanId | HeroId | ArenaId | Arena2Id | Arena3Id | BoutId | Bout2Id | KayitId | XxxId | null>(null);
+  const [reelShot, setReelShot] = useState<ReelShot | PlanBId | SagaId | DiscoverId | MixId | CountdownId | DefendId | VsId | New1Id | New2Id | New3Id | New4Id | New5Id | New6Id | New62Id | New7Id | LabId | DevId | Dev2Id | Dev3Id | Dev4Id | Dev5Id | Dev6Id | Dev7Id | Dev8Id | Dev9Id | Dev10Id | Dev11Id | Dev12Id | Dev13Id | Dev14Id | SnakeId | DevsId | FilmId | DragonId | WarsId | OrduId | OkId | KalkanId | HeroId | ArenaId | Arena2Id | Arena3Id | BoutId | Bout2Id | KayitId | XxxId | null>(null);
   const [reelDay, setReelDay] = useState("1");
   const [recentOpen, setRecentOpen] = useState(false);
   const [capturing, setCapturing] = useState(false);
@@ -595,7 +595,7 @@ export function AdminPage() {
                   : isFilm(reelShot)
                     ? [FILM_SECONDS]
                   : isGiantShot(reelShot)
-                    ? [isDevs(reelShot) ? DEVS_SECONDS : isSnake(reelShot) ? SNAKE_SECONDS : isDev13(reelShot) ? DEV13_SECONDS : isDev12(reelShot) ? DEV12_SECONDS : isDev11(reelShot) ? DEV11_SECONDS : isDev10(reelShot) ? DEV10_SECONDS : isDev9(reelShot) ? DEV9_SECONDS : isDev8(reelShot) ? DEV8_SECONDS : isDev7(reelShot) ? DEV7_SECONDS : isDev6(reelShot) ? DEV6_SECONDS : isDev5(reelShot) ? DEV5_SECONDS : isDev4(reelShot) ? DEV4_SECONDS : isDev3(reelShot) ? DEV3_SECONDS : isDev2(reelShot) ? DEV2_SECONDS : DEV_SECONDS]
+                    ? [isDevs(reelShot) ? DEVS_SECONDS : isSnake(reelShot) ? SNAKE_SECONDS : isDev14(reelShot) ? DEV14_SECONDS : isDev13(reelShot) ? DEV13_SECONDS : isDev12(reelShot) ? DEV12_SECONDS : isDev11(reelShot) ? DEV11_SECONDS : isDev10(reelShot) ? DEV10_SECONDS : isDev9(reelShot) ? DEV9_SECONDS : isDev8(reelShot) ? DEV8_SECONDS : isDev7(reelShot) ? DEV7_SECONDS : isDev6(reelShot) ? DEV6_SECONDS : isDev5(reelShot) ? DEV5_SECONDS : isDev4(reelShot) ? DEV4_SECONDS : isDev3(reelShot) ? DEV3_SECONDS : isDev2(reelShot) ? DEV2_SECONDS : DEV_SECONDS]
                   : isNewField(reelShot)
                     ? [isLab(reelShot) ? LAB_SECONDS : isNew7(reelShot) ? NEW7_SECONDS : isNew62(reelShot) ? NEW62_SECONDS : isNew6(reelShot) ? NEW6_SECONDS : isNew5(reelShot) ? NEW5_SECONDS : isNew4(reelShot) ? NEW4_SECONDS : isNew3(reelShot) ? NEW3_SECONDS : isNew2(reelShot) ? NEW2_SECONDS : NEW1_SECONDS]
                   : isVsMode(reelShot)
@@ -962,6 +962,18 @@ export function AdminPage() {
             </button>
             <button
               type="button"
+              className={reelShot === DEV14_ID ? "on" : ""}
+              onClick={() => {
+                setReelShot((cur) => (cur === DEV14_ID ? null : DEV14_ID));
+                setReelSeconds(DEV14_SECONDS);
+                setReelText(false);
+                setReelSkipCmd(true);
+              }}
+            >
+              {DEV14_MODE.label} — {DEV14_SECONDS}s
+            </button>
+            <button
+              type="button"
               className={reelShot === BOUT_ID ? "on" : ""}
               onClick={() => {
                 setReelShot((cur) => (cur === BOUT_ID ? null : BOUT_ID));
@@ -1179,6 +1191,9 @@ export function AdminPage() {
           )}
           {isDev13(reelShot) && (
             <p className="muted">DEV12’nin aynısı, telefona uygun. Alien önceden sadeleştirilmiş kopyadan yüklenir: 59 MB yerine 4,4 MB, 1,1 milyon yerine 92 bin nokta. Doku ve görünüm aynı, mobil tarayıcıda eksiksiz görünür.</p>
+          )}
+          {isDev14(reelShot) && (
+            <p className="muted">DEV13 gibi telefona uygun; dev eklenen kırmızı canavar (1,5 MB). Video 20 saniye: askerler 15. saniyeye kadar ölür, her tekme daha çok asker götürür. Tekmelenen askerler 3 kat yükseğe fırlar, dönerek düşer.</p>
           )}
           {isBout(reelShot) && (
             <p className="muted">52 saniye. DEV9’daki çim. King Kong sadece ekrandan uzak olan sol eliyle yumruk atar, ork baltalarıyla karşılık verir. Vuruşlar seri. İkisinin de üstünde kırmızı can barı var. Kıyasıya dövüşürler, ork düşer.</p>

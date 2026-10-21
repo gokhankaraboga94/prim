@@ -108,10 +108,10 @@ function DreadShell({ plate, iron, eye, horn }: { plate: THREE.Material; iron: T
 
 const HEAD_BAR = 2.5;
 
-function HeadHp({ soldiers, kick = false }: { soldiers: number; kick?: boolean }) {
+function HeadHp({ soldiers, kick = false, fast = false }: { soldiers: number; kick?: boolean; fast?: boolean }) {
   const fill = useRef<THREE.Mesh>(null);
   useFrame(({ clock }) => {
-    const alive = devAlive(Math.max(0, clock.elapsedTime - REEL_HOLD), soldiers, true, !kick, false, false, kick);
+    const alive = devAlive(Math.max(0, clock.elapsedTime - REEL_HOLD), soldiers, true, !kick, false, false, kick, fast);
     const u = Math.max(0, Math.min(1, alive / Math.max(1, soldiers)));
     const mesh = fill.current;
     if (!mesh) return;
@@ -667,7 +667,7 @@ function ColossusModel({ soldiers }: { soldiers: number }) {
   return <group ref={rig} scale={scale} position={[-COLOSSUS_CENTER_X * scale, -COLOSSUS_MIN_Y * scale, -COLOSSUS_CENTER_Z * scale]} />;
 }
 
-function GiantBody({ soldiers, big, sword, dread, flesh = false, ape = false, demon = false, orc = false, hulk = false, kickModel = "hulk", crown = false }: { soldiers: number; big: boolean; sword: boolean; dread: boolean; flesh?: boolean; ape?: boolean; demon?: boolean; orc?: boolean; hulk?: boolean; kickModel?: KickModel; crown?: boolean }) {
+function GiantBody({ soldiers, big, sword, dread, flesh = false, ape = false, demon = false, orc = false, hulk = false, kickModel = "hulk", fast = false, crown = false }: { soldiers: number; big: boolean; sword: boolean; dread: boolean; flesh?: boolean; ape?: boolean; demon?: boolean; orc?: boolean; hulk?: boolean; kickModel?: KickModel; fast?: boolean; crown?: boolean }) {
   const root = useRef<THREE.Group>(null);
   const arm = useRef<THREE.Group>(null);
   const mace = useRef<THREE.Group>(null);
@@ -681,7 +681,7 @@ function GiantBody({ soldiers, big, sword, dread, flesh = false, ape = false, de
     const t = Math.max(0, clock.elapsedTime - REEL_HOLD);
     const g = devGiantAt(t);
     if (hulk) {
-      const kick = devKick(t, soldiers);
+      const kick = devKick(t, soldiers, fast);
       const fx = Math.sin(g.yaw);
       const fz = Math.cos(g.yaw);
       if (root.current) {
@@ -739,7 +739,7 @@ function GiantBody({ soldiers, big, sword, dread, flesh = false, ape = false, de
   return (
     <group ref={root} scale={big ? 1.52 : 1}>
       {hulk ? (
-        <HulkModel soldiers={soldiers} model={kickModel} />
+        <HulkModel soldiers={soldiers} model={kickModel} fast={fast} />
       ) : orc ? (
         <OrcModel soldiers={soldiers} />
       ) : demon ? (
@@ -874,7 +874,7 @@ function GiantBody({ soldiers, big, sword, dread, flesh = false, ape = false, de
       </group>
         </>
       )}
-      {crown && <HeadHp soldiers={soldiers} kick={hulk} />}
+      {crown && <HeadHp soldiers={soldiers} kick={hulk} fast={fast} />}
     </group>
   );
 }
@@ -1297,25 +1297,25 @@ function DevTroop({ soldiers }: { soldiers: number }) {
   );
 }
 
-export function Giant({ soldiers, big = false, sword = false, dread = false, flesh = false, ape = false, demon = false, orc = false, hulk = false, kickModel = "hulk", snake = false, devs = false, crown = false }: { soldiers: number; big?: boolean; sword?: boolean; dread?: boolean; flesh?: boolean; ape?: boolean; demon?: boolean; orc?: boolean; hulk?: boolean; kickModel?: KickModel; snake?: boolean; devs?: boolean; crown?: boolean }) {
+export function Giant({ soldiers, big = false, sword = false, dread = false, flesh = false, ape = false, demon = false, orc = false, hulk = false, kickModel = "hulk", fast = false, snake = false, devs = false, crown = false }: { soldiers: number; big?: boolean; sword?: boolean; dread?: boolean; flesh?: boolean; ape?: boolean; demon?: boolean; orc?: boolean; hulk?: boolean; kickModel?: KickModel; fast?: boolean; snake?: boolean; devs?: boolean; crown?: boolean }) {
   return (
     <group>
-      {devs ? <DevTroop soldiers={soldiers} /> : snake ? <SnakeBody soldiers={soldiers} /> : <GiantBody soldiers={soldiers} big={big} sword={sword} dread={dread} flesh={flesh} ape={ape} demon={demon} orc={orc} hulk={hulk} kickModel={kickModel} crown={crown} />}
+      {devs ? <DevTroop soldiers={soldiers} /> : snake ? <SnakeBody soldiers={soldiers} /> : <GiantBody soldiers={soldiers} big={big} sword={sword} dread={dread} flesh={flesh} ape={ape} demon={demon} orc={orc} hulk={hulk} kickModel={kickModel} fast={fast} crown={crown} />}
       <ArrowVolley big={big} snake={snake} devs={devs} soldiers={soldiers} />
     </group>
   );
 }
 
-export function DevHealthBar({ soldiers, big = false, sword = false, snake = false, devs = false, kick = false }: { soldiers: number; big?: boolean; sword?: boolean; snake?: boolean; devs?: boolean; kick?: boolean }) {
+export function DevHealthBar({ soldiers, big = false, sword = false, snake = false, devs = false, kick = false, fast = false }: { soldiers: number; big?: boolean; sword?: boolean; snake?: boolean; devs?: boolean; kick?: boolean; fast?: boolean }) {
   return (
     <Hud renderPriority={3}>
       <OrthographicCamera makeDefault position={[0, 0, 10]} />
-      <DevHealthPlate soldiers={soldiers} big={big} sword={sword} snake={snake} devs={devs} kick={kick} />
+      <DevHealthPlate soldiers={soldiers} big={big} sword={sword} snake={snake} devs={devs} kick={kick} fast={fast} />
     </Hud>
   );
 }
 
-function DevHealthPlate({ soldiers, big, sword, snake, devs, kick }: { soldiers: number; big: boolean; sword: boolean; snake: boolean; devs: boolean; kick: boolean }) {
+function DevHealthPlate({ soldiers, big, sword, snake, devs, kick, fast }: { soldiers: number; big: boolean; sword: boolean; snake: boolean; devs: boolean; kick: boolean; fast: boolean }) {
   const size = useThree((s) => s.size);
   const tex = useMemo(() => {
     const canvas = document.createElement("canvas");
@@ -1326,7 +1326,7 @@ function DevHealthPlate({ soldiers, big, sword, snake, devs, kick }: { soldiers:
     return map;
   }, []);
   useFrame(({ clock }) => {
-    const alive = devAlive(Math.max(0, clock.elapsedTime - REEL_HOLD), soldiers, big, sword, snake, devs, kick);
+    const alive = devAlive(Math.max(0, clock.elapsedTime - REEL_HOLD), soldiers, big, sword, snake, devs, kick, fast);
     const canvas = tex.image as HTMLCanvasElement;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;

@@ -29,11 +29,13 @@ export const DEV12_ID = "dev12" as const;
 export type Dev12Id = typeof DEV12_ID;
 export const DEV13_ID = "dev13" as const;
 export type Dev13Id = typeof DEV13_ID;
+export const DEV14_ID = "dev14" as const;
+export type Dev14Id = typeof DEV14_ID;
 export const SNAKE_ID = "yilan1" as const;
 export type SnakeId = typeof SNAKE_ID;
 export const DEVS_ID = "devler" as const;
 export type DevsId = typeof DEVS_ID;
-export type GiantId = DevId | Dev2Id | Dev3Id | Dev4Id | Dev5Id | Dev6Id | Dev7Id | Dev8Id | Dev9Id | Dev10Id | Dev11Id | Dev12Id | Dev13Id | SnakeId | DevsId;
+export type GiantId = DevId | Dev2Id | Dev3Id | Dev4Id | Dev5Id | Dev6Id | Dev7Id | Dev8Id | Dev9Id | Dev10Id | Dev11Id | Dev12Id | Dev13Id | Dev14Id | SnakeId | DevsId;
 export const DEV2_MODE = { id: DEV2_ID, label: "DEV2" } as const;
 export const DEV3_MODE = { id: DEV3_ID, label: "DEV3" } as const;
 export const DEV4_MODE = { id: DEV4_ID, label: "DEV4" } as const;
@@ -46,6 +48,7 @@ export const DEV10_MODE = { id: DEV10_ID, label: "DEV10" } as const;
 export const DEV11_MODE = { id: DEV11_ID, label: "DEV11" } as const;
 export const DEV12_MODE = { id: DEV12_ID, label: "DEV12" } as const;
 export const DEV13_MODE = { id: DEV13_ID, label: "DEV13" } as const;
+export const DEV14_MODE = { id: DEV14_ID, label: "DEV14" } as const;
 export const SNAKE_MODE = { id: SNAKE_ID, label: "yılan1" } as const;
 export const DEVS_MODE = { id: DEVS_ID, label: "devler" } as const;
 
@@ -101,15 +104,24 @@ export function isDev13(id: string | null | undefined): id is Dev13Id {
   return id === DEV13_ID;
 }
 
-/** DEV11 and its copies: one giant that kicks instead of swinging. Only the model differs. */
-export function isKicker(id: string | null | undefined) {
-  return id === DEV11_ID || id === DEV12_ID || id === DEV13_ID;
+export function isDev14(id: string | null | undefined): id is Dev14Id {
+  return id === DEV14_ID;
 }
 
-export type KickModel = "hulk" | "alien" | "alien-lite";
+/** DEV11 and its copies: one giant that kicks instead of swinging. Only the model differs. */
+export function isKicker(id: string | null | undefined) {
+  return id === DEV11_ID || id === DEV12_ID || id === DEV13_ID || id === DEV14_ID;
+}
+
+/** Short 20 s timeline with heavier kicks and high flings. */
+export function isDevFast(id: string | null | undefined) {
+  return id === DEV14_ID;
+}
+
+export type KickModel = "hulk" | "alien" | "alien-lite" | "red-monster";
 
 export function kickModel(id: string | null | undefined): KickModel {
-  return id === DEV13_ID ? "alien-lite" : id === DEV12_ID ? "alien" : "hulk";
+  return id === DEV14_ID ? "red-monster" : id === DEV13_ID ? "alien-lite" : id === DEV12_ID ? "alien" : "hulk";
 }
 
 export function isDevDread(id: string | null | undefined) {
@@ -125,19 +137,19 @@ export function isDevs(id: string | null | undefined): id is DevsId {
 }
 
 export function isDevBig(id: string | null | undefined) {
-  return id === DEV2_ID || id === DEV3_ID || id === DEV4_ID || id === DEV5_ID || id === DEV6_ID || id === DEV7_ID || id === DEV8_ID || id === DEV9_ID || id === DEV10_ID || id === DEV11_ID || id === DEV12_ID || id === DEV13_ID || id === SNAKE_ID || id === DEVS_ID;
+  return id === DEV2_ID || id === DEV3_ID || id === DEV4_ID || id === DEV5_ID || id === DEV6_ID || id === DEV7_ID || id === DEV8_ID || id === DEV9_ID || id === DEV10_ID || id === DEV11_ID || id === DEV12_ID || id === DEV13_ID || id === DEV14_ID || id === SNAKE_ID || id === DEVS_ID;
 }
 
 export function isDevAll(id: string | null | undefined) {
-  return id === DEV3_ID || id === DEV4_ID || id === DEV5_ID || id === DEV6_ID || id === DEV7_ID || id === DEV8_ID || id === DEV9_ID || id === DEV10_ID || id === DEV11_ID || id === DEV12_ID || id === DEV13_ID || id === SNAKE_ID || id === DEVS_ID;
+  return id === DEV3_ID || id === DEV4_ID || id === DEV5_ID || id === DEV6_ID || id === DEV7_ID || id === DEV8_ID || id === DEV9_ID || id === DEV10_ID || id === DEV11_ID || id === DEV12_ID || id === DEV13_ID || id === DEV14_ID || id === SNAKE_ID || id === DEVS_ID;
 }
 
 export function isDevSword(id: string | null | undefined) {
-  return id === DEV4_ID || id === DEV5_ID || id === DEV6_ID || id === DEV7_ID || id === DEV8_ID || id === DEV9_ID || id === DEV10_ID || id === DEV11_ID || id === DEV12_ID || id === DEV13_ID || id === SNAKE_ID || id === DEVS_ID;
+  return id === DEV4_ID || id === DEV5_ID || id === DEV6_ID || id === DEV7_ID || id === DEV8_ID || id === DEV9_ID || id === DEV10_ID || id === DEV11_ID || id === DEV12_ID || id === DEV13_ID || id === DEV14_ID || id === SNAKE_ID || id === DEVS_ID;
 }
 
 export function isGiantShot(id: string | null | undefined): id is GiantId {
-  return id === DEV_ID || id === DEV2_ID || id === DEV3_ID || id === DEV4_ID || id === DEV5_ID || id === DEV6_ID || id === DEV7_ID || id === DEV8_ID || id === DEV9_ID || id === DEV10_ID || id === DEV11_ID || id === DEV12_ID || id === DEV13_ID || id === SNAKE_ID || id === DEVS_ID;
+  return id === DEV_ID || id === DEV2_ID || id === DEV3_ID || id === DEV4_ID || id === DEV5_ID || id === DEV6_ID || id === DEV7_ID || id === DEV8_ID || id === DEV9_ID || id === DEV10_ID || id === DEV11_ID || id === DEV12_ID || id === DEV13_ID || id === DEV14_ID || id === SNAKE_ID || id === DEVS_ID;
 }
 
 export const DEV_SECONDS = 58;
@@ -153,16 +165,35 @@ export const DEV10_SECONDS = DEV_SECONDS;
 export const DEV11_SECONDS = DEV_SECONDS;
 export const DEV12_SECONDS = DEV_SECONDS;
 export const DEV13_SECONDS = DEV_SECONDS;
+export const DEV14_SECONDS = 20;
 export const SNAKE_SECONDS = DEV_SECONDS;
 export const DEVS_SECONDS = DEV_SECONDS;
 export const DEV_N = 300;
 export const DEV2_N = 450;
 const FIGHT = 3.2;
 const LAST = 52;
+/**
+ * DEV14 packs the whole fight into a 20 s reel: the 2.25 s hold, last kick at 15 s, its fling
+ * landing by about 18 s, then a short beat. A kick at most every 0.9 s.
+ */
+const FAST_LAST = 15;
+const FAST_KICK = 0.9;
+
+function lastDeath(fast: boolean) {
+  return fast ? FAST_LAST : LAST;
+}
 
 type Plan = { die: Float64Array; period: number };
 
 const plans = new Map<string, Plan>();
+
+/** Fewer, heavier kicks: the crowd is split evenly over as many kicks as fit the short window. */
+function fastBatches(n: number) {
+  const kicks = Math.max(1, Math.min(Math.ceil(n / 10), Math.floor((FAST_LAST - FIGHT) / FAST_KICK) + 1));
+  const base = Math.floor(n / kicks);
+  const extra = n - base * kicks;
+  return Array.from({ length: kicks }, (_, i) => base + (i < extra ? 1 : 0));
+}
 
 function screenNear(i: number, n: number, big: boolean) {
   const live = ringAt(i, n, 0, big);
@@ -171,13 +202,13 @@ function screenNear(i: number, n: number, big: boolean) {
   return (live.x - live.g.x) * side - (live.z - live.g.z) * back;
 }
 
-function planOf(soldiers: number, big = false): Plan {
+function planOf(soldiers: number, big = false, fast = false): Plan {
   const n = Math.max(1, Math.floor(soldiers));
-  const key = `${big ? 1 : 0}:${n}`;
+  const key = `${big ? 1 : 0}:${n}${fast ? ":f" : ""}`;
   const hit = plans.get(key);
   if (hit) return hit;
-  const batches: number[] = [];
-  let left = n;
+  const batches: number[] = fast ? fastBatches(n) : [];
+  let left = fast ? 0 : n;
   let swing = 0;
   while (left > 0) {
     let batch = 10 + ((swing * 5) % 11);
@@ -188,7 +219,7 @@ function planOf(soldiers: number, big = false): Plan {
     left -= batch;
     swing += 1;
   }
-  const period = batches.length <= 1 ? 1.2 : (LAST - FIGHT) / (batches.length - 1);
+  const period = batches.length <= 1 ? 1.2 : (lastDeath(fast) - FIGHT) / (batches.length - 1);
   const order = Array.from({ length: n }, (_, i) => i);
   order.sort((a, b) => screenNear(b, n, big) - screenNear(a, n, big) || a - b);
   const die = new Float64Array(n);
@@ -335,8 +366,8 @@ export function devClubHit(t: number, soldiers: number) {
   return Math.max(burst(0.03, 0.045), burst(0.46, 0.04));
 }
 
-function swingClock(t: number, soldiers: number) {
-  const period = planOf(Math.max(1, soldiers)).period;
+function swingClock(t: number, soldiers: number, fast = false) {
+  const period = planOf(Math.max(1, soldiers), false, fast).period;
   const span = 0.808;
   const fit = period >= span ? 1 : period / span;
   const windStart = 0.438 * fit;
@@ -345,7 +376,7 @@ function swingClock(t: number, soldiers: number) {
   const idleAfter = 0.37 * fit;
   let dt: number;
   if (t < FIGHT) dt = t - FIGHT;
-  else if (t > LAST + 0.22) dt = 999;
+  else if (t > lastDeath(fast) + 0.22) dt = 999;
   else {
     const into = (t - FIGHT) % period;
     dt = into > period * 0.55 ? into - period : into;
@@ -353,9 +384,9 @@ function swingClock(t: number, soldiers: number) {
   return { dt, period, windStart, snapStart, followEnd, idleAfter };
 }
 
-export function devKick(t: number, soldiers: number) {
+export function devKick(t: number, soldiers: number, fast = false) {
   const idle = { hip: 0, knee: 0, ankle: 0, lunge: 0 };
-  const clock = swingClock(t, soldiers);
+  const clock = swingClock(t, soldiers, fast);
   if (clock.dt > 100) return idle;
   const { dt, period, windStart, snapStart } = clock;
   const recover = Math.min(0.62, Math.max(0.02, period - windStart - 0.08));
@@ -382,11 +413,11 @@ export function devKick(t: number, soldiers: number) {
 
 const kickPlans = new Map<string, Float64Array>();
 
-function kickPlan(n: number) {
-  const key = String(n);
+function kickPlan(n: number, fast = false) {
+  const key = fast ? `${n}:f` : String(n);
   const hit = kickPlans.get(key);
   if (hit) return hit;
-  const base = planOf(n, true);
+  const base = planOf(n, true, fast);
   const countAt = new Map<number, number>();
   for (let i = 0; i < n; i++) countAt.set(base.die[i], (countAt.get(base.die[i]) ?? 0) + 1);
   const die = new Float64Array(n);
@@ -1010,11 +1041,11 @@ function tailHits(n: number) {
   return at;
 }
 
-export function devAlive(recT: number, soldiers: number, big = false, sword = false, snake = false, devs = false, kick = false) {
+export function devAlive(recT: number, soldiers: number, big = false, sword = false, snake = false, devs = false, kick = false, fast = false) {
   const n = Math.max(0, Math.floor(soldiers));
   if (n <= 0) return 0;
   if (kick) {
-    const die = kickPlan(n);
+    const die = kickPlan(n, fast);
     const t = Math.max(0, recT);
     let alive = 0;
     for (let i = 0; i < n; i++) if (t < die[i]) alive += 1;
@@ -1041,7 +1072,7 @@ export function devAlive(recT: number, soldiers: number, big = false, sword = fa
   return alive;
 }
 
-export function devFriendAt(i: number, n: number, recT: number, out: New1Pose, big = false, sword = false, snake = false, devs = false, kick = false) {
+export function devFriendAt(i: number, n: number, recT: number, out: New1Pose, big = false, sword = false, snake = false, devs = false, kick = false, fast = false) {
   const count = Math.max(0, Math.floor(n));
   const t = Math.max(0, recT);
   if (i < 0 || i >= count) {
@@ -1058,7 +1089,7 @@ export function devFriendAt(i: number, n: number, recT: number, out: New1Pose, b
     snakeFriendAt(i, count, t, out, devs);
     return;
   }
-  const dieAt = kick ? kickPlan(count)[i] : planOf(count, big).die[i];
+  const dieAt = kick ? kickPlan(count, fast)[i] : planOf(count, big).die[i];
   const slashAt = sword && !kick ? swordHits(count, big, snake)[i] : 1e9;
   const tailAt = snake ? tailHits(count)[i] : 1e9;
   if (snake && t >= tailAt && t < tailAt + FLING) {
@@ -1086,6 +1117,19 @@ export function devFriendAt(i: number, n: number, recT: number, out: New1Pose, b
     const fx = Math.sin(g.yaw);
     const fz = Math.cos(g.yaw);
     const u = (t - dieAt) / FLING;
+    if (fast) {
+      // Kicked high: 3× the lift of DEV11–13, spread sideways and tumbling, so each victim reads as flying.
+      const side = ((i * 7) % 11) / 5 - 1;
+      const dist = u * u * 18;
+      out.x = live.x + (fx + fz * side * 0.45) * dist;
+      out.z = live.z + (fz - fx * side * 0.45) * dist;
+      out.y = Math.sin(u * Math.PI) * 7.2;
+      out.rx = 0.35 + u * 3.2;
+      out.ry = live.ry + u * (i % 2 ? 2.6 : -2.6);
+      out.rz = (i % 2 ? 1 : -1) * u * 1.4;
+      out.s = 1;
+      return;
+    }
     const dist = u * u * 16;
     out.x = live.x + fx * dist;
     out.z = live.z + fz * dist;
@@ -1136,10 +1180,11 @@ export function devFriendAt(i: number, n: number, recT: number, out: New1Pose, b
   out.s = 1;
 }
 
-export function sampleDevCam(recT: number, big = false, devs = false, backOff = 1): ShotPose {
+export function sampleDevCam(recT: number, big = false, devs = false, backOff = 1, fast = false): ShotPose {
   const t = Math.max(0, recT);
   const g = devGiantAt(t);
-  const u = t <= 48 ? 0 : Math.min(1, (t - 48) / 6);
+  const push = lastDeath(fast) - 4;
+  const u = t <= push ? 0 : Math.min(1, (t - push) / (fast ? 4 : 6));
   const e = u * u * (3 - 2 * u);
   const side = (devs ? 36 : big ? 30 : 28) - e * (devs ? 1 : big ? 5 : 6);
   const back = (devs ? 66 : big ? 48 : 46) - e * (devs ? 1 : big ? 8 : 10);
