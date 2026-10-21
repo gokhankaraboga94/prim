@@ -512,6 +512,33 @@ export function assignNames(store: EditStore, pool: string[], manual: string) {
   store.bump();
 }
 
+/** Drops the names of the selected soldiers; select one soldier or a whole team first. */
+export function clearNames(store: EditStore) {
+  const picked = store.units.filter((unit) => unit.alive && store.selected.has(unit.id) && unit.name);
+  if (!picked.length) {
+    store.note = "Adı geri almak için adlı asker seç.";
+    store.bump();
+    return;
+  }
+  for (const unit of picked) unit.name = "";
+  store.nameStamp += 1;
+  store.note = picked.length === 1 ? "1 askerin adı geri alındı." : `${picked.length} askerin adı geri alındı.`;
+  store.bump();
+}
+
+export function selectTeam(store: EditStore, team: number) {
+  const mates = store.units.filter((unit) => unit.alive && unit.team === team);
+  if (!mates.length) {
+    store.note = `${teamLabel(team)} takımında asker yok.`;
+    store.bump();
+    return;
+  }
+  store.selected.clear();
+  for (const unit of mates) store.selected.add(unit.id);
+  store.note = `${teamLabel(team)} takımının ${mates.length} askeri seçildi.`;
+  store.bump();
+}
+
 export function startBattle(store: EditStore) {
   if (store.battle) {
     store.battle = false;

@@ -22,26 +22,44 @@ const hit = new THREE.Vector3();
 const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
 const raycaster = new THREE.Raycaster();
 const nameCache = new Map<string, THREE.Texture>();
+const NAME_PX = 128;
+const NAME_H = 192;
+const NAME_FONT = `700 ${NAME_PX}px Outfit, "Segoe UI", sans-serif`;
 
-function nameTexture(text: string) {
+/**
+ * One texture per label, drawn at 128 px glyph height on a canvas sized to the
+ * text, so the sprite can be scaled to the same aspect and never stretches the
+ * glyphs. Max anisotropy keeps it legible at the grazing camera angle.
+ */
+function nameTexture(text: string, anisotropy: number) {
   const cached = nameCache.get(text);
   if (cached) return cached;
   const canvas = document.createElement("canvas");
-  canvas.width = 256;
-  canvas.height = 64;
+  const probe = canvas.getContext("2d");
+  if (!probe) return null;
+  probe.font = NAME_FONT;
+  const pad = 36;
+  const textW = Math.ceil(probe.measureText(text).width);
+  canvas.width = Math.min(2048, Math.max(256, textW + pad * 2));
+  canvas.height = NAME_H;
   const ctx = canvas.getContext("2d");
   if (!ctx) return null;
-  ctx.clearRect(0, 0, 256, 64);
-  ctx.font = "600 34px Outfit, sans-serif";
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.font = NAME_FONT;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.lineWidth = 8;
-  ctx.strokeStyle = "rgba(0,0,0,0.75)";
-  ctx.strokeText(text, 128, 34, 240);
+  ctx.lineJoin = "round";
+  ctx.lineWidth = 22;
+  ctx.strokeStyle = "rgba(0,0,0,0.85)";
+  ctx.strokeText(text, canvas.width / 2, NAME_H / 2 + 6, canvas.width - pad);
   ctx.fillStyle = "#f6e7b2";
-  ctx.fillText(text, 128, 34, 240);
+  ctx.fillText(text, canvas.width / 2, NAME_H / 2 + 6, canvas.width - pad);
   const tex = new THREE.CanvasTexture(canvas);
   tex.colorSpace = THREE.SRGBColorSpace;
+  tex.anisotropy = anisotropy;
+  tex.minFilter = THREE.LinearMipmapLinearFilter;
+  tex.magFilter = THREE.LinearFilter;
+  tex.userData.aspect = canvas.width / canvas.height;
   nameCache.set(text, tex);
   return tex;
 }
@@ -90,6 +108,7 @@ function EditRig({ store, assets }: { store: EditStore; assets: Record<string, C
   const rings = useRef<THREE.InstancedMesh>(null);
   const bars = useRef<THREE.InstancedMesh>(null);
   const names = useRef<THREE.Group>(null);
+  const maxAniso = useMemo(() => gl.capabilities.getMaxAnisotropy(), [gl]);
   const meshes = useRef(new Map<string, THREE.InstancedMesh>());
   const keys = useRef(new Set<string>());
   const look = useRef({ yaw: 0.45, pitch: 0.78, dist: 38 });
@@ -489,7 +508,7 @@ function EditRig({ store, assets }: { store: EditStore; assets: Record<string, C
         have.add(unit.id);
         let sprite = nameHost.children.find((child) => child.userData.id === unit.id) as THREE.Sprite | undefined;
         if (!sprite) {
-          const map = nameTexture(unit.name);
+          const map = nameTexture(unit.name, maxAniso);
           if (!map) continue;
           sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map, transparent: true, depthTest: false }));
           sprite.userData.id = unit.id;
@@ -497,13 +516,16 @@ function EditRig({ store, assets }: { store: EditStore; assets: Record<string, C
           sprite.renderOrder = 3;
           nameHost.add(sprite);
         } else if (sprite.userData.label !== unit.name) {
-          const map = nameTexture(unit.name);
+          const map = nameTexture(unit.name, maxAniso);
           if (map) (sprite.material as THREE.SpriteMaterial).map = map;
           sprite.userData.label = unit.name;
         }
         sprite.position.set(unit.x, unit.height + Math.min(1.4, unit.height * 0.12) + 0.35, unit.z);
-        const width = Math.min(6, Math.max(1.3, unit.height * 0.34));
-        sprite.scale.set(width, width * 0.25, 1);
+        // Glyph height is fixed in world units per body size; width follows the label so letters keep their shape.
+        const aspect = ((sprite.material as THREE.SpriteMaterial).map?.userData.aspect as number | undefined) ?? 4;
+        const cap = Math.min(7, Math.max(2.4, unit.height * 1.4));
+        const glyph = Math.min(Math.min(1.5, Math.max(0.42, unit.height * 0.11)), cap / aspect);
+        sprite.scale.set(glyph * aspect, glyph, 1);
       }
       for (let i = nameHost.children.length - 1; i >= 0; i--) {
         const child = nameHost.children[i];

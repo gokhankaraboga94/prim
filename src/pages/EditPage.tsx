@@ -4,7 +4,7 @@ import { SceneErrorBoundary } from "../components/SceneErrorBoundary";
 import { EditField } from "../components/scene/EditField";
 import { useGame } from "../hooks/useGame";
 import { CHARACTERS, TEAMS, characterById } from "../edit/catalog";
-import { assignNames, assignTeam, clearField, createStore, removeSelected, selectAll, spawnUnits, startBattle, unassignTeam } from "../edit/battle";
+import { assignNames, assignTeam, clearField, clearNames, createStore, removeSelected, selectAll, selectTeam, spawnUnits, startBattle, unassignTeam } from "../edit/battle";
 import { disposeThumbRenderer, loadCharacter, snapshotCharacter, type CharacterAsset } from "../edit/loadModel";
 import { REEL_HEIGHT, REEL_WIDTH, reelWindow } from "../recordCanvas";
 
@@ -110,6 +110,7 @@ export function EditPage() {
   const selected = store.selected.size;
   const standing = store.units.filter((unit) => unit.alive).length;
   const selectedInTeam = store.units.some((unit) => unit.alive && unit.team > 0 && store.selected.has(unit.id));
+  const selectedNamed = store.units.some((unit) => unit.alive && unit.name && store.selected.has(unit.id));
   const teamCounts = TEAMS.map((item) => ({
     ...item,
     n: store.units.filter((unit) => unit.alive && unit.team === item.id).length,
@@ -208,7 +209,16 @@ export function EditPage() {
         </button>
         <div className="edit-teams" aria-label="Takımlar">
           {TEAMS.map((item) => (
-            <button key={item.id} type="button" className={team === item.id ? "on" : ""} onClick={() => setTeam(item.id)}>
+            <button
+              key={item.id}
+              type="button"
+              className={team === item.id ? "on" : ""}
+              title="İlk tık rengi seçer, ikinci tık takımın askerlerini seçer"
+              onClick={() => {
+                if (team === item.id && teamCounts[item.id - 1]?.n) selectTeam(store, item.id);
+                else setTeam(item.id);
+              }}
+            >
               <i style={{ background: item.color }} />
               {item.label}
               {teamCounts[item.id - 1]?.n ? ` ${teamCounts[item.id - 1].n}` : ""}
@@ -245,6 +255,9 @@ export function EditPage() {
         <button type="button" onClick={() => assignNames(store, game.names, manual)} disabled={!selected || !manual.trim()}>
           Adı ata
         </button>
+        <button type="button" onClick={() => clearNames(store)} disabled={!selectedNamed}>
+          Adı kaldır
+        </button>
         <span className="edit-note">
           Seçili {selected}
           {store.battle ? " · savaşta" : ""} · {store.note}
@@ -252,7 +265,7 @@ export function EditPage() {
       </header>
 
       <p className="edit-help">
-        Sol tık seçer, sürükleyince kutu olur; Shift ekler. Çift tık, aynı modelden yakındakileri de seçer. Takımdan birini seçip yere tıklayınca bütün takım askeri nizamda oraya gider. Savaşta vurulan yere düşer, yeri kapanır, kalanlar yeniden dizilir. Kayıt 9:16 kadrajı savaşın olduğu yeri ortalar. Sağ tuş kamerayı döndürür, tekerlek yakınlaştırır, orta tuş ve ok tuşları haritayı kaydırır. Telefonda iki parmak yakınlaştırır ve kaydırır. Ctrl+A hepsini seçer, Delete siler, Esc seçimi bırakır. Takımsız asker savaşmaz.
+        Sol tık seçer, sürükleyince kutu olur; Shift ekler. Çift tık, aynı modelden yakındakileri de seçer. Seçili renge ikinci kez tıklayınca o takımın hepsi seçilir; sonra "Takımdan çıkar" ya da "Adı kaldır" bütün takıma uygulanır, tek asker seçince sadece ona. Takımdan birini seçip yere tıklayınca bütün takım askeri nizamda oraya gider. Savaşta vurulan yere düşer, yeri kapanır, kalanlar yeniden dizilir. Kayıt 9:16 kadrajı savaşın olduğu yeri ortalar. Sağ tuş kamerayı döndürür, tekerlek yakınlaştırır, orta tuş ve ok tuşları haritayı kaydırır. Telefonda iki parmak yakınlaştırır ve kaydırır. Ctrl+A hepsini seçer, Delete siler, Esc seçimi bırakır. Takımsız asker savaşmaz.
       </p>
 
       <div className="edit-stage">
