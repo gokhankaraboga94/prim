@@ -385,10 +385,34 @@ function stillClose(t: number) {
   const p = Math.max(0, Math.min(1, (t - FIGHT) / (FAST_LAST - FIGHT)));
   return 1 - p * 0.6;
 }
-export function devNameCovered(sx: number, sz: number, cx: number, cz: number, recT: number, big: boolean, wide = false, small = false) {
+const STILL_BODY_R = 3.2;
+const STILL_BODY_H = 12.4;
+
+/** Line of sight from the camera to a name tag passes through the half-size giant's body. */
+function stillCovers(g: { x: number; z: number }, sx: number, sy: number, sz: number, cx: number, cy: number, cz: number) {
+  const dx = sx - cx;
+  const dz = sz - cz;
+  const ox = cx - g.x;
+  const oz = cz - g.z;
+  const a = dx * dx + dz * dz;
+  if (a < 1e-6) return false;
+  const b = 2 * (ox * dx + oz * dz);
+  const c = ox * ox + oz * oz - STILL_BODY_R * STILL_BODY_R;
+  const disc = b * b - 4 * a * c;
+  if (disc <= 0) return false;
+  const root = Math.sqrt(disc);
+  const t0 = Math.max(0, (-b - root) / (2 * a));
+  const t1 = Math.min(1, (-b + root) / (2 * a));
+  if (t0 >= t1) return false;
+  const y0 = cy + (sy - cy) * t0;
+  const y1 = cy + (sy - cy) * t1;
+  return Math.min(y0, y1) < STILL_BODY_H && Math.max(y0, y1) > 0;
+}
+
+export function devNameCovered(sx: number, sz: number, cx: number, cz: number, recT: number, big: boolean, wide = false, small = false, sy = 2.4, cy = 40) {
   const k = devSize(small);
   const g = devGiantPose(Math.max(0, recT), small);
-  if (wide && small) return Math.hypot(sx - g.x, sz - g.z) < 5.4 && Math.hypot(sx - cx, sz - cz) > Math.hypot(g.x - cx, g.z - cz);
+  if (wide && small) return stillCovers(g, sx, sy, sz, cx, cy, cz);
   if (wide) {
     const yaw = g.yaw;
     const vx = sx - cx;

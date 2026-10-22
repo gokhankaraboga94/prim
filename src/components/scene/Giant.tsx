@@ -892,6 +892,7 @@ function ArrowVolley({ big, snake = false, devs = false, soldiers = 0, small = f
     if (!mesh.current) return;
     const t = Math.max(0, clock.elapsedTime - REEL_HOLD);
     const g = devGiantPose(t, small, soldiers);
+    const shooting = small ? Math.ceil((ARROWS * devAlive(t, soldiers, true, false, false, false, true, true)) / Math.max(1, soldiers)) : ARROWS;
     const cy = Math.cos(g.yaw);
     const sy = Math.sin(g.yaw);
     const nArrow = devs ? 36 : ARROWS;
@@ -926,7 +927,7 @@ function ArrowVolley({ big, snake = false, devs = false, soldiers = 0, small = f
         dummy.position.set(sx + (g.x - sx) * u, 1.6 + (aimY - 1.6) * u + Math.sin(u * Math.PI) * 2.6, sz + (g.z - sz) * u);
         dummy.lookAt(g.x, aimY, g.z);
         dummy.rotateX(Math.PI / 2);
-        const show = t > 2 && t < LAST_ARROW && u > 0.06 && u < 0.9;
+        const show = t > 2 && t < LAST_ARROW && u > 0.06 && u < 0.9 && (i * 5) % ARROWS < shooting;
         dummy.scale.set(show ? 0.56 : 0, show ? 1.15 : 0, show ? 0.56 : 0);
         dummy.updateMatrix();
         mesh.current.setMatrixAt(i, dummy.matrix);
