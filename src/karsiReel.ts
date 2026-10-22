@@ -2,12 +2,19 @@ export const KARSI_ID = "karsi" as const;
 export type KarsiId = typeof KARSI_ID;
 export const KARSI_MODE = { id: KARSI_ID, label: "karşı takipçi" } as const;
 export const KARSI_SECONDS = 20;
+export const KARSI0_ID = "karsi0" as const;
+export type Karsi0Id = typeof KARSI0_ID;
+export const KARSI0_MODE = { id: KARSI0_ID, label: "karşıtakipçi0" } as const;
+export const KARSI0_SECONDS = 16;
 export const KARSI_ME = "wargame2028";
 export const KARSI_HERO_ME = "/models/arena3/1.glb";
 export const KARSI_HERO_FOE = "/models/arena3/2.glb";
 
 /** Rival account and its follower count, asked when the button is pressed. */
-export type Rival = { name: string; foes: number };
+export type Rival = { name: string; foes: number; invite?: boolean };
+
+/** karşıtakipçi0: no rival yet, only our army on the field. */
+export const KARSI0_RIVAL: Rival = { name: "", foes: 0, invite: true };
 
 /** Instanced bodies drawn per side; the score plate always shows the real counts. */
 const SHOW_FRIENDS = 2000;
@@ -25,6 +32,14 @@ const FALL = 0.75;
 
 export function isKarsi(id: string | null | undefined): id is KarsiId {
   return id === KARSI_ID;
+}
+
+export function isKarsi0(id: string | null | undefined): id is Karsi0Id {
+  return id === KARSI0_ID;
+}
+
+export function isKarsiMode(id: string | null | undefined): id is KarsiId | Karsi0Id {
+  return id === KARSI_ID || id === KARSI0_ID;
 }
 
 export function cleanRival(name: string) {
@@ -82,6 +97,7 @@ export type KarsiLayout = {
   us: KarsiSide;
   them: KarsiSide;
   weWin: boolean;
+  invite: boolean;
   width: number;
   depth: number;
   liveX: Float32Array;
@@ -128,22 +144,23 @@ function makeSide(real: number, cap: number, lossFrac: number, salt: number): Ka
  * The larger army wins. Winner losses follow the square law, so a close fight is
  * bloody and a lopsided one barely scratches the winner. A tie keeps a handful alive.
  */
-export function makeKarsiLayout(friends: number, foes: number): KarsiLayout {
+export function makeKarsiLayout(friends: number, foes: number, invite = false): KarsiLayout {
   const a = Math.max(0, Math.floor(friends));
-  const b = Math.max(0, Math.floor(foes));
+  const b = invite ? 0 : Math.max(0, Math.floor(foes));
   const weWin = a >= b;
   const big = Math.max(1, weWin ? a : b);
   const small = weWin ? b : a;
-  const winLoss = Math.min(0.97, 1 - Math.sqrt(Math.max(0, 1 - (small / big) ** 2)));
-  const us = makeSide(a, SHOW_FRIENDS, weWin ? winLoss : 1, 3);
-  const them = makeSide(b, SHOW_FOES, weWin ? 1 : winLoss, 11);
-  const width = Math.max(us.cols, them.cols) * PITCH + LANE * 2;
+  const winLoss = invite ? 0 : Math.min(0.97, 1 - Math.sqrt(Math.max(0, 1 - (small / big) ** 2)));
+  const us = makeSide(a, SHOW_FRIENDS, invite ? 0 : weWin ? winLoss : 1, 3);
+  const them = makeSide(b, SHOW_FOES, invite ? 0 : weWin ? 1 : winLoss, 11);
+  const width = Math.max(us.cols, Math.max(1, them.cols)) * PITCH + LANE * 2;
   return {
     us,
     them,
     weWin,
+    invite,
     width,
-    depth: us.depth + them.depth + START_GAP,
+    depth: us.depth + (invite ? START_GAP + 24 : them.depth + START_GAP),
     liveX: new Float32Array(us.n),
     liveZ: new Float32Array(us.n),
     liveFall: new Float32Array(us.n),
@@ -152,12 +169,14 @@ export function makeKarsiLayout(friends: number, foes: number): KarsiLayout {
 
 /** Front line: armies charge to it, then it drifts toward the losing side. */
 export function karsiMeet(layout: KarsiLayout, t: number) {
+  if (layout.invite) return 0;
   return (layout.weWin ? 1 : -1) * PUSH * ease((t - T_MEET) / (T_END - T_MEET));
 }
 
 function front(layout: KarsiLayout, t: number, sign: number) {
-  const march = ease((t - T_CHARGE) / (T_MEET - T_CHARGE));
   const start = START_GAP / 2;
+  if (layout.invite) return sign * start;
+  const march = ease((t - T_CHARGE) / (T_MEET - T_CHARGE));
   return karsiMeet(layout, t) + sign * (start + (CONTACT - start) * march);
 }
 
@@ -184,6 +203,15 @@ function swing(t: number, phase: number) {
 }
 
 function sidePose(layout: KarsiLayout, side: KarsiSide, i: number, t: number, sign: number, out: KarsiPose) {
+  if (layout.invite) {
+    out.x = side.x[i];
+    out.z = front(layout, t, sign) + sign * side.row[i] * PITCH;
+    out.yaw = 0;
+    out.fall = 0;
+    out.lift = 0;
+    out.chop = 0;
+    return out;
+  }
   const die = side.die[i];
   const at = Math.min(t, die);
   const lag = Math.max(0, side.row[i] - deadRows(side, at));
@@ -220,6 +248,15 @@ export type KarsiChief = { x: number; z: number; yaw: number; kneel: number; lif
 /** Commanders lead the charge, duel in the centre lane; the loser kneels at the end. */
 export function karsiChief(layout: KarsiLayout, mine: boolean, t: number, out: KarsiChief) {
   const sign = mine ? -1 : 1;
+  if (layout.invite) {
+    out.x = 0;
+    out.z = front(layout, t, sign) - sign * 2.4;
+    out.yaw = 0;
+    out.kneel = 0;
+    out.chop = 0;
+    out.lift = t > 12.2 ? ease((t - 12.2) / 0.55) : 0;
+    return out;
+  }
   const ahead = 2.4 * (1 - ease((t - T_CHARGE) / (T_MEET - T_CHARGE)));
   out.x = 0;
   out.z = front(layout, t, sign) - sign * ahead;
@@ -241,8 +278,8 @@ export function karsiChief(layout: KarsiLayout, mine: boolean, t: number, out: K
   return out;
 }
 
-export function karsiEndAt() {
-  return T_END;
+export function karsiEndAt(invite = false) {
+  return invite ? 12.6 : T_END;
 }
 
 type Cam = { x: number; y: number; z: number; lx: number; ly: number; lz: number; fov: number };
@@ -277,7 +314,33 @@ function wideDist(layout: KarsiLayout) {
  * Close on both commanders, pull out to show both armies whole, settle on the front
  * line for the fight, then swing round to the winning commander.
  */
+function look(x: number, y: number, z: number, lx: number, ly: number, lz: number, fov: number): Cam {
+  return { x, y, z, lx, ly, lz, fov };
+}
+
+/**
+ * Invite reel. First 3 s stay tight: over the commander's shoulder, looking at the
+ * empty grass where a rival army would stand. Then the whole army, then that vacant
+ * field, then back to the commander.
+ */
+function karsiInviteCam(layout: KarsiLayout, t: number): Cam {
+  const line = -START_GAP / 2;
+  const chiefZ = line + 2.4;
+  const armyMid = line - layout.us.depth * 0.42;
+  const empty = START_GAP / 2 + 10;
+  const open = look(3.2, 1.78, chiefZ - 4.6, 0.15, 1.48, empty * 0.22, 40);
+  const hold = look(2.4, 1.92, chiefZ - 6.4, 0.1, 1.42, 7.2, 42);
+  const whole = orbit(0, 0.6, armyMid, Math.max(32, layout.width * 0.82), 38, 0.06, 48);
+  const vacant = look(10, 7.4, 2, 0, 0.35, empty, 46);
+  const close = look(-4.6, 2.15, chiefZ - 8.2, 0, 1.85, chiefZ + 2.2, 44);
+  if (t < 3) return mixCam(open, hold, t / 3);
+  if (t < 7) return mixCam(hold, whole, (t - 3) / 4);
+  if (t < 11) return mixCam(whole, vacant, (t - 7) / 4);
+  return mixCam(vacant, close, Math.min(1, (t - 11) / 3.6));
+}
+
 export function karsiCam(layout: KarsiLayout, t: number): Cam {
+  if (layout.invite) return karsiInviteCam(layout, t);
   const meet = karsiMeet(layout, t);
   const close = orbit(0, 1.8, front(layout, t, -1) + 1.4, 17, 20, 0, 46);
   const midZ = (layout.them.depth - layout.us.depth) * 0.5;
@@ -300,7 +363,7 @@ export function karsiHaze(layout: KarsiLayout) {
   return { near: Math.max(80, wideDist(layout) * 0.9), far: Math.max(520, wideDist(layout) * 3.2 + layout.depth * 1.5) };
 }
 
-export function karsiField(friends: number, foes: number) {
-  const layout = makeKarsiLayout(friends, foes);
+export function karsiField(friends: number, foes: number, invite = false) {
+  const layout = makeKarsiLayout(friends, foes, invite);
   return { width: layout.width, depth: layout.depth };
 }

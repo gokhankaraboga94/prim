@@ -147,7 +147,7 @@ function KarsiArmies({ layout }: { layout: KarsiLayout }) {
       knight.strike.needsUpdate = true;
     }
     const them = themRef.current;
-    if (!them || !roman) return;
+    if (layout.invite || !them || !roman) return;
     for (let i = 0; i < layout.them.n; i++) {
       karsiFoe(layout, i, t, pose);
       dummy.position.set(pose.x, 0.05, pose.z);
@@ -164,7 +164,7 @@ function KarsiArmies({ layout }: { layout: KarsiLayout }) {
   return (
     <group>
       {knight && layout.us.n > 0 && <instancedMesh ref={usRef} args={[knight.geo, knight.material, layout.us.n]} frustumCulled={false} />}
-      {roman && layout.them.n > 0 && <instancedMesh ref={themRef} args={[roman.geo, roman.material, layout.them.n]} frustumCulled={false} />}
+      {!layout.invite && roman && layout.them.n > 0 && <instancedMesh ref={themRef} args={[roman.geo, roman.material, layout.them.n]} frustumCulled={false} />}
     </group>
   );
 }
@@ -376,7 +376,13 @@ function KarsiHud({ layout, rival }: { layout: KarsiLayout; rival: string }) {
       ctx.lineWidth = 22;
       ctx.strokeStyle = "#ffe14a";
       ctx.stroke();
-      const parts = [
+      const parts = layout.invite
+        ? [
+            { text: formatCount(layout.us.real), font: 150, fill: "#ffe14a" },
+            { text: ` ${upper(KARSI_ME)}  `, font: 66, fill: "#fff4c4" },
+            { text: "HAZIR", font: 120, fill: "#ffffff" },
+          ]
+        : [
         { text: formatCount(layout.them.real), font: 150, fill: "#ff3b30" },
         { text: ` ${upper(rival)}  `, font: 66, fill: "#ffd2c8" },
         { text: "VS", font: 120, fill: "#ffffff" },
@@ -414,7 +420,7 @@ function KarsiHud({ layout, rival }: { layout: KarsiLayout; rival: string }) {
       }
     }
     return canvasTexture(canvas);
-  }, [layout.them.real, layout.us.real, rival]);
+  }, [layout.invite, layout.them.real, layout.us.real, rival]);
   const bannerTex = useMemo(() => {
     const canvas = document.createElement("canvas");
     canvas.width = 2048;
@@ -441,19 +447,25 @@ function KarsiHud({ layout, rival }: { layout: KarsiLayout; rival: string }) {
         ctx.fillStyle = fill;
         ctx.fillText(text, 1024, y);
       };
-      line("ZAFER", 150, 190, "#ffe14a");
-      line(winner, 310, 130, "#ffffff");
-      line(`${loser} ORDUSU RÖVANŞ İSTİYOR ⚔️`, 490, 92, "#ffb020");
+      if (layout.invite) {
+        line("YORUMA ⚔️", 190, 180, "#ffe14a");
+        line("CESARETİN VARSA BIRAK", 360, 92, "#ffffff");
+        line("GÜÇLÜ OLAN KAZANIR", 500, 80, "#ffb020");
+      } else {
+        line("ZAFER", 150, 190, "#ffe14a");
+        line(winner, 310, 130, "#ffffff");
+        line(`${loser} ORDUSU RÖVANŞ İSTİYOR ⚔️`, 490, 92, "#ffb020");
+      }
     }
     return canvasTexture(canvas);
-  }, [layout.weWin, rival]);
+  }, [layout.invite, layout.weWin, rival]);
   useEffect(() => () => scoreTex.dispose(), [scoreTex]);
   useEffect(() => () => bannerTex.dispose(), [bannerTex]);
   useFrame(({ clock }) => {
     const t = Math.max(0, clock.elapsedTime - REEL_HOLD);
     const pulse = 1 + Math.sin(t * 3.4) * 0.04;
     score.current?.scale.set(pulse, pulse, 1);
-    const show = Math.max(0, Math.min(1, (t - karsiEndAt() - 0.9) / 0.5));
+    const show = Math.max(0, Math.min(1, (t - karsiEndAt(layout.invite) - 0.9) / 0.5));
     const b = banner.current;
     if (b) {
       b.visible = show > 0;
@@ -481,7 +493,7 @@ function KarsiHud({ layout, rival }: { layout: KarsiLayout; rival: string }) {
 }
 
 export function useKarsiLayout(soldiers: number, rival: Rival) {
-  return useMemo(() => makeKarsiLayout(soldiers, rival.foes), [soldiers, rival.foes]);
+  return useMemo(() => makeKarsiLayout(soldiers, rival.foes, Boolean(rival.invite)), [soldiers, rival.foes, rival.invite]);
 }
 
 export function KarsiCam({ soldiers, rival }: { soldiers: number; rival: Rival }) {
@@ -511,7 +523,7 @@ export function KarsiBattle({ names, soldiers, rival }: { names: string[]; soldi
       <KarsiArmies layout={layout} />
       <KarsiNames names={names} layout={layout} />
       <KarsiChiefUnit layout={layout} mine name={KARSI_ME} />
-      <KarsiChiefUnit layout={layout} mine={false} name={rival.name} />
+      {!layout.invite && <KarsiChiefUnit layout={layout} mine={false} name={rival.name} />}
     </group>
   );
 }

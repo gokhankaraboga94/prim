@@ -910,8 +910,8 @@ function SceneContent({
   const grass = devLive || isDefend5(defend) || Boolean(bout);
   const friendN = defend ? defendShownFriends(defend, soldiers) : soldiers;
   const warsScale = wars ? warsView(soldiers) : 1;
-  const orduFog = karsi ? karsiHaze(makeKarsiLayout(soldiers, karsi.foes)) : ordu ? orduHaze(soldiers) : null;
-  const orduField = karsi ? karsiField(soldiers, karsi.foes) : ordu ? orduForm(soldiers) : null;
+  const orduFog = karsi ? karsiHaze(makeKarsiLayout(soldiers, karsi.foes, Boolean(karsi.invite))) : ordu ? orduHaze(soldiers) : null;
+  const orduField = karsi ? karsiField(soldiers, karsi.foes, Boolean(karsi.invite)) : ordu ? orduForm(soldiers) : null;
   const field = isVs(vs);
   const climb = isVs2(vs);
   const chase = Boolean(new5 || new7);
