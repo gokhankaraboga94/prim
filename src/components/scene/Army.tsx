@@ -1922,7 +1922,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
       const staggered = Boolean(countdown || defend || vs || vs2 || openField);
       if (countdown) nameScale = 1.12 * crowd;
       else if (defend) nameScale = 1.22 * crowd;
-      else if (giant) nameScale = (giantDevs ? 2.02 : giantBig ? 1.58 : 0.96) * (nameAlert ? 1.25 : 1);
+      else if (giant) nameScale = (giantDevs ? 2.02 : giantBig ? 1.58 : 0.96) * (nameAlert ? 1.25 : 1) * (giantSmall ? 0.8 : 1);
       else if (maze) nameScale = 1.05;
       else if (dragon) nameScale = 1.22;
       else if (namePlate) nameScale = 1.7;
