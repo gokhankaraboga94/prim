@@ -679,7 +679,7 @@ function GiantBody({ soldiers, big, sword, dread, flesh = false, ape = false, de
   const horn = useMemo(() => new THREE.MeshStandardMaterial({ color: "#1a1816", metalness: 0.45, roughness: 0.55 }), []);
   useFrame(({ clock }) => {
     const t = Math.max(0, clock.elapsedTime - REEL_HOLD);
-    const g = devGiantPose(t, small);
+    const g = devGiantPose(t, small, soldiers);
     if (hulk) {
       const kick = devKick(t, soldiers, fast);
       const fx = Math.sin(g.yaw);
@@ -891,7 +891,7 @@ function ArrowVolley({ big, snake = false, devs = false, soldiers = 0, small = f
   useFrame(({ clock }) => {
     if (!mesh.current) return;
     const t = Math.max(0, clock.elapsedTime - REEL_HOLD);
-    const g = devGiantPose(t, small);
+    const g = devGiantPose(t, small, soldiers);
     const cy = Math.cos(g.yaw);
     const sy = Math.sin(g.yaw);
     const nArrow = devs ? 36 : ARROWS;
