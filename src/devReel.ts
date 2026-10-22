@@ -31,11 +31,13 @@ export const DEV13_ID = "dev13" as const;
 export type Dev13Id = typeof DEV13_ID;
 export const DEV14_ID = "dev14" as const;
 export type Dev14Id = typeof DEV14_ID;
+export const DEV15_ID = "dev15" as const;
+export type Dev15Id = typeof DEV15_ID;
 export const SNAKE_ID = "yilan1" as const;
 export type SnakeId = typeof SNAKE_ID;
 export const DEVS_ID = "devler" as const;
 export type DevsId = typeof DEVS_ID;
-export type GiantId = DevId | Dev2Id | Dev3Id | Dev4Id | Dev5Id | Dev6Id | Dev7Id | Dev8Id | Dev9Id | Dev10Id | Dev11Id | Dev12Id | Dev13Id | Dev14Id | SnakeId | DevsId;
+export type GiantId = DevId | Dev2Id | Dev3Id | Dev4Id | Dev5Id | Dev6Id | Dev7Id | Dev8Id | Dev9Id | Dev10Id | Dev11Id | Dev12Id | Dev13Id | Dev14Id | Dev15Id | SnakeId | DevsId;
 export const DEV2_MODE = { id: DEV2_ID, label: "DEV2" } as const;
 export const DEV3_MODE = { id: DEV3_ID, label: "DEV3" } as const;
 export const DEV4_MODE = { id: DEV4_ID, label: "DEV4" } as const;
@@ -49,6 +51,7 @@ export const DEV11_MODE = { id: DEV11_ID, label: "DEV11" } as const;
 export const DEV12_MODE = { id: DEV12_ID, label: "DEV12" } as const;
 export const DEV13_MODE = { id: DEV13_ID, label: "DEV13" } as const;
 export const DEV14_MODE = { id: DEV14_ID, label: "DEV14" } as const;
+export const DEV15_MODE = { id: DEV15_ID, label: "DEV15" } as const;
 export const SNAKE_MODE = { id: SNAKE_ID, label: "yılan1" } as const;
 export const DEVS_MODE = { id: DEVS_ID, label: "devler" } as const;
 
@@ -108,20 +111,33 @@ export function isDev14(id: string | null | undefined): id is Dev14Id {
   return id === DEV14_ID;
 }
 
+export function isDev15(id: string | null | undefined): id is Dev15Id {
+  return id === DEV15_ID;
+}
+
 /** DEV11 and its copies: one giant that kicks instead of swinging. Only the model differs. */
 export function isKicker(id: string | null | undefined) {
-  return id === DEV11_ID || id === DEV12_ID || id === DEV13_ID || id === DEV14_ID;
+  return id === DEV11_ID || id === DEV12_ID || id === DEV13_ID || id === DEV14_ID || id === DEV15_ID;
 }
 
 /** Short 20 s timeline with heavier kicks and high flings. */
 export function isDevFast(id: string | null | undefined) {
-  return id === DEV14_ID;
+  return id === DEV14_ID || id === DEV15_ID;
+}
+
+/** DEV15: DEV14 with the giant at half size; the crowd and camera close in so soldiers read bigger. */
+export function isDevSmall(id: string | null | undefined) {
+  return id === DEV15_ID;
+}
+
+export function devSize(small: boolean) {
+  return small ? 0.5 : 1;
 }
 
 export type KickModel = "hulk" | "alien" | "alien-lite" | "red-monster";
 
 export function kickModel(id: string | null | undefined): KickModel {
-  return id === DEV14_ID ? "red-monster" : id === DEV13_ID ? "alien-lite" : id === DEV12_ID ? "alien" : "hulk";
+  return id === DEV14_ID || id === DEV15_ID ? "red-monster" : id === DEV13_ID ? "alien-lite" : id === DEV12_ID ? "alien" : "hulk";
 }
 
 export function isDevDread(id: string | null | undefined) {
@@ -137,19 +153,19 @@ export function isDevs(id: string | null | undefined): id is DevsId {
 }
 
 export function isDevBig(id: string | null | undefined) {
-  return id === DEV2_ID || id === DEV3_ID || id === DEV4_ID || id === DEV5_ID || id === DEV6_ID || id === DEV7_ID || id === DEV8_ID || id === DEV9_ID || id === DEV10_ID || id === DEV11_ID || id === DEV12_ID || id === DEV13_ID || id === DEV14_ID || id === SNAKE_ID || id === DEVS_ID;
+  return id === DEV2_ID || id === DEV3_ID || id === DEV4_ID || id === DEV5_ID || id === DEV6_ID || id === DEV7_ID || id === DEV8_ID || id === DEV9_ID || id === DEV10_ID || id === DEV11_ID || id === DEV12_ID || id === DEV13_ID || id === DEV14_ID || id === DEV15_ID || id === SNAKE_ID || id === DEVS_ID;
 }
 
 export function isDevAll(id: string | null | undefined) {
-  return id === DEV3_ID || id === DEV4_ID || id === DEV5_ID || id === DEV6_ID || id === DEV7_ID || id === DEV8_ID || id === DEV9_ID || id === DEV10_ID || id === DEV11_ID || id === DEV12_ID || id === DEV13_ID || id === DEV14_ID || id === SNAKE_ID || id === DEVS_ID;
+  return id === DEV3_ID || id === DEV4_ID || id === DEV5_ID || id === DEV6_ID || id === DEV7_ID || id === DEV8_ID || id === DEV9_ID || id === DEV10_ID || id === DEV11_ID || id === DEV12_ID || id === DEV13_ID || id === DEV14_ID || id === DEV15_ID || id === SNAKE_ID || id === DEVS_ID;
 }
 
 export function isDevSword(id: string | null | undefined) {
-  return id === DEV4_ID || id === DEV5_ID || id === DEV6_ID || id === DEV7_ID || id === DEV8_ID || id === DEV9_ID || id === DEV10_ID || id === DEV11_ID || id === DEV12_ID || id === DEV13_ID || id === DEV14_ID || id === SNAKE_ID || id === DEVS_ID;
+  return id === DEV4_ID || id === DEV5_ID || id === DEV6_ID || id === DEV7_ID || id === DEV8_ID || id === DEV9_ID || id === DEV10_ID || id === DEV11_ID || id === DEV12_ID || id === DEV13_ID || id === DEV14_ID || id === DEV15_ID || id === SNAKE_ID || id === DEVS_ID;
 }
 
 export function isGiantShot(id: string | null | undefined): id is GiantId {
-  return id === DEV_ID || id === DEV2_ID || id === DEV3_ID || id === DEV4_ID || id === DEV5_ID || id === DEV6_ID || id === DEV7_ID || id === DEV8_ID || id === DEV9_ID || id === DEV10_ID || id === DEV11_ID || id === DEV12_ID || id === DEV13_ID || id === DEV14_ID || id === SNAKE_ID || id === DEVS_ID;
+  return id === DEV_ID || id === DEV2_ID || id === DEV3_ID || id === DEV4_ID || id === DEV5_ID || id === DEV6_ID || id === DEV7_ID || id === DEV8_ID || id === DEV9_ID || id === DEV10_ID || id === DEV11_ID || id === DEV12_ID || id === DEV13_ID || id === DEV14_ID || id === DEV15_ID || id === SNAKE_ID || id === DEVS_ID;
 }
 
 export const DEV_SECONDS = 58;
@@ -166,6 +182,7 @@ export const DEV11_SECONDS = DEV_SECONDS;
 export const DEV12_SECONDS = DEV_SECONDS;
 export const DEV13_SECONDS = DEV_SECONDS;
 export const DEV14_SECONDS = 20;
+export const DEV15_SECONDS = DEV14_SECONDS;
 export const SNAKE_SECONDS = DEV_SECONDS;
 export const DEVS_SECONDS = DEV_SECONDS;
 export const DEV_N = 300;
@@ -323,7 +340,8 @@ export function devGiantAt(t: number) {
   return { x, z, yaw: Math.atan2(dx, dz || 0.001) };
 }
 
-export function devNameCovered(sx: number, sz: number, cx: number, cz: number, recT: number, big: boolean, wide = false) {
+export function devNameCovered(sx: number, sz: number, cx: number, cz: number, recT: number, big: boolean, wide = false, small = false) {
+  const k = devSize(small);
   const g = devGiantAt(Math.max(0, recT));
   if (wide) {
     const yaw = g.yaw;
@@ -339,8 +357,8 @@ export function devNameCovered(sx: number, sz: number, cx: number, cz: number, r
     const oz = g.z - pz;
     const forward = ox * Math.sin(yaw) + oz * Math.cos(yaw);
     const right = ox * Math.cos(yaw) - oz * Math.sin(yaw);
-    const depth = 12.6;
-    const width = 9.4;
+    const depth = 12.6 * k;
+    const width = 9.4 * k;
     return (forward * forward) / (depth * depth) + (right * right) / (width * width) < 1;
   }
   const vx = g.x - cx;
@@ -350,7 +368,7 @@ export function devNameCovered(sx: number, sz: number, cx: number, cz: number, r
   const fz = vz / vlen;
   const along = (sx - g.x) * fx + (sz - g.z) * fz;
   const side = Math.abs((sx - g.x) * fz - (sz - g.z) * fx);
-  return along > 0.4 && side < (big ? 5.4 : 3.6);
+  return along > 0.4 && side < (big ? 5.4 : 3.6) * k;
 }
 
 export function devClubHit(t: number, soldiers: number) {
@@ -413,8 +431,9 @@ export function devKick(t: number, soldiers: number, fast = false) {
 
 const kickPlans = new Map<string, Float64Array>();
 
-function kickPlan(n: number, fast = false) {
-  const key = fast ? `${n}:f` : String(n);
+function kickPlan(n: number, fast = false, small = false) {
+  const key = `${n}:${fast ? "f" : ""}${small ? "s" : ""}`;
+  const k = devSize(small);
   const hit = kickPlans.get(key);
   if (hit) return hit;
   const base = planOf(n, true, fast);
@@ -429,16 +448,16 @@ function kickPlan(n: number, fast = false) {
     const fz = Math.cos(g.yaw);
     const rx = -Math.cos(g.yaw);
     const rz = Math.sin(g.yaw);
-    const tx = g.x + fx * 13.2 + rx * 3.6;
-    const tz = g.z + fz * 13.2 + rz * 3.6;
+    const tx = g.x + (fx * 13.2 + rx * 3.6) * k;
+    const tz = g.z + (fz * 13.2 + rz * 3.6) * k;
     const scored: { i: number; s: number }[] = [];
     for (let i = 0; i < n; i++) {
       if (used[i]) continue;
-      const live = ringAt(i, n, t, true, false);
+      const live = ringAt(i, n, t, true, false, small);
       const forward = (live.x - g.x) * fx + (live.z - g.z) * fz;
       const dx = live.x - tx;
       const dz = live.z - tz;
-      scored.push({ i, s: dx * dx + dz * dz + (forward < 2 ? 420 : 0) });
+      scored.push({ i, s: dx * dx + dz * dz + (forward < 2 * k ? 420 : 0) });
     }
     scored.sort((a, b) => a.s - b.s || a.i - b.i);
     for (let j = 0; j < batch && j < scored.length; j++) {
@@ -499,7 +518,7 @@ export function devIsSpear(i: number, n: number) {
   return !devIsArcher(i, n) && i % 2 === 1;
 }
 
-function ringAt(i: number, n: number, t: number, big = false, snake = false) {
+function ringAt(i: number, n: number, t: number, big = false, snake = false, small = false) {
   const g = devGiantAt(t);
   const archer = devIsArcher(i, n);
   const meleeN = Math.ceil(n / 2);
@@ -526,7 +545,9 @@ function ringAt(i: number, n: number, t: number, big = false, snake = false) {
     const az = g.z + localZ * cy * sc;
     return { x, z, ry: Math.atan2(ax - x, az - z), ang, g, archer };
   }
-  const rad = archer ? (big ? 30 + ring * 2.05 : 20 + ring * 1.7) : big ? 13.8 + ring * 1.9 : 8.2 + ring * 1.45;
+  const rad = small
+    ? archer ? 18 + ring * 2.05 : 7.4 + ring * 1.9
+    : archer ? (big ? 30 + ring * 2.05 : 20 + ring * 1.7) : big ? 13.8 + ring * 1.9 : 8.2 + ring * 1.45;
   const x = g.x + Math.sin(ang) * rad;
   const z = g.z + Math.cos(ang) * rad;
   return { x, z, ry: Math.atan2(g.x - x, g.z - z), ang, g, archer };
@@ -1072,7 +1093,7 @@ export function devAlive(recT: number, soldiers: number, big = false, sword = fa
   return alive;
 }
 
-export function devFriendAt(i: number, n: number, recT: number, out: New1Pose, big = false, sword = false, snake = false, devs = false, kick = false, fast = false) {
+export function devFriendAt(i: number, n: number, recT: number, out: New1Pose, big = false, sword = false, snake = false, devs = false, kick = false, fast = false, small = false) {
   const count = Math.max(0, Math.floor(n));
   const t = Math.max(0, recT);
   if (i < 0 || i >= count) {
@@ -1089,7 +1110,7 @@ export function devFriendAt(i: number, n: number, recT: number, out: New1Pose, b
     snakeFriendAt(i, count, t, out, devs);
     return;
   }
-  const dieAt = kick ? kickPlan(count, fast)[i] : planOf(count, big).die[i];
+  const dieAt = kick ? kickPlan(count, fast, small)[i] : planOf(count, big).die[i];
   const slashAt = sword && !kick ? swordHits(count, big, snake)[i] : 1e9;
   const tailAt = snake ? tailHits(count)[i] : 1e9;
   if (snake && t >= tailAt && t < tailAt + FLING) {
@@ -1112,7 +1133,7 @@ export function devFriendAt(i: number, n: number, recT: number, out: New1Pose, b
     return;
   }
   if (kick && t >= dieAt && t < dieAt + FLING) {
-    const live = ringAt(i, count, dieAt, big, false);
+    const live = ringAt(i, count, dieAt, big, false, small);
     const g = live.g;
     const fx = Math.sin(g.yaw);
     const fz = Math.cos(g.yaw);
@@ -1169,7 +1190,7 @@ export function devFriendAt(i: number, n: number, recT: number, out: New1Pose, b
     out.s = 0;
     return;
   }
-  const live = ringAt(i, count, t, big, snake);
+  const live = ringAt(i, count, t, big, snake, small);
   const bob = Math.sin(t * 8 + i);
   out.x = live.x;
   out.z = live.z;
@@ -1180,7 +1201,7 @@ export function devFriendAt(i: number, n: number, recT: number, out: New1Pose, b
   out.s = 1;
 }
 
-export function sampleDevCam(recT: number, big = false, devs = false, backOff = 1, fast = false): ShotPose {
+export function sampleDevCam(recT: number, big = false, devs = false, backOff = 1, fast = false, small = false): ShotPose {
   const t = Math.max(0, recT);
   const g = devGiantAt(t);
   const push = lastDeath(fast) - 4;
@@ -1190,9 +1211,9 @@ export function sampleDevCam(recT: number, big = false, devs = false, backOff = 
   const back = (devs ? 66 : big ? 48 : 46) - e * (devs ? 1 : big ? 8 : 10);
   const height = (devs ? 41 : big ? 38 : 34) - e * (devs ? 1 : big ? 6 : 8);
   const lx = g.x;
-  const ly = devs ? 4 : big ? 9.2 : 5.4;
+  const ly = (devs ? 4 : big ? 9.2 : 5.4) * devSize(small);
   const lz = g.z + 2;
-  const pull = backOff > 0 ? backOff : 1;
+  const pull = (backOff > 0 ? backOff : 1) * (small ? 0.72 : 1);
   return {
     x: lx + (g.x + side - lx) * pull,
     y: ly + (height - ly) * pull,

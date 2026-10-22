@@ -6,7 +6,7 @@ import { formatCount } from "../../game";
 import { REEL_HOLD } from "../../recordCanvas";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
-import { devAlive, devClubHit, devGiantAt, devKick, devMaceSwing, devSnakeBite, devSwordPose, devTailLash, devTroopHit, devTroopSlot, devWaitArrow, TROOP_N, TROOP_SCALE, type KickModel } from "../../devReel";
+import { devAlive, devClubHit, devGiantAt, devKick, devMaceSwing, devSize, devSnakeBite, devSwordPose, devTailLash, devTroopHit, devTroopSlot, devWaitArrow, TROOP_N, TROOP_SCALE, type KickModel } from "../../devReel";
 import { KongModel } from "./Kong";
 import { DemonModel } from "./Demon";
 import { HulkModel } from "./Hulk";
@@ -108,7 +108,7 @@ function DreadShell({ plate, iron, eye, horn }: { plate: THREE.Material; iron: T
 
 const HEAD_BAR = 2.5;
 
-function HeadHp({ soldiers, kick = false, fast = false }: { soldiers: number; kick?: boolean; fast?: boolean }) {
+function HeadHp({ soldiers, kick = false, fast = false, small = false }: { soldiers: number; kick?: boolean; fast?: boolean; small?: boolean }) {
   const fill = useRef<THREE.Mesh>(null);
   useFrame(({ clock }) => {
     const alive = devAlive(Math.max(0, clock.elapsedTime - REEL_HOLD), soldiers, true, !kick, false, false, kick, fast);
@@ -119,7 +119,7 @@ function HeadHp({ soldiers, kick = false, fast = false }: { soldiers: number; ki
     mesh.position.x = (u - 1) * HEAD_BAR * 0.5;
   });
   return (
-    <group position={[0.05, 16.2, 0]}>
+    <group position={[0.05, 16.2, 0]} scale={1 / devSize(small)}>
       <mesh>
         <boxGeometry args={[HEAD_BAR + 0.1, 0.32, 0.05]} />
         <meshBasicMaterial color="#8f1c1c" side={THREE.DoubleSide} />
@@ -667,7 +667,7 @@ function ColossusModel({ soldiers }: { soldiers: number }) {
   return <group ref={rig} scale={scale} position={[-COLOSSUS_CENTER_X * scale, -COLOSSUS_MIN_Y * scale, -COLOSSUS_CENTER_Z * scale]} />;
 }
 
-function GiantBody({ soldiers, big, sword, dread, flesh = false, ape = false, demon = false, orc = false, hulk = false, kickModel = "hulk", fast = false, crown = false }: { soldiers: number; big: boolean; sword: boolean; dread: boolean; flesh?: boolean; ape?: boolean; demon?: boolean; orc?: boolean; hulk?: boolean; kickModel?: KickModel; fast?: boolean; crown?: boolean }) {
+function GiantBody({ soldiers, big, sword, dread, flesh = false, ape = false, demon = false, orc = false, hulk = false, kickModel = "hulk", fast = false, small = false, crown = false }: { soldiers: number; big: boolean; sword: boolean; dread: boolean; flesh?: boolean; ape?: boolean; demon?: boolean; orc?: boolean; hulk?: boolean; kickModel?: KickModel; fast?: boolean; small?: boolean; crown?: boolean }) {
   const root = useRef<THREE.Group>(null);
   const arm = useRef<THREE.Group>(null);
   const mace = useRef<THREE.Group>(null);
@@ -685,7 +685,7 @@ function GiantBody({ soldiers, big, sword, dread, flesh = false, ape = false, de
       const fx = Math.sin(g.yaw);
       const fz = Math.cos(g.yaw);
       if (root.current) {
-        root.current.position.set(g.x + fx * kick.lunge, 0, g.z + fz * kick.lunge);
+        const lunge = kick.lunge * devSize(small);
         root.current.rotation.y = g.yaw;
         root.current.rotation.x = 0;
         root.current.rotation.z = 0;
@@ -737,7 +737,7 @@ function GiantBody({ soldiers, big, sword, dread, flesh = false, ape = false, de
   });
   const spikes = [0, 45, 90, 135, 180, 225, 270, 315];
   return (
-    <group ref={root} scale={big ? 1.52 : 1}>
+    <group ref={root} scale={(big ? 1.52 : 1) * devSize(small)}>
       {hulk ? (
         <HulkModel soldiers={soldiers} model={kickModel} fast={fast} />
       ) : orc ? (
@@ -874,7 +874,7 @@ function GiantBody({ soldiers, big, sword, dread, flesh = false, ape = false, de
       </group>
         </>
       )}
-      {crown && <HeadHp soldiers={soldiers} kick={hulk} fast={fast} />}
+      {crown && <HeadHp soldiers={soldiers} kick={hulk} fast={fast} small={small} />}
     </group>
   );
 }
@@ -883,7 +883,7 @@ const BLOOD = 28;
 const _drop = Array.from({ length: BLOOD }, () => ({ t: -10, x: 0, y: 0, z: 0, vx: 0, vz: 0 }));
 let _dropN = 0;
 
-function ArrowVolley({ big, snake = false, devs = false, soldiers = 0 }: { big: boolean; snake?: boolean; devs?: boolean; soldiers?: number }) {
+function ArrowVolley({ big, snake = false, devs = false, soldiers = 0, small = false }: { big: boolean; snake?: boolean; devs?: boolean; soldiers?: number; small?: boolean }) {
   const mesh = useRef<THREE.InstancedMesh>(null);
   const blood = useRef<THREE.InstancedMesh>(null);
   const lastHit = useRef(new Float32Array(ARROWS));
@@ -916,12 +916,12 @@ function ArrowVolley({ big, snake = false, devs = false, soldiers = 0 }: { big: 
       }
       const phase = ((t * 0.8 + i * 0.19) % 1.4) / 1.4;
       const ang = (i / ARROWS) * Math.PI * 2;
-      const rad = (big ? 32 : 22) + (i % 4) * 1.6;
+      const rad = (small ? 20 : big ? 32 : 22) + (i % 4) * 1.6;
       const sx = g.x + Math.sin(ang) * rad;
       const sz = g.z + Math.cos(ang) * rad;
       const u = phase;
       if (!snake && !devs) {
-        const aimY = big ? 14 : 9.2;
+        const aimY = (big ? 14 : 9.2) * devSize(small);
         dummy.position.set(sx + (g.x - sx) * u, 1.6 + (aimY - 1.6) * u + Math.sin(u * Math.PI) * 2.6, sz + (g.z - sz) * u);
         dummy.lookAt(g.x, aimY, g.z);
         dummy.rotateX(Math.PI / 2);
@@ -1297,11 +1297,11 @@ function DevTroop({ soldiers }: { soldiers: number }) {
   );
 }
 
-export function Giant({ soldiers, big = false, sword = false, dread = false, flesh = false, ape = false, demon = false, orc = false, hulk = false, kickModel = "hulk", fast = false, snake = false, devs = false, crown = false }: { soldiers: number; big?: boolean; sword?: boolean; dread?: boolean; flesh?: boolean; ape?: boolean; demon?: boolean; orc?: boolean; hulk?: boolean; kickModel?: KickModel; fast?: boolean; snake?: boolean; devs?: boolean; crown?: boolean }) {
+export function Giant({ soldiers, big = false, sword = false, dread = false, flesh = false, ape = false, demon = false, orc = false, hulk = false, kickModel = "hulk", fast = false, small = false, snake = false, devs = false, crown = false }: { soldiers: number; big?: boolean; sword?: boolean; dread?: boolean; flesh?: boolean; ape?: boolean; demon?: boolean; orc?: boolean; hulk?: boolean; kickModel?: KickModel; fast?: boolean; small?: boolean; snake?: boolean; devs?: boolean; crown?: boolean }) {
   return (
     <group>
-      {devs ? <DevTroop soldiers={soldiers} /> : snake ? <SnakeBody soldiers={soldiers} /> : <GiantBody soldiers={soldiers} big={big} sword={sword} dread={dread} flesh={flesh} ape={ape} demon={demon} orc={orc} hulk={hulk} kickModel={kickModel} fast={fast} crown={crown} />}
-      <ArrowVolley big={big} snake={snake} devs={devs} soldiers={soldiers} />
+      {devs ? <DevTroop soldiers={soldiers} /> : snake ? <SnakeBody soldiers={soldiers} /> : <GiantBody soldiers={soldiers} big={big} sword={sword} dread={dread} flesh={flesh} ape={ape} demon={demon} orc={orc} hulk={hulk} kickModel={kickModel} fast={fast} small={small} crown={crown} />}
+      <ArrowVolley big={big} snake={snake} devs={devs} soldiers={soldiers} small={small} />
     </group>
   );
 }
