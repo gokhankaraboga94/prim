@@ -6,7 +6,7 @@ import { formatCount } from "../../game";
 import { REEL_HOLD } from "../../recordCanvas";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
-import { devAlive, devClubHit, devGiantAt, devKick, devMaceSwing, devSize, devSnakeBite, devSwordPose, devTailLash, devTroopHit, devTroopSlot, devWaitArrow, TROOP_N, TROOP_SCALE, type KickModel } from "../../devReel";
+import { devAlive, devClubHit, devGiantAt, devGiantPose, devKick, devMaceSwing, devSize, devSnakeBite, devSwordPose, devTailLash, devTroopHit, devTroopSlot, devWaitArrow, TROOP_N, TROOP_SCALE, type KickModel } from "../../devReel";
 import { KongModel } from "./Kong";
 import { DemonModel } from "./Demon";
 import { HulkModel } from "./Hulk";
@@ -679,13 +679,14 @@ function GiantBody({ soldiers, big, sword, dread, flesh = false, ape = false, de
   const horn = useMemo(() => new THREE.MeshStandardMaterial({ color: "#1a1816", metalness: 0.45, roughness: 0.55 }), []);
   useFrame(({ clock }) => {
     const t = Math.max(0, clock.elapsedTime - REEL_HOLD);
-    const g = devGiantAt(t);
+    const g = devGiantPose(t, small);
     if (hulk) {
       const kick = devKick(t, soldiers, fast);
       const fx = Math.sin(g.yaw);
       const fz = Math.cos(g.yaw);
       if (root.current) {
         const lunge = kick.lunge * devSize(small);
+        root.current.position.set(g.x + fx * lunge, 0, g.z + fz * lunge);
         root.current.rotation.y = g.yaw;
         root.current.rotation.x = 0;
         root.current.rotation.z = 0;
@@ -890,7 +891,7 @@ function ArrowVolley({ big, snake = false, devs = false, soldiers = 0, small = f
   useFrame(({ clock }) => {
     if (!mesh.current) return;
     const t = Math.max(0, clock.elapsedTime - REEL_HOLD);
-    const g = devGiantAt(t);
+    const g = devGiantPose(t, small);
     const cy = Math.cos(g.yaw);
     const sy = Math.sin(g.yaw);
     const nArrow = devs ? 36 : ARROWS;
@@ -915,7 +916,7 @@ function ArrowVolley({ big, snake = false, devs = false, soldiers = 0, small = f
         continue;
       }
       const phase = ((t * 0.8 + i * 0.19) % 1.4) / 1.4;
-      const ang = (i / ARROWS) * Math.PI * 2;
+      const ang = small ? g.yaw + (i / ARROWS - 0.5) * 2.4 : (i / ARROWS) * Math.PI * 2;
       const rad = (small ? 20 : big ? 32 : 22) + (i % 4) * 1.6;
       const sx = g.x + Math.sin(ang) * rad;
       const sz = g.z + Math.cos(ang) * rad;

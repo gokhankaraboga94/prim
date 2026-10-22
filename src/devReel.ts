@@ -340,9 +340,72 @@ export function devGiantAt(t: number) {
   return { x, z, yaw: Math.atan2(dx, dz || 0.001) };
 }
 
+/** DEV15 plants the giant: no walk, no turn. The crowd queues in front of it instead. */
+const STILL = { x: 0, z: 5, yaw: -1.8 };
+
+export function devGiantPose(t: number, still = false) {
+  return still ? STILL : devGiantAt(t);
+}
+
+const QUEUE_R0 = 6.6;
+const QUEUE_ROW = 1.3;
+const QUEUE_GAP = 1.2;
+const QUEUE_SPAN = 1.3;
+const QUEUE_WAIT = 0.25;
+const QUEUE_MOVE = 0.6;
+type Queue = { times: number[]; starts: number[]; rows: number[] };
+const queues = new Map<number, Queue>();
+
+function queueOf(n: number): Queue {
+  const hit = queues.get(n);
+  if (hit) return hit;
+  const die = kickPlan(n, true, true);
+  const times: number[] = [];
+  const starts = [0];
+  for (let i = 0; i < n; i++) {
+    if (!times.length || die[i] !== times[times.length - 1]) {
+      if (times.length) starts.push(i);
+      times.push(die[i]);
+    }
+  }
+  starts.push(n);
+  const rows = [0];
+  for (let r = 0; rows[rows.length - 1] < n; r++) rows.push(rows[r] + Math.max(5, Math.floor((2 * QUEUE_SPAN * (QUEUE_R0 + r * QUEUE_ROW)) / QUEUE_GAP)));
+  const q = { times, starts, rows };
+  queues.set(n, q);
+  return q;
+}
+
+function queueSeat(q: Queue, slot: number) {
+  const s = Math.max(0, slot);
+  let r = 0;
+  while (r < q.rows.length - 2 && q.rows[r + 1] <= s) r++;
+  const c = s - q.rows[r];
+  const lane = c % 2 ? -(c + 1) / 2 : c / 2;
+  const d = QUEUE_R0 + r * QUEUE_ROW;
+  return { d, a: (lane * QUEUE_GAP) / d };
+}
+
+/** Soldiers stand in rows facing the giant; after each kick the survivors walk up to fill the front. */
+function queueAt(i: number, n: number, t: number) {
+  const q = queueOf(n);
+  let b = 0;
+  while (b < q.times.length && q.times[b] + QUEUE_WAIT <= t) b++;
+  const from = queueSeat(q, i - q.starts[Math.max(0, b - 1)]);
+  const to = queueSeat(q, i - q.starts[b]);
+  const u = b === 0 ? 1 : Math.min(1, (t - q.times[b - 1] - QUEUE_WAIT) / QUEUE_MOVE);
+  const e = u * u * (3 - 2 * u);
+  const jitter = (((i * 37) % 9) - 4) * 0.05;
+  const d = from.d + (to.d - from.d) * e + jitter;
+  const a = from.a + (to.a - from.a) * e;
+  const g = STILL;
+  const x = g.x + Math.sin(g.yaw + a) * d;
+  const z = g.z + Math.cos(g.yaw + a) * d;
+  return { x, z, ry: Math.atan2(g.x - x, g.z - z), ang: a, g, archer: devIsArcher(i, n) };
+}
 export function devNameCovered(sx: number, sz: number, cx: number, cz: number, recT: number, big: boolean, wide = false, small = false) {
   const k = devSize(small);
-  const g = devGiantAt(Math.max(0, recT));
+  const g = devGiantPose(Math.max(0, recT), small);
   if (wide) {
     const yaw = g.yaw;
     const vx = sx - cx;
@@ -437,6 +500,11 @@ function kickPlan(n: number, fast = false, small = false) {
   const hit = kickPlans.get(key);
   if (hit) return hit;
   const base = planOf(n, true, fast);
+  if (small) {
+    const order = Float64Array.from(base.die).sort();
+    kickPlans.set(key, order);
+    return order;
+  }
   const countAt = new Map<number, number>();
   for (let i = 0; i < n; i++) countAt.set(base.die[i], (countAt.get(base.die[i]) ?? 0) + 1);
   const die = new Float64Array(n);
@@ -519,6 +587,7 @@ export function devIsSpear(i: number, n: number) {
 }
 
 function ringAt(i: number, n: number, t: number, big = false, snake = false, small = false) {
+  if (small && !snake) return queueAt(i, n, t);
   const g = devGiantAt(t);
   const archer = devIsArcher(i, n);
   const meleeN = Math.ceil(n / 2);
@@ -1203,16 +1272,17 @@ export function devFriendAt(i: number, n: number, recT: number, out: New1Pose, b
 
 export function sampleDevCam(recT: number, big = false, devs = false, backOff = 1, fast = false, small = false): ShotPose {
   const t = Math.max(0, recT);
-  const g = devGiantAt(t);
+  const g = devGiantPose(t, small);
   const push = lastDeath(fast) - 4;
   const u = t <= push ? 0 : Math.min(1, (t - push) / (fast ? 4 : 6));
   const e = u * u * (3 - 2 * u);
   const side = (devs ? 36 : big ? 30 : 28) - e * (devs ? 1 : big ? 5 : 6);
   const back = (devs ? 66 : big ? 48 : 46) - e * (devs ? 1 : big ? 8 : 10);
   const height = (devs ? 41 : big ? 38 : 34) - e * (devs ? 1 : big ? 6 : 8);
-  const lx = g.x;
+  const lead = small ? 5 : 0;
+  const lx = g.x + Math.sin(g.yaw) * lead;
   const ly = (devs ? 4 : big ? 9.2 : 5.4) * devSize(small);
-  const lz = g.z + 2;
+  const lz = g.z + 2 + Math.cos(g.yaw) * lead;
   const pull = (backOff > 0 ? backOff : 1) * (small ? 0.72 : 1);
   return {
     x: lx + (g.x + side - lx) * pull,
