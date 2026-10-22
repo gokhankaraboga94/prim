@@ -23,7 +23,9 @@ import { sampleDragonCam, type DragonId } from "../../dragonReel";
 import { WarsBattle, WarsCam } from "./WarsBattle";
 import { warsView, type WarsId } from "../../warsReel";
 import { OrduBattle, OrduCam } from "./OrduBattle";
-import { orduForm, orduHaze, type OrduId } from "../../orduReel";
+import { ORDU_ID, orduForm, orduHaze, type OrduId } from "../../orduReel";
+import { karsiField, karsiHaze, makeKarsiLayout, type Rival } from "../../karsiReel";
+import { KarsiBattle, KarsiCam } from "./KarsiBattle";
 import { OkBattle, OkCam } from "./OkBattle";
 import { type OkId } from "../../okReel";
 import { KalkanBattle, KalkanCam } from "./KalkanBattle";
@@ -94,6 +96,7 @@ type BattleSceneProps = {
   giant?: GiantId | null;
   wars?: WarsId | null;
   ordu?: OrduId | null;
+  karsi?: Rival | null;
   ok?: OkId | null;
   kalkan?: KalkanId | null;
   hero?: HeroId | null;
@@ -882,7 +885,8 @@ function SceneContent({
   dragon = null,
   giant = null,
   wars = null,
-  ordu = null,
+  ordu: orduIn = null,
+  karsi = null,
   ok = null,
   kalkan = null,
   hero = null,
@@ -895,6 +899,7 @@ function SceneContent({
   xxx = null,
   rosterIds = null,
 }: BattleSceneProps) {
+  const ordu = orduIn ?? (karsi ? ORDU_ID : null);
   const chiefs = effectiveCommanders(commanders, names);
   const pit = Boolean(arena || arena2 || arena3);
   const hideCmd = skipCommander || Boolean(discover) || Boolean(countdown) || Boolean(defend) || Boolean(vs) || Boolean(new1) || Boolean(new2) || Boolean(new3) || Boolean(new4) || Boolean(new5) || Boolean(new6) || Boolean(new62) || Boolean(new7) || Boolean(maze) || Boolean(film) || Boolean(dragon) || Boolean(giant) || Boolean(ok) || Boolean(kalkan) || Boolean(hero) || pit || Boolean(bout) || Boolean(kayit) || Boolean(xxx && xxxHideCmd(xxx));
@@ -905,8 +910,8 @@ function SceneContent({
   const grass = devLive || isDefend5(defend) || Boolean(bout);
   const friendN = defend ? defendShownFriends(defend, soldiers) : soldiers;
   const warsScale = wars ? warsView(soldiers) : 1;
-  const orduFog = ordu ? orduHaze(soldiers) : null;
-  const orduField = ordu ? orduForm(soldiers) : null;
+  const orduFog = karsi ? karsiHaze(makeKarsiLayout(soldiers, karsi.foes)) : ordu ? orduHaze(soldiers) : null;
+  const orduField = karsi ? karsiField(soldiers, karsi.foes) : ordu ? orduForm(soldiers) : null;
   const field = isVs(vs);
   const climb = isVs2(vs);
   const chase = Boolean(new5 || new7);
@@ -967,7 +972,7 @@ function SceneContent({
       {giant && <Giant soldiers={isDevAll(giant) ? Math.max(1, soldiers) : Math.min(giant === DEV2_ID ? DEV2_N : DEV_N, Math.max(1, soldiers))} big={isDevBig(giant)} sword={isDevSword(giant)} dread={isDevDread(giant)} flesh={isDev7(giant)} ape={isDev8(giant)} demon={isDev9(giant)} orc={isDev10(giant)} hulk={isKicker(giant)} kickModel={kickModel(giant)} fast={isDevFast(giant)} small={isDevSmall(giant)} snake={isSnake(giant)} devs={isDevs(giant)} crown={devLive} />}
       {!wars && !ordu && !ok && !kalkan && !hero && !pit && !bout && <Army count={friendN} names={names} commanders={commanders} cinematic={cinematic} duration={duration} skipCommander={hideCmd} roster={roster} discover={discover} countdown={Boolean(countdown)} defend={Boolean(defend)} defend2={sortie} defend3={isDefend3(defend)} loose={isDefend5(defend)} blue={isDefend4(defend) || isDefend5(defend)} vs={field} vs2={climb} new1={Boolean(new1)} new2={duel} blade={blades || Boolean(maze)} bridge={chase} cross={cross} wide={wide} relief={relief} maze={Boolean(maze)} film={Boolean(film)} dragon={Boolean(dragon)} giant={Boolean(giant)} giantBig={isDevBig(giant)} giantAll={isDevAll(giant)} giantSword={isDevSword(giant)} giantSnake={isSnake(giant)} giantDevs={isDevs(giant)} giantKnight={isDev7(giant) || isDev8(giant) || isDev9(giant) || isDev10(giant) || isKicker(giant)} giantKick={isKicker(giant)} giantFast={isDevFast(giant)} giantSmall={isDevSmall(giant)} knight={!cinematic} nameGold={isDevDread(giant) || isSnake(giant) || isDevs(giant)} nameAlert={devLive || isDefend5(defend)} namePlate={Boolean(kayit)} mix={split} mixSlow={isMix9(mix)} nameHunt={Boolean(xxx)} quiet={Boolean(xxx && xxxQuiet(xxx)) || slaughter || Boolean(maze) || Boolean(film) || Boolean(dragon) || Boolean(giant) || Boolean(kayit)} square={Boolean(kayit) || Boolean(xxx && xxxSquare(xxx))} readNames={Boolean(xxx && xxxCloseNames(xxx))} scanHunt={Boolean(xxx && xxxScanHunt(xxx))} level={level} rosterIds={rosterIds} />}
       {wars && <WarsBattle names={names} soldiers={soldiers} />}
-      {ordu && <OrduBattle names={names} soldiers={soldiers} />}
+      {ordu && (karsi ? <KarsiBattle names={names} soldiers={soldiers} rival={karsi} /> : <OrduBattle names={names} soldiers={soldiers} />)}
       {ok && <OkBattle names={names} />}
       {hero && <HeroBattle names={names} />}
       {pit && (
@@ -986,7 +991,7 @@ function SceneContent({
       {wars ? (
         <WarsCam soldiers={soldiers} />
       ) : ordu ? (
-        <OrduCam soldiers={soldiers} />
+        karsi ? <KarsiCam soldiers={soldiers} rival={karsi} /> : <OrduCam soldiers={soldiers} />
       ) : ok ? (
         <OkCam />
       ) : pit ? (
@@ -1126,6 +1131,7 @@ function BattleSceneInner({
   giant = null,
   wars = null,
   ordu = null,
+  karsi = null,
   ok = null,
   kalkan = null,
   hero = null,
@@ -1258,6 +1264,7 @@ function BattleSceneInner({
         giant={giant}
         wars={wars}
         ordu={ordu}
+        karsi={karsi}
         ok={ok}
         kalkan={kalkan}
         hero={hero}

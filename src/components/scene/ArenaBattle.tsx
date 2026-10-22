@@ -118,7 +118,7 @@ function withoutFootBase(geo: THREE.BufferGeometry) {
   return next;
 }
 
-function buildFoe(root: THREE.Object3D) {
+export function buildFoe(root: THREE.Object3D) {
   root.updateMatrixWorld(true);
   const pieces: THREE.BufferGeometry[] = [];
   const box = new THREE.Box3();
@@ -262,7 +262,7 @@ type ArmUniforms = {
 };
 
 /** Writes armW/armE onto the geometry and returns the weapon side. */
-function paintArmWeights(geo: THREE.BufferGeometry, forwardX: boolean) {
+export function paintArmWeights(geo: THREE.BufferGeometry, forwardX: boolean) {
   const pos = geo.getAttribute("position") as THREE.BufferAttribute;
   geo.computeBoundingBox();
   const box = geo.boundingBox;
@@ -286,7 +286,7 @@ function paintArmWeights(geo: THREE.BufferGeometry, forwardX: boolean) {
   return { side, pivot, elbow: height * ARM_ELBOW_DROP };
 }
 
-function armUniforms(side: number, pivot: THREE.Vector3, elbow: number, forwardX: boolean): ArmUniforms {
+export function armUniforms(side: number, pivot: THREE.Vector3, elbow: number, forwardX: boolean): ArmUniforms {
   return {
     uStrike: { value: new THREE.Vector2(0, 0) },
     armSide: { value: side },
@@ -297,7 +297,7 @@ function armUniforms(side: number, pivot: THREE.Vector3, elbow: number, forwardX
 }
 
 /** `strikeExpr` reads the strike for this vertex: a uniform for heroes, an instance attribute for foes. */
-function installArmShader(material: THREE.Material, uniforms: ArmUniforms, strikeExpr: string, key: string) {
+export function installArmShader(material: THREE.Material, uniforms: ArmUniforms, strikeExpr: string, key: string) {
   material.customProgramCacheKey = () => key;
   material.onBeforeCompile = (shader) => {
     Object.assign(shader.uniforms, uniforms);
@@ -344,7 +344,7 @@ function rigArm(mesh: THREE.Mesh, forwardX: boolean) {
   mesh.userData.armStrike = uniforms.uStrike.value;
 }
 
-function fitHero(scene: THREE.Group, yaw: number, light = false) {
+export function fitHero(scene: THREE.Group, yaw: number, light = false) {
   scene.updateMatrixWorld(true);
   scene.traverse((obj) => {
     const mesh = obj as THREE.Mesh;
