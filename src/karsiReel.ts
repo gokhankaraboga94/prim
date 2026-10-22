@@ -7,7 +7,7 @@ export type Karsi0Id = typeof KARSI0_ID;
 export const KARSI0_MODE = { id: KARSI0_ID, label: "karşıtakipçi0" } as const;
 export const KARSI0_SECONDS = 16;
 export const KARSI_ME = "wargame2028";
-export const KARSI_HERO_ME = "/models/arena3/1.glb";
+export const KARSI_HERO_ME = "/models/arena3/armored.glb";
 export const KARSI_HERO_FOE = "/models/arena3/2.glb";
 
 /** Rival account and its follower count, asked when the button is pressed. */

@@ -260,8 +260,9 @@ function canvasTexture(canvas: HTMLCanvasElement) {
   return map;
 }
 
-/** Commander tag: the account name in capitals, yellow on black. */
-function chiefTag(text: string) {
+/** Commander tag: yellow on black for us, red on black for the rival. */
+function chiefTag(text: string, foe = false) {
+  const ink = foe ? "#ff2a22" : "#ffe14a";
   const canvas = document.createElement("canvas");
   canvas.width = 1024;
   canvas.height = 200;
@@ -278,9 +279,9 @@ function chiefTag(text: string) {
     ctx.fillStyle = "#000000";
     ctx.fill();
     ctx.lineWidth = 8;
-    ctx.strokeStyle = "#ffe14a";
+    ctx.strokeStyle = ink;
     ctx.stroke();
-    ctx.fillStyle = "#ffe14a";
+    ctx.fillStyle = ink;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.fillText(text, 512, 104);
@@ -305,7 +306,7 @@ function KarsiChiefUnit({ layout, mine, name }: { layout: KarsiLayout; mine: boo
   const [body, setBody] = useState<THREE.Group | null>(null);
   const node = useRef<THREE.Group>(null);
   const tag = useRef<THREE.Mesh>(null);
-  const tex = useMemo(() => chiefTag(upper(name)), [name]);
+  const tex = useMemo(() => chiefTag(upper(name), !mine), [name, mine]);
   useEffect(() => () => tex.dispose(), [tex]);
   useEffect(() => {
     let drop = false;
@@ -384,7 +385,7 @@ function KarsiHud({ layout, rival }: { layout: KarsiLayout; rival: string }) {
           ]
         : [
         { text: formatCount(layout.them.real), font: 150, fill: "#ff3b30" },
-        { text: ` ${upper(rival)}  `, font: 66, fill: "#ffd2c8" },
+        { text: ` ${upper(rival)}  `, font: 66, fill: "#ff2a22" },
         { text: "VS", font: 120, fill: "#ffffff" },
         { text: `  ${formatCount(layout.us.real)}`, font: 150, fill: "#ffe14a" },
         { text: ` ${upper(KARSI_ME)}`, font: 66, fill: "#fff4c4" },
