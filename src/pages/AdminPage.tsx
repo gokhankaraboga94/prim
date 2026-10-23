@@ -1452,7 +1452,7 @@ export function AdminPage() {
           )}
           {isKarsi3(reelShot) && (
             <p className="muted">
-              Karşı takipçi2 ile aynı savaş ve aynı liste. Kamera @WARGAME2028'in sağ omzunun gerisinde kalır, üçüncü şahıs nişancı gibi rakibe bakar. Şu an {game.rivalHandle ? `@${game.rivalHandle.toUpperCase()} · ${formatCount(game.rivalNames.length)} asker` : "liste boş"}. İsimler siyah plakada kırmızı.
+              Karşı takipçi2 ile aynı savaş ve aynı liste. Omuz kamerasıyla başlar ve biter. Arada oyuncu değişir: bizim kahraman, karşı komutan, bir asker, bir düşman asker. İki ara kesit tepeden, karşı takipçi2 gibi. Şu an {game.rivalHandle ? `@${game.rivalHandle.toUpperCase()} · ${formatCount(game.rivalNames.length)} asker` : "liste boş"}. İsimler siyah plakada kırmızı.
             </p>
           )}
           {isOk(reelShot) && (

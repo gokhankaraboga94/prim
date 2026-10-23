@@ -397,21 +397,88 @@ function karsiInviteCam(layout: KarsiLayout, t: number): Cam {
 
 const tpsMe: KarsiChief = { x: 0, z: 0, yaw: 0, kneel: 0, lift: 0, chop: 0 };
 const tpsFoe: KarsiChief = { x: 0, z: 0, yaw: 0, kneel: 0, lift: 0, chop: 0 };
+const tpsUs: KarsiPose = { x: 0, z: 0, yaw: 0, fall: 0, lift: 0, chop: 0 };
+const tpsThem: KarsiPose = { x: 0, z: 0, yaw: 0, fall: 0, lift: 0, chop: 0 };
+
+type TpsBody = { x: number; z: number; fall: number; face: 1 | -1 };
+
+/** Front-rank body, off the centre lane, who stays up the longest. */
+function tpsSoldier(side: KarsiSide, salt: number) {
+  if (side.n <= 0) return -1;
+  let best = 0;
+  let score = -1;
+  for (let i = 0; i < side.n; i++) {
+    const off = Math.abs(side.x[i]);
+    const s = (side.row[i] <= 1 ? 8 : 0) + (off > 0.7 ? 3 : 0) + Math.min(side.die[i], 40) / 20 + hash(i, salt);
+    if (s > score) {
+      score = s;
+      best = i;
+    }
+  }
+  return best;
+}
+
+function tpsChiefBody(layout: KarsiLayout, mine: boolean, t: number): TpsBody {
+  const chief = karsiChief(layout, mine, t, mine ? tpsMe : tpsFoe);
+  return { x: chief.x, z: chief.z, fall: chief.kneel, face: mine ? 1 : -1 };
+}
+
+function tpsSoldierBody(layout: KarsiLayout, mine: boolean, t: number): TpsBody | null {
+  const side = mine ? layout.us : layout.them;
+  const i = tpsSoldier(side, mine ? 4 : 9);
+  if (i < 0) return null;
+  const pose = mine ? karsiFriend(layout, i, t, tpsUs) : karsiFoe(layout, i, t, tpsThem);
+  return { x: pose.x, z: pose.z, fall: pose.fall, face: mine ? 1 : -1 };
+}
+
+/** Over the right shoulder. face +1 looks toward +Z, so ours and the foe mirror. */
+function tpsBehind(body: TpsBody, aim: TpsBody, u: number, tall: boolean): Cam {
+  const gap = Math.max(1.8, Math.abs(aim.z - body.z));
+  const close = ease(clamp01((16 - gap) / 13));
+  const back = (tall ? 5.4 : 4.15) - close * (tall ? 1.05 : 0.55) + u * 0.22;
+  const side = (tall ? 0.72 : 0.5) + close * (tall ? 0.5 : 0.28);
+  const camY = (tall ? 2.85 : 2.05) + close * (tall ? 1.25 : 0.55) - body.fall * (tall ? 0.85 : 0.5) + u * 0.1;
+  const aimY = (tall ? 1.45 : 1.2) + close * 0.15 - aim.fall * 0.85;
+  return look(body.x - body.face * side, Math.max(1.4, camY), body.z - body.face * back, aim.x, Math.max(0.7, aimY), aim.z, (tall ? 52 : 56) - close * 4);
+}
+
+/** Same high angles as karşı takipçi2: whole field, then the front line. */
+function karsiTop(layout: KarsiLayout, t: number, wide: boolean, u: number): Cam {
+  const meet = karsiMeet(layout, t);
+  if (wide) {
+    const dist = wideDist(layout);
+    const midZ = (layout.them.depth - layout.us.depth) * 0.5;
+    return mixCam(orbit(0, 0.4, midZ, dist, 48, -0.04, 50), orbit(0, 0.4, midZ, dist * 0.9, 42, 0.1, 48), u);
+  }
+  const dist = Math.min(wideDist(layout) * 0.62, Math.max(28, layout.width * 0.85));
+  return mixCam(orbit(0, 1.1, meet, dist, 38, -0.05, 48), orbit(0, 1.1, meet, dist * 0.92, 34, 0.14, 46), u);
+}
 
 /**
- * Third person behind our commander. Right shoulder, rival kept ahead.
- * Pulls up as the lines meet so the portrait frame looks over him, not into his back.
+ * Opens and closes over our commander's shoulder. Between those, the shoulder
+ * passes to the rival commander, one of our soldiers, and one enemy soldier,
+ * with two overhead cuts like karşı takipçi2.
  */
 export function karsiTpsCam(layout: KarsiLayout, t: number): Cam {
-  const me = karsiChief(layout, true, t, tpsMe);
-  const foe = karsiChief(layout, false, t, tpsFoe);
-  const gap = Math.max(1.8, foe.z - me.z);
-  const close = ease(clamp01((16 - gap) / 13));
-  const back = 5.4 - close * 1.15;
-  const side = -(0.72 + close * 0.55);
-  const camY = 2.85 + close * 1.35 - me.kneel * 0.85;
-  const aimY = 1.45 + close * 0.15 - foe.kneel * 0.9;
-  return look(me.x + side, Math.max(1.55, camY), me.z - back, foe.x * 0.4, Math.max(0.75, aimY), foe.z, 52 - close * 4);
+  const me = tpsChiefBody(layout, true, t);
+  const foe = tpsChiefBody(layout, false, t);
+  const us = tpsSoldierBody(layout, true, t) ?? me;
+  const them = tpsSoldierBody(layout, false, t) ?? foe;
+  const cuts: { until: number; cam: (u: number) => Cam }[] = [
+    { until: 3.2, cam: (u) => tpsBehind(me, foe, u, true) },
+    { until: 6, cam: (u) => karsiTop(layout, t, true, u) },
+    { until: 9, cam: (u) => tpsBehind(foe, me, u, true) },
+    { until: 11.4, cam: (u) => karsiTop(layout, t, false, u) },
+    { until: 14, cam: (u) => tpsBehind(us, foe, u, false) },
+    { until: 16.6, cam: (u) => tpsBehind(them, me, u, false) },
+    { until: 20, cam: (u) => tpsBehind(me, foe, u, true) },
+  ];
+  let prev = 0;
+  for (const cut of cuts) {
+    if (t < cut.until) return cut.cam(clamp01((t - prev) / Math.max(0.001, cut.until - prev)));
+    prev = cut.until;
+  }
+  return tpsBehind(me, foe, 1, true);
 }
 
 export function karsiCam(layout: KarsiLayout, t: number): Cam {
