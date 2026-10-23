@@ -3,6 +3,8 @@ export type GameState = {
   instagramHandle: string;
   names: string[];
   commanders: string[];
+  rivalHandle: string;
+  rivalNames: string[];
   updatedAt: number;
   castleLevel: number;
   castleHp: number;
@@ -41,6 +43,8 @@ export const DEFAULT_GAME: GameState = {
   instagramHandle: "Wargame2028",
   names: [],
   commanders: [],
+  rivalHandle: "",
+  rivalNames: [],
   updatedAt: 0,
   castleLevel: 1,
   castleHp: LEVEL_HP[1],
@@ -74,11 +78,14 @@ export function parseGame(v: Partial<GameState> | null): GameState {
     soldiers
   );
   const commanders = compactCommanders(coerceNames(v?.commanders), names);
+  const rivalNames = coerceNames(v?.rivalNames).map((item) => normalizeHandle(item)).filter(Boolean);
   return {
     soldiers,
     instagramHandle,
     names,
     commanders,
+    rivalHandle: normalizeHandle(String(v?.rivalHandle || "")),
+    rivalNames,
     updatedAt,
     castleLevel,
     castleHp: hasHp ? Math.max(0, Number(v?.castleHp)) : maxHpForLevel(castleLevel),
@@ -115,7 +122,7 @@ export function resolveSiege(game: GameState, now = Date.now()): SiegeView {
 export function toGameRecord(
   game: GameState,
   now: number,
-  patch: Partial<Pick<GameState, "soldiers" | "instagramHandle" | "names" | "commanders">> = {}
+  patch: Partial<Pick<GameState, "soldiers" | "instagramHandle" | "names" | "commanders" | "rivalHandle" | "rivalNames">> = {}
 ): GameState {
   const siege = resolveSiege(game, now);
   const soldiers = patch.soldiers ?? game.soldiers;
@@ -125,6 +132,8 @@ export function toGameRecord(
     instagramHandle: patch.instagramHandle ?? game.instagramHandle,
     names,
     commanders: compactCommanders(patch.commanders ?? game.commanders, names),
+    rivalHandle: patch.rivalHandle !== undefined ? normalizeHandle(patch.rivalHandle) : game.rivalHandle,
+    rivalNames: patch.rivalNames !== undefined ? patch.rivalNames.map((n) => normalizeHandle(n)).filter(Boolean) : game.rivalNames,
     updatedAt: now,
     castleLevel: siege.level,
     castleHp: siege.hp,

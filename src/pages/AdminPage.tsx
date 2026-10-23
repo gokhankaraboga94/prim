@@ -37,7 +37,7 @@ import { FILM_ID, FILM_MODE, FILM_SECONDS, isFilm, type FilmId } from "../filmRe
 import { DRAGON_ID, DRAGON_MODE, DRAGON_SECONDS, isDragon, type DragonId } from "../dragonReel";
 import { WARS_ID, WARS_MODE, WARS_SECONDS, isWars, type WarsId } from "../warsReel";
 import { ORDU_ID, ORDU_MODE, ORDU_SECONDS, isOrdu, type OrduId } from "../orduReel";
-import { KARSI_ID, KARSI_MODE, KARSI_SECONDS, KARSI0_ID, KARSI0_MODE, KARSI0_SECONDS, KARSI2_ID, KARSI2_MODE, KARSI2_SECONDS, KARSI0_RIVAL, askRival, askRivalName, isKarsi, isKarsi0, isKarsi2, isKarsiMode, type Karsi0Id, type Karsi2Id, type KarsiId, type Rival } from "../karsiReel";
+import { KARSI_ID, KARSI_MODE, KARSI_SECONDS, KARSI0_ID, KARSI0_MODE, KARSI0_SECONDS, KARSI2_ID, KARSI2_MODE, KARSI2_SECONDS, KARSI0_RIVAL, askRival, isKarsi, isKarsi0, isKarsi2, isKarsiMode, type Karsi0Id, type Karsi2Id, type KarsiId, type Rival } from "../karsiReel";
 import { OK_ID, OK_MODE, OK_SECONDS, isOk, type OkId } from "../okReel";
 import { KALKAN_ID, KALKAN_MODE, KALKAN_SECONDS, isKalkan, type KalkanId } from "../kalkanReel";
 import { HERO_ID, HERO_MODE, HERO_SECONDS, isHero, type HeroId } from "../heroReel";
@@ -69,7 +69,9 @@ export function AdminPage() {
   const [reelSkipCmd, setReelSkipCmd] = useState(false);
   const [reelShot, setReelShot] = useState<ReelShot | PlanBId | SagaId | DiscoverId | MixId | CountdownId | DefendId | VsId | New1Id | New2Id | New3Id | New4Id | New5Id | New6Id | New62Id | New7Id | LabId | DevId | Dev2Id | Dev3Id | Dev4Id | Dev5Id | Dev6Id | Dev7Id | Dev8Id | Dev9Id | Dev10Id | Dev11Id | Dev12Id | Dev13Id | Dev14Id | Dev15Id | SnakeId | DevsId | FilmId | DragonId | WarsId | OrduId | KarsiId | Karsi0Id | Karsi2Id | OkId | KalkanId | HeroId | ArenaId | Arena2Id | Arena3Id | BoutId | Bout2Id | KayitId | XxxId | null>(null);
   const [rival, setRival] = useState<Rival | null>(null);
-  const [foeList, setFoeList] = useState("");
+  const [rivalHandleInput, setRivalHandleInput] = useState("");
+  const [rivalNamesInput, setRivalNamesInput] = useState("");
+  const [rivalDraft, setRivalDraft] = useState(false);
   const [reelDay, setReelDay] = useState("1");
   const [recentOpen, setRecentOpen] = useState(false);
   const [capturing, setCapturing] = useState(false);
@@ -100,6 +102,19 @@ export function AdminPage() {
     setReelSeconds(pendingJoin.seconds);
   }, [reelShot, pendingJoin.seconds, capturing]);
 
+  useEffect(() => {
+    if (rivalDraft) return;
+    setRivalHandleInput(game.rivalHandle);
+    setRivalNamesInput(game.rivalNames.join("\n"));
+  }, [game.rivalHandle, game.rivalNames, rivalDraft]);
+
+  function rivalFromGame(): Rival | null {
+    const name = game.rivalHandle;
+    const foeNames = game.rivalNames;
+    if (!name || !foeNames.length) return null;
+    return { name, foes: foeNames.length, foeNames };
+  }
+
   function pickKarsi() {
     if (reelShot === KARSI_ID) {
       setReelShot(null);
@@ -121,9 +136,14 @@ export function AdminPage() {
       setRival(null);
       return;
     }
-    const name = askRivalName();
-    if (!name) return;
-    setRival({ name, foes: 0, foeNames: [] });
+    const next = rivalFromGame();
+    if (!next) {
+      const text = "Önce Karşı takipçiler alanına hesabı ve adları kaydet.";
+      setMsg(text);
+      window.alert(text);
+      return;
+    }
+    setRival(next);
     setReelShot(KARSI2_ID);
     setReelSeconds(KARSI2_SECONDS);
     setReelText(false);
@@ -564,6 +584,65 @@ export function AdminPage() {
             )}
           </ul>
           )}
+        </section>
+
+        <section className="admin-card">
+          <h2>Karşı takipçiler</h2>
+          <p className="muted">
+            Karşı takipçi2 bu listeyi kullanır. Yeni hesapla savaşacaksan eski adların yerine yenilerini yapıştırıp kaydet; eski liste silinir, asker sayısı yeni ad kadar olur.
+          </p>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              void (async () => {
+                setBusy(true);
+                try {
+                  const handle = String(rivalHandleInput || "").trim().replace(/^@+/, "").replace(/\s+/g, "");
+                  const names = parseNameList(rivalNamesInput);
+                  if (!handle || !names.length) {
+                    setMsg("Karşı hesap ve en az bir kullanıcı adı gerekli.");
+                    return;
+                  }
+                  await set(ref(db, "game"), toGameRecord(game, Date.now(), { rivalHandle: handle, rivalNames: names }));
+                  setRivalDraft(false);
+                  setRivalHandleInput(handle);
+                  setRivalNamesInput(names.join("\n"));
+                  setMsg(`Karşı takipçiler kaydedildi: @${handle} · ${formatCount(names.length)} asker. Eski liste silindi.`);
+                } catch {
+                  setMsg("Karşı takipçiler yazılamadı.");
+                } finally {
+                  setBusy(false);
+                }
+              })();
+            }}
+          >
+            <label>Karşı hesap</label>
+            <input
+              type="text"
+              placeholder="ahmet"
+              value={rivalHandleInput}
+              onChange={(e) => {
+                setRivalDraft(true);
+                setRivalHandleInput(e.target.value);
+              }}
+            />
+            <label>Karşı kullanıcı adları</label>
+            <textarea
+              rows={8}
+              placeholder={"takipci1\ntakipci2\ntakipci3"}
+              value={rivalNamesInput}
+              onChange={(e) => {
+                setRivalDraft(true);
+                setRivalNamesInput(e.target.value);
+              }}
+            />
+            <button className="btn-gold" disabled={busy}>
+              Karşı listeyi kaydet
+            </button>
+          </form>
+          <p className="muted">
+            Kayıtlı: {game.rivalHandle ? `@${game.rivalHandle}` : "hesap yok"} · {formatCount(game.rivalNames.length)} karşı asker
+          </p>
         </section>
 
         <section className="admin-card">
@@ -1308,19 +1387,9 @@ export function AdminPage() {
             </p>
           )}
           {isKarsi2(reelShot) && (
-            <>
-              <p className="muted">
-                Karşı takipçi ile aynı savaş. Takipçi sayısı sorulmaz: aşağıya düşman kullanıcı adlarını alt alta yaz. O kadar roman gelir, her birinin üstünde adı siyah plakada kırmızı. Komutan {rival ? `@${rival.name.toUpperCase()}` : "sorulur"}.
-              </p>
-              <label>Düşman kullanıcı adları</label>
-              <textarea
-                rows={8}
-                placeholder={"ahmet\nmehmet\nayse"}
-                value={foeList}
-                onChange={(e) => setFoeList(e.target.value)}
-              />
-              <p className="muted">{formatCount(parseNameList(foeList).length)} düşman adı.</p>
-            </>
+            <p className="muted">
+              Karşı takipçi ile aynı savaş. Düşman, kaydettiğin karşı takipçiler: {game.rivalHandle ? `@${game.rivalHandle.toUpperCase()} · ${formatCount(game.rivalNames.length)} asker` : "liste boş"}. İsimler siyah plakada kırmızı. Yeni hesap için yukarıdaki alanı yenile, eski adlar silinir.
+            </p>
           )}
           {isOk(reelShot) && (
             <p className="muted">Havada krem taş, düşmanın geldiği yön uzun. 10 okçuyla başlar, isimler sarı. Dalga büyüdükçe daha kalabalık düşman koşar. 3. dalgada Colossus gelir, üstünde can barı vardır, oklar onu yavaş düşürür. Ekranda +50, +100, +20 takipçi yazar ve o kadar asker eklenir. Ölenler ön sıradan. Dev Darwin Yamamoto Colossus (CC-BY). Şövalyeler Vaporworks Knight (CC-BY).</p>
@@ -1817,15 +1886,14 @@ export function AdminPage() {
                 setRival(next);
               }
               if (isKarsi2(reelShot)) {
-                const foeNames = parseNameList(foeList);
-                const cmd = rival?.name || askRivalName();
-                if (!cmd || foeNames.length === 0) {
-                  const text = "Kayıt başlamadı: karşı hesap ve alt alta düşman adları gerekli.";
+                const next = rivalFromGame();
+                if (!next) {
+                  const text = "Kayıt başlamadı: Karşı takipçiler alanına hesabı ve adları kaydet.";
                   setMsg(text);
                   window.alert(text);
                   return;
                 }
-                setRival({ name: cmd, foes: foeNames.length, foeNames });
+                setRival(next);
               }
               try {
                 if (isJoin(reelShot)) {
