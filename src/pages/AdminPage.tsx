@@ -1473,7 +1473,7 @@ export function AdminPage() {
             <p className="muted">200 son katılan birlikte girer. Kamera geriden ve uzaktan, askerler görünecek şekilde koridoru takip eder. Taş duvarlar mazgallı. Sonda çıkanlara yaklaşır.</p>
           )}
           {isElf(reelShot) && (
-            <p className="muted">Meydanın üstünde 8 elf ve 24 orc, isimsiz. Sade modeller; WebGL düşmesin. Orclar koşar, oklar yaklaşırken düşürür.</p>
+            <p className="muted">İlk 3 saniye geniş açı: elfler ve orklar aynı karede, oklar havada. Sonra elf yüzü, ork yüzü, boydan çekim, sonda karşılıklı hücum.</p>
           )}
           {isNew7(reelShot) && (
             <p className="muted">new5 ile aynı, kamera daha geriden. Kaybedecekken arkadan 24 asker belirir. Yazıyı sen eklersin.</p>

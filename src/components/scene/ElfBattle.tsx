@@ -14,7 +14,6 @@ import {
   elfCam,
   elfPhone,
   elfPieceReady,
-  elfResetClock,
   elfT,
   orcAt,
   setElfFloor,
@@ -159,7 +158,7 @@ function paintFloor(root: THREE.Object3D) {
     rows,
     ys,
     lift,
-    zElf: z0 + (z1 - z0) * 0.2,
+    zElf: z0 + (z1 - z0) * 0.42,
     zSpawn: z0 + (z1 - z0) * 0.86,
   });
 }
@@ -455,10 +454,6 @@ export function ElfCam() {
 export function ElfBattle() {
   const [floorReady, setFloorReady] = useState(false);
   const markFloor = useMemo(() => () => setFloorReady(true), []);
-
-  useEffect(() => {
-    elfResetClock();
-  }, []);
 
   return (
     <group>

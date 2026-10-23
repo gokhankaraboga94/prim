@@ -2,8 +2,6 @@ export const ELF_ID = "elf" as const;
 export type ElfId = typeof ELF_ID;
 export const ELF_MODE = { id: ELF_ID, label: "elf" } as const;
 export const ELF_SECONDS = 24;
-/** Alternating film beats: elves, orcs, elves, orcs… */
-export const ELF_FILM_SEG = 4;
 
 export const ELF_N = 8;
 export const ELF_PER_RANK = 4;
@@ -223,30 +221,32 @@ function look(x: number, y: number, z: number, lx: number, ly: number, lz: numbe
   return { x, y, z, lx, ly, lz, fov };
 }
 
-export function elfFilmBeat(t: number) {
-  return Math.min(5, Math.floor(t / ELF_FILM_SEG));
+/** Authored face points along -X. PI/2 turns it toward +Z (the orcs). */
+const FACE_ORCS = Math.PI / 2;
+/** Orc mesh is authored looking down +Z. PI turns that toward the elves. */
+const FACE_ELVES = Math.PI;
+const CHARGE = 19.4;
+
+function lines() {
+  const run = Math.max(10, floor.zSpawn - floor.zElf);
+  const elfFront = floor.zElf + 1.05;
+  const elfBack = elfFront + 1.15;
+  const orcFront = floor.zElf + Math.max(elfBack + 7.2, run * 0.48);
+  return { elfFront, elfBack, orcFront, orcDepth: 4.2, midZ: (elfBack + orcFront) * 0.5 };
 }
 
-export function elfFilmKind(t: number): "elf" | "orc" {
-  return elfFilmBeat(t) % 2 === 0 ? "elf" : "orc";
-}
-
-export function elfFilmLocal(t: number) {
-  return t - elfFilmBeat(t) * ELF_FILM_SEG;
-}
-
-/** Two shallow ranks on the meydan, facing the charge. */
+/** Tight block in the middle of the portrait frame. Wide meydan spacing put every elf outside the 9:16 lens. */
 export function elfAt(i: number, _t: number): ElfPose {
   const row = i < ELF_PER_RANK ? 0 : 1;
   const col = i % ELF_PER_RANK;
-  const laneW = (floor.x1 - floor.x0) * 0.48;
-  const x = (col - (ELF_PER_RANK - 1) / 2) * (laneW / ELF_PER_RANK);
-  const z = floor.zElf + row * 0.62;
+  const { elfFront } = lines();
+  const x = (col - (ELF_PER_RANK - 1) / 2) * 0.78 + (row === 1 ? 0.39 : 0);
+  const z = elfFront + row * 1.15;
   return {
     x,
-    y: elfFloor(x, z) + 0.14,
+    y: elfFloor(x, z) + 0.02,
     z,
-    yaw: Math.PI,
+    yaw: FACE_ORCS,
     pitch: 0,
     roll: 0,
     hide: false,
@@ -258,19 +258,17 @@ function orcSeat(i: number) {
   const rows = Math.ceil(ORC_N / cols);
   const col = i % cols;
   const row = Math.floor(i / cols);
-  const run = Math.max(8, floor.zSpawn - floor.zElf);
-  const laneW = (floor.x1 - floor.x0) * 0.84;
-  const x = (col / Math.max(1, cols - 1) - 0.5) * laneW + (row % 2) * 0.4;
-  const zBack = floor.zElf + run * 0.34;
-  const zSpread = run * 0.52;
-  const z0 = zBack + (row / Math.max(1, rows - 1)) * zSpread + hash(i, 4) * 0.6;
+  const { elfBack, orcFront, orcDepth } = lines();
+  const laneW = 3.2;
+  const x = (col / Math.max(1, cols - 1) - 0.5) * laneW + (row % 2) * 0.2;
+  const z0 = orcFront + (row / Math.max(1, rows - 1)) * orcDepth + hash(i, 4) * 0.28;
   return {
     kind: (i + row) % 2,
     x,
     z0,
-    start: 2.8 + (col % 5) * 0.2 + row * 0.48 + hash(i, 1) * 0.35,
-    speed: 2.15 + hash(i, 2) * 0.32,
-    killZ: floor.zElf + 1.4 + row * 0.55 + hash(i, 3) * run * 0.14,
+    delay: row * 0.2 + (col % 4) * 0.07 + hash(i, 1) * 0.16,
+    speed: 2.45 + hash(i, 2) * 0.35,
+    killZ: elfBack + 0.7 + hash(i, 3) * 0.5,
   };
 }
 
@@ -278,55 +276,57 @@ export function orcKind(i: number) {
   return orcSeat(i).kind;
 }
 
-/** Orcs charge only on orc beats; hidden on elf beats. */
+/** Orcs stand opposite the elves the whole film, then charge in the last shot. */
 export function orcAt(i: number, t: number): ElfPose {
   const seat = orcSeat(i);
-  const parked = {
+  const creep = t < 3 ? clamp01(t / 2.2) * 0.4 : 0.4;
+  const standZ = seat.z0 - creep;
+  const pose = {
     x: seat.x,
-    y: elfFloor(seat.x, seat.z0) + 0.02,
-    z: seat.z0,
-    yaw: Math.PI,
-    pitch: -0.12,
+    y: elfFloor(seat.x, standZ) + 0.02,
+    z: standZ,
+    yaw: FACE_ELVES,
+    pitch: -0.1,
     roll: 0,
-    hide: true,
+    hide: !elfFieldReady(),
   };
-  if (elfFilmKind(t) !== "orc" || !elfFieldReady()) return parked;
-  const lt = elfFilmLocal(t);
-  const runT = lt - (0.35 + (i % 6) * 0.14 + Math.floor(i / 13) * 0.32 + hash(i, 1) * 0.22);
-  if (runT < 0) {
-    return { ...parked, hide: false };
-  }
-  const killDist = seat.z0 - seat.killZ;
+  if (!elfFieldReady()) return pose;
+  const runT = t - CHARGE - seat.delay;
+  if (runT < 0) return pose;
+  const killDist = Math.max(0.8, standZ - seat.killZ);
   const dist = runT * seat.speed;
   const dead = dist >= killDist;
-  const fall = dead ? clamp01((dist - killDist) / Math.max(0.65, seat.speed * 0.5)) : 0;
-  const z = dead ? seat.killZ : seat.z0 - dist;
-  const x = seat.x + (dead ? Math.sign(seat.x || 1) * fall * 0.45 : 0);
+  const fall = dead ? clamp01((dist - killDist) / Math.max(0.55, seat.speed * 0.45)) : 0;
+  const z = dead ? seat.killZ : standZ - dist;
+  const x = seat.x + (dead ? Math.sign(seat.x || 1) * fall * 0.4 : 0);
   return {
     x,
     y: elfFloor(x, z) + 0.02,
     z,
-    yaw: Math.PI,
-    pitch: dead ? -1.28 * fall : -0.14,
-    roll: dead ? (i % 2 ? 0.42 : -0.42) * fall : 0,
+    yaw: FACE_ELVES,
+    pitch: dead ? -1.28 * fall : -0.16,
+    roll: dead ? (i % 2 ? 0.4 : -0.4) * fall : 0,
     hide: false,
   };
 }
 
 const ARROWS: ElfArrow[] = Array.from({ length: ELF_ARROW_MAX }, () => ({ x: 0, y: 0, z: 0, dx: 0, dy: 1, dz: 0 }));
 
+function arrowsLive(t: number) {
+  return (t >= 0.2 && t < 2.9) || t >= CHARGE;
+}
+
 function arrowFlight(elf: number, t: number, out: ElfArrow) {
-  if (elfFilmKind(t) !== "elf") return false;
-  const lt = elfFilmLocal(t);
-  const cycle = 0.78;
-  const phase = (lt * 1.12 + elf * 0.17 + (elf % 3) * 0.08) % cycle;
-  if (phase < 0.18 || lt < 0.55) return false;
-  const u = (phase - 0.18) / (cycle - 0.18);
+  if (!arrowsLive(t)) return false;
+  const cycle = 0.72;
+  const phase = (t * 1.15 + elf * 0.19 + (elf % 3) * 0.08) % cycle;
+  if (phase < 0.16) return false;
+  const u = (phase - 0.16) / (cycle - 0.16);
   const from = elfAt(elf, t);
-  const aim = from.z + 7.2 + ((elf * 7) % 11) * 0.85 + Math.sin(t * 0.7 + elf) * 0.9;
-  const x0 = from.x + 0.22;
-  const y0 = from.y + 1.38;
-  const z0 = from.z + 0.42;
+  const aim = from.z + 6.4 + ((elf * 7) % 9) * 0.7 + Math.sin(t * 0.7 + elf) * 0.6;
+  const x0 = from.x + (elf % 2 ? 0.16 : -0.16);
+  const y0 = from.y + 1.34;
+  const z0 = from.z + 0.48;
   const x1 = from.x * 0.18 + Math.sin(elf * 1.8) * 1.6;
   const z1 = aim;
   const y1 = elfFloor(x1, z1) + 1.05;
@@ -352,31 +352,44 @@ export function elfArrows(t: number) {
   return { list: ARROWS, n };
 }
 
-/** Six 4s beats: elf → orc → elf → orc → elf → orc, each with A→B camera inside the beat. */
+function cutFilm(t: number, shots: { until: number; a: ElfCam; b: ElfCam }[]) {
+  let prev = 0;
+  for (const shot of shots) {
+    if (t <= shot.until) return mixCam(shot.a, shot.b, clamp01((t - prev) / Math.max(0.001, shot.until - prev)));
+    prev = shot.until;
+  }
+  return shots[shots.length - 1].b;
+}
+
+/**
+ * 0–3 wide hook, both lines in frame and arrows already flying.
+ * Then elf faces, orc faces, elf full-length, orc full-length, and a side clash.
+ */
 export function elfCam(t: number): ElfCam {
-  const g = elfLift();
-  const ez = floor.zElf;
-  const run = Math.max(6, floor.zSpawn - floor.zElf);
-  const oz = floor.zElf + run * 0.58;
-  const elfMidZ = ez + 0.38;
-  const elfA = look(0, g + 1.85, ez - 1.85, 0, g + 1.55, elfMidZ, 30);
-  const elfB = look(0.35, g + 1.62, ez - 0.75, 0, g + 1.48, elfMidZ, 26);
-  const elfC = look(-0.55, g + 1.68, ez - 1.15, 0.08, g + 1.5, elfMidZ + 0.2, 29);
-  const elfD = look(0.22, g + 1.82, ez + 0.35, 0, g + 1.52, elfMidZ, 28);
-  const orcA = look(0.15, g + 1.58, oz - 1.8, 0, g + 1.22, oz + 1.2, 33);
-  const orcB = look(-0.35, g + 1.42, ez + 1.8, 0.12, g + 1.18, oz, 31);
-  const orcC = look(0.65, g + 1.48, oz - 1.2, 0, g + 1.15, oz + 2.4, 34);
-  const orcD = look(-0.9, g + 1.55, ez + 3.2, 0.2, g + 1.05, oz + 0.5, 32);
-  const pairs: [ElfCam, ElfCam][] = [
-    [elfA, elfB],
-    [orcA, orcB],
-    [elfC, elfD],
-    [orcC, orcD],
-    [elfB, elfA],
-    [orcB, orcA],
-  ];
-  const beat = elfFilmBeat(t);
-  const u = clamp01(elfFilmLocal(t) / ELF_FILM_SEG);
-  const [a, b] = pairs[beat];
-  return mixCam(a, b, u);
+  const { elfFront, elfBack, orcFront, midZ } = lines();
+  const elfZ = (elfFront + elfBack) * 0.5;
+  const feetE = elfFloor(0, elfZ);
+  const feetO = elfFloor(0, orcFront);
+  const waistE = feetE + 1.02;
+  const nearZ = elfFront + 1.15;
+  const wideA = look(-2.2, feetE + 2.9, elfFront - 7.2, 0.1, waistE + 0.15, midZ, 74);
+  const wideB = look(-1.2, feetE + 2.35, elfFront - 5.6, 0, waistE + 0.1, midZ + 0.5, 66);
+  const faceEA = look(-0.78, feetE + 1.78, nearZ + 3.05, -0.78, feetE + 1.55, nearZ, 38);
+  const faceEB = look(0.72, feetE + 1.72, nearZ + 2.9, 0.72, feetE + 1.52, nearZ, 36);
+  const faceOA = look(0.5, feetO + 1.28, orcFront - 2.7, 0.45, feetO + 1.12, orcFront, 40);
+  const faceOB = look(-0.5, feetO + 1.22, orcFront - 2.5, -0.45, feetO + 1.1, orcFront, 38);
+  const bodyEA = look(0, feetE + 1.15, elfFront + 6.5, 0, feetE + 0.72, elfZ, 54);
+  const bodyEB = look(0.25, feetE + 1.0, elfFront + 6.05, 0.06, feetE + 0.68, elfZ, 52);
+  const bodyOA = look(0.1, feetO + 0.95, orcFront - 5.6, 0, feetO + 0.52, orcFront + 1.1, 56);
+  const bodyOB = look(-0.22, feetO + 0.82, orcFront - 5.0, 0, feetO + 0.5, orcFront + 1.4, 54);
+  const sideA = look(-1.1, feetE + 3.15, elfFront - 6.6, 0, feetE + 1.35, midZ, 72);
+  const sideB = look(-0.35, feetE + 2.55, elfFront - 5.0, 0, feetE + 1.45, elfBack + 3.4, 66);
+  return cutFilm(t, [
+    { until: 3, a: wideA, b: wideB },
+    { until: 7.2, a: faceEA, b: faceEB },
+    { until: 11.2, a: faceOA, b: faceOB },
+    { until: 16.2, a: bodyEA, b: bodyEB },
+    { until: 20.2, a: bodyOA, b: bodyOB },
+    { until: ELF_SECONDS, a: sideA, b: sideB },
+  ]);
 }
