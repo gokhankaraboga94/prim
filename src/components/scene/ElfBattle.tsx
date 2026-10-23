@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useFrame } from "@react-three/fiber";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
@@ -158,40 +158,29 @@ function fitFigure(root: THREE.Object3D, height: number) {
   root.updateMatrixWorld(true);
 }
 
-type Pack = { mesh: THREE.InstancedMesh };
+type FigureSlot = { geo: THREE.BufferGeometry; mat: THREE.Material };
 
-function packsFrom(root: THREE.Object3D, count: number, renderOrder = 0): Pack[] {
-  const parts: { geo: THREE.BufferGeometry; mat: THREE.Material }[] = [];
+function figureSlots(root: THREE.Object3D, height: number): FigureSlot[] {
+  fitFigure(root, height);
+  const parts: FigureSlot[] = [];
   root.traverse((obj) => {
     const src = obj as THREE.Mesh;
     if (!src.isMesh) return;
     parts.push({ geo: src.geometry, mat: Array.isArray(src.material) ? src.material[0] : src.material });
   });
   if (!parts.length) return [];
-
-  const make = (geo: THREE.BufferGeometry, mat: THREE.Material) => {
-    const mesh = new THREE.InstancedMesh(geo, mat, count);
-    mesh.frustumCulled = false;
-    mesh.castShadow = false;
-    mesh.receiveShadow = false;
-    mesh.renderOrder = renderOrder;
-    dummy.position.set(0, -40, 0);
-    dummy.scale.setScalar(0);
-    dummy.updateMatrix();
-    for (let i = 0; i < count; i++) mesh.setMatrixAt(i, dummy.matrix);
-    mesh.instanceMatrix.needsUpdate = true;
-    return mesh;
-  };
-
-  if (parts.length === 1) return [{ mesh: make(parts[0].geo, parts[0].mat) }];
-
+  if (parts.length === 1) return parts;
   const merged = mergeGeometries(parts.map((p) => p.geo), false);
-  if (merged) return [{ mesh: make(merged, parts[0].mat) }];
-
-  return parts.map((p) => ({ mesh: make(p.geo, p.mat) }));
+  if (merged) {
+    for (const p of parts) {
+      if (p.geo !== merged) p.geo.dispose();
+    }
+    return [{ geo: merged, mat: parts[0].mat }];
+  }
+  return parts;
 }
 
-function paintPack(pack: Pack[], count: number, at: (i: number, out: ElfPose) => void) {
+function paintMeshes(meshes: THREE.InstancedMesh[], count: number, at: (i: number, out: ElfPose) => void) {
   for (let i = 0; i < count; i++) {
     at(i, pose);
     if (pose.hide) {
@@ -204,26 +193,22 @@ function paintPack(pack: Pack[], count: number, at: (i: number, out: ElfPose) =>
       dummy.scale.setScalar(1);
     }
     dummy.updateMatrix();
-    for (const item of pack) item.mesh.setMatrixAt(i, dummy.matrix);
+    for (const mesh of meshes) mesh.setMatrixAt(i, dummy.matrix);
   }
-  for (const item of pack) item.mesh.instanceMatrix.needsUpdate = true;
+  for (const mesh of meshes) mesh.instanceMatrix.needsUpdate = true;
 }
 
-function disposePack(pack: Pack[]) {
-  for (const item of pack) {
-    item.mesh.parent?.remove(item.mesh);
-    item.mesh.geometry.dispose();
-    const mats = Array.isArray(item.mesh.material) ? item.mesh.material : [item.mesh.material];
-    for (const mat of mats) {
-      const std = mat as THREE.MeshStandardMaterial;
-      std.map?.dispose();
-      std.normalMap?.dispose();
-      std.roughnessMap?.dispose();
-      std.metalnessMap?.dispose();
-      std.aoMap?.dispose();
-      std.emissiveMap?.dispose();
-      mat.dispose();
-    }
+function disposeSlots(slots: FigureSlot[]) {
+  for (const slot of slots) {
+    slot.geo.dispose();
+    const std = slot.mat as THREE.MeshStandardMaterial;
+    std.map?.dispose();
+    std.normalMap?.dispose();
+    std.roughnessMap?.dispose();
+    std.metalnessMap?.dispose();
+    std.aoMap?.dispose();
+    std.emissiveMap?.dispose();
+    slot.mat.dispose();
   }
 }
 
@@ -242,10 +227,10 @@ function ElfFigures({
   drawOrder?: number;
   kind: "elf" | "orc";
 }) {
-  const pack = useRef<Pack[]>([]);
   const pickRef = useRef(pick);
   pickRef.current = pick;
-  const [meshes, setMeshes] = useState<THREE.InstancedMesh[]>([]);
+  const [slots, setSlots] = useState<FigureSlot[]>([]);
+  const inst = useRef<(THREE.InstancedMesh | null)[]>([]);
   useEffect(() => {
     const loader = new GLTFLoader();
     let drop = false;
@@ -255,12 +240,8 @@ function ElfFigures({
       (gltf) => {
         if (drop) return;
         try {
-          const root = gltf.scene;
-          fitFigure(root, height);
-          const next = packsFrom(root, count, drawOrder);
-          pack.current = next;
-          setMeshes(next.map((p) => p.mesh));
-          paintPack(next, count, (i, out) => pickRef.current(i, 0, out));
+          const next = figureSlots(gltf.scene, height);
+          setSlots(next);
           elfPieceReady(kind, next.length > 0);
         } catch (err) {
           console.warn("elf model failed", url, err);
@@ -274,25 +255,42 @@ function ElfFigures({
     );
     return () => {
       drop = true;
-      disposePack(pack.current);
-      pack.current = [];
-      setMeshes([]);
+      setSlots((prev) => {
+        disposeSlots(prev);
+        return [];
+      });
+      inst.current = [];
     };
-  }, [url, height, count, drawOrder, kind]);
+  }, [url, height, kind]);
+  useLayoutEffect(() => {
+    const meshes = inst.current.filter(Boolean) as THREE.InstancedMesh[];
+    if (!meshes.length) return;
+    paintMeshes(meshes, count, (i, out) => pickRef.current(i, elfT(), out));
+  }, [slots, count]);
   useFrame(() => {
-    if (!pack.current.length) return;
-    paintPack(pack.current, count, (i, out) => pickRef.current(i, elfT(), out));
+    const meshes = inst.current.filter(Boolean) as THREE.InstancedMesh[];
+    if (!meshes.length) return;
+    paintMeshes(meshes, count, (i, out) => pickRef.current(i, elfT(), out));
   });
+  if (!slots.length) return null;
   return (
     <group>
-      {meshes.map((mesh, i) => (
-        <primitive key={`${url}-${i}`} object={mesh} />
+      {slots.map((slot, i) => (
+        <instancedMesh
+          key={`${url}-${i}`}
+          ref={(node) => {
+            inst.current[i] = node;
+          }}
+          args={[slot.geo, slot.mat, count]}
+          frustumCulled={false}
+          renderOrder={drawOrder}
+        />
       ))}
     </group>
   );
 }
 
-function Meydan() {
+function Meydan({ onFloor }: { onFloor: () => void }) {
   const [ground, setGround] = useState<THREE.Object3D | null>(null);
   useEffect(() => {
     const loader = new GLTFLoader();
@@ -324,6 +322,7 @@ function Meydan() {
           model.updateMatrixWorld(true);
           paintFloor(model);
           setGround(model);
+          onFloor();
           elfPieceReady("field", true);
         } catch (err) {
           console.warn("meydan failed", err);
@@ -349,7 +348,7 @@ function Meydan() {
         return null;
       });
     };
-  }, []);
+  }, [onFloor]);
   return ground ? <primitive object={ground} /> : null;
 }
 
@@ -492,13 +491,17 @@ const hidden: ElfPose = { x: 0, y: -40, z: 0, yaw: 0, pitch: 0, roll: 0, hide: t
 
 export function ElfBattle() {
   const assets = elfAssets();
+  const [floorReady, setFloorReady] = useState(false);
+  const markFloor = useMemo(() => () => setFloorReady(true), []);
   return (
     <group>
       <DuskSky />
       <hemisphereLight args={["#f3d8b0", "#3a2a1c", 0.78]} />
       <directionalLight position={[18, 22, 8]} intensity={1.55} color="#ffc178" />
       <directionalLight position={[-12, 8, -6]} intensity={0.48} color="#8ea4c4" />
-      <Meydan />
+      <Meydan onFloor={markFloor} />
+      {floorReady && (
+        <>
       <ElfFigures
         kind="elf"
         url={assets.elf}
@@ -522,6 +525,8 @@ export function ElfBattle() {
         pick={(i, t, out) => writePose(orcKind(i) === 1 ? orcAt(i, t) : hidden, out)}
       />
       <Arrows />
+        </>
+      )}
     </group>
   );
 }

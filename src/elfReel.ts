@@ -98,11 +98,7 @@ export function isElf(id: string | null | undefined): id is ElfId {
 }
 
 export function elfWarm() {
-  for (const url of elfAssets().list) {
-    void fetch(url).catch(() => {
-      /* cache miss is fine; scene fetch retries */
-    });
-  }
+  void import("./arenaPreload").then(({ preloadGlbs }) => preloadGlbs(elfAssets().list));
 }
 
 const ELF_PIECES = 4;
@@ -250,7 +246,7 @@ export function elfAt(i: number, t: number): ElfPose {
     yaw: Math.PI,
     pitch: 0,
     roll: 0,
-    hide: elfFilmKind(t) !== "elf" || !elfFieldReady(),
+    hide: false,
   };
 }
 
