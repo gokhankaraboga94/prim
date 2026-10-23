@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import * as THREE from "three";
 import { dropGroundSlab } from "../../groundSlab";
 import { preloadedGlb } from "../../arenaPreload";
 import { REEL_HOLD } from "../../recordCanvas";
-import { ELF_N, ORC_N, elfArrows, elfAssets, elfAt, elfCam, elfPhone, orcAt, orcKind, type ElfPose } from "../../elfReel";
+import { ELF_N, ORC_N, elfArrows, elfAssets, elfAt, elfCam, elfPhone, orcAt, orcKind, setElfFloor, type ElfPose } from "../../elfReel";
 
 type Gltf = Parameters<Parameters<GLTFLoader["load"]>[1]>[0];
 
@@ -19,24 +20,64 @@ const dummy = new THREE.Object3D();
 const pose: ElfPose = { x: 0, y: 0, z: 0, yaw: 0, pitch: 0, roll: 0, hide: false };
 const arrowDir = new THREE.Vector3();
 const up = new THREE.Vector3(0, 1, 0);
+const down = new THREE.Vector3(0, -1, 0);
+const ray = new THREE.Raycaster();
+const origin = new THREE.Vector3();
 
-function keepMat(src: THREE.Material, phone: boolean) {
-  const base = (Array.isArray(src) ? src[0] : src) as THREE.MeshStandardMaterial;
-  if (phone) {
-    const next = new THREE.MeshLambertMaterial({
-      map: base.map ?? null,
-      color: base.color ? base.color.clone() : "#ffffff",
-      side: THREE.DoubleSide,
-    });
-    return next;
+function paintFloor(root: THREE.Object3D) {
+  const box = new THREE.Box3().setFromObject(root);
+  const pad = 0.1;
+  const x0 = box.min.x + (box.max.x - box.min.x) * pad;
+  const x1 = box.max.x - (box.max.x - box.min.x) * pad;
+  const z0 = box.min.z + (box.max.z - box.min.z) * pad;
+  const z1 = box.max.z - (box.max.z - box.min.z) * pad;
+  const cols = 28;
+  const rows = 36;
+  const ys = new Float32Array(cols * rows);
+  const top = box.max.y + 6;
+  ray.far = box.max.y - box.min.y + 14;
+  let sum = 0;
+  let n = 0;
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const x = x0 + ((c + 0.5) / cols) * (x1 - x0);
+      const z = z0 + ((r + 0.5) / rows) * (z1 - z0);
+      origin.set(x, top, z);
+      ray.set(origin, down);
+      const hit = ray.intersectObject(root, true)[0];
+      const y = hit ? hit.point.y : box.min.y;
+      ys[r * cols + c] = y;
+      if (hit) {
+        sum += y;
+        n += 1;
+      }
+    }
   }
-  const mat = src.clone();
-  mat.side = THREE.DoubleSide;
-  mat.shadowSide = THREE.DoubleSide;
-  return mat;
+  const lift = n ? sum / n : 0;
+  setElfFloor({
+    x0,
+    x1,
+    z0,
+    z1,
+    cols,
+    rows,
+    ys,
+    lift,
+    zElf: z0 + (z1 - z0) * 0.2,
+    zSpawn: z0 + (z1 - z0) * 0.86,
+  });
 }
 
-function fitFigure(root: THREE.Object3D, height: number, phone: boolean) {
+function keepMat(src: THREE.Material) {
+  const base = (Array.isArray(src) ? src[0] : src) as THREE.MeshStandardMaterial;
+  return new THREE.MeshLambertMaterial({
+    map: base.map ?? null,
+    color: base.color ? base.color.clone() : "#ffffff",
+    side: THREE.DoubleSide,
+  });
+}
+
+function fitFigure(root: THREE.Object3D, height: number) {
   root.updateMatrixWorld(true);
   root.traverse((obj) => {
     const mesh = obj as THREE.Mesh;
@@ -49,8 +90,7 @@ function fitFigure(root: THREE.Object3D, height: number, phone: boolean) {
     mesh.quaternion.identity();
     mesh.scale.set(1, 1, 1);
     mesh.updateMatrix();
-    if (Array.isArray(mesh.material)) mesh.material = mesh.material.map((item) => keepMat(item, phone));
-    else mesh.material = keepMat(mesh.material, phone);
+    mesh.material = keepMat(Array.isArray(mesh.material) ? mesh.material[0] : mesh.material);
   });
   root.position.set(0, 0, 0);
   root.quaternion.identity();
@@ -68,24 +108,26 @@ function fitFigure(root: THREE.Object3D, height: number, phone: boolean) {
 type Pack = { mesh: THREE.InstancedMesh };
 
 function packsFrom(root: THREE.Object3D, count: number): Pack[] {
-  const out: Pack[] = [];
+  const geos: THREE.BufferGeometry[] = [];
+  let mat: THREE.Material | null = null;
   root.traverse((obj) => {
     const src = obj as THREE.Mesh;
     if (!src.isMesh) return;
-    const geo = src.geometry;
-    const mat = Array.isArray(src.material) ? src.material[0] : src.material;
-    const mesh = new THREE.InstancedMesh(geo, mat, count);
-    mesh.frustumCulled = false;
-    mesh.castShadow = false;
-    mesh.receiveShadow = false;
-    dummy.position.set(0, -40, 0);
-    dummy.scale.setScalar(0);
-    dummy.updateMatrix();
-    for (let i = 0; i < count; i++) mesh.setMatrixAt(i, dummy.matrix);
-    mesh.instanceMatrix.needsUpdate = true;
-    out.push({ mesh });
+    geos.push(src.geometry);
+    if (!mat) mat = Array.isArray(src.material) ? src.material[0] : src.material;
   });
-  return out;
+  const merged = geos.length > 1 ? mergeGeometries(geos, false) ?? geos[0] : geos[0];
+  if (!merged || !mat) return [];
+  const mesh = new THREE.InstancedMesh(merged, mat, count);
+  mesh.frustumCulled = false;
+  mesh.castShadow = false;
+  mesh.receiveShadow = false;
+  dummy.position.set(0, -40, 0);
+  dummy.scale.setScalar(0);
+  dummy.updateMatrix();
+  for (let i = 0; i < count; i++) mesh.setMatrixAt(i, dummy.matrix);
+  mesh.instanceMatrix.needsUpdate = true;
+  return [{ mesh }];
 }
 
 function paintPack(pack: Pack[], count: number, at: (i: number, out: ElfPose) => void) {
@@ -136,7 +178,7 @@ function ElfFigures({ url, height, count, pick }: { url: string; height: number;
       (gltf) => {
         if (drop || !group.current) return;
         const root = gltf.scene;
-        fitFigure(root, height, elfPhone());
+        fitFigure(root, height);
         const next = packsFrom(root, count);
         pack.current = next;
         for (const item of next) group.current.add(item.mesh);
@@ -169,12 +211,11 @@ function Meydan() {
         const host = root.current;
         if (drop || !host) return;
         const model = gltf.scene;
-        const phone = elfPhone();
         model.updateMatrixWorld(true);
         const box = new THREE.Box3().setFromObject(model);
         const size = box.getSize(new THREE.Vector3());
         const span = Math.max(size.x, size.z, 1);
-        const s = 92 / span;
+        const s = 72 / span;
         model.scale.setScalar(s);
         model.updateMatrixWorld(true);
         const fitted = new THREE.Box3().setFromObject(model);
@@ -182,12 +223,14 @@ function Meydan() {
         model.traverse((obj) => {
           const mesh = obj as THREE.Mesh;
           if (!mesh.isMesh) return;
-          mesh.material = keepMat(Array.isArray(mesh.material) ? mesh.material[0] : mesh.material, phone);
+          mesh.material = keepMat(Array.isArray(mesh.material) ? mesh.material[0] : mesh.material);
           mesh.frustumCulled = false;
           mesh.castShadow = false;
-          mesh.receiveShadow = !phone;
+          mesh.receiveShadow = false;
         });
         host.add(model);
+        host.updateMatrixWorld(true);
+        paintFloor(host);
       },
       (err) => console.warn("meydan failed", err)
     );
