@@ -1,16 +1,16 @@
 import { ARENA2_ID, ARENA2_MODE, ARENA2_SECONDS, ARENA3_ID, ARENA3_MODE, ARENA3_SECONDS, ARENA_ID, ARENA_MODE, ARENA_SECONDS } from "./arenaReel";
 import { BOUT2_ID, BOUT2_MODE, BOUT2_SECONDS, BOUT_ID, BOUT_MODE, BOUT_SECONDS } from "./boutReel";
 import { DEV10_ID, DEV10_MODE, DEV10_SECONDS, DEV11_ID, DEV11_MODE, DEV11_SECONDS, DEV12_ID, DEV12_MODE, DEV12_SECONDS, DEV13_ID, DEV13_MODE, DEV13_SECONDS, DEV14_ID, DEV14_MODE, DEV14_SECONDS, DEV15_ID, DEV15_MODE, DEV15_SECONDS, DEV8_ID, DEV8_MODE, DEV8_SECONDS, DEV9_ID, DEV9_MODE, DEV9_SECONDS } from "./devReel";
-import { KARSI_ID, KARSI_MODE, KARSI_SECONDS, KARSI0_ID, KARSI0_MODE, KARSI0_SECONDS, KARSI2_ID, KARSI2_MODE, KARSI2_SECONDS, KARSI3_ID, KARSI3_MODE, KARSI3_SECONDS } from "./karsiReel";
+import { KARSI_ID, KARSI_MODE, KARSI_SECONDS, KARSI0_ID, KARSI0_MODE, KARSI0_SECONDS, KARSI2_ID, KARSI2_MODE, KARSI2_SECONDS, KARSI3_ID, KARSI3_MODE, KARSI3_SECONDS, YEDI_ID, YEDI_MODE, YEDI_SECONDS } from "./karsiReel";
 import { KAYIT_ID, KAYIT_MODE, KAYIT_SECONDS } from "./kayitReel";
 import { HERO_ID, HERO_MODE, HERO_SECONDS } from "./heroReel";
 import { DRAGON_ID, DRAGON_MODE, DRAGON_SECONDS } from "./dragonReel";
-import { KALKAN_ID, KALKAN_MODE, KALKAN_SECONDS } from "./kalkanReel";
 import { ELF_ID, ELF_MODE, ELF_SECONDS } from "./elfReel";
 export const RECENT_BUTTON_LIMIT = 20;
 
 /** Yeniden eskiye. Bir buton güncellenirse en üste alınır, en alttaki 20'nin dışına düşer. */
 export const RECENT_BUTTONS = [
+  { id: YEDI_ID, label: `${YEDI_MODE.label} — ${YEDI_SECONDS}s`, seconds: YEDI_SECONDS },
   { id: KARSI3_ID, label: `${KARSI3_MODE.label} — ${KARSI3_SECONDS}s`, seconds: KARSI3_SECONDS },
   { id: ELF_ID, label: `${ELF_MODE.label} — ${ELF_SECONDS}s`, seconds: ELF_SECONDS },
   { id: KARSI2_ID, label: `${KARSI2_MODE.label} — ${KARSI2_SECONDS}s`, seconds: KARSI2_SECONDS },
@@ -32,5 +32,4 @@ export const RECENT_BUTTONS = [
   { id: HERO_ID, label: `${HERO_MODE.label} — ${HERO_SECONDS}s`, seconds: HERO_SECONDS },
   { id: DRAGON_ID, label: `${DRAGON_MODE.label} — ${DRAGON_SECONDS}s`, seconds: DRAGON_SECONDS },
   { id: DEV8_ID, label: `${DEV8_MODE.label} — ${DEV8_SECONDS}s`, seconds: DEV8_SECONDS },
-  { id: KALKAN_ID, label: `${KALKAN_MODE.label} — ${KALKAN_SECONDS}s`, seconds: KALKAN_SECONDS },
 ] as const;

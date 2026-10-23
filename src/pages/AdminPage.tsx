@@ -38,7 +38,7 @@ import { FILM_ID, FILM_MODE, FILM_SECONDS, isFilm, type FilmId } from "../filmRe
 import { DRAGON_ID, DRAGON_MODE, DRAGON_SECONDS, isDragon, type DragonId } from "../dragonReel";
 import { WARS_ID, WARS_MODE, WARS_SECONDS, isWars, type WarsId } from "../warsReel";
 import { ORDU_ID, ORDU_MODE, ORDU_SECONDS, isOrdu, type OrduId } from "../orduReel";
-import { KARSI_ID, KARSI_MODE, KARSI_SECONDS, KARSI0_ID, KARSI0_MODE, KARSI0_SECONDS, KARSI2_ID, KARSI2_MODE, KARSI2_SECONDS, KARSI3_ID, KARSI3_MODE, KARSI3_SECONDS, KARSI0_RIVAL, askRival, cleanRival, sameRival, isKarsi, isKarsi0, isKarsi2, isKarsi3, isKarsiMode, type Karsi0Id, type Karsi2Id, type Karsi3Id, type KarsiId, type Rival } from "../karsiReel";
+import { KARSI_ID, KARSI_MODE, KARSI_SECONDS, KARSI0_ID, KARSI0_MODE, KARSI0_SECONDS, KARSI2_ID, KARSI2_MODE, KARSI2_SECONDS, KARSI3_ID, KARSI3_MODE, KARSI3_SECONDS, YEDI_ID, YEDI_MODE, YEDI_SECONDS, KARSI0_RIVAL, askRival, cleanRival, sameRival, isKarsi, isKarsi0, isKarsi2, isKarsi3, isYedi, isKarsiMode, type Karsi0Id, type Karsi2Id, type Karsi3Id, type YediId, type KarsiId, type Rival } from "../karsiReel";
 import { OK_ID, OK_MODE, OK_SECONDS, isOk, type OkId } from "../okReel";
 import { ELF_ID, ELF_MODE, ELF_SECONDS, isElf, type ElfId } from "../elfReel";
 import { KALKAN_ID, KALKAN_MODE, KALKAN_SECONDS, isKalkan, type KalkanId } from "../kalkanReel";
@@ -69,12 +69,12 @@ export function AdminPage() {
   const [reelSeconds, setReelSeconds] = useState<number>(7);
   const [reelText, setReelText] = useState(true);
   const [reelSkipCmd, setReelSkipCmd] = useState(false);
-  const [reelShot, setReelShot] = useState<ReelShot | PlanBId | SagaId | DiscoverId | MixId | CountdownId | DefendId | VsId | New1Id | New2Id | New3Id | New4Id | New5Id | New6Id | New62Id | New7Id | LabId | DevId | Dev2Id | Dev3Id | Dev4Id | Dev5Id | Dev6Id | Dev7Id | Dev8Id | Dev9Id | Dev10Id | Dev11Id | Dev12Id | Dev13Id | Dev14Id | Dev15Id | SnakeId | DevsId | FilmId | DragonId | WarsId | OrduId | KarsiId | Karsi0Id | Karsi2Id | Karsi3Id | OkId | ElfId | KalkanId | HeroId | ArenaId | Arena2Id | Arena3Id | BoutId | Bout2Id | KayitId | XxxId | null>(null);
+  const [reelShot, setReelShot] = useState<ReelShot | PlanBId | SagaId | DiscoverId | MixId | CountdownId | DefendId | VsId | New1Id | New2Id | New3Id | New4Id | New5Id | New6Id | New62Id | New7Id | LabId | DevId | Dev2Id | Dev3Id | Dev4Id | Dev5Id | Dev6Id | Dev7Id | Dev8Id | Dev9Id | Dev10Id | Dev11Id | Dev12Id | Dev13Id | Dev14Id | Dev15Id | SnakeId | DevsId | FilmId | DragonId | WarsId | OrduId | KarsiId | Karsi0Id | Karsi2Id | Karsi3Id | YediId | OkId | ElfId | KalkanId | HeroId | ArenaId | Arena2Id | Arena3Id | BoutId | Bout2Id | KayitId | XxxId | null>(null);
   const [rival, setRival] = useState<Rival | null>(null);
   const [rivalHandleInput, setRivalHandleInput] = useState("");
   const [rivalNamesInput, setRivalNamesInput] = useState("");
   const [rivalDraft, setRivalDraft] = useState(false);
-  const [karsi2Ask, setKarsi2Ask] = useState<null | { mode: Karsi2Id | Karsi3Id; step: "name" | "list"; handle: string; names: string }>(null);
+  const [karsi2Ask, setKarsi2Ask] = useState<null | { mode: Karsi2Id | Karsi3Id | YediId; step: "name" | "list"; handle: string; names: string }>(null);
   const [reelDay, setReelDay] = useState("1");
   const [recentOpen, setRecentOpen] = useState(false);
   const [capturing, setCapturing] = useState(false);
@@ -133,16 +133,17 @@ export function AdminPage() {
     setReelSkipCmd(true);
   }
 
-  function applyKarsi2(handle: string, foeNames: string[], mode: Karsi2Id | Karsi3Id = KARSI2_ID) {
-    setRival({ name: handle, foes: foeNames.length, foeNames, tps: mode === KARSI3_ID });
+  function applyKarsi2(handle: string, foeNames: string[], mode: Karsi2Id | Karsi3Id | YediId = KARSI2_ID) {
+    const shoulder = mode === KARSI3_ID || mode === YEDI_ID;
+    setRival({ name: handle, foes: foeNames.length, foeNames, tps: shoulder, hunt: mode === YEDI_ID });
     setReelShot(mode);
-    setReelSeconds(mode === KARSI3_ID ? KARSI3_SECONDS : KARSI2_SECONDS);
+    setReelSeconds(mode === YEDI_ID ? YEDI_SECONDS : mode === KARSI3_ID ? KARSI3_SECONDS : KARSI2_SECONDS);
     setReelText(false);
     setReelSkipCmd(true);
     setKarsi2Ask(null);
   }
 
-  function pickKarsi2(mode: Karsi2Id | Karsi3Id = KARSI2_ID) {
+  function pickKarsi2(mode: Karsi2Id | Karsi3Id | YediId = KARSI2_ID) {
     if (reelShot === mode) {
       setReelShot(null);
       setRival(null);
@@ -720,6 +721,8 @@ export function AdminPage() {
                     ? [WARS_SECONDS]
                   : isKarsi0(reelShot)
                     ? [KARSI0_SECONDS]
+                  : isYedi(reelShot)
+                    ? [YEDI_SECONDS]
                   : isKarsi3(reelShot)
                     ? [KARSI3_SECONDS]
                   : isKarsi2(reelShot)
@@ -840,7 +843,7 @@ export function AdminPage() {
                         pickKarsi();
                         return;
                       }
-                      if (mode.id === KARSI2_ID || mode.id === KARSI3_ID) {
+                      if (mode.id === KARSI2_ID || mode.id === KARSI3_ID || mode.id === YEDI_ID) {
                         pickKarsi2(mode.id);
                         return;
                       }
@@ -1256,6 +1259,13 @@ export function AdminPage() {
             </button>
             <button
               type="button"
+              className={reelShot === YEDI_ID ? "on" : ""}
+              onClick={() => pickKarsi2(YEDI_ID)}
+            >
+              {YEDI_MODE.label} — {YEDI_SECONDS}s
+            </button>
+            <button
+              type="button"
               className={reelShot === OK_ID ? "on" : ""}
               onClick={() => {
                 setReelShot((cur) => (cur === OK_ID ? null : OK_ID));
@@ -1453,6 +1463,11 @@ export function AdminPage() {
           {isKarsi3(reelShot) && (
             <p className="muted">
               Karşı takipçi2 ile aynı savaş ve aynı liste. Omuz kamerasıyla başlar ve biter. Arada oyuncu değişir: bizim kahraman, karşı komutan, bir asker, bir düşman asker. İki ara kesit tepeden, karşı takipçi2 gibi. Şu an {game.rivalHandle ? `@${game.rivalHandle.toUpperCase()} · ${formatCount(game.rivalNames.length)} asker` : "liste boş"}. İsimler siyah plakada kırmızı.
+            </p>
+          )}
+          {isYedi(reelShot) && (
+            <p className="muted">
+              Karşıtakipçi3’ün aynısı, üstüne 7 bayrak. Altısı sarı ve durduğu kesitte sayılır. Yedincisi açılışta komutanın topuğunun yanında, çimin renginde, yerde yatar; tepeden bakınca çizgi gibi kalır. Videoda cevap yok. Başlık: “7 bayrak var. Birini kaçırırsın.” Yorum isteme, cevabı sabitleme. İnsanlar “7. nerede, ben 6 tane buldum” diye yazar ve başa sarar.
             </p>
           )}
           {isOk(reelShot) && (
@@ -1952,7 +1967,7 @@ export function AdminPage() {
                 }
                 setRival(next);
               }
-              if ((isKarsi2(reelShot) || isKarsi3(reelShot)) && !rival?.foeNames?.length) {
+              if ((isKarsi2(reelShot) || isKarsi3(reelShot) || isYedi(reelShot)) && !rival?.foeNames?.length) {
                 const next = rivalFromGame();
                 if (!next) {
                   const text = "Kayıt başlamadı: karşı komutan ve asker adları gerekli.";
@@ -1960,7 +1975,7 @@ export function AdminPage() {
                   window.alert(text);
                   return;
                 }
-                setRival(isKarsi3(reelShot) ? { ...next, tps: true } : next);
+                setRival(isYedi(reelShot) ? { ...next, tps: true, hunt: true } : isKarsi3(reelShot) ? { ...next, tps: true } : next);
               }
               try {
                 if (isJoin(reelShot)) {
@@ -2040,7 +2055,7 @@ export function AdminPage() {
           giant={isGiantShot(reelShot) ? reelShot : null}
           wars={isWars(reelShot) ? reelShot : null}
           ordu={isOrdu(reelShot) ? reelShot : null}
-          karsi={isKarsi0(reelShot) ? KARSI0_RIVAL : isKarsi3(reelShot) || isKarsi2(reelShot) || isKarsi(reelShot) ? rival : null}
+          karsi={isKarsi0(reelShot) ? KARSI0_RIVAL : isYedi(reelShot) || isKarsi3(reelShot) || isKarsi2(reelShot) || isKarsi(reelShot) ? rival : null}
           ok={isOk(reelShot) ? reelShot : null}
           elf={isElf(reelShot) ? reelShot : null}
           kalkan={isKalkan(reelShot) ? reelShot : null}

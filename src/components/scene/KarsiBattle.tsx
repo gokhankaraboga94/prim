@@ -759,6 +759,160 @@ export function KarsiCam({ soldiers, rival }: { soldiers: number; rival: Rival }
   return null;
 }
 
+function huntBody(layout: KarsiLayout, mine: boolean, t: number) {
+  const side = mine ? layout.us : layout.them;
+  if (side.n <= 0) {
+    const chief = karsiChief(layout, mine, t, { x: 0, z: 0, yaw: 0, kneel: 0, lift: 0, chop: 0 });
+    return { x: chief.x, z: chief.z };
+  }
+  let best = 0;
+  let score = -1;
+  for (let i = 0; i < side.n; i++) {
+    const s = (side.row[i] <= 1 ? 8 : 0) + (Math.abs(side.x[i]) > 0.7 ? 3 : 0) + Math.min(side.die[i], 40) / 20;
+    if (s <= score) continue;
+    score = s;
+    best = i;
+  }
+  const out: KarsiPose = { x: 0, z: 0, yaw: 0, fall: 0, lift: 0, chop: 0 };
+  const body = mine ? karsiFriend(layout, best, t, out) : karsiFoe(layout, best, t, out);
+  return { x: body.x, z: body.z };
+}
+
+/** Six gold flags sit in a shot. The seventh lies in the grass by our commander's heel. */
+function huntSpots(layout: KarsiLayout) {
+  const me = karsiChief(layout, true, 0, { x: 0, z: 0, yaw: 0, kneel: 0, lift: 0, chop: 0 });
+  const foe0 = karsiChief(layout, false, 0, { x: 0, z: 0, yaw: 0, kneel: 0, lift: 0, chop: 0 });
+  const foe = karsiChief(layout, false, 7.5, { x: 0, z: 0, yaw: 0, kneel: 0, lift: 0, chop: 0 });
+  const us = huntBody(layout, true, 12.4);
+  const them = huntBody(layout, false, 15.2);
+  return [
+    { x: me.x + 1.85, z: me.z + 2.5 },
+    { x: me.x - 0.92, z: me.z - 1.25, hard: true },
+    { x: -Math.max(6, layout.width * 0.22), z: me.z - 3.2 - layout.us.depth * 0.55 },
+    { x: Math.max(6, layout.width * 0.24), z: foe0.z + 3.4 + layout.them.depth * 0.4 },
+    { x: foe.x + 1.7, z: foe.z - 1.8 },
+    { x: us.x - 1.15, z: us.z + 0.9 },
+    { x: them.x + 1.15, z: them.z - 0.9 },
+  ];
+}
+
+function PlantedFlag({ x, z, hard = false }: { x: number; z: number; hard?: boolean }) {
+  const pole = hard ? 0.72 : 1.62;
+  const flagW = hard ? 0.34 : 0.7;
+  const flagH = hard ? 0.2 : 0.42;
+  return (
+    <group position={[x, hard ? 0.04 : 0.02, z]} rotation={hard ? [1.22, 0.55, 0.15] : [0, 0.5, 0]}>
+      <mesh position={[0, pole / 2, 0]}>
+        <boxGeometry args={[hard ? 0.035 : 0.055, pole, hard ? 0.035 : 0.055]} />
+        <meshStandardMaterial color={hard ? "#6f8f48" : "#3a2a16"} roughness={0.86} />
+      </mesh>
+      <mesh position={[flagW * 0.48, pole - flagH * 0.45, 0]}>
+        <boxGeometry args={[flagW, flagH, 0.025]} />
+        <meshStandardMaterial
+          color={hard ? "#7da85a" : "#ffe14a"}
+          roughness={hard ? 0.96 : 0.42}
+          metalness={hard ? 0 : 0.12}
+          emissive={hard ? "#000000" : "#7a5a00"}
+          emissiveIntensity={hard ? 0 : 0.35}
+        />
+      </mesh>
+    </group>
+  );
+}
+
+function drawHuntCard(canvas: HTMLCanvasElement, badge: boolean) {
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return;
+  const w = canvas.width;
+  const h = canvas.height;
+  ctx.clearRect(0, 0, w, h);
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  if (badge) {
+    ctx.fillStyle = "#ffd54f";
+    ctx.beginPath();
+    ctx.arc(w / 2, h / 2, w * 0.42, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.lineWidth = 16;
+    ctx.strokeStyle = "#111111";
+    ctx.stroke();
+    ctx.font = "900 230px Inter, Montserrat, Helvetica, Arial, sans-serif";
+    ctx.fillStyle = "#111111";
+    ctx.fillText("7", w / 2, h / 2 + 8);
+    return;
+  }
+  roundRect(ctx, 28, 24, w - 56, h - 48, 36);
+  ctx.fillStyle = "#ffd54f";
+  ctx.fill();
+  ctx.lineWidth = 10;
+  ctx.strokeStyle = "#111111";
+  ctx.stroke();
+  ctx.fillStyle = "#111111";
+  ctx.font = "900 168px Inter, Montserrat, Helvetica, Arial, sans-serif";
+  ctx.fillText("7 BAYRAK", w / 2, h * 0.4);
+  ctx.font = "800 72px Inter, Montserrat, Helvetica, Arial, sans-serif";
+  ctx.fillText("birini kaçırırsın", w / 2, h * 0.72);
+}
+
+function HuntCard() {
+  const size = useThree((s) => s.size);
+  const cardMat = useRef<THREE.MeshBasicMaterial>(null);
+  const badgeMat = useRef<THREE.MeshBasicMaterial>(null);
+  const cardTex = useMemo(() => {
+    const canvas = document.createElement("canvas");
+    canvas.width = 1080;
+    canvas.height = 420;
+    drawHuntCard(canvas, false);
+    return canvasTexture(canvas);
+  }, []);
+  const badgeTex = useMemo(() => {
+    const canvas = document.createElement("canvas");
+    canvas.width = 360;
+    canvas.height = 360;
+    drawHuntCard(canvas, true);
+    return canvasTexture(canvas);
+  }, []);
+  useEffect(() => () => {
+    cardTex.dispose();
+    badgeTex.dispose();
+  }, [cardTex, badgeTex]);
+  useFrame(({ clock }) => {
+    const t = Math.max(0, clock.elapsedTime - REEL_HOLD);
+    const card = t < 0.2 ? t / 0.2 : t < 2.55 ? 1 : Math.max(0, 1 - (t - 2.55) / 0.4);
+    const badge = t < 2.7 ? 0 : Math.min(1, (t - 2.7) / 0.35);
+    if (cardMat.current) cardMat.current.opacity = card;
+    if (badgeMat.current) badgeMat.current.opacity = badge;
+  });
+  const w = size.width * 0.84;
+  const h = w * (420 / 1080);
+  const badgeW = size.width * 0.13;
+  return (
+    <Hud renderPriority={4}>
+      <OrthographicCamera makeDefault position={[0, 0, 10]} />
+      <mesh position={[0, size.height * 0.22, 5]} renderOrder={40}>
+        <planeGeometry args={[w, h]} />
+        <meshBasicMaterial ref={cardMat} map={cardTex} transparent opacity={0} depthTest={false} toneMapped={false} />
+      </mesh>
+      <mesh position={[-size.width / 2 + badgeW * 0.72, -size.height / 2 + badgeW * 0.72, 5]} renderOrder={41}>
+        <planeGeometry args={[badgeW, badgeW]} />
+        <meshBasicMaterial ref={badgeMat} map={badgeTex} transparent opacity={0} depthTest={false} toneMapped={false} />
+      </mesh>
+    </Hud>
+  );
+}
+
+function KarsiHunt({ layout }: { layout: KarsiLayout }) {
+  const spots = useMemo(() => huntSpots(layout), [layout]);
+  return (
+    <group>
+      {spots.map((spot) => (
+        <PlantedFlag key={`${spot.x.toFixed(2)}:${spot.z.toFixed(2)}`} x={spot.x} z={spot.z} hard={spot.hard} />
+      ))}
+      <HuntCard />
+    </group>
+  );
+}
+
 export function KarsiBattle({ names, soldiers, rival }: { names: string[]; soldiers: number; rival: Rival }) {
   const layout = useKarsiLayout(soldiers, rival);
   return (
@@ -769,6 +923,7 @@ export function KarsiBattle({ names, soldiers, rival }: { names: string[]; soldi
       {!!rival.foeNames?.length && <KarsiNames names={rival.foeNames} layout={layout} foe tight={Boolean(rival.tps)} />}
       <KarsiChiefUnit layout={layout} mine name={KARSI_ME} compact={Boolean(rival.tps)} />
       {!layout.invite && <KarsiChiefUnit layout={layout} mine={false} name={rival.name} compact={Boolean(rival.tps)} />}
+      {rival.hunt && <KarsiHunt layout={layout} />}
     </group>
   );
 }
