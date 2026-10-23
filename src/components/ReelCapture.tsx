@@ -24,6 +24,14 @@ import type { OkId } from "../okReel";
 import { elfHasScene, elfHold, elfIsReady, elfLoadDone, elfLoadTotal, elfStartPlay, elfWarm, elfWhenReady, type ElfId } from "../elfReel";
 import { ElfScene } from "./scene/ElfScene";
 import { WEBGL_BLOCKED, webglBlocked, webglOpen } from "../webglOk";
+
+function sceneErrMsg(e: Error) {
+  if (webglBlocked(e)) return WEBGL_BLOCKED;
+  if (/R3F:|THREE namespace|forget to extend/i.test(e.message)) {
+    return "Sahne açılamadı. Sayfayı tamamen yenile, elf'i tekrar dene.";
+  }
+  return e.message || "Sahne çöktü.";
+}
 import type { KalkanId } from "../kalkanReel";
 import type { HeroId } from "../heroReel";
 import { ARENA3_ARENA_URL, ARENA3_HERO_URLS, type Arena2Id, type Arena3Id, type ArenaId } from "../arenaReel";
@@ -216,7 +224,7 @@ export function ReelCapture({ soldiers, names, commanders = [], level, pressure,
         {phase !== "done" && phase !== "err" && assets.ready && (
         <SceneErrorBoundary
           onError={(e) => {
-            setErr(webglBlocked(e) ? WEBGL_BLOCKED : e.message || "Sahne çöktü.");
+            setErr(sceneErrMsg(e));
             setPhase("err");
           }}
         >

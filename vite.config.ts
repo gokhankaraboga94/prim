@@ -3,6 +3,12 @@ import react from "@vitejs/plugin-react";
 
 export default defineConfig({
   plugins: [react()],
+  resolve: {
+    dedupe: ["three", "@react-three/fiber", "@react-three/drei"],
+  },
+  optimizeDeps: {
+    include: ["three", "@react-three/fiber", "@react-three/drei"],
+  },
   server: {
     watch: {
       ignored: ["**/public/models/new/**"],
@@ -14,7 +20,6 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks: {
-          three: ["three", "@react-three/fiber", "@react-three/drei"],
           firebase: ["firebase/app", "firebase/auth", "firebase/database", "firebase/storage"],
         },
       },
