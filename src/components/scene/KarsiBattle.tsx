@@ -218,7 +218,7 @@ function KarsiNames({ names, layout, foe = false }: { names: string[]; layout: K
       const ahead = dx * lookDir.x + (NAME_Y - camera.position.y) * lookDir.y + dz * lookDir.z;
       const dist = Math.hypot(dx, camera.position.y - NAME_Y, dz);
       const hide = ahead < 2.4 || (foe ? layout.foeFall[slot] : layout.liveFall[slot]) > 0.35;
-      const pitch = foe ? layout.them.pitch : layout.us.pitch;
+      const pitch = foe ? layout.them.spread : layout.us.spread;
       const want = Math.min(pitch * 1.08, dist * tanH * (foe ? 0.984 : 0.84));
       const size = want / Math.max(2.05, cell.sx);
       dummy.position.set(x, NAME_Y, z);

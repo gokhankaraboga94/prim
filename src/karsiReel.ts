@@ -37,8 +37,10 @@ function bodyCap(high: number) {
 
 const PITCH_US = 2.22;
 const PITCH_FOE = 3.0;
+const SPREAD_US = 2.22;
+const SPREAD_FOE = 4.4;
 const LANE_US = 1.62;
-const LANE_FOE = 1.85;
+const LANE_FOE = 2.25;
 const T_CHARGE = 3.2;
 const T_MEET = 6.4;
 const T_END = 15.5;
@@ -115,6 +117,7 @@ export type KarsiSide = {
   cols: number;
   rows: number;
   pitch: number;
+  spread: number;
   x: Float32Array;
   row: Uint16Array;
   phase: Float32Array;
@@ -139,7 +142,7 @@ export type KarsiLayout = {
 };
 
 /** Deep, narrow blocks so both armies fit a portrait frame. */
-function makeSide(real: number, cap: number, lossFrac: number, salt: number, pitch: number, lane: number): KarsiSide {
+function makeSide(real: number, cap: number, lossFrac: number, salt: number, pitch: number, lane: number, spread = pitch): KarsiSide {
   const n = Math.max(0, Math.min(cap, Math.floor(real)));
   const cols = Math.max(1, Math.ceil(Math.sqrt(n / 1.6)));
   const rows = Math.max(1, Math.ceil(n / cols));
@@ -149,6 +152,7 @@ function makeSide(real: number, cap: number, lossFrac: number, salt: number, pit
     cols,
     rows,
     pitch,
+    spread,
     x: new Float32Array(n),
     row: new Uint16Array(n),
     phase: new Float32Array(n),
@@ -160,7 +164,7 @@ function makeSide(real: number, cap: number, lossFrac: number, salt: number, pit
     const row = Math.floor(i / cols);
     const col = i % cols;
     const inRow = row === rows - 1 ? n - row * cols : cols;
-    const off = (col - (inRow - 1) / 2) * pitch;
+    const off = (col - (inRow - 1) / 2) * spread;
     side.x[i] = off + Math.sign(off || (col % 2 ? 1 : -1)) * lane;
     side.row[i] = row;
     side.phase[i] = hash(i, salt) * 1.1;
@@ -175,10 +179,11 @@ function makeSide(real: number, cap: number, lossFrac: number, salt: number, pit
 }
 
 /**
- * We are only 10% stronger. Losses follow melee (linear) so a bigger army still
- * bleeds: 10 vs 10 we drop about 9, 991 vs 469 we drop about four in ten.
+ * Romans hit harder per man. Losses stay linear melee: the weaker side is wiped,
+ * the winner bleeds loseP/winP.
  */
 const OUR_STR = 1.1;
+const FOE_STR = 1.45;
 
 function winLossFrac(winP: number, loseP: number) {
   return Math.min(0.97, loseP / Math.max(1e-6, winP));
@@ -188,12 +193,12 @@ export function makeKarsiLayout(friends: number, foes: number, invite = false): 
   const a = Math.max(0, Math.floor(friends));
   const b = invite ? 0 : Math.max(0, Math.floor(foes));
   const pUs = a * OUR_STR;
-  const pThem = b;
+  const pThem = b * FOE_STR;
   const weWin = pUs >= pThem;
   const winLoss = invite || a <= 0 || b <= 0 ? 0 : winLossFrac(Math.max(pUs, pThem), Math.min(pUs, pThem));
-  const us = makeSide(a, bodyCap(SHOW_FRIENDS), invite ? 0 : weWin ? winLoss : 1, 3, PITCH_US, LANE_US);
-  const them = makeSide(b, bodyCap(SHOW_FOES), invite ? 0 : weWin ? 1 : winLoss, 11, PITCH_FOE, LANE_FOE);
-  const width = Math.max(us.cols * us.pitch, Math.max(1, them.cols) * them.pitch) + Math.max(LANE_US, LANE_FOE) * 2;
+  const us = makeSide(a, bodyCap(SHOW_FRIENDS), invite ? 0 : weWin ? winLoss : 1, 3, PITCH_US, LANE_US, SPREAD_US);
+  const them = makeSide(b, bodyCap(SHOW_FOES), invite ? 0 : weWin ? 1 : winLoss, 11, PITCH_FOE, LANE_FOE, SPREAD_FOE);
+  const width = Math.max(us.cols * us.spread, Math.max(1, them.cols) * them.spread) + Math.max(LANE_US, LANE_FOE) * 2;
   return {
     us,
     them,
