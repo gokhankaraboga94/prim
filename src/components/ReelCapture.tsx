@@ -21,7 +21,7 @@ import type { WarsId } from "../warsReel";
 import type { OrduId } from "../orduReel";
 import type { Rival } from "../karsiReel";
 import type { OkId } from "../okReel";
-import { elfIsReady, elfStartPlay, elfWhenReady, type ElfId } from "../elfReel";
+import { elfHold, elfIsReady, elfStartPlay, elfWhenReady, type ElfId } from "../elfReel";
 import { ElfScene } from "./scene/ElfScene";
 import type { KalkanId } from "../kalkanReel";
 import type { HeroId } from "../heroReel";
@@ -148,17 +148,18 @@ export function ReelCapture({ soldiers, names, commanders = [], level, pressure,
           return;
         }
         setElfReady(true);
+        elfHold();
       }
       await wait(Math.round(REEL_HOLD * 1000) + 80);
       if (stop) return;
-      if (elf) elfStartPlay();
+      if (elf) elfHold();
       setPhase("rec");
       try {
         await Promise.race([unlockReelSfx(), wait(1200)]);
         if (stop) return;
         const heavy = isMix9(mix);
         const bits = heavy ? 2_500_000 : xxx && xxxHiRes(xxx) ? 24_000_000 : 8_000_000;
-        const recorded = await recordCanvas(canvas, clip, reelSfxStream(), bits, heavy);
+        const recorded = await recordCanvas(canvas, clip, reelSfxStream(), bits, heavy, elf ? elfStartPlay : undefined);
         if (stop) return;
         setBlob(recorded);
         setPreview(URL.createObjectURL(recorded));

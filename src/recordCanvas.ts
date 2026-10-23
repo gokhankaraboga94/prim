@@ -62,7 +62,7 @@ export function wait(ms: number) {
   return new Promise((resolve) => window.setTimeout(resolve, ms));
 }
 
-export async function recordCanvas(canvas: HTMLCanvasElement, seconds: number, audio?: MediaStream | null, bitsPerSecond = 8_000_000, steady = false) {
+export async function recordCanvas(canvas: HTMLCanvasElement, seconds: number, audio?: MediaStream | null, bitsPerSecond = 8_000_000, steady = false, onStart?: () => void) {
   const mime = pickMime(Boolean(audio));
   if (!mime) throw new Error("Bu tarayıcı video kaydını desteklemiyor. Safari veya Chrome dene.");
   const reel = document.createElement("canvas");
@@ -71,11 +71,19 @@ export async function recordCanvas(canvas: HTMLCanvasElement, seconds: number, a
   const flat = reel.getContext("2d", { alpha: false });
   if (!flat) throw new Error("Bu tarayıcı video kaydını desteklemiyor. Safari veya Chrome dene.");
   let copying = true;
+  let armed = false;
+  let started = false;
   const copyFrame = () => {
     if (!copying) return;
     const sw = canvas.width;
     const sh = canvas.height;
-    if (sw > 0 && sh > 0) flat.drawImage(canvas, 0, 0, sw, sh, 0, 0, REEL_WIDTH, REEL_HEIGHT);
+    if (sw > 0 && sh > 0) {
+      flat.drawImage(canvas, 0, 0, sw, sh, 0, 0, REEL_WIDTH, REEL_HEIGHT);
+      if (armed && !started) {
+        started = true;
+        onStart?.();
+      }
+    }
     requestAnimationFrame(copyFrame);
   };
   copyFrame();
@@ -105,6 +113,7 @@ export async function recordCanvas(canvas: HTMLCanvasElement, seconds: number, a
     };
   });
   rec.start(steady ? 1000 : 250);
+  armed = true;
   try {
     await wait(Math.max(1000, seconds * 1000));
     if (rec.state === "recording") {

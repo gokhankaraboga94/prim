@@ -117,11 +117,15 @@ export function elfWhenReady() {
   return new Promise<void>((ok) => elfWait.push(ok));
 }
 
-export function elfStartPlay() {
-  if (!elfPlayAt) elfPlayAt = performance.now() / 1000;
+export function elfHold() {
+  elfPlayAt = 0;
 }
 
-/** Frozen at the opening until recording actually starts. */
+export function elfStartPlay() {
+  elfPlayAt = performance.now() / 1000;
+}
+
+/** Frozen at the opening until the recorder writes its first frame. */
 export function elfT() {
   if (!elfPlayAt) return 0;
   return Math.max(0, performance.now() / 1000 - elfPlayAt);
@@ -215,9 +219,9 @@ function orcSeat(i: number) {
     kind: (i + row) % 2,
     x,
     z0: floor.zSpawn + row * Math.min(3.2, run * 0.08),
-    start: 1.05 + (col % 5) * 0.16 + row * 0.38 + hash(i, 1) * 0.35,
-    speed: 3.2 + hash(i, 2) * 0.7 + run * 0.02,
-    killZ: floor.zElf + 3.2 + hash(i, 3) * run * 0.42,
+    start: 2.4 + (col % 5) * 0.22 + row * 0.55 + hash(i, 1) * 0.4,
+    speed: 2.05 + hash(i, 2) * 0.35 + run * 0.01,
+    killZ: floor.zElf + 6.2 + hash(i, 3) * run * 0.26,
   };
 }
 
@@ -254,7 +258,7 @@ const ARROWS: ElfArrow[] = Array.from({ length: 28 }, () => ({ x: 0, y: 0, z: 0,
 function arrowFlight(elf: number, t: number, out: ElfArrow) {
   const cycle = 0.78;
   const phase = (t * 1.12 + elf * 0.17 + (elf % 3) * 0.08) % cycle;
-  if (phase < 0.2 || t < 1.6) return false;
+  if (phase < 0.2 || t < 3.1) return false;
   const u = (phase - 0.2) / (cycle - 0.2);
   const from = elfAt(elf, t);
   const aim = from.z + 8 + ((elf * 7) % 11) * 1.05 + Math.sin(t * 0.7 + elf) * 1.2;
@@ -294,8 +298,8 @@ export function elfCam(t: number): ElfCam {
   const g = elfLift();
   const ez = floor.zElf;
   const mid = (floor.zElf + floor.zSpawn) * 0.5;
-  const wide = look(13.2, g + 5.6, mid + 10, 0.2, g + 1.28, ez + 3, 40);
-  const hold = look(10.4, g + 3.5, mid + 5, 0.3, g + 1.3, ez + 5, 38);
+  const wide = look(20, g + 5.1, mid + 3, 0, g + 1.18, mid - 2, 40);
+  const hold = look(15.2, g + 3.3, mid + 1, 0.3, g + 1.25, ez + 7, 36);
   const charge = look(11.5, g + 2.05, floor.zSpawn - 10, 1.2, g + 1.15, floor.zSpawn - 16, 38);
   const elfClose = look(2.15, g + 1.58, ez + 3.8, 0.2, g + 1.42, ez + 0.3, 32);
   const volley = look(1.4, g + 3.4, ez + 9.6, 0.6, g + 1.35, mid, 34);
