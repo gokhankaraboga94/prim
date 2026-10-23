@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useFrame } from "@react-three/fiber";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
@@ -39,6 +39,7 @@ const up = new THREE.Vector3(0, 1, 0);
 const down = new THREE.Vector3(0, -1, 0);
 const ray = new THREE.Raycaster();
 const origin = new THREE.Vector3();
+const skinPt = new THREE.Vector3();
 
 function paintFloor(root: THREE.Object3D) {
   const box = new THREE.Box3().setFromObject(root);
@@ -102,15 +103,42 @@ function keepMat(src: THREE.Material) {
   });
 }
 
+function bakeMeshGeometry(mesh: THREE.Mesh) {
+  const skinned = mesh as THREE.SkinnedMesh;
+  mesh.updateMatrixWorld(true);
+  let baked: THREE.BufferGeometry;
+  if (skinned.isSkinnedMesh) {
+    skinned.skeleton?.update();
+    baked = skinned.geometry.clone();
+    const pos = baked.getAttribute("position") as THREE.BufferAttribute;
+    for (let i = 0; i < pos.count; i++) {
+      skinned.getVertexPosition(i, skinPt);
+      pos.setXYZ(i, skinPt.x, skinPt.y, skinPt.z);
+    }
+    baked.applyMatrix4(mesh.matrixWorld);
+  } else {
+    baked = mesh.geometry.clone();
+    baked.applyMatrix4(mesh.matrixWorld);
+  }
+  const trimmed = dropGroundSlab(baked);
+  trimmed.computeBoundingBox();
+  const box = trimmed.boundingBox;
+  if (box && box.max.y - box.min.y < 0.04) {
+    trimmed.dispose();
+    return baked;
+  }
+  if (trimmed !== baked) baked.dispose();
+  return trimmed;
+}
+
 function fitFigure(root: THREE.Object3D, height: number) {
   root.updateMatrixWorld(true);
   root.traverse((obj) => {
     const mesh = obj as THREE.Mesh;
     if (!mesh.isMesh) return;
-    const baked = mesh.geometry.clone();
-    baked.applyMatrix4(mesh.matrixWorld);
+    const geo = bakeMeshGeometry(mesh);
     mesh.geometry.dispose();
-    mesh.geometry = dropGroundSlab(baked);
+    mesh.geometry = geo;
     mesh.position.set(0, 0, 0);
     mesh.quaternion.identity();
     mesh.scale.set(1, 1, 1);
@@ -205,15 +233,19 @@ function ElfFigures({
   count,
   pick,
   drawOrder = 0,
+  kind,
 }: {
   url: string;
   height: number;
   count: number;
   pick: (i: number, t: number, out: ElfPose) => void;
   drawOrder?: number;
+  kind: "elf" | "orc";
 }) {
-  const group = useRef<THREE.Group>(null);
   const pack = useRef<Pack[]>([]);
+  const pickRef = useRef(pick);
+  pickRef.current = pick;
+  const [meshes, setMeshes] = useState<THREE.InstancedMesh[]>([]);
   useEffect(() => {
     const loader = new GLTFLoader();
     let drop = false;
@@ -221,45 +253,47 @@ function ElfFigures({
       loader,
       url,
       (gltf) => {
+        if (drop) return;
         try {
-          const host = group.current;
-          if (drop || !host) {
-            if (!drop) elfPieceReady(/\/elf(-lite)?\.glb/.test(url) ? "elf" : "orc", false);
-            return;
-          }
           const root = gltf.scene;
           fitFigure(root, height);
           const next = packsFrom(root, count, drawOrder);
           pack.current = next;
-          for (const item of next) host.add(item.mesh);
-          paintPack(next, count, (i, out) => pick(i, 0, out));
-          const isElf = /\/elf(-lite)?\.glb/.test(url);
-          if (!drop) elfPieceReady(isElf ? "elf" : "orc", next.length > 0);
+          setMeshes(next.map((p) => p.mesh));
+          paintPack(next, count, (i, out) => pickRef.current(i, 0, out));
+          elfPieceReady(kind, next.length > 0);
         } catch (err) {
           console.warn("elf model failed", url, err);
-          if (!drop) elfPieceReady(/\/elf(-lite)?\.glb/.test(url) ? "elf" : "orc", false);
+          elfPieceReady(kind, false);
         }
       },
       (err) => {
         console.warn("elf model failed", url, err);
-        if (!drop) elfPieceReady(/\/elf(-lite)?\.glb/.test(url) ? "elf" : "orc", false);
+        if (!drop) elfPieceReady(kind, false);
       }
     );
     return () => {
       drop = true;
       disposePack(pack.current);
       pack.current = [];
+      setMeshes([]);
     };
-  }, [url, height, count, drawOrder]);
+  }, [url, height, count, drawOrder, kind]);
   useFrame(() => {
     if (!pack.current.length) return;
-    paintPack(pack.current, count, (i, out) => pick(i, elfT(), out));
+    paintPack(pack.current, count, (i, out) => pickRef.current(i, elfT(), out));
   });
-  return <group ref={group} />;
+  return (
+    <group>
+      {meshes.map((mesh, i) => (
+        <primitive key={`${url}-${i}`} object={mesh} />
+      ))}
+    </group>
+  );
 }
 
 function Meydan() {
-  const root = useRef<THREE.Group>(null);
+  const [ground, setGround] = useState<THREE.Object3D | null>(null);
   useEffect(() => {
     const loader = new GLTFLoader();
     let drop = false;
@@ -267,12 +301,8 @@ function Meydan() {
       loader,
       elfAssets().field,
       (gltf) => {
+        if (drop) return;
         try {
-          const host = root.current;
-          if (drop || !host) {
-            if (!drop) elfPieceReady("field", false);
-            return;
-          }
           const model = gltf.scene;
           model.updateMatrixWorld(true);
           const box = new THREE.Box3().setFromObject(model);
@@ -291,13 +321,13 @@ function Meydan() {
             mesh.castShadow = false;
             mesh.receiveShadow = false;
           });
-          host.add(model);
-          host.updateMatrixWorld(true);
-          paintFloor(host);
-          if (!drop) elfPieceReady("field", true);
+          model.updateMatrixWorld(true);
+          paintFloor(model);
+          setGround(model);
+          elfPieceReady("field", true);
         } catch (err) {
           console.warn("meydan failed", err);
-          if (!drop) elfPieceReady("field", false);
+          elfPieceReady("field", false);
         }
       },
       (err) => {
@@ -307,19 +337,20 @@ function Meydan() {
     );
     return () => {
       drop = true;
-      const host = root.current;
-      if (!host) return;
-      host.traverse((obj) => {
-        const mesh = obj as THREE.Mesh;
-        if (!mesh.isMesh) return;
-        mesh.geometry?.dispose();
-        const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
-        for (const mat of mats) mat?.dispose();
+      setGround((prev) => {
+        if (!prev) return null;
+        prev.traverse((obj) => {
+          const mesh = obj as THREE.Mesh;
+          if (!mesh.isMesh) return;
+          mesh.geometry?.dispose();
+          const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+          for (const mat of mats) mat?.dispose();
+        });
+        return null;
       });
-      host.clear();
     };
   }, []);
-  return <group ref={root} />;
+  return ground ? <primitive object={ground} /> : null;
 }
 
 function paintVerts(geo: THREE.BufferGeometry, hex: string) {
@@ -468,14 +499,23 @@ export function ElfBattle() {
       <directionalLight position={[18, 22, 8]} intensity={1.55} color="#ffc178" />
       <directionalLight position={[-12, 8, -6]} intensity={0.48} color="#8ea4c4" />
       <Meydan />
-      <ElfFigures url={assets.elf} height={1.92} count={ELF_N} drawOrder={2} pick={(i, t, out) => writePose(elfAt(i, t), out)} />
       <ElfFigures
+        kind="elf"
+        url={assets.elf}
+        height={1.92}
+        count={ELF_N}
+        drawOrder={2}
+        pick={(i, t, out) => writePose(elfAt(i, t), out)}
+      />
+      <ElfFigures
+        kind="orc"
         url={assets.orc1}
         height={1.52}
         count={ORC_N}
         pick={(i, t, out) => writePose(orcKind(i) === 0 ? orcAt(i, t) : hidden, out)}
       />
       <ElfFigures
+        kind="orc"
         url={assets.orc2}
         height={1.52}
         count={ORC_N}

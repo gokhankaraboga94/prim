@@ -2,6 +2,8 @@ export const ELF_ID = "elf" as const;
 export type ElfId = typeof ELF_ID;
 export const ELF_MODE = { id: ELF_ID, label: "elf" } as const;
 export const ELF_SECONDS = 24;
+/** Alternating film beats: elves, orcs, elves, orcs… */
+export const ELF_FILM_SEG = 4;
 
 export const ELF_N = 10;
 export const ORC_N = 52;
@@ -85,6 +87,10 @@ export function elfFloor(x: number, z: number) {
 
 export function elfLift() {
   return floor.lift;
+}
+
+export function elfFieldReady() {
+  return floor.cols >= 2 && floor.rows >= 2;
 }
 
 export function isElf(id: string | null | undefined): id is ElfId {
@@ -218,8 +224,20 @@ function look(x: number, y: number, z: number, lx: number, ly: number, lz: numbe
   return { x, y, z, lx, ly, lz, fov };
 }
 
+export function elfFilmBeat(t: number) {
+  return Math.min(5, Math.floor(t / ELF_FILM_SEG));
+}
+
+export function elfFilmKind(t: number): "elf" | "orc" {
+  return elfFilmBeat(t) % 2 === 0 ? "elf" : "orc";
+}
+
+export function elfFilmLocal(t: number) {
+  return t - elfFilmBeat(t) * ELF_FILM_SEG;
+}
+
 /** Two shallow ranks on the meydan, facing the charge. */
-export function elfAt(i: number, _t: number): ElfPose {
+export function elfAt(i: number, t: number): ElfPose {
   const row = i < 5 ? 0 : 1;
   const col = i % 5;
   const laneW = (floor.x1 - floor.x0) * 0.5;
@@ -232,7 +250,7 @@ export function elfAt(i: number, _t: number): ElfPose {
     yaw: Math.PI,
     pitch: 0,
     roll: 0,
-    hide: false,
+    hide: elfFilmKind(t) !== "elf",
   };
 }
 
@@ -261,17 +279,28 @@ export function orcKind(i: number) {
   return orcSeat(i).kind;
 }
 
-/** Orcs slide in; they drop mid-charge and just as they reach the elves. */
+/** Orcs charge only on orc beats; hidden on elf beats. */
 export function orcAt(i: number, t: number): ElfPose {
   const seat = orcSeat(i);
-  const runT = t - seat.start;
+  const parked = {
+    x: seat.x,
+    y: elfFloor(seat.x, seat.z0) + 0.02,
+    z: seat.z0,
+    yaw: Math.PI,
+    pitch: -0.12,
+    roll: 0,
+    hide: true,
+  };
+  if (elfFilmKind(t) !== "orc") return parked;
+  const lt = elfFilmLocal(t);
+  const runT = lt - (0.35 + (i % 6) * 0.14 + Math.floor(i / 13) * 0.32 + hash(i, 1) * 0.22);
   if (runT < 0) {
-    return { x: seat.x, y: elfFloor(seat.x, seat.z0), z: seat.z0, yaw: Math.PI, pitch: -0.12, roll: 0, hide: false };
+    return { ...parked, hide: false };
   }
   const killDist = seat.z0 - seat.killZ;
   const dist = runT * seat.speed;
   const dead = dist >= killDist;
-  const fall = dead ? clamp01((dist - killDist) / Math.max(0.8, seat.speed * 0.55)) : 0;
+  const fall = dead ? clamp01((dist - killDist) / Math.max(0.65, seat.speed * 0.5)) : 0;
   const z = dead ? seat.killZ : seat.z0 - dist;
   const x = seat.x + (dead ? Math.sign(seat.x || 1) * fall * 0.45 : 0);
   return {
@@ -288,9 +317,11 @@ export function orcAt(i: number, t: number): ElfPose {
 const ARROWS: ElfArrow[] = Array.from({ length: 28 }, () => ({ x: 0, y: 0, z: 0, dx: 0, dy: 1, dz: 0 }));
 
 function arrowFlight(elf: number, t: number, out: ElfArrow) {
+  if (elfFilmKind(t) !== "elf") return false;
+  const lt = elfFilmLocal(t);
   const cycle = 0.78;
-  const phase = (t * 1.12 + elf * 0.17 + (elf % 3) * 0.08) % cycle;
-  if (phase < 0.18 || t < 3.1) return false;
+  const phase = (lt * 1.12 + elf * 0.17 + (elf % 3) * 0.08) % cycle;
+  if (phase < 0.18 || lt < 0.55) return false;
   const u = (phase - 0.18) / (cycle - 0.18);
   const from = elfAt(elf, t);
   const aim = from.z + 7.2 + ((elf * 7) % 11) * 0.85 + Math.sin(t * 0.7 + elf) * 0.9;
@@ -322,30 +353,31 @@ export function elfArrows(t: number) {
   return { list: ARROWS, n };
 }
 
-/**
- * LOTR-style cuts: establish the field, ride with the charge, close on an elf,
- * follow the volley, then pull back over the fallen line.
- */
+/** Six 4s beats: elf → orc → elf → orc → elf → orc, each with A→B camera inside the beat. */
 export function elfCam(t: number): ElfCam {
   const g = elfLift();
   const ez = floor.zElf;
-  const mid = (floor.zElf + floor.zSpawn) * 0.5;
-  const elfMidZ = ez + 0.35;
-  const wide = look(0.15, g + 1.78, ez - 2.55, 0, g + 1.42, elfMidZ, 34);
-  const hold = look(-0.65, g + 1.58, ez - 1.05, 0.12, g + 1.36, elfMidZ + 1.2, 31);
-  const charge = look(0.8, g + 1.38, ez + 5.5, 0.15, g + 1.12, ez + 12, 34);
-  const elfClose = look(0.55, g + 1.52, ez - 0.85, 0, g + 1.42, elfMidZ, 28);
-  const volley = look(0.2, g + 1.72, ez + 0.8, 0.1, g + 1.45, ez + 7.5, 30);
-  const rain = look(-0.85, g + 2.1, ez + 4.2, 0.3, g + 1.36, ez + 10, 32);
-  const last = look(1.4, g + 1.42, ez + 5.8, 0.15, g + 0.95, ez + 9.5, 32);
-  const line = look(-0.35, g + 1.55, ez - 1.1, 0.12, g + 1.38, elfMidZ, 30);
-  const end = look(4.2, g + 3.2, ez + 2.4, 0, g + 1.08, mid, 38);
-  if (t < 2.7) return mixCam(wide, hold, t / 2.7);
-  if (t < 6.1) return mixCam(hold, charge, (t - 2.7) / 3.4);
-  if (t < 8.6) return mixCam(charge, elfClose, (t - 6.1) / 2.5);
-  if (t < 11.2) return mixCam(elfClose, volley, (t - 8.6) / 2.6);
-  if (t < 14.5) return mixCam(volley, rain, (t - 11.2) / 3.3);
-  if (t < 18) return mixCam(rain, last, (t - 14.5) / 3.5);
-  if (t < 20.6) return mixCam(last, line, (t - 18) / 2.6);
-  return mixCam(line, end, Math.min(1, (t - 20.6) / 3.2));
+  const run = Math.max(6, floor.zSpawn - floor.zElf);
+  const oz = floor.zElf + run * 0.58;
+  const elfMidZ = ez + 0.38;
+  const elfA = look(0.05, g + 1.72, ez - 2.35, 0, g + 1.44, elfMidZ, 32);
+  const elfB = look(0.42, g + 1.56, ez - 0.95, 0, g + 1.46, elfMidZ, 27);
+  const elfC = look(-0.55, g + 1.68, ez - 1.15, 0.08, g + 1.5, elfMidZ + 0.2, 29);
+  const elfD = look(0.22, g + 1.82, ez + 0.35, 0, g + 1.52, elfMidZ, 28);
+  const orcA = look(0.15, g + 1.58, oz - 1.8, 0, g + 1.22, oz + 1.2, 33);
+  const orcB = look(-0.35, g + 1.42, ez + 1.8, 0.12, g + 1.18, oz, 31);
+  const orcC = look(0.65, g + 1.48, oz - 1.2, 0, g + 1.15, oz + 2.4, 34);
+  const orcD = look(-0.9, g + 1.55, ez + 3.2, 0.2, g + 1.05, oz + 0.5, 32);
+  const pairs: [ElfCam, ElfCam][] = [
+    [elfA, elfB],
+    [orcA, orcB],
+    [elfC, elfD],
+    [orcC, orcD],
+    [elfB, elfA],
+    [orcB, orcA],
+  ];
+  const beat = elfFilmBeat(t);
+  const u = clamp01(elfFilmLocal(t) / ELF_FILM_SEG);
+  const [a, b] = pairs[beat];
+  return mixCam(a, b, u);
 }
