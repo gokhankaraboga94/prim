@@ -36,24 +36,6 @@ const CHIEF_H = 2.7;
 /** fitHero fits heroes to 1.58. */
 const CHIEF_SCALE = CHIEF_H / 1.58;
 const NAME_Y = 2.94;
-/** Spread through the block so the back rank keeps plates. A full roster atlas knocks the tab out. */
-const SHOW_NAMES = 96;
-
-function pickRankLabels(names: string[], count: number, limit: number) {
-  const out: { slot: number; text: string }[] = [];
-  if (count < 1 || limit < 1) return out;
-  const n = Math.min(count, Math.max(1, limit));
-  const seen = new Set<number>();
-  for (let k = 0; k < n; k++) {
-    const slot = n === 1 ? 0 : Math.round((k * (count - 1)) / (n - 1));
-    if (seen.has(slot)) continue;
-    const text = String(names[slot] ?? "").trim().replace(/^@+/, "");
-    if (!text) continue;
-    seen.add(slot);
-    out.push({ slot, text });
-  }
-  return out;
-}
 
 function upper(name: string) {
   return `@${name.replace(/^@+/, "").toUpperCase()}`;
@@ -196,13 +178,22 @@ function KarsiArmies({ layout }: { layout: KarsiLayout }) {
 /** Follower names: yellow on black for us, red on black for the rival list. */
 function KarsiNames({ names, layout, foe = false }: { names: string[]; layout: KarsiLayout; foe?: boolean }) {
   const count = foe ? layout.them.n : layout.us.n;
-  const labels = useMemo(() => pickRankLabels(names, count, SHOW_NAMES), [names, count]);
+  const labels = useMemo(() => {
+    const out: { slot: number; text: string }[] = [];
+    for (let i = 0; i < count; i++) {
+      const text = String(names[i] ?? "").trim().replace(/^@+/, "");
+      if (text) out.push({ slot: i, text });
+    }
+    return out;
+  }, [names, count]);
   const atlas = useMemo<NameAtlas>(() => {
     const items = labels.map((n) => ({ text: n.text, commander: false, plain: true, fill: foe ? "#ff2a22" : "#ffe14a", frame: true }));
+    const sharp = items.length <= 80;
+    const crisp = items.length <= 220;
     try {
-      return buildNameAtlas(items, true, items.length <= 80);
+      return buildNameAtlas(items, crisp, sharp);
     } catch {
-      return buildNameAtlas(items, true);
+      return buildNameAtlas(items);
     }
   }, [labels, foe]);
   const refs = useRef<(THREE.InstancedMesh | null)[]>([]);
