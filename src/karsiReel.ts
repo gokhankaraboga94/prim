@@ -6,12 +6,16 @@ export const KARSI0_ID = "karsi0" as const;
 export type Karsi0Id = typeof KARSI0_ID;
 export const KARSI0_MODE = { id: KARSI0_ID, label: "karşıtakipçi0" } as const;
 export const KARSI0_SECONDS = 16;
+export const KARSI2_ID = "karsi2" as const;
+export type Karsi2Id = typeof KARSI2_ID;
+export const KARSI2_MODE = { id: KARSI2_ID, label: "karşı takipçi2" } as const;
+export const KARSI2_SECONDS = KARSI_SECONDS;
 export const KARSI_ME = "wargame2028";
 export const KARSI_HERO_ME = "/models/arena3/armored.glb";
 export const KARSI_HERO_FOE = "/models/arena3/2.glb";
 
 /** Rival account and its follower count, asked when the button is pressed. */
-export type Rival = { name: string; foes: number; invite?: boolean };
+export type Rival = { name: string; foes: number; invite?: boolean; foeNames?: string[] };
 
 /** karşıtakipçi0: no rival yet, only our army on the field. */
 export const KARSI0_RIVAL: Rival = { name: "", foes: 0, invite: true };
@@ -38,8 +42,12 @@ export function isKarsi0(id: string | null | undefined): id is Karsi0Id {
   return id === KARSI0_ID;
 }
 
-export function isKarsiMode(id: string | null | undefined): id is KarsiId | Karsi0Id {
-  return id === KARSI_ID || id === KARSI0_ID;
+export function isKarsi2(id: string | null | undefined): id is Karsi2Id {
+  return id === KARSI2_ID;
+}
+
+export function isKarsiMode(id: string | null | undefined): id is KarsiId | Karsi0Id | Karsi2Id {
+  return id === KARSI_ID || id === KARSI0_ID || id === KARSI2_ID;
 }
 
 export function cleanRival(name: string) {
@@ -47,8 +55,12 @@ export function cleanRival(name: string) {
 }
 
 /** Admin button: ask for the rival account, then its follower count. Cancel returns null. */
+export function askRivalName() {
+  return cleanRival(window.prompt("Karşı taraf kimin hesabı? Düşman komutan bu olacak.", "") || "");
+}
+
 export function askRival(): Rival | null {
-  const name = cleanRival(window.prompt("Karşı taraf kimin hesabı? Düşman komutan bu olacak.", "") || "");
+  const name = askRivalName();
   if (!name) return null;
   const foes = parseFollowers(window.prompt(`${name} kaç takipçi? O kadar düşman askeri gelir.`, "") || "");
   if (foes <= 0) return null;
@@ -103,6 +115,9 @@ export type KarsiLayout = {
   liveX: Float32Array;
   liveZ: Float32Array;
   liveFall: Float32Array;
+  foeX: Float32Array;
+  foeZ: Float32Array;
+  foeFall: Float32Array;
 };
 
 /** Deep, narrow blocks so both armies fit a portrait frame. */
@@ -164,6 +179,9 @@ export function makeKarsiLayout(friends: number, foes: number, invite = false): 
     liveX: new Float32Array(us.n),
     liveZ: new Float32Array(us.n),
     liveFall: new Float32Array(us.n),
+    foeX: new Float32Array(them.n),
+    foeZ: new Float32Array(them.n),
+    foeFall: new Float32Array(them.n),
   };
 }
 

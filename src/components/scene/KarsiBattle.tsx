@@ -147,18 +147,23 @@ function KarsiArmies({ layout }: { layout: KarsiLayout }) {
       knight.strike.needsUpdate = true;
     }
     const them = themRef.current;
-    if (layout.invite || !them || !roman) return;
+    if (layout.invite) return;
     for (let i = 0; i < layout.them.n; i++) {
       karsiFoe(layout, i, t, pose);
-      dummy.position.set(pose.x, 0.05, pose.z);
+      layout.foeX[i] = pose.x;
+      layout.foeZ[i] = pose.z;
+      layout.foeFall[i] = pose.fall;
+      if (!them || !roman) continue;
       dummy.rotation.set(0, Math.PI / 2, 1.45 * pose.fall);
       dummy.scale.setScalar(ROMAN_SCALE);
       dummy.updateMatrix();
       them.setMatrixAt(i, dummy.matrix);
       roman.strike.setXY(i, pose.lift, pose.chop);
     }
-    them.instanceMatrix.needsUpdate = true;
-    roman.strike.needsUpdate = true;
+    if (them && roman) {
+      them.instanceMatrix.needsUpdate = true;
+      roman.strike.needsUpdate = true;
+    }
   });
 
   return (
@@ -169,24 +174,25 @@ function KarsiArmies({ layout }: { layout: KarsiLayout }) {
   );
 }
 
-/** Follower names on our soldiers: yellow on a black plate. */
-function KarsiNames({ names, layout }: { names: string[]; layout: KarsiLayout }) {
+/** Follower names: yellow on black for us, red on black for the rival list. */
+function KarsiNames({ names, layout, foe = false }: { names: string[]; layout: KarsiLayout; foe?: boolean }) {
+  const count = foe ? layout.them.n : layout.us.n;
   const labels = useMemo(() => {
     const out: { slot: number; text: string }[] = [];
-    for (let i = 0; i < layout.us.n; i++) {
+    for (let i = 0; i < count; i++) {
       const text = String(names[i] ?? "").trim().replace(/^@+/, "");
       if (text) out.push({ slot: i, text });
     }
     return out;
-  }, [names, layout.us.n]);
+  }, [names, count]);
   const atlas = useMemo<NameAtlas>(() => {
-    const items = labels.map((n) => ({ text: n.text, commander: false, plain: true, fill: "#ffe14a", frame: true }));
+    const items = labels.map((n) => ({ text: n.text, commander: false, plain: true, fill: foe ? "#ff2a22" : "#ffe14a", frame: true }));
     try {
       return buildNameAtlas(items, true, true);
     } catch {
       return buildNameAtlas(items, true);
     }
-  }, [labels]);
+  }, [labels, foe]);
   const refs = useRef<(THREE.InstancedMesh | null)[]>([]);
   const lookDir = useMemo(() => new THREE.Vector3(), []);
   useEffect(() => () => atlas.dispose(), [atlas]);
@@ -202,13 +208,13 @@ function KarsiNames({ names, layout }: { names: string[]; layout: KarsiLayout })
       const mesh = cell ? refs.current[cell.sheet] : null;
       if (!cell || !mesh) continue;
       const slot = labels[k].slot;
-      const x = layout.liveX[slot];
-      const z = layout.liveZ[slot];
+      const x = foe ? layout.foeX[slot] : layout.liveX[slot];
+      const z = foe ? layout.foeZ[slot] : layout.liveZ[slot];
       const dx = x - camera.position.x;
       const dz = z - camera.position.z;
       const ahead = dx * lookDir.x + (NAME_Y - camera.position.y) * lookDir.y + dz * lookDir.z;
       const dist = Math.hypot(dx, camera.position.y - NAME_Y, dz);
-      const hide = ahead < 2.4 || layout.liveFall[slot] > 0.35;
+      const hide = ahead < 2.4 || (foe ? layout.foeFall[slot] : layout.liveFall[slot]) > 0.35;
       const want = Math.min(1.9 * 0.9, dist * tanH * 0.46);
       const size = want / Math.max(2.4, cell.sx);
       dummy.position.set(x, NAME_Y, z);
@@ -523,6 +529,7 @@ export function KarsiBattle({ names, soldiers, rival }: { names: string[]; soldi
       <KarsiHud layout={layout} rival={rival.name} />
       <KarsiArmies layout={layout} />
       <KarsiNames names={names} layout={layout} />
+      {!!rival.foeNames?.length && <KarsiNames names={rival.foeNames} layout={layout} foe />}
       <KarsiChiefUnit layout={layout} mine name={KARSI_ME} />
       {!layout.invite && <KarsiChiefUnit layout={layout} mine={false} name={rival.name} />}
     </group>
