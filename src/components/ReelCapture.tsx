@@ -23,6 +23,7 @@ import type { Rival } from "../karsiReel";
 import type { OkId } from "../okReel";
 import { elfHold, elfIsReady, elfStartPlay, elfWhenReady, type ElfId } from "../elfReel";
 import { ElfScene } from "./scene/ElfScene";
+import { WEBGL_BLOCKED, webglBlocked, webglOpen } from "../webglOk";
 import type { KalkanId } from "../kalkanReel";
 import type { HeroId } from "../heroReel";
 import { ARENA3_ARENA_URL, ARENA3_HERO_URLS, type Arena2Id, type Arena3Id, type ArenaId } from "../arenaReel";
@@ -111,6 +112,11 @@ export function ReelCapture({ soldiers, names, commanders = [], level, pressure,
 
   useEffect(() => {
     if (!elf) return;
+    if (!webglOpen()) {
+      setErr(WEBGL_BLOCKED);
+      setPhase("err");
+      return;
+    }
     setElfReady(false);
     let stop = false;
     void elfWhenReady().then(() => {
@@ -203,10 +209,10 @@ export function ReelCapture({ soldiers, names, commanders = [], level, pressure,
     <div className="reel-capture">
       <div className="reel-capture-scene">
         <div className="reel-capture-frame">
-        {phase !== "done" && assets.ready && (
+        {phase !== "done" && phase !== "err" && assets.ready && (
         <SceneErrorBoundary
           onError={(e) => {
-            setErr(e.message || "Sahne çöktü.");
+            setErr(webglBlocked(e) ? WEBGL_BLOCKED : e.message || "Sahne çöktü.");
             setPhase("err");
           }}
         >
@@ -214,6 +220,10 @@ export function ReelCapture({ soldiers, names, commanders = [], level, pressure,
             <ElfScene
               onReady={(canvas) => {
                 canvasRef.current = canvas;
+              }}
+              onBlocked={(msg) => {
+                setErr(msg);
+                setPhase("err");
               }}
             />
           ) : (
