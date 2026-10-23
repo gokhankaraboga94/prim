@@ -1487,7 +1487,7 @@ export function AdminPage() {
           )}
           {isLoop(reelShot) && (
             <p className="muted">
-              Karşılaştırma değil. Kale avlusu, tek açı, 6 saniye. Zırhlı kahramanın 7 kopyası. Beşi avluda açıkta durur. İkisi gölgede kalır: biri kule dibinde, biri sur yürüyüşünde, ikisi de taşın rengine yakın. Sekizinci asker yoktur. Kamera kıpırdamaz. Meşale ve hafif dönüş ilk kareye döner. Ekranda “8 ASKERİ BUL!” durur. Cevap yok. Başlık: “8 asker var. İkisini kaçırırsın.” İlk yorum: “8. askeri bulan var mı?” Cevabı sabitleme.
+              Karşılaştırma değil. Kale avlusu karşıdan, tek açı, 6 saniye. Kadın elf modelinin 7 kopyası kameraya bakar. Beşi açıkta, ikisi kenarda gölgede. Sekizinci yoktur. Kamera kıpırdamaz, ilk kare son kareyle aynıdır. Ekranda “8 ASKERİ BUL!” durur, yazı üstte değil biraz aşağıdadır. Cevap yok. Başlık: “8 asker var. İkisini kaçırırsın.” İlk yorum: “8. askeri bulan var mı?” Cevabı sabitleme.
             </p>
           )}
           {isOk(reelShot) && (

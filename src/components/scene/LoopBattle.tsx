@@ -7,10 +7,11 @@ import { fitHero } from "./ArenaBattle";
 import { REEL_HOLD } from "../../recordCanvas";
 import { LOOP_HERO, LOOP_SECONDS, LOOP_SPOTS, loopCam } from "../../loopReel";
 
-const STONE = "#8b847c";
-const STONE_DARK = "#5e5954";
-const FLOOR = "#7a7168";
-const GRASS = "#6a9a48";
+const STONE = "#e4c98a";
+const STONE_DARK = "#c4924a";
+const FLOOR = "#f0d7a2";
+const GRASS = "#3cbe62";
+const FLOWER = ["#ff4f8b", "#ffe14a", "#4aa3ff", "#ff7a3c", "#c86bff"] as const;
 
 function Block({
   args,
@@ -37,7 +38,7 @@ function Merlons({ axis, at, from, to, n }: { axis: "x" | "z"; at: number; from:
     const t = from + ((to - from) * i) / Math.max(1, n - 1);
     const position: [number, number, number] = axis === "x" ? [t, 3.72, at] : [at, 3.72, t];
     const args: [number, number, number] = axis === "x" ? [0.46, 0.5, 0.62] : [0.62, 0.5, 0.46];
-    nodes.push(<Block key={`${axis}:${i}`} args={args} position={position} color="#9a948c" />);
+    nodes.push(<Block key={`${axis}:${i}`} args={args} position={position} color="#f2d48a" />);
   }
   return <group>{nodes}</group>;
 }
@@ -79,7 +80,41 @@ function Banner() {
       </mesh>
       <mesh ref={cloth} position={[0.38, 1.85, 0]}>
         <boxGeometry args={[0.7, 0.48, 0.03]} />
-        <meshLambertMaterial color="#8e2a22" />
+        <meshLambertMaterial color="#ff5a3c" />
+      </mesh>
+    </group>
+  );
+}
+
+function Flowers() {
+  const spots = [
+    [-2.4, 1.7],
+    [-1.9, 1.45],
+    [2.2, 1.55],
+    [1.85, 1.85],
+    [-2.6, -1.7],
+    [2.5, -1.9],
+    [-0.2, 1.9],
+    [0.4, -1.85],
+  ] as const;
+  return (
+    <group>
+      {spots.map(([x, z], i) => (
+        <mesh key={`${x}:${z}`} position={[x, 0.16, z]}>
+          <sphereGeometry args={[0.13, 8, 6]} />
+          <meshLambertMaterial color={FLOWER[i % FLOWER.length]} />
+        </mesh>
+      ))}
+    </group>
+  );
+}
+
+function Pennant({ position, color }: { position: [number, number, number]; color: string }) {
+  return (
+    <group position={position}>
+      <mesh position={[0.28, 0, 0]}>
+        <boxGeometry args={[0.55, 0.36, 0.03]} />
+        <meshLambertMaterial color={color} />
       </mesh>
     </group>
   );
@@ -94,12 +129,10 @@ function Yard() {
       </mesh>
       <Block args={[9.4, 0.1, 9.4]} position={[0, 0.02, 0]} color={FLOOR} />
       <Block args={[9.6, 3.4, 0.62]} position={[0, 1.7, -4.35]} color={STONE} />
-      <Block args={[9.6, 3.4, 0.62]} position={[0, 1.7, 4.35]} color={STONE} />
       <Block args={[0.62, 3.4, 9.6]} position={[-4.35, 1.7, 0]} color={STONE} />
       <Block args={[0.62, 3.4, 9.6]} position={[4.35, 1.7, 0]} color={STONE} />
       <Block args={[8.4, 0.22, 1.05]} position={[0, 1.61, -3.72]} color={STONE_DARK} />
       <Merlons axis="x" at={-4.35} from={-4.2} to={4.2} n={11} />
-      <Merlons axis="x" at={4.35} from={-4.2} to={4.2} n={11} />
       <Merlons axis="z" at={-4.35} from={-3.8} to={3.8} n={9} />
       <Merlons axis="z" at={4.35} from={-3.8} to={3.8} n={9} />
       {[
@@ -110,12 +143,15 @@ function Yard() {
       ].map(([x, z]) => (
         <Block key={`${x}:${z}`} args={[1.7, 5.4, 1.7]} position={[x, 2.7, z]} color={STONE_DARK} />
       ))}
-      <Block args={[0.7, 0.55, 0.7]} position={[-1.7, 0.32, 0.35]} color="#6a5340" />
-      <Block args={[0.55, 0.7, 0.55]} position={[-1.35, 0.4, 0.7]} color="#5c4636" />
-      <Block args={[1.15, 1.85, 0.72]} position={[-3.45, 0.92, -2.55]} color="#4e4944" />
-      <Block args={[0.7, 1.7, 0.55]} position={[2.72, 0.85, 0.35]} color="#4a453f" />
-      <Torch position={[-3.55, 0, 3.15]} />
-      <Torch position={[3.55, 0, -2.4]} />
+      <Block args={[2.4, 0.04, 1.5]} position={[0, 0.1, 0.15]} color="#e23b4a" />
+      <Block args={[1.15, 1.85, 0.72]} position={[-3.45, 0.92, -1.85]} color="#b9833a" />
+      <Block args={[0.85, 1.85, 0.6]} position={[2.85, 0.92, -0.2]} color="#b9833a" />
+      <Pennant position={[-2.2, 3.15, -4.05]} color="#2f6bff" />
+      <Pennant position={[0.2, 3.15, -4.05]} color="#ffd23a" />
+      <Pennant position={[2.3, 3.15, -4.05]} color="#ff4d6d" />
+      <Flowers />
+      <Torch position={[-3.15, 0, 2.4]} />
+      <Torch position={[3.15, 0, 2.35]} />
       <Banner />
     </group>
   );
@@ -130,7 +166,7 @@ function Sentry({ src, index }: { src: THREE.Group; index: number }) {
       const mesh = obj as THREE.Mesh;
       if (!mesh.isMesh) return;
       const mat = (mesh.material as THREE.MeshLambertMaterial).clone();
-      mat.color.multiplyScalar(0.28);
+      mat.color.multiplyScalar(0.4);
       mesh.material = mat;
     });
     return copy;
@@ -170,7 +206,7 @@ function Heroes() {
         const mesh = obj as THREE.Mesh;
         if (!mesh.isMesh) return;
         const mat = mesh.material as THREE.MeshLambertMaterial;
-        if (mat.color) mat.color.multiplyScalar(1.65);
+        if (mat.color) mat.color.multiplyScalar(1.25);
       });
       keep.current = fitted;
       setSrc(fitted);
@@ -251,7 +287,7 @@ function LoopCard() {
   return (
     <Hud renderPriority={1}>
       <OrthographicCamera makeDefault position={[0, 0, 10]} />
-      <mesh position={[0, size.height * 0.4, 5]} renderOrder={40}>
+      <mesh position={[0, size.height * 0.26, 5]} renderOrder={40}>
         <planeGeometry args={[w, h]} />
         <meshBasicMaterial map={tex} transparent depthTest={false} toneMapped={false} />
       </mesh>
@@ -280,9 +316,9 @@ export function LoopCam() {
 export function LoopBattle() {
   return (
     <group>
-      <ambientLight intensity={0.72} color="#ffe6cc" />
-      <directionalLight position={[14, 18, 12]} intensity={2.5} color="#ffc27a" />
-      <directionalLight position={[6, 9, 14]} intensity={0.35} color="#d5e4f8" />
+      <ambientLight intensity={0.95} color="#fff6ea" />
+      <directionalLight position={[4, 14, 10]} intensity={2.2} color="#fff1d0" />
+      <directionalLight position={[-6, 8, 6]} intensity={0.55} color="#9fd0ff" />
       <Yard />
       <Heroes />
       <LoopCard />
