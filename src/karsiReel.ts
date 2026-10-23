@@ -175,16 +175,27 @@ function makeSide(real: number, cap: number, lossFrac: number, salt: number, pit
 }
 
 /**
- * The larger army wins. Winner losses follow the square law, so a close fight is
- * bloody and a lopsided one barely scratches the winner. A tie keeps a handful alive.
+ * We are only 10% stronger. A 10 vs 10 melee is close and bloody (about 8 of
+ * ours fall, all of theirs). A lopsided count still uses the square law so the
+ * bigger side is only scratched.
  */
+const OUR_STR = 1.1;
+
+function winLossFrac(winP: number, loseP: number) {
+  const ratio = loseP / Math.max(1e-6, winP);
+  const square = 1 - Math.sqrt(Math.max(0, 1 - ratio * ratio));
+  const linear = ratio;
+  const close = ratio * ratio;
+  return Math.min(0.97, linear * close + square * (1 - close));
+}
+
 export function makeKarsiLayout(friends: number, foes: number, invite = false): KarsiLayout {
   const a = Math.max(0, Math.floor(friends));
   const b = invite ? 0 : Math.max(0, Math.floor(foes));
-  const weWin = a >= b;
-  const big = Math.max(1, weWin ? a : b);
-  const small = weWin ? b : a;
-  const winLoss = invite ? 0 : Math.min(0.97, 1 - Math.sqrt(Math.max(0, 1 - (small / big) ** 2)));
+  const pUs = a * OUR_STR;
+  const pThem = b;
+  const weWin = pUs >= pThem;
+  const winLoss = invite || a <= 0 || b <= 0 ? 0 : winLossFrac(Math.max(pUs, pThem), Math.min(pUs, pThem));
   const us = makeSide(a, bodyCap(SHOW_FRIENDS), invite ? 0 : weWin ? winLoss : 1, 3, PITCH_US, LANE_US);
   const them = makeSide(b, bodyCap(SHOW_FOES), invite ? 0 : weWin ? 1 : winLoss, 11, PITCH_FOE, LANE_FOE);
   const width = Math.max(us.cols * us.pitch, Math.max(1, them.cols) * them.pitch) + Math.max(LANE_US, LANE_FOE) * 2;
