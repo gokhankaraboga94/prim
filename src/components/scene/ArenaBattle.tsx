@@ -344,7 +344,7 @@ function rigArm(mesh: THREE.Mesh, forwardX: boolean) {
   mesh.userData.armStrike = uniforms.uStrike.value;
 }
 
-export function fitHero(scene: THREE.Group, yaw: number, light = false) {
+export function fitHero(scene: THREE.Group, yaw: number, light = false, rig = true) {
   scene.updateMatrixWorld(true);
   scene.traverse((obj) => {
     const mesh = obj as THREE.Mesh;
@@ -381,7 +381,7 @@ export function fitHero(scene: THREE.Group, yaw: number, light = false) {
     const mesh = obj as THREE.Mesh;
     if (!mesh.isMesh) return;
     mesh.frustumCulled = false;
-    rigArm(mesh, false);
+    if (rig) rigArm(mesh, false);
   });
   return scene;
 }

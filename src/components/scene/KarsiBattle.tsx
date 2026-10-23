@@ -313,6 +313,237 @@ function disposeScene(scene: THREE.Object3D) {
   });
 }
 
+/** Pitch around the hilt. The raise goes up; the chop carries the blade forward, then follows through to the hang. */
+function poseBlade(blade: THREE.Object3D, lift: number, chop: number) {
+  const raise = -2.35;
+  const hit = -3.75;
+  let angle: number;
+  if (lift > 0 && chop > 0) angle = raise * lift + hit * chop;
+  else if (chop > 0) angle = -Math.PI * 2 + (hit + Math.PI * 2) * chop;
+  else angle = raise * lift;
+  blade.rotation.x = angle;
+}
+
+/**
+ * The blade hangs below the arm band, so the shoulder shader swings the other arm and the torso.
+ * Split the thin blade and rotate that mesh only. The body stays in the bind pose.
+ */
+function takeSword(root: THREE.Object3D) {
+  const blades: THREE.Object3D[] = [];
+  root.traverse((obj) => {
+    const mesh = obj as THREE.Mesh;
+    if (!mesh.isMesh || mesh.userData.blade) return;
+    const split = splitBlade(mesh.geometry);
+    if (!split) return;
+    const previous = mesh.geometry;
+    mesh.geometry = split.body;
+    previous.dispose();
+    const blade = new THREE.Mesh(split.sword, mesh.material);
+    blade.position.copy(split.hilt);
+    blade.frustumCulled = false;
+    blade.castShadow = false;
+    blade.receiveShadow = false;
+    blade.userData.blade = true;
+    mesh.add(blade);
+    blades.push(blade);
+  });
+  if (!blades.length) console.warn("commander sword was not found");
+  return blades;
+}
+
+function splitBlade(geo: THREE.BufferGeometry) {
+  const pos = geo.getAttribute("position");
+  if (!pos || pos.count < 80) return null;
+  let minY = Infinity;
+  let maxY = -Infinity;
+  for (let i = 0; i < pos.count; i++) {
+    minY = Math.min(minY, pos.getY(i));
+    maxY = Math.max(maxY, pos.getY(i));
+  }
+  const height = maxY - minY;
+  if (height < 1e-4) return null;
+  const chestX: number[] = [];
+  const chestZ: number[] = [];
+  for (let i = 0; i < pos.count; i++) {
+    const yn = (pos.getY(i) - minY) / height;
+    if (yn < 0.5 || yn > 0.72) continue;
+    chestX.push(pos.getX(i));
+    chestZ.push(pos.getZ(i));
+  }
+  if (chestX.length < 30) return null;
+  chestX.sort((a, b) => a - b);
+  chestZ.sort((a, b) => a - b);
+  const centerX = chestX[chestX.length >> 1];
+  const centerZ = chestZ[chestZ.length >> 1];
+  let tipI = -1;
+  let tipD = -1;
+  for (let i = 0; i < pos.count; i++) {
+    const yn = (pos.getY(i) - minY) / height;
+    if (yn > 0.16) continue;
+    const d = Math.hypot(pos.getX(i) - centerX, pos.getZ(i) - centerZ);
+    if (d <= tipD) continue;
+    tipD = d;
+    tipI = i;
+  }
+  if (tipI < 0 || tipD < height * 0.15) return null;
+  const tipX = pos.getX(tipI);
+  const tipY = pos.getY(tipI);
+  const tipZ = pos.getZ(tipI);
+  let dx = 0;
+  let dy = 0;
+  let dz = 0;
+  let near = 0;
+  const nearLo = height * 0.03;
+  const nearHi = height * 0.08;
+  for (let i = 0; i < pos.count; i++) {
+    const d = Math.hypot(pos.getX(i) - tipX, pos.getY(i) - tipY, pos.getZ(i) - tipZ);
+    if (d < nearLo || d > nearHi) continue;
+    dx += pos.getX(i) - tipX;
+    dy += pos.getY(i) - tipY;
+    dz += pos.getZ(i) - tipZ;
+    near += 1;
+  }
+  const dirLen = Math.hypot(dx, dy, dz);
+  if (near < 8 || dirLen < 1e-6) return null;
+  const dirX = dx / dirLen;
+  const dirY = dy / dirLen;
+  const dirZ = dz / dirLen;
+  // Walk the thin blade from the tip and stop at the hand, where the cross-section thickens.
+  const step = height * 0.025;
+  const rad = height * 0.028;
+  const shell = height * 0.04;
+  const stopSpread = height * 0.038;
+  const maxTravel = height * 0.5;
+  const sword = new Uint8Array(pos.count);
+  const centers: number[] = [];
+  let cx = tipX;
+  let cy = tipY;
+  let cz = tipZ;
+  let hx = dirX;
+  let hy = dirY;
+  let hz = dirZ;
+  let traveled = 0;
+  const hilt = new THREE.Vector3(tipX, tipY, tipZ);
+  const take = (x: number, y: number, z: number, limit: number) => {
+    let n = 0;
+    let sx = 0;
+    let sy = 0;
+    let sz = 0;
+    let spread = 0;
+    const hit: number[] = [];
+    for (let i = 0; i < pos.count; i++) {
+      const dist = Math.hypot(pos.getX(i) - x, pos.getY(i) - y, pos.getZ(i) - z);
+      if (dist > limit) continue;
+      hit.push(i);
+      sx += pos.getX(i);
+      sy += pos.getY(i);
+      sz += pos.getZ(i);
+      n += 1;
+    }
+    if (n) {
+      sx /= n;
+      sy /= n;
+      sz /= n;
+      for (const i of hit) {
+        spread = Math.max(spread, Math.hypot(pos.getX(i) - sx, pos.getY(i) - sy, pos.getZ(i) - sz));
+      }
+    }
+    return { n, sx, sy, sz, spread, hit };
+  };
+  for (const i of take(tipX, tipY, tipZ, rad).hit) sword[i] = 1;
+  for (let s = 0; s < 40; s++) {
+    const probe = take(cx + hx * step, cy + hy * step, cz + hz * step, rad);
+    if (probe.n < 8) break;
+    const vx = probe.sx - cx;
+    const vy = probe.sy - cy;
+    const vz = probe.sz - cz;
+    const hop = Math.hypot(vx, vy, vz) || 1;
+    const dot = (vx / hop) * dirX + (vy / hop) * dirY + (vz / hop) * dirZ;
+    if (s > 1 && (probe.spread > stopSpread || dot < 0.75 || traveled + hop > maxTravel)) break;
+    traveled += hop;
+    for (const i of probe.hit) sword[i] = 1;
+    hx = vx / hop;
+    hy = vy / hop;
+    hz = vz / hop;
+    cx = probe.sx;
+    cy = probe.sy;
+    cz = probe.sz;
+    hilt.set(cx, cy, cz);
+    centers.push(cx, cy, cz);
+  }
+  for (let i = 0; i < pos.count; i++) {
+    if (sword[i]) continue;
+    for (let c = 0; c < centers.length; c += 3) {
+      const dist = Math.hypot(pos.getX(i) - centers[c], pos.getY(i) - centers[c + 1], pos.getZ(i) - centers[c + 2]);
+      if (dist > shell) continue;
+      sword[i] = 1;
+      break;
+    }
+  }
+  let marked = 0;
+  let minX = Infinity;
+  let maxX = -Infinity;
+  let minZ = Infinity;
+  let maxZ = -Infinity;
+  for (let i = 0; i < pos.count; i++) {
+    if (!sword[i]) continue;
+    marked += 1;
+    minX = Math.min(minX, pos.getX(i));
+    maxX = Math.max(maxX, pos.getX(i));
+    minZ = Math.min(minZ, pos.getZ(i));
+    maxZ = Math.max(maxZ, pos.getZ(i));
+  }
+  if (marked < 80 || marked > 6000) return null;
+  if (maxX - minX > height * 0.7 || maxZ - minZ > height * 0.7) return null;
+  const index = geo.getIndex();
+  const triCount = index ? index.count / 3 : pos.count / 3;
+  const bladeTris: number[] = [];
+  const bodyTris: number[] = [];
+  for (let t = 0; t < triCount; t++) {
+    const a = index ? index.getX(t * 3) : t * 3;
+    const b = index ? index.getX(t * 3 + 1) : t * 3 + 1;
+    const c = index ? index.getX(t * 3 + 2) : t * 3 + 2;
+    const n = (sword[a] ? 1 : 0) + (sword[b] ? 1 : 0) + (sword[c] ? 1 : 0);
+    (n >= 1 ? bladeTris : bodyTris).push(a, b, c);
+  }
+  if (bladeTris.length < 40 || !bodyTris.length) return null;
+  return { body: bakePart(geo, bodyTris, null), sword: bakePart(geo, bladeTris, hilt), hilt };
+}
+
+function bakePart(geo: THREE.BufferGeometry, tris: number[], shift: THREE.Vector3 | null) {
+  const map = new Map<number, number>();
+  const order: number[] = [];
+  const nextIndex: number[] = [];
+  for (const v of tris) {
+    let id = map.get(v);
+    if (id == null) {
+      id = order.length;
+      map.set(v, id);
+      order.push(v);
+    }
+    nextIndex.push(id);
+  }
+  const next = new THREE.BufferGeometry();
+  for (const name in geo.attributes) {
+    const attr = geo.getAttribute(name);
+    const item = attr.itemSize;
+    const arr = new Float32Array(order.length * item);
+    for (let i = 0; i < order.length; i++) {
+      for (let k = 0; k < item; k++) arr[i * item + k] = attr.getComponent(order[i], k);
+    }
+    if (shift && name === "position") {
+      for (let i = 0; i < order.length; i++) {
+        arr[i * item] -= shift.x;
+        arr[i * item + 1] -= shift.y;
+        arr[i * item + 2] -= shift.z;
+      }
+    }
+    next.setAttribute(name, new THREE.BufferAttribute(arr, item, attr.normalized));
+  }
+  next.setIndex(nextIndex);
+  return next;
+}
+
 function KarsiChiefUnit({ layout, mine, name, compact = false }: { layout: KarsiLayout; mine: boolean; name: string; compact?: boolean }) {
   const [body, setBody] = useState<THREE.Group | null>(null);
   const node = useRef<THREE.Group>(null);
@@ -322,7 +553,8 @@ function KarsiChiefUnit({ layout, mine, name, compact = false }: { layout: Karsi
   useEffect(() => {
     let drop = false;
     new GLTFLoader().load(mine ? KARSI_HERO_ME : KARSI_HERO_FOE, (gltf) => {
-      const fitted = fitHero(gltf.scene, 0, true);
+      const fitted = fitHero(gltf.scene, 0, true, false);
+      takeSword(fitted);
       if (drop) {
         disposeScene(fitted);
         return;
@@ -336,11 +568,10 @@ function KarsiChiefUnit({ layout, mine, name, compact = false }: { layout: Karsi
   useEffect(() => () => {
     if (body) disposeScene(body);
   }, [body]);
-  const arms = useMemo(() => {
-    const list: THREE.Vector2[] = [];
+  const blades = useMemo(() => {
+    const list: THREE.Object3D[] = [];
     body?.traverse((obj) => {
-      const mesh = obj as THREE.Mesh;
-      if (mesh.isMesh && mesh.userData.armStrike) list.push(mesh.userData.armStrike as THREE.Vector2);
+      if (obj.userData.blade) list.push(obj);
     });
     return list;
   }, [body]);
@@ -352,7 +583,7 @@ function KarsiChiefUnit({ layout, mine, name, compact = false }: { layout: Karsi
       g.position.set(chief.x, -0.55 * chief.kneel, chief.z);
       g.rotation.set(0.38 * chief.kneel * (mine ? 1 : -1), chief.yaw, 0);
     }
-    for (const arm of arms) arm.set(chief.lift, chief.chop);
+    for (const blade of blades) poseBlade(blade, chief.lift, chief.chop);
     const plate = tag.current;
     if (plate) {
       plate.position.set(chief.x, CHIEF_H + (compact ? 0.42 : 0.75) - 0.55 * chief.kneel, chief.z);
