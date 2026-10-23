@@ -7,10 +7,21 @@ export const ELF_N = 10;
 export const ORC_N = 52;
 
 export const ELF_URLS = ["/models/new/elf.glb", "/models/new/orc1.glb", "/models/new/orc2.glb", "/models/new/meydan.glb"] as const;
-export const ELF_ELF_URL = ELF_URLS[0];
-export const ELF_ORC1_URL = ELF_URLS[1];
-export const ELF_ORC2_URL = ELF_URLS[2];
-export const ELF_FIELD_URL = ELF_URLS[3];
+export const ELF_LITE_URLS = ["/models/new/elf-lite.glb", "/models/new/orc1-lite.glb", "/models/new/orc2-lite.glb", "/models/new/meydan-lite.glb"] as const;
+
+export function elfPhone() {
+  if (typeof window === "undefined") return false;
+  try {
+    return window.matchMedia("(pointer: coarse)").matches || window.innerWidth <= 900;
+  } catch {
+    return false;
+  }
+}
+
+export function elfAssets() {
+  const urls = elfPhone() ? ELF_LITE_URLS : ELF_URLS;
+  return { elf: urls[0], orc1: urls[1], orc2: urls[2], field: urls[3], list: urls };
+}
 
 export function isElf(id: string | null | undefined): id is ElfId {
   return id === ELF_ID;

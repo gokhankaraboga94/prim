@@ -5,20 +5,7 @@ import * as THREE from "three";
 import { dropGroundSlab } from "../../groundSlab";
 import { preloadedGlb } from "../../arenaPreload";
 import { REEL_HOLD } from "../../recordCanvas";
-import {
-  ELF_ELF_URL,
-  ELF_FIELD_URL,
-  ELF_N,
-  ELF_ORC1_URL,
-  ELF_ORC2_URL,
-  ORC_N,
-  elfArrows,
-  elfAt,
-  elfCam,
-  orcAt,
-  orcKind,
-  type ElfPose,
-} from "../../elfReel";
+import { ELF_N, ORC_N, elfArrows, elfAssets, elfAt, elfCam, elfPhone, orcAt, orcKind, type ElfPose } from "../../elfReel";
 
 type Gltf = Parameters<Parameters<GLTFLoader["load"]>[1]>[0];
 
@@ -33,14 +20,23 @@ const pose: ElfPose = { x: 0, y: 0, z: 0, yaw: 0, pitch: 0, roll: 0, hide: false
 const arrowDir = new THREE.Vector3();
 const up = new THREE.Vector3(0, 1, 0);
 
-function keepMat(src: THREE.Material) {
+function keepMat(src: THREE.Material, phone: boolean) {
+  const base = (Array.isArray(src) ? src[0] : src) as THREE.MeshStandardMaterial;
+  if (phone) {
+    const next = new THREE.MeshLambertMaterial({
+      map: base.map ?? null,
+      color: base.color ? base.color.clone() : "#ffffff",
+      side: THREE.DoubleSide,
+    });
+    return next;
+  }
   const mat = src.clone();
   mat.side = THREE.DoubleSide;
   mat.shadowSide = THREE.DoubleSide;
   return mat;
 }
 
-function fitFigure(root: THREE.Object3D, height: number) {
+function fitFigure(root: THREE.Object3D, height: number, phone: boolean) {
   root.updateMatrixWorld(true);
   root.traverse((obj) => {
     const mesh = obj as THREE.Mesh;
@@ -53,8 +49,8 @@ function fitFigure(root: THREE.Object3D, height: number) {
     mesh.quaternion.identity();
     mesh.scale.set(1, 1, 1);
     mesh.updateMatrix();
-    if (Array.isArray(mesh.material)) mesh.material = mesh.material.map(keepMat);
-    else mesh.material = keepMat(mesh.material);
+    if (Array.isArray(mesh.material)) mesh.material = mesh.material.map((item) => keepMat(item, phone));
+    else mesh.material = keepMat(mesh.material, phone);
   });
   root.position.set(0, 0, 0);
   root.quaternion.identity();
@@ -140,7 +136,7 @@ function ElfFigures({ url, height, count, pick }: { url: string; height: number;
       (gltf) => {
         if (drop || !group.current) return;
         const root = gltf.scene;
-        fitFigure(root, height);
+        fitFigure(root, height, elfPhone());
         const next = packsFrom(root, count);
         pack.current = next;
         for (const item of next) group.current.add(item.mesh);
@@ -168,11 +164,12 @@ function Meydan() {
     let drop = false;
     loadGlb(
       loader,
-      ELF_FIELD_URL,
+      elfAssets().field,
       (gltf) => {
         const host = root.current;
         if (drop || !host) return;
         const model = gltf.scene;
+        const phone = elfPhone();
         model.updateMatrixWorld(true);
         const box = new THREE.Box3().setFromObject(model);
         const size = box.getSize(new THREE.Vector3());
@@ -185,9 +182,10 @@ function Meydan() {
         model.traverse((obj) => {
           const mesh = obj as THREE.Mesh;
           if (!mesh.isMesh) return;
+          mesh.material = keepMat(Array.isArray(mesh.material) ? mesh.material[0] : mesh.material, phone);
           mesh.frustumCulled = false;
           mesh.castShadow = false;
-          mesh.receiveShadow = true;
+          mesh.receiveShadow = !phone;
         });
         host.add(model);
       },
@@ -278,7 +276,7 @@ function DuskSky() {
   useEffect(() => () => mat.dispose(), [mat]);
   return (
     <mesh material={mat} frustumCulled={false}>
-      <sphereGeometry args={[220, 24, 16]} />
+      <sphereGeometry args={elfPhone() ? [220, 16, 10] : [220, 24, 16]} />
     </mesh>
   );
 }
@@ -311,7 +309,10 @@ function writePose(src: ElfPose, out: ElfPose) {
   out.hide = src.hide;
 }
 
+const hidden: ElfPose = { x: 0, y: -40, z: 0, yaw: 0, pitch: 0, roll: 0, hide: true };
+
 export function ElfBattle() {
+  const assets = elfAssets();
   return (
     <group>
       <DuskSky />
@@ -319,18 +320,18 @@ export function ElfBattle() {
       <directionalLight position={[18, 22, 8]} intensity={1.35} color="#ffc178" />
       <directionalLight position={[-12, 8, -6]} intensity={0.38} color="#8ea4c4" />
       <Meydan />
-      <ElfFigures url={ELF_ELF_URL} height={1.72} count={ELF_N} pick={(i, t, out) => writePose(elfAt(i, t), out)} />
+      <ElfFigures url={assets.elf} height={1.72} count={ELF_N} pick={(i, t, out) => writePose(elfAt(i, t), out)} />
       <ElfFigures
-        url={ELF_ORC1_URL}
+        url={assets.orc1}
         height={1.52}
         count={ORC_N}
-        pick={(i, t, out) => writePose(orcKind(i) === 0 ? orcAt(i, t) : { ...orcAt(i, t), hide: true }, out)}
+        pick={(i, t, out) => writePose(orcKind(i) === 0 ? orcAt(i, t) : hidden, out)}
       />
       <ElfFigures
-        url={ELF_ORC2_URL}
+        url={assets.orc2}
         height={1.52}
         count={ORC_N}
-        pick={(i, t, out) => writePose(orcKind(i) === 1 ? orcAt(i, t) : { ...orcAt(i, t), hide: true }, out)}
+        pick={(i, t, out) => writePose(orcKind(i) === 1 ? orcAt(i, t) : hidden, out)}
       />
       <Arrows />
     </group>

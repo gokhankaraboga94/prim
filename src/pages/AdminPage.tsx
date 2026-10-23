@@ -1473,7 +1473,7 @@ export function AdminPage() {
             <p className="muted">200 son katılan birlikte girer. Kamera geriden ve uzaktan, askerler görünecek şekilde koridoru takip eder. Taş duvarlar mazgallı. Sonda çıkanlara yaklaşır.</p>
           )}
           {isElf(reelShot) && (
-            <p className="muted">Meydan. 10 elf okla bekler, 52 orc (iki model eşit) koşarak gelir. Orclar yolun ortasında ve tam yaklaşırken düşer. Kamera LOTR gibi: geniş alan, alçak hücum, elf yakın plan, ok takibi. 24 saniye.</p>
+            <p className="muted">Meydan. 10 elf, 52 orc; hepsi isimsiz. Orclar koşar, oklar yaklaşırken düşürür. Kamera LOTR gibi. Telefonda sade modeller yüklenir.</p>
           )}
           {isNew7(reelShot) && (
             <p className="muted">new5 ile aynı, kamera daha geriden. Kaybedecekken arkadan 24 asker belirir. Yazıyı sen eklersin.</p>
@@ -1993,7 +1993,7 @@ export function AdminPage() {
         <ReelCapture
           key={captureGen}
           soldiers={game.soldiers}
-          names={game.names}
+          names={isElf(reelShot) ? [] : game.names}
           commanders={game.commanders}
           level={level}
           pressure={pressure}

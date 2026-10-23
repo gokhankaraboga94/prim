@@ -1062,10 +1062,10 @@ function SceneContent({
           <LiveOpening shot={opening} />
         </>
       )}
-      {cinematic && !wars && !ordu && !ok && !kalkan && !hero && !pit && !bout && !kayit && !split && !countdown && !defend && !vs && !slaughter && !xxx && maxHp != null && hp != null && (
+      {cinematic && !wars && !ordu && !ok && !elf && !kalkan && !hero && !pit && !bout && !kayit && !split && !countdown && !defend && !vs && !slaughter && !xxx && maxHp != null && hp != null && (
         <CaptureHpHud hp={hp} maxHp={maxHp} soldiers={soldiers} duration={duration ?? 8} skipCommander={hideCmd} cinema={cinema} roster={roster} discover={discover} />
       )}
-      {cinematic && !wars && !ordu && !ok && !kalkan && !hero && !pit && !bout && !kayit && showTitles && !split && !vs && !slaughter && !xxx && (
+      {cinematic && !wars && !ordu && !ok && !elf && !kalkan && !hero && !pit && !bout && !kayit && showTitles && !split && !vs && !slaughter && !xxx && (
         <ReelTitles soldiers={soldiers} duration={duration ?? 8} day={day} skipCommander={hideCmd} cinema={cinema} roster={roster} saga={saga} discover={discover} countdown={countdown} defend={defend} names={names} rosterIds={rosterIds} />
       )}
       {cinematic && xxx && xxxHasHook(xxx) && (
@@ -1208,7 +1208,7 @@ function BattleSceneInner({
       shadows={!cinematic}
       dpr={cinematic ? (xxx && xxxHiRes(xxx) ? 2 : 1) : [1, 1.5]}
       gl={{
-        antialias: !pit && (Boolean(new1 || new2 || new3 || new4 || new5 || new6 || new62 || new7 || maze) || (!(xxx && xxxQuiet(xxx)) && (!defend || isDefend3(defend)))),
+        antialias: !pit && !elf && (Boolean(new1 || new2 || new3 || new4 || new5 || new6 || new62 || new7 || maze) || (!(xxx && xxxQuiet(xxx)) && (!defend || isDefend3(defend)))),
         alpha: false,
         powerPreference: "high-performance",
         stencil: false,

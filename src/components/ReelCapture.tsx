@@ -21,7 +21,7 @@ import type { WarsId } from "../warsReel";
 import type { OrduId } from "../orduReel";
 import type { Rival } from "../karsiReel";
 import type { OkId } from "../okReel";
-import { ELF_URLS, type ElfId } from "../elfReel";
+import { elfAssets, type ElfId } from "../elfReel";
 import type { KalkanId } from "../kalkanReel";
 import type { HeroId } from "../heroReel";
 import { ARENA3_ARENA_URL, ARENA3_HERO_URLS, type Arena2Id, type Arena3Id, type ArenaId } from "../arenaReel";
@@ -94,12 +94,12 @@ export function ReelCapture({ soldiers, names, commanders = [], level, pressure,
     arena3
       ? { ready: false, done: 0, total: ARENA3_HERO_URLS.length + 1 }
       : elf
-        ? { ready: false, done: 0, total: ELF_URLS.length }
+        ? { ready: false, done: 0, total: elfAssets().list.length }
         : { ready: true, done: 0, total: 0 }
   );
 
   useEffect(() => {
-    const urls = arena3 ? [...ARENA3_HERO_URLS, ARENA3_ARENA_URL] : elf ? [...ELF_URLS] : null;
+    const urls = arena3 ? [...ARENA3_HERO_URLS, ARENA3_ARENA_URL] : elf ? [...elfAssets().list] : null;
     if (!urls) return;
     let stop = false;
     void preloadGlbs(urls, (done, total) => {
