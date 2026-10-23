@@ -21,7 +21,8 @@ import type { WarsId } from "../warsReel";
 import type { OrduId } from "../orduReel";
 import type { Rival } from "../karsiReel";
 import type { OkId } from "../okReel";
-import { elfAssets, type ElfId } from "../elfReel";
+import type { ElfId } from "../elfReel";
+import { ElfScene } from "./scene/ElfScene";
 import type { KalkanId } from "../kalkanReel";
 import type { HeroId } from "../heroReel";
 import { ARENA3_ARENA_URL, ARENA3_HERO_URLS, type Arena2Id, type Arena3Id, type ArenaId } from "../arenaReel";
@@ -91,18 +92,13 @@ export function ReelCapture({ soldiers, names, commanders = [], level, pressure,
   const [busy, setBusy] = useState(false);
   // Arena3 fetches its packed models first; the scene mounts once they are in memory.
   const [assets, setAssets] = useState(() =>
-    arena3
-      ? { ready: false, done: 0, total: ARENA3_HERO_URLS.length + 1 }
-      : elf
-        ? { ready: false, done: 0, total: elfAssets().list.length }
-        : { ready: true, done: 0, total: 0 }
+    arena3 ? { ready: false, done: 0, total: ARENA3_HERO_URLS.length + 1 } : { ready: true, done: 0, total: 0 }
   );
 
   useEffect(() => {
-    const urls = arena3 ? [...ARENA3_HERO_URLS, ARENA3_ARENA_URL] : elf ? [...elfAssets().list] : null;
-    if (!urls) return;
+    if (!arena3) return;
     let stop = false;
-    void preloadGlbs(urls, (done, total) => {
+    void preloadGlbs([...ARENA3_HERO_URLS, ARENA3_ARENA_URL], (done, total) => {
       if (!stop) setAssets({ ready: false, done, total });
     }).then(() => {
       if (!stop) setAssets((cur) => ({ ...cur, ready: true }));
@@ -110,7 +106,7 @@ export function ReelCapture({ soldiers, names, commanders = [], level, pressure,
     return () => {
       stop = true;
     };
-  }, [arena3, elf]);
+  }, [arena3]);
 
   useEffect(() => {
     if (!assets.ready) return;
@@ -186,6 +182,13 @@ export function ReelCapture({ soldiers, names, commanders = [], level, pressure,
             setPhase("err");
           }}
         >
+          {elf ? (
+            <ElfScene
+              onReady={(canvas) => {
+                canvasRef.current = canvas;
+              }}
+            />
+          ) : (
           <BattleScene
             soldiers={soldiers}
             names={names}
@@ -239,6 +242,7 @@ export function ReelCapture({ soldiers, names, commanders = [], level, pressure,
               canvasRef.current = canvas;
             }}
           />
+          )}
         </SceneErrorBoundary>
         )}
         </div>
