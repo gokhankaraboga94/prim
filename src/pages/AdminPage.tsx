@@ -12,6 +12,7 @@ import {
   namedCount,
   normalizeHandle,
   parseNameList,
+  parseRivalNameList,
   removeSoldier,
   removeSoldiersByNames,
   renameSoldier,
@@ -165,7 +166,7 @@ export function AdminPage() {
 
   async function confirmKarsi2List() {
     const handle = cleanRival(karsi2Ask?.handle || "");
-    const foeNames = parseNameList(karsi2Ask?.names || "");
+    const foeNames = parseRivalNameList(karsi2Ask?.names || "");
     if (!handle || !foeNames.length) {
       setMsg("En az bir kullanıcı adı gerekli.");
       return;
@@ -621,7 +622,7 @@ export function AdminPage() {
         <section className="admin-card">
           <h2>Karşı takipçiler</h2>
           <p className="muted">
-            Karşı takipçi2 önce komutanı sorar. Aynı hesapsa bu kayıtlı liste gelir. Farklı hesap yazarsan yeni adlar istenir ve bu liste değişir. Telefonda pencere sorusu yok, panel açılır.
+            Karşı takipçi2 önce komutanı sorar. Aynı hesapsa bu kayıtlı liste gelir. Farklı hesap yazarsan yeni adlar istenir ve bu liste değişir. Instagram’dan kullanıcı adı + isim yapıştırırsan bio cümleleri asker olmaz; her kullanıcı adı bir askerdir. Telefonda pencere sorusu yok, panel açılır.
           </p>
           <form
             onSubmit={(e) => {
@@ -630,7 +631,7 @@ export function AdminPage() {
                 setBusy(true);
                 try {
                   const handle = String(rivalHandleInput || "").trim().replace(/^@+/, "").replace(/\s+/g, "");
-                  const names = parseNameList(rivalNamesInput);
+                  const names = parseRivalNameList(rivalNamesInput);
                   if (!handle || !names.length) {
                     setMsg("Karşı hesap ve en az bir kullanıcı adı gerekli.");
                     return;

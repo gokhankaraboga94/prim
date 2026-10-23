@@ -189,6 +189,31 @@ export function parseNameList(raw: string): string[] {
   return out;
 }
 
+function handleLine(line: string) {
+  return /^@?[\w.]{1,30}$/.test(line.trim());
+}
+
+/** Instagram dump: one name per line. Skip bios / display lines that are not handles. */
+export function parseRivalNameList(raw: string): string[] {
+  const lines = String(raw || "")
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+  if (!lines.length) return [];
+  const dump = lines.some((line) => /\s/.test(line) || !handleLine(line));
+  if (!dump) return parseNameList(raw);
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const line of lines) {
+    if (!handleLine(line)) continue;
+    const name = normalizeHandle(line);
+    if (!name || seen.has(nameKey(name))) continue;
+    seen.add(nameKey(name));
+    out.push(name);
+  }
+  return out;
+}
+
 export function compactNames(names: string[], soldiers: number): string[] {
   return names
     .map((n) => normalizeHandle(n))
