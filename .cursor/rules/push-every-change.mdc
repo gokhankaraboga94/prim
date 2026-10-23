@@ -1,0 +1,14 @@
+---
+description: Her kod değişikliğini sormadan commit'leyip origin'e push et
+alwaysApply: true
+---
+
+# Git'e kendin yolla
+
+Kullanıcı istemeden de, istenen bir kod değişikliği bittiyse commit'le ve mevcut dalı `origin`'e push et. "Commit at" veya "yolla" demesini bekleme.
+
+- Yalnızca bu işte değişen dosyaları ekle. İlgisiz, yarım veya gizli dosyaları (`Untitled-2.ini`, `.env`, kimlik) ekleme.
+- Değişiklik yoksa boş commit açma.
+- Mesaj bu deponun stili gibi kısa ve Türkçe olsun: ne değişti, neden.
+- `git config` değiştirme. `--no-verify`, `--force` ve history rewrite kullanma.
+- Push normal `git push`. Reddedilirse force ile zorlama; durumu söyle.
