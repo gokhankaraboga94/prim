@@ -175,18 +175,13 @@ function makeSide(real: number, cap: number, lossFrac: number, salt: number, pit
 }
 
 /**
- * We are only 10% stronger. A 10 vs 10 melee is close and bloody (about 8 of
- * ours fall, all of theirs). A lopsided count still uses the square law so the
- * bigger side is only scratched.
+ * We are only 10% stronger. Losses follow melee (linear) so a bigger army still
+ * bleeds: 10 vs 10 we drop about 9, 991 vs 469 we drop about four in ten.
  */
 const OUR_STR = 1.1;
 
 function winLossFrac(winP: number, loseP: number) {
-  const ratio = loseP / Math.max(1e-6, winP);
-  const square = 1 - Math.sqrt(Math.max(0, 1 - ratio * ratio));
-  const linear = ratio;
-  const close = ratio * ratio;
-  return Math.min(0.97, linear * close + square * (1 - close));
+  return Math.min(0.97, loseP / Math.max(1e-6, winP));
 }
 
 export function makeKarsiLayout(friends: number, foes: number, invite = false): KarsiLayout {
