@@ -9,6 +9,7 @@ export const ELF_N = 8;
 export const ELF_PER_RANK = 4;
 export const ORC_N = 24;
 export const ORC_COLS = 8;
+export const ELF_ARROW_MAX = 6;
 
 export const ELF_URLS = ["/models/new/elf.glb", "/models/new/orc1.glb", "/models/new/orc2.glb", "/models/new/meydan.glb"] as const;
 export const ELF_LITE_URLS = ["/models/new/elf-lite.glb", "/models/new/orc1-lite.glb", "/models/new/orc2-lite.glb", "/models/new/meydan-lite.glb"] as const;
@@ -240,10 +241,10 @@ export function elfAt(i: number, _t: number): ElfPose {
   const col = i % ELF_PER_RANK;
   const laneW = (floor.x1 - floor.x0) * 0.48;
   const x = (col - (ELF_PER_RANK - 1) / 2) * (laneW / ELF_PER_RANK);
-  const z = floor.zElf + row * 0.68 - 0.42;
+  const z = floor.zElf + row * 0.62;
   return {
     x,
-    y: elfFloor(x, z) + 0.03,
+    y: elfFloor(x, z) + 0.14,
     z,
     yaw: Math.PI,
     pitch: 0,
@@ -312,7 +313,7 @@ export function orcAt(i: number, t: number): ElfPose {
   };
 }
 
-const ARROWS: ElfArrow[] = Array.from({ length: 28 }, () => ({ x: 0, y: 0, z: 0, dx: 0, dy: 1, dz: 0 }));
+const ARROWS: ElfArrow[] = Array.from({ length: ELF_ARROW_MAX }, () => ({ x: 0, y: 0, z: 0, dx: 0, dy: 1, dz: 0 }));
 
 function arrowFlight(elf: number, t: number, out: ElfArrow) {
   if (elfFilmKind(t) !== "elf") return false;
@@ -358,8 +359,8 @@ export function elfCam(t: number): ElfCam {
   const run = Math.max(6, floor.zSpawn - floor.zElf);
   const oz = floor.zElf + run * 0.58;
   const elfMidZ = ez + 0.38;
-  const elfA = look(0.05, g + 1.72, ez - 2.35, 0, g + 1.44, elfMidZ, 32);
-  const elfB = look(0.42, g + 1.56, ez - 0.95, 0, g + 1.46, elfMidZ, 27);
+  const elfA = look(0, g + 1.85, ez - 1.85, 0, g + 1.55, elfMidZ, 30);
+  const elfB = look(0.35, g + 1.62, ez - 0.75, 0, g + 1.48, elfMidZ, 26);
   const elfC = look(-0.55, g + 1.68, ez - 1.15, 0.08, g + 1.5, elfMidZ + 0.2, 29);
   const elfD = look(0.22, g + 1.82, ez + 0.35, 0, g + 1.52, elfMidZ, 28);
   const orcA = look(0.15, g + 1.58, oz - 1.8, 0, g + 1.22, oz + 1.2, 33);
