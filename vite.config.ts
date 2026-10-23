@@ -3,6 +3,11 @@ import react from "@vitejs/plugin-react";
 
 export default defineConfig({
   plugins: [react()],
+  server: {
+    watch: {
+      ignored: ["**/public/models/new/**"],
+    },
+  },
   build: {
     target: "es2020",
     sourcemap: false,
