@@ -43,6 +43,7 @@ import { OK_ID, OK_MODE, OK_SECONDS, isOk, type OkId } from "../okReel";
 import { ELF_ID, ELF_MODE, ELF_SECONDS, isElf, type ElfId } from "../elfReel";
 import { KALKAN_ID, KALKAN_MODE, KALKAN_SECONDS, isKalkan, type KalkanId } from "../kalkanReel";
 import { HERO_ID, HERO_MODE, HERO_SECONDS, isHero, type HeroId } from "../heroReel";
+import { LOOP_ID, LOOP_MODE, LOOP_SECONDS, isLoop, type LoopId } from "../loopReel";
 import { ARENA2_ID, ARENA2_MODE, ARENA2_SECONDS, ARENA3_ID, ARENA3_MODE, ARENA3_SECONDS, ARENA_ID, ARENA_MODE, ARENA_SECONDS, isArena, isArena2, isArena3, type Arena2Id, type Arena3Id, type ArenaId } from "../arenaReel";
 import { BOUT2_ID, BOUT2_MODE, BOUT2_SECONDS, BOUT_ID, BOUT_MODE, BOUT_SECONDS, isBout, isBout2, type Bout2Id, type BoutId } from "../boutReel";
 import { KAYIT_ID, KAYIT_MODE, KAYIT_SECONDS, isKayit, type KayitId } from "../kayitReel";
@@ -69,7 +70,7 @@ export function AdminPage() {
   const [reelSeconds, setReelSeconds] = useState<number>(7);
   const [reelText, setReelText] = useState(true);
   const [reelSkipCmd, setReelSkipCmd] = useState(false);
-  const [reelShot, setReelShot] = useState<ReelShot | PlanBId | SagaId | DiscoverId | MixId | CountdownId | DefendId | VsId | New1Id | New2Id | New3Id | New4Id | New5Id | New6Id | New62Id | New7Id | LabId | DevId | Dev2Id | Dev3Id | Dev4Id | Dev5Id | Dev6Id | Dev7Id | Dev8Id | Dev9Id | Dev10Id | Dev11Id | Dev12Id | Dev13Id | Dev14Id | Dev15Id | SnakeId | DevsId | FilmId | DragonId | WarsId | OrduId | KarsiId | Karsi0Id | Karsi2Id | Karsi3Id | YediId | OkId | ElfId | KalkanId | HeroId | ArenaId | Arena2Id | Arena3Id | BoutId | Bout2Id | KayitId | XxxId | null>(null);
+  const [reelShot, setReelShot] = useState<ReelShot | PlanBId | SagaId | DiscoverId | MixId | CountdownId | DefendId | VsId | New1Id | New2Id | New3Id | New4Id | New5Id | New6Id | New62Id | New7Id | LabId | DevId | Dev2Id | Dev3Id | Dev4Id | Dev5Id | Dev6Id | Dev7Id | Dev8Id | Dev9Id | Dev10Id | Dev11Id | Dev12Id | Dev13Id | Dev14Id | Dev15Id | SnakeId | DevsId | FilmId | DragonId | WarsId | OrduId | KarsiId | Karsi0Id | Karsi2Id | Karsi3Id | YediId | LoopId | OkId | ElfId | KalkanId | HeroId | ArenaId | Arena2Id | Arena3Id | BoutId | Bout2Id | KayitId | XxxId | null>(null);
   const [rival, setRival] = useState<Rival | null>(null);
   const [rivalHandleInput, setRivalHandleInput] = useState("");
   const [rivalNamesInput, setRivalNamesInput] = useState("");
@@ -721,6 +722,8 @@ export function AdminPage() {
                     ? [WARS_SECONDS]
                   : isKarsi0(reelShot)
                     ? [KARSI0_SECONDS]
+                  : isLoop(reelShot)
+                    ? [LOOP_SECONDS]
                   : isYedi(reelShot)
                     ? [YEDI_SECONDS]
                   : isKarsi3(reelShot)
@@ -1266,6 +1269,18 @@ export function AdminPage() {
             </button>
             <button
               type="button"
+              className={reelShot === LOOP_ID ? "on" : ""}
+              onClick={() => {
+                setReelShot((cur) => (cur === LOOP_ID ? null : LOOP_ID));
+                setReelSeconds(LOOP_SECONDS);
+                setReelText(false);
+                setReelSkipCmd(true);
+              }}
+            >
+              {LOOP_MODE.label} — {LOOP_SECONDS}s
+            </button>
+            <button
+              type="button"
               className={reelShot === OK_ID ? "on" : ""}
               onClick={() => {
                 setReelShot((cur) => (cur === OK_ID ? null : OK_ID));
@@ -1468,6 +1483,11 @@ export function AdminPage() {
           {isYedi(reelShot) && (
             <p className="muted">
               Karşıtakipçi3’ün aynısı, üstüne 7 bayrak. Altısı sarı ve durduğu kesitte sayılır. Yedincisi açılışta komutanın topuğunun yanında, çimin renginde, yerde yatar; tepeden bakınca çizgi gibi kalır. Videoda cevap yok. Başlık: “7 bayrak var. Birini kaçırırsın.” Yorum isteme, cevabı sabitleme. İnsanlar “7. nerede, ben 6 tane buldum” diye yazar ve başa sarar.
+            </p>
+          )}
+          {isLoop(reelShot) && (
+            <p className="muted">
+              Karşılaştırma değil. Kale avlusu, tek açı, 6 saniye. Zırhlı kahramanın 7 kopyası. Beşi avluda açıkta durur. İkisi gölgede kalır: biri kule dibinde, biri sur yürüyüşünde, ikisi de taşın rengine yakın. Sekizinci asker yoktur. Kamera kıpırdamaz. Meşale ve hafif dönüş ilk kareye döner. Ekranda “8 ASKERİ BUL!” durur. Cevap yok. Başlık: “8 asker var. İkisini kaçırırsın.” İlk yorum: “8. askeri bulan var mı?” Cevabı sabitleme.
             </p>
           )}
           {isOk(reelShot) && (
@@ -2032,8 +2052,8 @@ export function AdminPage() {
           maxHp={maxHp}
           seconds={captureSec}
           showTitles={reelText}
-          skipCommander={reelSkipCmd || isDiscover(reelShot) || isCountdown(reelShot) || isDefend(reelShot) || isVsMode(reelShot) || isNewField(reelShot) || isLab(reelShot) || isGiantShot(reelShot) || isFilm(reelShot) || isDragon(reelShot) || isWars(reelShot) || isOrdu(reelShot) || isKarsiMode(reelShot) || isOk(reelShot) || isElf(reelShot) || isKalkan(reelShot) || isHero(reelShot) || isArena(reelShot) || isArena2(reelShot) || isArena3(reelShot) || isBout(reelShot) || isBout2(reelShot) || isKayit(reelShot) || (isXxx(reelShot) && xxxHideCmd(reelShot))}
-          shotMode={reelShot === CINEMA_ID || isPlanB(reelShot) || isSaga(reelShot) || isDiscover(reelShot) || isCountdown(reelShot) || isDefend(reelShot) || isVsMode(reelShot) || isNewField(reelShot) || isLab(reelShot) || isGiantShot(reelShot) || isFilm(reelShot) || isDragon(reelShot) || isWars(reelShot) || isOrdu(reelShot) || isKarsiMode(reelShot) || isOk(reelShot) || isElf(reelShot) || isKalkan(reelShot) || isHero(reelShot) || isArena(reelShot) || isArena2(reelShot) || isArena3(reelShot) || isBout(reelShot) || isBout2(reelShot) || isKayit(reelShot) || isMix(reelShot) || isXxx(reelShot) ? null : reelShot}
+          skipCommander={reelSkipCmd || isDiscover(reelShot) || isCountdown(reelShot) || isDefend(reelShot) || isVsMode(reelShot) || isNewField(reelShot) || isLab(reelShot) || isGiantShot(reelShot) || isFilm(reelShot) || isDragon(reelShot) || isWars(reelShot) || isOrdu(reelShot) || isKarsiMode(reelShot) || isOk(reelShot) || isElf(reelShot) || isKalkan(reelShot) || isHero(reelShot) || isLoop(reelShot) || isArena(reelShot) || isArena2(reelShot) || isArena3(reelShot) || isBout(reelShot) || isBout2(reelShot) || isKayit(reelShot) || (isXxx(reelShot) && xxxHideCmd(reelShot))}
+          shotMode={reelShot === CINEMA_ID || isPlanB(reelShot) || isSaga(reelShot) || isDiscover(reelShot) || isCountdown(reelShot) || isDefend(reelShot) || isVsMode(reelShot) || isNewField(reelShot) || isLab(reelShot) || isGiantShot(reelShot) || isFilm(reelShot) || isDragon(reelShot) || isWars(reelShot) || isOrdu(reelShot) || isKarsiMode(reelShot) || isOk(reelShot) || isElf(reelShot) || isKalkan(reelShot) || isHero(reelShot) || isLoop(reelShot) || isArena(reelShot) || isArena2(reelShot) || isArena3(reelShot) || isBout(reelShot) || isBout2(reelShot) || isKayit(reelShot) || isMix(reelShot) || isXxx(reelShot) ? null : reelShot}
           cinema={reelShot === CINEMA_ID}
           roster={isPlanB(reelShot) ? reelShot : null}
           saga={isSaga(reelShot) ? reelShot : null}
@@ -2060,6 +2080,7 @@ export function AdminPage() {
           elf={isElf(reelShot) ? reelShot : null}
           kalkan={isKalkan(reelShot) ? reelShot : null}
           hero={isHero(reelShot) ? reelShot : null}
+          loop={isLoop(reelShot) ? reelShot : null}
           arena={isArena(reelShot) ? reelShot : null}
           arena2={isArena2(reelShot) ? reelShot : null}
           arena3={isArena3(reelShot) ? reelShot : null}
