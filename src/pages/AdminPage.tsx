@@ -37,7 +37,7 @@ import { FILM_ID, FILM_MODE, FILM_SECONDS, isFilm, type FilmId } from "../filmRe
 import { DRAGON_ID, DRAGON_MODE, DRAGON_SECONDS, isDragon, type DragonId } from "../dragonReel";
 import { WARS_ID, WARS_MODE, WARS_SECONDS, isWars, type WarsId } from "../warsReel";
 import { ORDU_ID, ORDU_MODE, ORDU_SECONDS, isOrdu, type OrduId } from "../orduReel";
-import { KARSI_ID, KARSI_MODE, KARSI_SECONDS, KARSI0_ID, KARSI0_MODE, KARSI0_SECONDS, KARSI2_ID, KARSI2_MODE, KARSI2_SECONDS, KARSI0_RIVAL, askRival, isKarsi, isKarsi0, isKarsi2, isKarsiMode, type Karsi0Id, type Karsi2Id, type KarsiId, type Rival } from "../karsiReel";
+import { KARSI_ID, KARSI_MODE, KARSI_SECONDS, KARSI0_ID, KARSI0_MODE, KARSI0_SECONDS, KARSI2_ID, KARSI2_MODE, KARSI2_SECONDS, KARSI0_RIVAL, askRival, askRivalName, sameRival, isKarsi, isKarsi0, isKarsi2, isKarsiMode, type Karsi0Id, type Karsi2Id, type KarsiId, type Rival } from "../karsiReel";
 import { OK_ID, OK_MODE, OK_SECONDS, isOk, type OkId } from "../okReel";
 import { KALKAN_ID, KALKAN_MODE, KALKAN_SECONDS, isKalkan, type KalkanId } from "../kalkanReel";
 import { HERO_ID, HERO_MODE, HERO_SECONDS, isHero, type HeroId } from "../heroReel";
@@ -130,20 +130,38 @@ export function AdminPage() {
     setReelSkipCmd(true);
   }
 
-  function pickKarsi2() {
+  async function pickKarsi2() {
     if (reelShot === KARSI2_ID) {
       setReelShot(null);
       setRival(null);
       return;
     }
-    const next = rivalFromGame();
-    if (!next) {
-      const text = "Önce Karşı takipçiler alanına hesabı ve adları kaydet.";
-      setMsg(text);
-      window.alert(text);
-      return;
+    const name = askRivalName(game.rivalHandle);
+    if (!name) return;
+    const reuse = sameRival(name, game.rivalHandle) && game.rivalNames.length > 0;
+    let handle = reuse ? game.rivalHandle : name;
+    let foeNames = reuse ? game.rivalNames : [];
+    if (!reuse) {
+      const raw = window.prompt(`${name} için yeni düşman kullanıcı adlarını yaz (alt alta veya boşlukla).`, "") || "";
+      foeNames = parseNameList(raw);
+      if (!foeNames.length) {
+        const text = "En az bir kullanıcı adı gerekli.";
+        setMsg(text);
+        window.alert(text);
+        return;
+      }
+      setBusy(true);
+      try {
+        await set(ref(db, "game"), toGameRecord(game, Date.now(), { rivalHandle: handle, rivalNames: foeNames }));
+        setRivalDraft(false);
+      } catch {
+        setMsg("Karşı takipçiler yazılamadı.");
+        setBusy(false);
+        return;
+      }
+      setBusy(false);
     }
-    setRival(next);
+    setRival({ name: handle, foes: foeNames.length, foeNames });
     setReelShot(KARSI2_ID);
     setReelSeconds(KARSI2_SECONDS);
     setReelText(false);
@@ -589,7 +607,7 @@ export function AdminPage() {
         <section className="admin-card">
           <h2>Karşı takipçiler</h2>
           <p className="muted">
-            Karşı takipçi2 bu listeyi kullanır. Yeni hesapla savaşacaksan eski adların yerine yenilerini yapıştırıp kaydet; eski liste silinir, asker sayısı yeni ad kadar olur.
+            Karşı takipçi2 önce komutanı sorar. Aynı hesapsa bu kayıtlı liste gelir. Farklı hesap yazarsan yeni adlar istenir ve bu liste değişir.
           </p>
           <form
             onSubmit={(e) => {
@@ -801,7 +819,7 @@ export function AdminPage() {
                         return;
                       }
                       if (mode.id === KARSI2_ID) {
-                        pickKarsi2();
+                        void pickKarsi2();
                         return;
                       }
                       setReelShot((cur) => (cur === mode.id ? null : mode.id));
@@ -1191,7 +1209,7 @@ export function AdminPage() {
             <button
               type="button"
               className={reelShot === KARSI2_ID ? "on" : ""}
-              onClick={() => pickKarsi2()}
+              onClick={() => void pickKarsi2()}
             >
               {KARSI2_MODE.label} — {KARSI2_SECONDS}s
             </button>
@@ -1388,7 +1406,7 @@ export function AdminPage() {
           )}
           {isKarsi2(reelShot) && (
             <p className="muted">
-              Karşı takipçi ile aynı savaş. Düşman, kaydettiğin karşı takipçiler: {game.rivalHandle ? `@${game.rivalHandle.toUpperCase()} · ${formatCount(game.rivalNames.length)} asker` : "liste boş"}. İsimler siyah plakada kırmızı. Yeni hesap için yukarıdaki alanı yenile, eski adlar silinir.
+              Karşı takipçi ile aynı savaş. Butona basınca önce komutan sorulur. Aynı hesapsa kayıtlı askerler gelir; farklıysa yeni adlar istenir ve eski liste silinir. Şu an {game.rivalHandle ? `@${game.rivalHandle.toUpperCase()} · ${formatCount(game.rivalNames.length)} asker` : "liste boş"}. İsimler siyah plakada kırmızı.
             </p>
           )}
           {isOk(reelShot) && (
@@ -1885,10 +1903,10 @@ export function AdminPage() {
                 }
                 setRival(next);
               }
-              if (isKarsi2(reelShot)) {
+              if (isKarsi2(reelShot) && !rival?.foeNames?.length) {
                 const next = rivalFromGame();
                 if (!next) {
-                  const text = "Kayıt başlamadı: Karşı takipçiler alanına hesabı ve adları kaydet.";
+                  const text = "Kayıt başlamadı: karşı komutan ve asker adları gerekli.";
                   setMsg(text);
                   window.alert(text);
                   return;

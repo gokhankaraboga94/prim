@@ -55,8 +55,12 @@ export function cleanRival(name: string) {
 }
 
 /** Admin button: ask for the rival account, then its follower count. Cancel returns null. */
-export function askRivalName() {
-  return cleanRival(window.prompt("Karşı taraf kimin hesabı? Düşman komutan bu olacak.", "") || "");
+export function askRivalName(saved = "") {
+  return cleanRival(window.prompt("Karşı taraf kimin hesabı? Düşman komutan bu olacak.", saved) || "");
+}
+
+export function sameRival(a: string, b: string) {
+  return cleanRival(a).toLowerCase() === cleanRival(b).toLowerCase();
 }
 
 export function askRival(): Rival | null {
