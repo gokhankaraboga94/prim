@@ -24,8 +24,10 @@ export const KARSI0_RIVAL: Rival = { name: "", foes: 0, invite: true };
 const SHOW_FRIENDS = 2000;
 const SHOW_FOES = 4000;
 
-const PITCH = 1.9;
-const LANE = 1.5;
+const PITCH_US = 2.22;
+const PITCH_FOE = 3.0;
+const LANE_US = 1.62;
+const LANE_FOE = 1.85;
 const T_CHARGE = 3.2;
 const T_MEET = 6.4;
 const T_END = 15.5;
@@ -101,6 +103,7 @@ export type KarsiSide = {
   n: number;
   cols: number;
   rows: number;
+  pitch: number;
   x: Float32Array;
   row: Uint16Array;
   phase: Float32Array;
@@ -125,7 +128,7 @@ export type KarsiLayout = {
 };
 
 /** Deep, narrow blocks so both armies fit a portrait frame. */
-function makeSide(real: number, cap: number, lossFrac: number, salt: number): KarsiSide {
+function makeSide(real: number, cap: number, lossFrac: number, salt: number, pitch: number, lane: number): KarsiSide {
   const n = Math.max(0, Math.min(cap, Math.floor(real)));
   const cols = Math.max(1, Math.ceil(Math.sqrt(n / 1.6)));
   const rows = Math.max(1, Math.ceil(n / cols));
@@ -134,19 +137,20 @@ function makeSide(real: number, cap: number, lossFrac: number, salt: number): Ka
     n,
     cols,
     rows,
+    pitch,
     x: new Float32Array(n),
     row: new Uint16Array(n),
     phase: new Float32Array(n),
     die: new Float32Array(n).fill(1e9),
     loss: Math.min(n, Math.round(n * lossFrac)),
-    depth: Math.max(0, rows - 1) * PITCH,
+    depth: Math.max(0, rows - 1) * pitch,
   };
   for (let i = 0; i < n; i++) {
     const row = Math.floor(i / cols);
     const col = i % cols;
     const inRow = row === rows - 1 ? n - row * cols : cols;
-    const off = (col - (inRow - 1) / 2) * PITCH;
-    side.x[i] = off + Math.sign(off || (col % 2 ? 1 : -1)) * LANE;
+    const off = (col - (inRow - 1) / 2) * pitch;
+    side.x[i] = off + Math.sign(off || (col % 2 ? 1 : -1)) * lane;
     side.row[i] = row;
     side.phase[i] = hash(i, salt) * 1.1;
   }
@@ -170,9 +174,9 @@ export function makeKarsiLayout(friends: number, foes: number, invite = false): 
   const big = Math.max(1, weWin ? a : b);
   const small = weWin ? b : a;
   const winLoss = invite ? 0 : Math.min(0.97, 1 - Math.sqrt(Math.max(0, 1 - (small / big) ** 2)));
-  const us = makeSide(a, SHOW_FRIENDS, invite ? 0 : weWin ? winLoss : 1, 3);
-  const them = makeSide(b, SHOW_FOES, invite ? 0 : weWin ? 1 : winLoss, 11);
-  const width = Math.max(us.cols, Math.max(1, them.cols)) * PITCH + LANE * 2;
+  const us = makeSide(a, SHOW_FRIENDS, invite ? 0 : weWin ? winLoss : 1, 3, PITCH_US, LANE_US);
+  const them = makeSide(b, SHOW_FOES, invite ? 0 : weWin ? 1 : winLoss, 11, PITCH_FOE, LANE_FOE);
+  const width = Math.max(us.cols * us.pitch, Math.max(1, them.cols) * them.pitch) + Math.max(LANE_US, LANE_FOE) * 2;
   return {
     us,
     them,
@@ -227,7 +231,7 @@ function swing(t: number, phase: number) {
 function sidePose(layout: KarsiLayout, side: KarsiSide, i: number, t: number, sign: number, out: KarsiPose) {
   if (layout.invite) {
     out.x = side.x[i];
-    out.z = front(layout, t, sign) + sign * side.row[i] * PITCH;
+    out.z = front(layout, t, sign) + sign * side.row[i] * side.pitch;
     out.yaw = 0;
     out.fall = 0;
     out.lift = 0;
@@ -238,7 +242,7 @@ function sidePose(layout: KarsiLayout, side: KarsiSide, i: number, t: number, si
   const at = Math.min(t, die);
   const lag = Math.max(0, side.row[i] - deadRows(side, at));
   out.x = side.x[i];
-  out.z = front(layout, at, sign) + sign * lag * PITCH;
+  out.z = front(layout, at, sign) + sign * lag * side.pitch;
   out.yaw = 0;
   out.fall = t > die ? ease((t - die) / FALL) : 0;
   out.lift = 0;
