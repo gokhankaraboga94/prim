@@ -6,10 +6,12 @@ import { KAYIT_ID, KAYIT_MODE, KAYIT_SECONDS } from "./kayitReel";
 import { HERO_ID, HERO_MODE, HERO_SECONDS } from "./heroReel";
 import { DRAGON_ID, DRAGON_MODE, DRAGON_SECONDS } from "./dragonReel";
 import { KALKAN_ID, KALKAN_MODE, KALKAN_SECONDS } from "./kalkanReel";
+import { ELF_ID, ELF_MODE, ELF_SECONDS } from "./elfReel";
 export const RECENT_BUTTON_LIMIT = 20;
 
 /** Yeniden eskiye. Bir buton güncellenirse en üste alınır, en alttaki 20'nin dışına düşer. */
 export const RECENT_BUTTONS = [
+  { id: ELF_ID, label: `${ELF_MODE.label} — ${ELF_SECONDS}s`, seconds: ELF_SECONDS },
   { id: KARSI2_ID, label: `${KARSI2_MODE.label} — ${KARSI2_SECONDS}s`, seconds: KARSI2_SECONDS },
   { id: KARSI0_ID, label: `${KARSI0_MODE.label} — ${KARSI0_SECONDS}s`, seconds: KARSI0_SECONDS },
   { id: KARSI_ID, label: `${KARSI_MODE.label} — ${KARSI_SECONDS}s`, seconds: KARSI_SECONDS },
