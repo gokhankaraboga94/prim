@@ -37,7 +37,7 @@ import { FILM_ID, FILM_MODE, FILM_SECONDS, isFilm, type FilmId } from "../filmRe
 import { DRAGON_ID, DRAGON_MODE, DRAGON_SECONDS, isDragon, type DragonId } from "../dragonReel";
 import { WARS_ID, WARS_MODE, WARS_SECONDS, isWars, type WarsId } from "../warsReel";
 import { ORDU_ID, ORDU_MODE, ORDU_SECONDS, isOrdu, type OrduId } from "../orduReel";
-import { KARSI_ID, KARSI_MODE, KARSI_SECONDS, KARSI0_ID, KARSI0_MODE, KARSI0_SECONDS, KARSI2_ID, KARSI2_MODE, KARSI2_SECONDS, KARSI0_RIVAL, askRival, askRivalName, sameRival, isKarsi, isKarsi0, isKarsi2, isKarsiMode, type Karsi0Id, type Karsi2Id, type KarsiId, type Rival } from "../karsiReel";
+import { KARSI_ID, KARSI_MODE, KARSI_SECONDS, KARSI0_ID, KARSI0_MODE, KARSI0_SECONDS, KARSI2_ID, KARSI2_MODE, KARSI2_SECONDS, KARSI0_RIVAL, askRival, cleanRival, sameRival, isKarsi, isKarsi0, isKarsi2, isKarsiMode, type Karsi0Id, type Karsi2Id, type KarsiId, type Rival } from "../karsiReel";
 import { OK_ID, OK_MODE, OK_SECONDS, isOk, type OkId } from "../okReel";
 import { KALKAN_ID, KALKAN_MODE, KALKAN_SECONDS, isKalkan, type KalkanId } from "../kalkanReel";
 import { HERO_ID, HERO_MODE, HERO_SECONDS, isHero, type HeroId } from "../heroReel";
@@ -72,6 +72,7 @@ export function AdminPage() {
   const [rivalHandleInput, setRivalHandleInput] = useState("");
   const [rivalNamesInput, setRivalNamesInput] = useState("");
   const [rivalDraft, setRivalDraft] = useState(false);
+  const [karsi2Ask, setKarsi2Ask] = useState<null | { step: "name" | "list"; handle: string; names: string }>(null);
   const [reelDay, setReelDay] = useState("1");
   const [recentOpen, setRecentOpen] = useState(false);
   const [capturing, setCapturing] = useState(false);
@@ -130,42 +131,55 @@ export function AdminPage() {
     setReelSkipCmd(true);
   }
 
-  async function pickKarsi2() {
-    if (reelShot === KARSI2_ID) {
-      setReelShot(null);
-      setRival(null);
-      return;
-    }
-    const name = askRivalName(game.rivalHandle);
-    if (!name) return;
-    const reuse = sameRival(name, game.rivalHandle) && game.rivalNames.length > 0;
-    let handle = reuse ? game.rivalHandle : name;
-    let foeNames = reuse ? game.rivalNames : [];
-    if (!reuse) {
-      const raw = window.prompt(`${name} için yeni düşman kullanıcı adlarını yaz (alt alta veya boşlukla).`, "") || "";
-      foeNames = parseNameList(raw);
-      if (!foeNames.length) {
-        const text = "En az bir kullanıcı adı gerekli.";
-        setMsg(text);
-        window.alert(text);
-        return;
-      }
-      setBusy(true);
-      try {
-        await set(ref(db, "game"), toGameRecord(game, Date.now(), { rivalHandle: handle, rivalNames: foeNames }));
-        setRivalDraft(false);
-      } catch {
-        setMsg("Karşı takipçiler yazılamadı.");
-        setBusy(false);
-        return;
-      }
-      setBusy(false);
-    }
+  function applyKarsi2(handle: string, foeNames: string[]) {
     setRival({ name: handle, foes: foeNames.length, foeNames });
     setReelShot(KARSI2_ID);
     setReelSeconds(KARSI2_SECONDS);
     setReelText(false);
     setReelSkipCmd(true);
+    setKarsi2Ask(null);
+  }
+
+  function pickKarsi2() {
+    if (reelShot === KARSI2_ID) {
+      setReelShot(null);
+      setRival(null);
+      setKarsi2Ask(null);
+      return;
+    }
+    setKarsi2Ask({ step: "name", handle: game.rivalHandle, names: "" });
+  }
+
+  function confirmKarsi2Name() {
+    const name = cleanRival(karsi2Ask?.handle || "");
+    if (!name) {
+      setMsg("Karşı komutan adı gerekli.");
+      return;
+    }
+    if (sameRival(name, game.rivalHandle) && game.rivalNames.length > 0) {
+      applyKarsi2(game.rivalHandle, game.rivalNames);
+      return;
+    }
+    setKarsi2Ask({ step: "list", handle: name, names: "" });
+  }
+
+  async function confirmKarsi2List() {
+    const handle = cleanRival(karsi2Ask?.handle || "");
+    const foeNames = parseNameList(karsi2Ask?.names || "");
+    if (!handle || !foeNames.length) {
+      setMsg("En az bir kullanıcı adı gerekli.");
+      return;
+    }
+    setBusy(true);
+    try {
+      await set(ref(db, "game"), toGameRecord(game, Date.now(), { rivalHandle: handle, rivalNames: foeNames }));
+      setRivalDraft(false);
+      applyKarsi2(handle, foeNames);
+    } catch {
+      setMsg("Karşı takipçiler yazılamadı.");
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function saveSoldiers(next: number) {
@@ -607,7 +621,7 @@ export function AdminPage() {
         <section className="admin-card">
           <h2>Karşı takipçiler</h2>
           <p className="muted">
-            Karşı takipçi2 önce komutanı sorar. Aynı hesapsa bu kayıtlı liste gelir. Farklı hesap yazarsan yeni adlar istenir ve bu liste değişir.
+            Karşı takipçi2 önce komutanı sorar. Aynı hesapsa bu kayıtlı liste gelir. Farklı hesap yazarsan yeni adlar istenir ve bu liste değişir. Telefonda pencere sorusu yok, panel açılır.
           </p>
           <form
             onSubmit={(e) => {
@@ -819,7 +833,7 @@ export function AdminPage() {
                         return;
                       }
                       if (mode.id === KARSI2_ID) {
-                        void pickKarsi2();
+                        pickKarsi2();
                         return;
                       }
                       setReelShot((cur) => (cur === mode.id ? null : mode.id));
@@ -1209,7 +1223,7 @@ export function AdminPage() {
             <button
               type="button"
               className={reelShot === KARSI2_ID ? "on" : ""}
-              onClick={() => void pickKarsi2()}
+              onClick={() => pickKarsi2()}
             >
               {KARSI2_MODE.label} — {KARSI2_SECONDS}s
             </button>
@@ -1406,7 +1420,7 @@ export function AdminPage() {
           )}
           {isKarsi2(reelShot) && (
             <p className="muted">
-              Karşı takipçi ile aynı savaş. Butona basınca önce komutan sorulur. Aynı hesapsa kayıtlı askerler gelir; farklıysa yeni adlar istenir ve eski liste silinir. Şu an {game.rivalHandle ? `@${game.rivalHandle.toUpperCase()} · ${formatCount(game.rivalNames.length)} asker` : "liste boş"}. İsimler siyah plakada kırmızı.
+              Karşı takipçi ile aynı savaş. Butona basınca komutan paneli açılır. Aynı hesapsa kayıtlı askerler gelir; farklıysa yeni adlar istenir ve eski liste silinir. Şu an {game.rivalHandle ? `@${game.rivalHandle.toUpperCase()} · ${formatCount(game.rivalNames.length)} asker` : "liste boş"}. İsimler siyah plakada kırmızı.
             </p>
           )}
           {isOk(reelShot) && (
@@ -2016,6 +2030,59 @@ export function AdminPage() {
             setCapturing(false);
           }}
         />
+      )}
+      {karsi2Ask && (
+        <div className="karsi-ask" role="dialog" aria-modal="true" aria-labelledby="karsi2-ask-title">
+          <form
+            className="karsi-ask-card"
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (karsi2Ask.step === "name") confirmKarsi2Name();
+              else void confirmKarsi2List();
+            }}
+          >
+            <h2 id="karsi2-ask-title">{karsi2Ask.step === "name" ? "Karşı komutan" : "Yeni karşı askerler"}</h2>
+            {karsi2Ask.step === "name" ? (
+              <>
+                <p className="muted">Aynı hesapsa kayıtlı askerler gelir. Farklıysa yeni adlar istenir.</p>
+                <label htmlFor="karsi2-handle">Komutan</label>
+                <input
+                  id="karsi2-handle"
+                  type="text"
+                  autoComplete="username"
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  inputMode="text"
+                  placeholder="ahmet"
+                  value={karsi2Ask.handle}
+                  onChange={(e) => setKarsi2Ask({ ...karsi2Ask, handle: e.target.value })}
+                />
+              </>
+            ) : (
+              <>
+                <p className="muted">@{karsi2Ask.handle} için kullanıcı adlarını yaz. Eski liste silinir.</p>
+                <label htmlFor="karsi2-names">Kullanıcı adları</label>
+                <textarea
+                  id="karsi2-names"
+                  rows={8}
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  placeholder={"takipci1\ntakipci2\ntakipci3"}
+                  value={karsi2Ask.names}
+                  onChange={(e) => setKarsi2Ask({ ...karsi2Ask, names: e.target.value })}
+                />
+              </>
+            )}
+            <div className="karsi-ask-actions">
+              <button type="button" className="btn-ghost" onClick={() => setKarsi2Ask(null)}>
+                Vazgeç
+              </button>
+              <button type="submit" className="btn-gold" disabled={busy}>
+                {karsi2Ask.step === "name" ? "Devam" : "Kaydet ve seç"}
+              </button>
+            </div>
+          </form>
+        </div>
       )}
     </div>
   );

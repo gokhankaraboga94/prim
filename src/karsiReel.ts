@@ -23,6 +23,17 @@ export const KARSI0_RIVAL: Rival = { name: "", foes: 0, invite: true };
 /** Instanced bodies drawn per side; the score plate always shows the real counts. */
 const SHOW_FRIENDS = 2000;
 const SHOW_FOES = 4000;
+const SHOW_MOBILE = 480;
+
+function bodyCap(high: number) {
+  if (typeof window === "undefined") return high;
+  try {
+    if (window.matchMedia("(pointer: coarse)").matches || window.innerWidth <= 900) return Math.min(high, SHOW_MOBILE);
+  } catch {
+    /* ignore */
+  }
+  return high;
+}
 
 const PITCH_US = 2.22;
 const PITCH_FOE = 3.0;
@@ -174,8 +185,8 @@ export function makeKarsiLayout(friends: number, foes: number, invite = false): 
   const big = Math.max(1, weWin ? a : b);
   const small = weWin ? b : a;
   const winLoss = invite ? 0 : Math.min(0.97, 1 - Math.sqrt(Math.max(0, 1 - (small / big) ** 2)));
-  const us = makeSide(a, SHOW_FRIENDS, invite ? 0 : weWin ? winLoss : 1, 3, PITCH_US, LANE_US);
-  const them = makeSide(b, SHOW_FOES, invite ? 0 : weWin ? 1 : winLoss, 11, PITCH_FOE, LANE_FOE);
+  const us = makeSide(a, bodyCap(SHOW_FRIENDS), invite ? 0 : weWin ? winLoss : 1, 3, PITCH_US, LANE_US);
+  const them = makeSide(b, bodyCap(SHOW_FOES), invite ? 0 : weWin ? 1 : winLoss, 11, PITCH_FOE, LANE_FOE);
   const width = Math.max(us.cols * us.pitch, Math.max(1, them.cols) * them.pitch) + Math.max(LANE_US, LANE_FOE) * 2;
   return {
     us,
