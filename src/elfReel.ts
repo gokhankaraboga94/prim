@@ -250,7 +250,7 @@ export function elfAt(i: number, t: number): ElfPose {
     yaw: Math.PI,
     pitch: 0,
     roll: 0,
-    hide: elfFilmKind(t) !== "elf",
+    hide: elfFilmKind(t) !== "elf" || !elfFieldReady(),
   };
 }
 
@@ -291,7 +291,7 @@ export function orcAt(i: number, t: number): ElfPose {
     roll: 0,
     hide: true,
   };
-  if (elfFilmKind(t) !== "orc") return parked;
+  if (elfFilmKind(t) !== "orc" || !elfFieldReady()) return parked;
   const lt = elfFilmLocal(t);
   const runT = lt - (0.35 + (i % 6) * 0.14 + Math.floor(i / 13) * 0.32 + hash(i, 1) * 0.22);
   if (runT < 0) {
