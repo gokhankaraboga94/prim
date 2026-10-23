@@ -15,6 +15,7 @@ import {
   KARSI_ME,
   karsiCam,
   karsiChief,
+  karsiTpsCam,
   karsiEndAt,
   karsiFar,
   karsiFoe,
@@ -176,7 +177,7 @@ function KarsiArmies({ layout }: { layout: KarsiLayout }) {
 }
 
 /** Follower names: yellow on black for us, red on black for the rival list. */
-function KarsiNames({ names, layout, foe = false }: { names: string[]; layout: KarsiLayout; foe?: boolean }) {
+function KarsiNames({ names, layout, foe = false, tight = false }: { names: string[]; layout: KarsiLayout; foe?: boolean; tight?: boolean }) {
   const count = foe ? layout.them.n : layout.us.n;
   const labels = useMemo(() => {
     const out: { slot: number; text: string }[] = [];
@@ -217,9 +218,9 @@ function KarsiNames({ names, layout, foe = false }: { names: string[]; layout: K
       const dz = z - camera.position.z;
       const ahead = dx * lookDir.x + (NAME_Y - camera.position.y) * lookDir.y + dz * lookDir.z;
       const dist = Math.hypot(dx, camera.position.y - NAME_Y, dz);
-      const hide = ahead < 2.4 || (foe ? layout.foeFall[slot] : layout.liveFall[slot]) > 0.35;
+      const hide = ahead < (tight ? 5 : 2.4) || dist < (tight ? 10.5 : 2.4) || (foe ? layout.foeFall[slot] : layout.liveFall[slot]) > 0.35;
       const pitch = foe ? layout.them.spread : layout.us.spread;
-      const want = Math.min(pitch * 1.08, dist * tanH * (foe ? 0.984 : 0.84));
+      const want = Math.min(pitch * (tight ? 0.48 : 1.08), dist * tanH * (tight ? 0.28 : foe ? 0.984 : 0.84));
       const size = want / Math.max(2.05, cell.sx);
       dummy.position.set(x, NAME_Y, z);
       dummy.scale.set(hide ? 0 : cell.sx * size, hide ? 0 : cell.sy * size, 1);
@@ -312,7 +313,7 @@ function disposeScene(scene: THREE.Object3D) {
   });
 }
 
-function KarsiChiefUnit({ layout, mine, name }: { layout: KarsiLayout; mine: boolean; name: string }) {
+function KarsiChiefUnit({ layout, mine, name, compact = false }: { layout: KarsiLayout; mine: boolean; name: string; compact?: boolean }) {
   const [body, setBody] = useState<THREE.Group | null>(null);
   const node = useRef<THREE.Group>(null);
   const tag = useRef<THREE.Mesh>(null);
@@ -354,7 +355,7 @@ function KarsiChiefUnit({ layout, mine, name }: { layout: KarsiLayout; mine: boo
     for (const arm of arms) arm.set(chief.lift, chief.chop);
     const plate = tag.current;
     if (plate) {
-      plate.position.set(chief.x, CHIEF_H + 0.75 - 0.55 * chief.kneel, chief.z);
+      plate.position.set(chief.x, CHIEF_H + (compact ? 0.42 : 0.75) - 0.55 * chief.kneel, chief.z);
       plate.quaternion.copy(camera.quaternion);
     }
   });
@@ -363,7 +364,7 @@ function KarsiChiefUnit({ layout, mine, name }: { layout: KarsiLayout; mine: boo
       <group ref={node}>
         <group scale={CHIEF_SCALE}>{body && <primitive object={body} />}</group>
       </group>
-      <mesh ref={tag} renderOrder={45}>
+      <mesh ref={tag} scale={compact ? 0.16 : 1} renderOrder={45}>
         <planeGeometry args={[4.6, 0.9]} />
         <meshBasicMaterial map={tex} transparent depthTest={false} toneMapped={false} />
       </mesh>
@@ -514,7 +515,8 @@ export function KarsiCam({ soldiers, rival }: { soldiers: number; rival: Rival }
     if ((camera as THREE.PerspectiveCamera).isPerspectiveCamera) perspCam.current = camera as THREE.PerspectiveCamera;
     const persp = perspCam.current;
     if (!persp) return;
-    const shot = karsiCam(layout, Math.max(0, clock.elapsedTime - REEL_HOLD));
+    const t = Math.max(0, clock.elapsedTime - REEL_HOLD);
+    const shot = (rival.tps ? karsiTpsCam : karsiCam)(layout, t);
     persp.fov = shot.fov;
     persp.near = 0.35;
     persp.far = karsiFar(layout);
@@ -532,10 +534,10 @@ export function KarsiBattle({ names, soldiers, rival }: { names: string[]; soldi
     <group>
       <KarsiHud layout={layout} rival={rival.name} />
       <KarsiArmies layout={layout} />
-      <KarsiNames names={names} layout={layout} />
-      {!!rival.foeNames?.length && <KarsiNames names={rival.foeNames} layout={layout} foe />}
-      <KarsiChiefUnit layout={layout} mine name={KARSI_ME} />
-      {!layout.invite && <KarsiChiefUnit layout={layout} mine={false} name={rival.name} />}
+      <KarsiNames names={names} layout={layout} tight={Boolean(rival.tps)} />
+      {!!rival.foeNames?.length && <KarsiNames names={rival.foeNames} layout={layout} foe tight={Boolean(rival.tps)} />}
+      <KarsiChiefUnit layout={layout} mine name={KARSI_ME} compact={Boolean(rival.tps)} />
+      {!layout.invite && <KarsiChiefUnit layout={layout} mine={false} name={rival.name} compact={Boolean(rival.tps)} />}
     </group>
   );
 }

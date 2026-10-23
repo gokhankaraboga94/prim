@@ -1,7 +1,7 @@
 export const ELF_ID = "elf" as const;
 export type ElfId = typeof ELF_ID;
 export const ELF_MODE = { id: ELF_ID, label: "elf" } as const;
-export const ELF_SECONDS = 24;
+export const ELF_SECONDS = 38;
 
 export const ELF_N = 8;
 export const ELF_PER_RANK = 4;
@@ -225,7 +225,7 @@ function look(x: number, y: number, z: number, lx: number, ly: number, lz: numbe
 const FACE_ORCS = Math.PI / 2;
 /** Orc mesh is authored looking down +Z. PI turns that toward the elves. */
 const FACE_ELVES = Math.PI;
-const CHARGE = 19.4;
+const CHARGE = 24.2;
 
 function lines() {
   const run = Math.max(10, floor.zSpawn - floor.zElf);
@@ -266,9 +266,10 @@ function orcSeat(i: number) {
     kind: (i + row) % 2,
     x,
     z0,
-    delay: row * 0.2 + (col % 4) * 0.07 + hash(i, 1) * 0.16,
-    speed: 2.45 + hash(i, 2) * 0.35,
-    killZ: elfBack + 0.7 + hash(i, 3) * 0.5,
+    delay: row * 0.35 + hash(i, 1) * 2.6,
+    speed: 1.65 + hash(i, 2) * 1.55,
+    killZ: elfBack + 1.15 + hash(i, 3) * 4.4,
+    drift: (hash(i, 8) - 0.5) * 5.6,
   };
 }
 
@@ -293,19 +294,20 @@ export function orcAt(i: number, t: number): ElfPose {
   if (!elfFieldReady()) return pose;
   const runT = t - CHARGE - seat.delay;
   if (runT < 0) return pose;
-  const killDist = Math.max(0.8, standZ - seat.killZ);
+  const killDist = Math.max(1.2, standZ - seat.killZ);
   const dist = runT * seat.speed;
   const dead = dist >= killDist;
-  const fall = dead ? clamp01((dist - killDist) / Math.max(0.55, seat.speed * 0.45)) : 0;
+  const fall = dead ? clamp01((dist - killDist) / Math.max(0.7, seat.speed * 0.55)) : 0;
+  const along = clamp01(dist / killDist);
   const z = dead ? seat.killZ : standZ - dist;
-  const x = seat.x + (dead ? Math.sign(seat.x || 1) * fall * 0.4 : 0);
+  const x = seat.x + seat.drift * along;
   return {
     x,
     y: elfFloor(x, z) + 0.02,
     z,
-    yaw: FACE_ELVES,
-    pitch: dead ? -1.28 * fall : -0.16,
-    roll: dead ? (i % 2 ? 0.4 : -0.4) * fall : 0,
+    yaw: FACE_ELVES + (hash(i, 9) - 0.5) * 0.5 * along,
+    pitch: dead ? -1.35 * fall : -0.18,
+    roll: dead ? (hash(i, 5) - 0.5) * 1.5 * fall : (hash(i, 7) - 0.5) * 0.12,
     hide: false,
   };
 }
@@ -362,8 +364,8 @@ function cutFilm(t: number, shots: { until: number; a: ElfCam; b: ElfCam }[]) {
 }
 
 /**
- * 0–3 wide hook, both lines in frame and arrows already flying.
- * Then elf faces, orc faces, elf full-length, orc full-length, and a side clash.
+ * 0–3 wide hook. Faces, then full-length. The last shot is a high angle
+ * over the elves so the scattered orc deaths stay in frame.
  */
 export function elfCam(t: number): ElfCam {
   const { elfFront, elfBack, orcFront, midZ } = lines();
@@ -382,14 +384,15 @@ export function elfCam(t: number): ElfCam {
   const bodyEB = look(0.25, feetE + 1.0, elfFront + 6.05, 0.06, feetE + 0.68, elfZ, 52);
   const bodyOA = look(0.1, feetO + 0.95, orcFront - 5.6, 0, feetO + 0.52, orcFront + 1.1, 56);
   const bodyOB = look(-0.22, feetO + 0.82, orcFront - 5.0, 0, feetO + 0.5, orcFront + 1.4, 54);
-  const sideA = look(-1.1, feetE + 3.15, elfFront - 6.6, 0, feetE + 1.35, midZ, 72);
-  const sideB = look(-0.35, feetE + 2.55, elfFront - 5.0, 0, feetE + 1.45, elfBack + 3.4, 66);
+  const grave = elfBack + 3.1;
+  const sideA = look(0.8, feetE + 7.4, elfFront - 5.8, 0, feetE + 0.35, grave, 66);
+  const sideB = look(-1.6, feetE + 9.2, elfFront - 3.4, 0.5, feetE + 0.15, grave + 1.4, 70);
   return cutFilm(t, [
     { until: 3, a: wideA, b: wideB },
-    { until: 7.2, a: faceEA, b: faceEB },
-    { until: 11.2, a: faceOA, b: faceOB },
-    { until: 16.2, a: bodyEA, b: bodyEB },
-    { until: 20.2, a: bodyOA, b: bodyOB },
+    { until: 8, a: faceEA, b: faceEB },
+    { until: 13, a: faceOA, b: faceOB },
+    { until: 19, a: bodyEA, b: bodyEB },
+    { until: 25, a: bodyOA, b: bodyOB },
     { until: ELF_SECONDS, a: sideA, b: sideB },
   ]);
 }

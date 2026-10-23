@@ -10,12 +10,16 @@ export const KARSI2_ID = "karsi2" as const;
 export type Karsi2Id = typeof KARSI2_ID;
 export const KARSI2_MODE = { id: KARSI2_ID, label: "karşı takipçi2" } as const;
 export const KARSI2_SECONDS = KARSI_SECONDS;
+export const KARSI3_ID = "karsi3" as const;
+export type Karsi3Id = typeof KARSI3_ID;
+export const KARSI3_MODE = { id: KARSI3_ID, label: "karşıtakipçi3" } as const;
+export const KARSI3_SECONDS = KARSI_SECONDS;
 export const KARSI_ME = "wargame2028";
 export const KARSI_HERO_ME = "/models/arena3/armored.glb";
 export const KARSI_HERO_FOE = "/models/arena3/2.glb";
 
 /** Rival account and its follower count, asked when the button is pressed. */
-export type Rival = { name: string; foes: number; invite?: boolean; foeNames?: string[] };
+export type Rival = { name: string; foes: number; invite?: boolean; foeNames?: string[]; tps?: boolean };
 
 /** karşıtakipçi0: no rival yet, only our army on the field. */
 export const KARSI0_RIVAL: Rival = { name: "", foes: 0, invite: true };
@@ -61,8 +65,12 @@ export function isKarsi2(id: string | null | undefined): id is Karsi2Id {
   return id === KARSI2_ID;
 }
 
-export function isKarsiMode(id: string | null | undefined): id is KarsiId | Karsi0Id | Karsi2Id {
-  return id === KARSI_ID || id === KARSI0_ID || id === KARSI2_ID;
+export function isKarsi3(id: string | null | undefined): id is Karsi3Id {
+  return id === KARSI3_ID;
+}
+
+export function isKarsiMode(id: string | null | undefined): id is KarsiId | Karsi0Id | Karsi2Id | Karsi3Id {
+  return id === KARSI_ID || id === KARSI0_ID || id === KARSI2_ID || id === KARSI3_ID;
 }
 
 export function cleanRival(name: string) {
@@ -385,6 +393,25 @@ function karsiInviteCam(layout: KarsiLayout, t: number): Cam {
   if (t < 7) return mixCam(hold, whole, (t - 3) / 4);
   if (t < 11) return mixCam(whole, vacant, (t - 7) / 4);
   return mixCam(vacant, close, Math.min(1, (t - 11) / 3.6));
+}
+
+const tpsMe: KarsiChief = { x: 0, z: 0, yaw: 0, kneel: 0, lift: 0, chop: 0 };
+const tpsFoe: KarsiChief = { x: 0, z: 0, yaw: 0, kneel: 0, lift: 0, chop: 0 };
+
+/**
+ * Third person behind our commander. Right shoulder, rival kept ahead.
+ * Pulls up as the lines meet so the portrait frame looks over him, not into his back.
+ */
+export function karsiTpsCam(layout: KarsiLayout, t: number): Cam {
+  const me = karsiChief(layout, true, t, tpsMe);
+  const foe = karsiChief(layout, false, t, tpsFoe);
+  const gap = Math.max(1.8, foe.z - me.z);
+  const close = ease(clamp01((16 - gap) / 13));
+  const back = 5.4 - close * 1.15;
+  const side = -(0.72 + close * 0.55);
+  const camY = 2.85 + close * 1.35 - me.kneel * 0.85;
+  const aimY = 1.45 + close * 0.15 - foe.kneel * 0.9;
+  return look(me.x + side, Math.max(1.55, camY), me.z - back, foe.x * 0.4, Math.max(0.75, aimY), foe.z, 52 - close * 4);
 }
 
 export function karsiCam(layout: KarsiLayout, t: number): Cam {
