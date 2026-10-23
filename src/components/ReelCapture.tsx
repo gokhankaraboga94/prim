@@ -161,7 +161,7 @@ export function ReelCapture({ soldiers, names, commanders = [], level, pressure,
         }
         setElfDone(elfLoadDone());
         if (!elfHasScene()) {
-          setErr("Modeller yüklenemedi. İptal deyip tekrar dene.");
+          setErr("Meydan veya elf modeli yüklenemedi. İptal deyip tekrar dene.");
           setPhase("err");
           return;
         }

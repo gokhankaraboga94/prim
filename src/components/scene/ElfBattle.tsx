@@ -132,27 +132,35 @@ function fitFigure(root: THREE.Object3D, height: number) {
 
 type Pack = { mesh: THREE.InstancedMesh };
 
-function packsFrom(root: THREE.Object3D, count: number): Pack[] {
-  const geos: THREE.BufferGeometry[] = [];
-  let mat: THREE.Material | null = null;
+function packsFrom(root: THREE.Object3D, count: number, renderOrder = 0): Pack[] {
+  const parts: { geo: THREE.BufferGeometry; mat: THREE.Material }[] = [];
   root.traverse((obj) => {
     const src = obj as THREE.Mesh;
     if (!src.isMesh) return;
-    geos.push(src.geometry);
-    if (!mat) mat = Array.isArray(src.material) ? src.material[0] : src.material;
+    parts.push({ geo: src.geometry, mat: Array.isArray(src.material) ? src.material[0] : src.material });
   });
-  const merged = geos.length > 1 ? mergeGeometries(geos, false) ?? geos[0] : geos[0];
-  if (!merged || !mat) return [];
-  const mesh = new THREE.InstancedMesh(merged, mat, count);
-  mesh.frustumCulled = false;
-  mesh.castShadow = false;
-  mesh.receiveShadow = false;
-  dummy.position.set(0, -40, 0);
-  dummy.scale.setScalar(0);
-  dummy.updateMatrix();
-  for (let i = 0; i < count; i++) mesh.setMatrixAt(i, dummy.matrix);
-  mesh.instanceMatrix.needsUpdate = true;
-  return [{ mesh }];
+  if (!parts.length) return [];
+
+  const make = (geo: THREE.BufferGeometry, mat: THREE.Material) => {
+    const mesh = new THREE.InstancedMesh(geo, mat, count);
+    mesh.frustumCulled = false;
+    mesh.castShadow = false;
+    mesh.receiveShadow = false;
+    mesh.renderOrder = renderOrder;
+    dummy.position.set(0, -40, 0);
+    dummy.scale.setScalar(0);
+    dummy.updateMatrix();
+    for (let i = 0; i < count; i++) mesh.setMatrixAt(i, dummy.matrix);
+    mesh.instanceMatrix.needsUpdate = true;
+    return mesh;
+  };
+
+  if (parts.length === 1) return [{ mesh: make(parts[0].geo, parts[0].mat) }];
+
+  const merged = mergeGeometries(parts.map((p) => p.geo), false);
+  if (merged) return [{ mesh: make(merged, parts[0].mat) }];
+
+  return parts.map((p) => ({ mesh: make(p.geo, p.mat) }));
 }
 
 function paintPack(pack: Pack[], count: number, at: (i: number, out: ElfPose) => void) {
@@ -191,7 +199,19 @@ function disposePack(pack: Pack[]) {
   }
 }
 
-function ElfFigures({ url, height, count, pick }: { url: string; height: number; count: number; pick: (i: number, t: number, out: ElfPose) => void }) {
+function ElfFigures({
+  url,
+  height,
+  count,
+  pick,
+  drawOrder = 0,
+}: {
+  url: string;
+  height: number;
+  count: number;
+  pick: (i: number, t: number, out: ElfPose) => void;
+  drawOrder?: number;
+}) {
   const group = useRef<THREE.Group>(null);
   const pack = useRef<Pack[]>([]);
   useEffect(() => {
@@ -204,24 +224,25 @@ function ElfFigures({ url, height, count, pick }: { url: string; height: number;
         try {
           const host = group.current;
           if (drop || !host) {
-            if (!drop) elfPieceReady(false);
+            if (!drop) elfPieceReady(/\/elf(-lite)?\.glb/.test(url) ? "elf" : "orc", false);
             return;
           }
           const root = gltf.scene;
           fitFigure(root, height);
-          const next = packsFrom(root, count);
+          const next = packsFrom(root, count, drawOrder);
           pack.current = next;
           for (const item of next) host.add(item.mesh);
           paintPack(next, count, (i, out) => pick(i, 0, out));
-          if (!drop) elfPieceReady(next.length > 0);
+          const isElf = /\/elf(-lite)?\.glb/.test(url);
+          if (!drop) elfPieceReady(isElf ? "elf" : "orc", next.length > 0);
         } catch (err) {
           console.warn("elf model failed", url, err);
-          if (!drop) elfPieceReady(false);
+          if (!drop) elfPieceReady(/\/elf(-lite)?\.glb/.test(url) ? "elf" : "orc", false);
         }
       },
       (err) => {
         console.warn("elf model failed", url, err);
-        if (!drop) elfPieceReady(false);
+        if (!drop) elfPieceReady(/\/elf(-lite)?\.glb/.test(url) ? "elf" : "orc", false);
       }
     );
     return () => {
@@ -229,7 +250,7 @@ function ElfFigures({ url, height, count, pick }: { url: string; height: number;
       disposePack(pack.current);
       pack.current = [];
     };
-  }, [url, height, count]);
+  }, [url, height, count, drawOrder]);
   useFrame(() => {
     if (!pack.current.length) return;
     paintPack(pack.current, count, (i, out) => pick(i, elfT(), out));
@@ -249,7 +270,7 @@ function Meydan() {
         try {
           const host = root.current;
           if (drop || !host) {
-            if (!drop) elfPieceReady(false);
+            if (!drop) elfPieceReady("field", false);
             return;
           }
           const model = gltf.scene;
@@ -273,15 +294,15 @@ function Meydan() {
           host.add(model);
           host.updateMatrixWorld(true);
           paintFloor(host);
-          if (!drop) elfPieceReady(true);
+          if (!drop) elfPieceReady("field", true);
         } catch (err) {
           console.warn("meydan failed", err);
-          if (!drop) elfPieceReady(false);
+          if (!drop) elfPieceReady("field", false);
         }
       },
       (err) => {
         console.warn("meydan failed", err);
-        if (!drop) elfPieceReady(false);
+        if (!drop) elfPieceReady("field", false);
       }
     );
     return () => {
@@ -447,7 +468,7 @@ export function ElfBattle() {
       <directionalLight position={[18, 22, 8]} intensity={1.55} color="#ffc178" />
       <directionalLight position={[-12, 8, -6]} intensity={0.48} color="#8ea4c4" />
       <Meydan />
-      <ElfFigures url={assets.elf} height={1.72} count={ELF_N} pick={(i, t, out) => writePose(elfAt(i, t), out)} />
+      <ElfFigures url={assets.elf} height={1.92} count={ELF_N} drawOrder={2} pick={(i, t, out) => writePose(elfAt(i, t), out)} />
       <ElfFigures
         url={assets.orc1}
         height={1.52}

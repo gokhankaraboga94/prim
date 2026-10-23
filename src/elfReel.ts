@@ -101,20 +101,23 @@ export function elfWarm() {
 
 const ELF_PIECES = 4;
 let elfLoaded = 0;
-let elfOk = 0;
+let elfFieldOk = false;
+let elfLineOk = false;
 let elfPlayAt = 0;
 const elfWait: Array<() => void> = [];
 
 export function elfResetClock() {
   elfLoaded = 0;
-  elfOk = 0;
+  elfFieldOk = false;
+  elfLineOk = false;
   elfPlayAt = 0;
   elfWait.length = 0;
 }
 
-export function elfPieceReady(ok = false) {
+export function elfPieceReady(kind: "field" | "elf" | "orc", ok: boolean) {
   elfLoaded += 1;
-  if (ok) elfOk += 1;
+  if (ok && kind === "field") elfFieldOk = true;
+  if (ok && kind === "elf") elfLineOk = true;
   if (elfLoaded < ELF_PIECES) return;
   for (const fn of elfWait.splice(0)) fn();
 }
@@ -128,7 +131,7 @@ export function elfLoadTotal() {
 }
 
 export function elfHasScene() {
-  return elfOk > 0;
+  return elfFieldOk && elfLineOk;
 }
 
 export function elfIsReady() {
@@ -215,17 +218,18 @@ function look(x: number, y: number, z: number, lx: number, ly: number, lz: numbe
   return { x, y, z, lx, ly, lz, fov };
 }
 
-/** Tight bow line — shoulders almost touch. */
+/** Two shallow ranks on the meydan, facing the charge. */
 export function elfAt(i: number, _t: number): ElfPose {
-  const mid = (ELF_N - 1) / 2;
-  const u = (i - mid) / Math.max(1, mid);
-  const x = (i - mid) * 0.74;
-  const z = floor.zElf + Math.abs(u) * 0.18;
+  const row = i < 5 ? 0 : 1;
+  const col = i % 5;
+  const laneW = (floor.x1 - floor.x0) * 0.5;
+  const x = (col - 2) * (laneW / 4.2);
+  const z = floor.zElf + row * 0.72;
   return {
     x,
-    y: elfFloor(x, z),
+    y: elfFloor(x, z) + 0.03,
     z,
-    yaw: 0,
+    yaw: Math.PI,
     pitch: 0,
     roll: 0,
     hide: false,
@@ -233,18 +237,23 @@ export function elfAt(i: number, _t: number): ElfPose {
 }
 
 function orcSeat(i: number) {
-  const col = i % 13;
-  const row = Math.floor(i / 13);
-  const pitch = ((floor.x1 - floor.x0) * 0.78) / 12;
-  const x = (col - 6) * pitch + (row % 2) * pitch * 0.22;
-  const run = Math.max(10, floor.zSpawn - floor.zElf);
+  const cols = 13;
+  const rows = Math.ceil(ORC_N / cols);
+  const col = i % cols;
+  const row = Math.floor(i / cols);
+  const run = Math.max(8, floor.zSpawn - floor.zElf);
+  const laneW = (floor.x1 - floor.x0) * 0.84;
+  const x = (col / Math.max(1, cols - 1) - 0.5) * laneW + (row % 2) * 0.4;
+  const zBack = floor.zElf + run * 0.34;
+  const zSpread = run * 0.52;
+  const z0 = zBack + (row / Math.max(1, rows - 1)) * zSpread + hash(i, 4) * 0.6;
   return {
     kind: (i + row) % 2,
     x,
-    z0: floor.zSpawn + row * Math.min(3.2, run * 0.08),
-    start: 2.4 + (col % 5) * 0.22 + row * 0.55 + hash(i, 1) * 0.4,
-    speed: 2.05 + hash(i, 2) * 0.35 + run * 0.01,
-    killZ: floor.zElf + 6.2 + hash(i, 3) * run * 0.26,
+    z0,
+    start: 2.8 + (col % 5) * 0.2 + row * 0.48 + hash(i, 1) * 0.35,
+    speed: 2.15 + hash(i, 2) * 0.32,
+    killZ: floor.zElf + 1.4 + row * 0.55 + hash(i, 3) * run * 0.14,
   };
 }
 
@@ -267,7 +276,7 @@ export function orcAt(i: number, t: number): ElfPose {
   const x = seat.x + (dead ? Math.sign(seat.x || 1) * fall * 0.45 : 0);
   return {
     x,
-    y: elfFloor(x, z),
+    y: elfFloor(x, z) + 0.02,
     z,
     yaw: Math.PI,
     pitch: dead ? -1.28 * fall : -0.14,
@@ -321,15 +330,16 @@ export function elfCam(t: number): ElfCam {
   const g = elfLift();
   const ez = floor.zElf;
   const mid = (floor.zElf + floor.zSpawn) * 0.5;
-  const wide = look(2.8, g + 1.68, ez - 2.6, 0.15, g + 1.22, ez + 8.5, 32);
-  const hold = look(-1.9, g + 1.52, ez - 1.8, 0.35, g + 1.32, ez + 5.4, 30);
-  const charge = look(1.55, g + 1.22, ez + 9.4, 0.2, g + 1.08, ez + 16.5, 34);
-  const elfClose = look(0.92, g + 1.46, ez - 1.05, -0.12, g + 1.4, ez + 0.35, 26);
-  const volley = look(0.35, g + 1.78, ez + 1.6, 0.15, g + 1.48, ez + 9.2, 28);
-  const rain = look(-1.05, g + 2.35, ez + 6.2, 0.4, g + 1.38, ez + 13, 30);
-  const last = look(2.15, g + 1.38, ez + 7.6, 0.1, g + 0.82, ez + 11.4, 32);
-  const line = look(-0.7, g + 1.5, ez - 1.25, 0.18, g + 1.36, ez + 1.1, 28);
-  const end = look(5.4, g + 3.6, ez + 3.2, 0, g + 1.05, mid, 36);
+  const elfMidZ = ez + 0.35;
+  const wide = look(0.15, g + 1.78, ez - 2.55, 0, g + 1.42, elfMidZ, 34);
+  const hold = look(-0.65, g + 1.58, ez - 1.05, 0.12, g + 1.36, elfMidZ + 1.2, 31);
+  const charge = look(0.8, g + 1.38, ez + 5.5, 0.15, g + 1.12, ez + 12, 34);
+  const elfClose = look(0.55, g + 1.52, ez - 0.85, 0, g + 1.42, elfMidZ, 28);
+  const volley = look(0.2, g + 1.72, ez + 0.8, 0.1, g + 1.45, ez + 7.5, 30);
+  const rain = look(-0.85, g + 2.1, ez + 4.2, 0.3, g + 1.36, ez + 10, 32);
+  const last = look(1.4, g + 1.42, ez + 5.8, 0.15, g + 0.95, ez + 9.5, 32);
+  const line = look(-0.35, g + 1.55, ez - 1.1, 0.12, g + 1.38, elfMidZ, 30);
+  const end = look(4.2, g + 3.2, ez + 2.4, 0, g + 1.08, mid, 38);
   if (t < 2.7) return mixCam(wide, hold, t / 2.7);
   if (t < 6.1) return mixCam(hold, charge, (t - 2.7) / 3.4);
   if (t < 8.6) return mixCam(charge, elfClose, (t - 6.1) / 2.5);
