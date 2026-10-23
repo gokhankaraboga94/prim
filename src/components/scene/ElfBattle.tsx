@@ -5,7 +5,7 @@ import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js
 import * as THREE from "three";
 import { dropGroundSlab } from "../../groundSlab";
 import { preloadedGlb } from "../../arenaPreload";
-import { ELF_N, ORC_N, elfArrows, elfAssets, elfAt, elfCam, elfPhone, elfPieceReady, elfT, orcAt, orcKind, setElfFloor, type ElfPose } from "../../elfReel";
+import { ELF_N, ORC_N, elfArrows, elfAssets, elfAt, elfCam, elfPhone, elfPieceReady, elfT, orcAt, setElfFloor, type ElfPose } from "../../elfReel";
 
 type Gltf = Parameters<Parameters<GLTFLoader["load"]>[1]>[0];
 
@@ -96,9 +96,11 @@ function keepMat(src: THREE.Material) {
     map.generateMipmaps = true;
     map.needsUpdate = true;
   }
-  return new THREE.MeshLambertMaterial({
+  return new THREE.MeshStandardMaterial({
     map,
     color: base.color ? base.color.clone() : "#ffffff",
+    roughness: 0.58,
+    metalness: 0.06,
     side: THREE.DoubleSide,
   });
 }
@@ -201,15 +203,77 @@ function paintMeshes(meshes: THREE.InstancedMesh[], count: number, at: (i: numbe
 function disposeSlots(slots: FigureSlot[]) {
   for (const slot of slots) {
     slot.geo.dispose();
-    const std = slot.mat as THREE.MeshStandardMaterial;
-    std.map?.dispose();
-    std.normalMap?.dispose();
-    std.roughnessMap?.dispose();
-    std.metalnessMap?.dispose();
-    std.aoMap?.dispose();
-    std.emissiveMap?.dispose();
     slot.mat.dispose();
   }
+}
+
+/** Eight real meshes — instancing was dropping elves on some GPUs. */
+function ElfLine({ height }: { height: number }) {
+  const [slot, setSlot] = useState<FigureSlot | null>(null);
+  const refs = useRef<(THREE.Mesh | null)[]>([]);
+  useEffect(() => {
+    const loader = new GLTFLoader();
+    let drop = false;
+    loadGlb(
+      loader,
+      elfAssets().elf,
+      (gltf) => {
+        if (drop) return;
+        try {
+          const slots = figureSlots(gltf.scene, height);
+          const first = slots[0] ?? null;
+          if (first && slots.length > 1) disposeSlots(slots.slice(1));
+          setSlot(first);
+          elfPieceReady("elf", Boolean(first));
+        } catch (err) {
+          console.warn("elf line failed", err);
+          elfPieceReady("elf", false);
+        }
+      },
+      (err) => {
+        console.warn("elf line failed", err);
+        if (!drop) elfPieceReady("elf", false);
+      }
+    );
+    return () => {
+      drop = true;
+      setSlot((prev) => {
+        if (prev) disposeSlots([prev]);
+        return null;
+      });
+      refs.current = [];
+    };
+  }, [height]);
+  useFrame(() => {
+    if (!slot) return;
+    for (let i = 0; i < ELF_N; i++) {
+      const mesh = refs.current[i];
+      if (!mesh) continue;
+      const p = elfAt(i, elfT());
+      mesh.visible = !p.hide;
+      if (p.hide) continue;
+      mesh.position.set(p.x, p.y, p.z);
+      mesh.rotation.order = "YXZ";
+      mesh.rotation.set(p.pitch, p.yaw, p.roll);
+    }
+  });
+  if (!slot) return null;
+  return (
+    <group renderOrder={3}>
+      {Array.from({ length: ELF_N }, (_, i) => (
+        <mesh
+          key={i}
+          ref={(node) => {
+            refs.current[i] = node;
+          }}
+          geometry={slot.geo}
+          material={slot.mat}
+          frustumCulled={false}
+          renderOrder={3}
+        />
+      ))}
+    </group>
+  );
 }
 
 function ElfFigures({
@@ -487,8 +551,6 @@ function writePose(src: ElfPose, out: ElfPose) {
   out.hide = src.hide;
 }
 
-const hidden: ElfPose = { x: 0, y: -40, z: 0, yaw: 0, pitch: 0, roll: 0, hide: true };
-
 export function ElfBattle() {
   const assets = elfAssets();
   const [floorReady, setFloorReady] = useState(false);
@@ -502,27 +564,14 @@ export function ElfBattle() {
       <Meydan onFloor={markFloor} />
       {floorReady && (
         <>
-      <ElfFigures
-        kind="elf"
-        url={assets.elf}
-        height={1.92}
-        count={ELF_N}
-        drawOrder={2}
-        pick={(i, t, out) => writePose(elfAt(i, t), out)}
-      />
+      <ElfLine height={2.05} />
       <ElfFigures
         kind="orc"
         url={assets.orc1}
         height={1.52}
         count={ORC_N}
-        pick={(i, t, out) => writePose(orcKind(i) === 0 ? orcAt(i, t) : hidden, out)}
-      />
-      <ElfFigures
-        kind="orc"
-        url={assets.orc2}
-        height={1.52}
-        count={ORC_N}
-        pick={(i, t, out) => writePose(orcKind(i) === 1 ? orcAt(i, t) : hidden, out)}
+        drawOrder={1}
+        pick={(i, t, out) => writePose(orcAt(i, t), out)}
       />
       <Arrows />
         </>

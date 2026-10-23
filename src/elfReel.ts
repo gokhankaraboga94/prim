@@ -5,8 +5,10 @@ export const ELF_SECONDS = 24;
 /** Alternating film beats: elves, orcs, elves, orcs… */
 export const ELF_FILM_SEG = 4;
 
-export const ELF_N = 10;
-export const ORC_N = 52;
+export const ELF_N = 8;
+export const ELF_PER_RANK = 4;
+export const ORC_N = 24;
+export const ORC_COLS = 8;
 
 export const ELF_URLS = ["/models/new/elf.glb", "/models/new/orc1.glb", "/models/new/orc2.glb", "/models/new/meydan.glb"] as const;
 export const ELF_LITE_URLS = ["/models/new/elf-lite.glb", "/models/new/orc1-lite.glb", "/models/new/orc2-lite.glb", "/models/new/meydan-lite.glb"] as const;
@@ -101,7 +103,7 @@ export function elfWarm() {
   void import("./arenaPreload").then(({ preloadGlbs }) => preloadGlbs(elfAssets().list));
 }
 
-const ELF_PIECES = 4;
+const ELF_PIECES = 3;
 let elfLoaded = 0;
 let elfFieldOk = false;
 let elfLineOk = false;
@@ -233,12 +235,12 @@ export function elfFilmLocal(t: number) {
 }
 
 /** Two shallow ranks on the meydan, facing the charge. */
-export function elfAt(i: number, t: number): ElfPose {
-  const row = i < 5 ? 0 : 1;
-  const col = i % 5;
-  const laneW = (floor.x1 - floor.x0) * 0.5;
-  const x = (col - 2) * (laneW / 4.2);
-  const z = floor.zElf + row * 0.72;
+export function elfAt(i: number, _t: number): ElfPose {
+  const row = i < ELF_PER_RANK ? 0 : 1;
+  const col = i % ELF_PER_RANK;
+  const laneW = (floor.x1 - floor.x0) * 0.48;
+  const x = (col - (ELF_PER_RANK - 1) / 2) * (laneW / ELF_PER_RANK);
+  const z = floor.zElf + row * 0.68 - 0.42;
   return {
     x,
     y: elfFloor(x, z) + 0.03,
@@ -251,7 +253,7 @@ export function elfAt(i: number, t: number): ElfPose {
 }
 
 function orcSeat(i: number) {
-  const cols = 13;
+  const cols = ORC_COLS;
   const rows = Math.ceil(ORC_N / cols);
   const col = i % cols;
   const row = Math.floor(i / cols);
