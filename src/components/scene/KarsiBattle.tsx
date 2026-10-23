@@ -36,6 +36,8 @@ const CHIEF_H = 2.7;
 /** fitHero fits heroes to 1.58. */
 const CHIEF_SCALE = CHIEF_H / 1.58;
 const NAME_Y = 2.72;
+/** Front-rank plates only. A full 991+469 sharp atlas knocks the tab out. */
+const SHOW_NAMES = 96;
 
 function upper(name: string) {
   return `@${name.replace(/^@+/, "").toUpperCase()}`;
@@ -180,7 +182,7 @@ function KarsiNames({ names, layout, foe = false }: { names: string[]; layout: K
   const count = foe ? layout.them.n : layout.us.n;
   const labels = useMemo(() => {
     const out: { slot: number; text: string }[] = [];
-    for (let i = 0; i < count; i++) {
+    for (let i = 0; i < count && out.length < SHOW_NAMES; i++) {
       const text = String(names[i] ?? "").trim().replace(/^@+/, "");
       if (text) out.push({ slot: i, text });
     }
@@ -189,7 +191,7 @@ function KarsiNames({ names, layout, foe = false }: { names: string[]; layout: K
   const atlas = useMemo<NameAtlas>(() => {
     const items = labels.map((n) => ({ text: n.text, commander: false, plain: true, fill: foe ? "#ff2a22" : "#ffe14a", frame: true }));
     try {
-      return buildNameAtlas(items, true, true);
+      return buildNameAtlas(items, true, items.length <= 80);
     } catch {
       return buildNameAtlas(items, true);
     }
