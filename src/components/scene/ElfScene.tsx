@@ -1,8 +1,15 @@
+import { useRef } from "react";
 import { Canvas } from "@react-three/fiber";
 import * as THREE from "three";
+import { elfResetClock } from "../../elfReel";
 import { ElfBattle, ElfCam } from "./ElfBattle";
 
 export function ElfScene({ onReady }: { onReady?: (canvas: HTMLCanvasElement) => void }) {
+  const boot = useRef(false);
+  if (!boot.current) {
+    boot.current = true;
+    elfResetClock();
+  }
   return (
     <Canvas
       dpr={1}

@@ -91,6 +91,42 @@ export function isElf(id: string | null | undefined): id is ElfId {
   return id === ELF_ID;
 }
 
+const ELF_PIECES = 4;
+let elfLoaded = 0;
+let elfPlayAt = 0;
+const elfWait: Array<() => void> = [];
+
+export function elfResetClock() {
+  elfLoaded = 0;
+  elfPlayAt = 0;
+  elfWait.length = 0;
+}
+
+export function elfPieceReady() {
+  elfLoaded += 1;
+  if (elfLoaded < ELF_PIECES) return;
+  for (const fn of elfWait.splice(0)) fn();
+}
+
+export function elfIsReady() {
+  return elfLoaded >= ELF_PIECES;
+}
+
+export function elfWhenReady() {
+  if (elfIsReady()) return Promise.resolve();
+  return new Promise<void>((ok) => elfWait.push(ok));
+}
+
+export function elfStartPlay() {
+  if (!elfPlayAt) elfPlayAt = performance.now() / 1000;
+}
+
+/** Frozen at the opening until recording actually starts. */
+export function elfT() {
+  if (!elfPlayAt) return 0;
+  return Math.max(0, performance.now() / 1000 - elfPlayAt);
+}
+
 export type ElfPose = {
   x: number;
   y: number;
@@ -194,7 +230,7 @@ export function orcAt(i: number, t: number): ElfPose {
   const seat = orcSeat(i);
   const runT = t - seat.start;
   if (runT < 0) {
-    return { x: seat.x, y: elfFloor(seat.x, seat.z0), z: seat.z0, yaw: Math.PI, pitch: -0.12, roll: 0, hide: t < seat.start - 0.4 };
+    return { x: seat.x, y: elfFloor(seat.x, seat.z0), z: seat.z0, yaw: Math.PI, pitch: -0.12, roll: 0, hide: false };
   }
   const killDist = seat.z0 - seat.killZ;
   const dist = runT * seat.speed;
@@ -258,8 +294,8 @@ export function elfCam(t: number): ElfCam {
   const g = elfLift();
   const ez = floor.zElf;
   const mid = (floor.zElf + floor.zSpawn) * 0.5;
-  const wide = look(22, g + 15.5, mid - 4, 0, g + 1.1, mid, 42);
-  const hold = look(16, g + 12.2, mid, 0.4, g + 1.2, mid + 4, 40);
+  const wide = look(13.2, g + 5.6, mid + 10, 0.2, g + 1.28, ez + 3, 40);
+  const hold = look(10.4, g + 3.5, mid + 5, 0.3, g + 1.3, ez + 5, 38);
   const charge = look(11.5, g + 2.05, floor.zSpawn - 10, 1.2, g + 1.15, floor.zSpawn - 16, 38);
   const elfClose = look(2.15, g + 1.58, ez + 3.8, 0.2, g + 1.42, ez + 0.3, 32);
   const volley = look(1.4, g + 3.4, ez + 9.6, 0.6, g + 1.35, mid, 34);

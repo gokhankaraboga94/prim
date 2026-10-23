@@ -5,8 +5,7 @@ import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js
 import * as THREE from "three";
 import { dropGroundSlab } from "../../groundSlab";
 import { preloadedGlb } from "../../arenaPreload";
-import { REEL_HOLD } from "../../recordCanvas";
-import { ELF_N, ORC_N, elfArrows, elfAssets, elfAt, elfCam, elfPhone, orcAt, orcKind, setElfFloor, type ElfPose } from "../../elfReel";
+import { ELF_N, ORC_N, elfArrows, elfAssets, elfAt, elfCam, elfPhone, elfPieceReady, elfT, orcAt, orcKind, setElfFloor, type ElfPose } from "../../elfReel";
 
 type Gltf = Parameters<Parameters<GLTFLoader["load"]>[1]>[0];
 
@@ -182,8 +181,13 @@ function ElfFigures({ url, height, count, pick }: { url: string; height: number;
         const next = packsFrom(root, count);
         pack.current = next;
         for (const item of next) group.current.add(item.mesh);
+        paintPack(next, count, (i, out) => pick(i, 0, out));
+        elfPieceReady();
       },
-      (err) => console.warn("elf model failed", url, err)
+      (err) => {
+        console.warn("elf model failed", url, err);
+        if (!drop) elfPieceReady();
+      }
     );
     return () => {
       drop = true;
@@ -191,10 +195,9 @@ function ElfFigures({ url, height, count, pick }: { url: string; height: number;
       pack.current = [];
     };
   }, [url, height, count]);
-  useFrame(({ clock }) => {
-    const t = Math.max(0, clock.elapsedTime - REEL_HOLD);
+  useFrame(() => {
     if (!pack.current.length) return;
-    paintPack(pack.current, count, (i, out) => pick(i, t, out));
+    paintPack(pack.current, count, (i, out) => pick(i, elfT(), out));
   });
   return <group ref={group} />;
 }
@@ -231,8 +234,12 @@ function Meydan() {
         host.add(model);
         host.updateMatrixWorld(true);
         paintFloor(host);
+        elfPieceReady();
       },
-      (err) => console.warn("meydan failed", err)
+      (err) => {
+        console.warn("meydan failed", err);
+        if (!drop) elfPieceReady();
+      }
     );
     return () => {
       drop = true;
@@ -262,10 +269,10 @@ function Arrows() {
     },
     [geo, mat]
   );
-  useFrame(({ clock }) => {
+  useFrame(() => {
     const inst = mesh.current;
     if (!inst) return;
-    const t = Math.max(0, clock.elapsedTime - REEL_HOLD);
+    const t = elfT();
     const { list, n } = elfArrows(t);
     dummy.scale.setScalar(0);
     dummy.position.set(0, -20, 0);
@@ -326,11 +333,11 @@ function DuskSky() {
 
 export function ElfCam() {
   const perspCam = useRef<THREE.PerspectiveCamera | null>(null);
-  useFrame(({ camera, clock }) => {
+  useFrame(({ camera }) => {
     if ((camera as THREE.PerspectiveCamera).isPerspectiveCamera) perspCam.current = camera as THREE.PerspectiveCamera;
     const persp = perspCam.current;
     if (!persp) return;
-    const shot = elfCam(Math.max(0, clock.elapsedTime - REEL_HOLD));
+    const shot = elfCam(elfT());
     persp.fov = shot.fov;
     persp.near = 0.12;
     persp.far = 720;

@@ -21,7 +21,7 @@ import type { WarsId } from "../warsReel";
 import type { OrduId } from "../orduReel";
 import type { Rival } from "../karsiReel";
 import type { OkId } from "../okReel";
-import type { ElfId } from "../elfReel";
+import { elfIsReady, elfStartPlay, elfWhenReady, type ElfId } from "../elfReel";
 import { ElfScene } from "./scene/ElfScene";
 import type { KalkanId } from "../kalkanReel";
 import type { HeroId } from "../heroReel";
@@ -90,6 +90,7 @@ export function ReelCapture({ soldiers, names, commanders = [], level, pressure,
   const [preview, setPreview] = useState("");
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
+  const [elfReady, setElfReady] = useState(!elf);
   // Arena3 fetches its packed models first; the scene mounts once they are in memory.
   const [assets, setAssets] = useState(() =>
     arena3 ? { ready: false, done: 0, total: ARENA3_HERO_URLS.length + 1 } : { ready: true, done: 0, total: 0 }
@@ -109,6 +110,18 @@ export function ReelCapture({ soldiers, names, commanders = [], level, pressure,
   }, [arena3]);
 
   useEffect(() => {
+    if (!elf) return;
+    setElfReady(false);
+    let stop = false;
+    void elfWhenReady().then(() => {
+      if (!stop) setElfReady(true);
+    });
+    return () => {
+      stop = true;
+    };
+  }, [elf]);
+
+  useEffect(() => {
     if (!assets.ready) return;
     let stop = false;
     (async () => {
@@ -123,8 +136,22 @@ export function ReelCapture({ soldiers, names, commanders = [], level, pressure,
         setPhase("err");
         return;
       }
+      if (elf) {
+        const loadStart = performance.now();
+        while (!elfIsReady() && performance.now() - loadStart < 90000) {
+          await wait(80);
+          if (stop) return;
+        }
+        if (!elfIsReady()) {
+          setErr("Modeller yüklenemedi. İptal deyip tekrar dene.");
+          setPhase("err");
+          return;
+        }
+        setElfReady(true);
+      }
       await wait(Math.round(REEL_HOLD * 1000) + 80);
       if (stop) return;
+      if (elf) elfStartPlay();
       setPhase("rec");
       try {
         await Promise.race([unlockReelSfx(), wait(1200)]);
@@ -250,7 +277,7 @@ export function ReelCapture({ soldiers, names, commanders = [], level, pressure,
 
       {(phase === "boot" || phase === "rec") && (
         <div className="reel-capture-hud">
-          <p>{phase === "boot" ? (assets.ready ? "Sahne hazırlanıyor…" : `Modeller yükleniyor… ${assets.done}/${assets.total}`) : "Kayıt alınıyor…"}</p>
+          <p>{phase === "boot" ? (!assets.ready || (elf && !elfReady) ? `Modeller yükleniyor…${assets.total ? ` ${assets.done}/${assets.total}` : ""}` : "Sahne hazırlanıyor…") : "Kayıt alınıyor…"}</p>
         </div>
       )}
 
