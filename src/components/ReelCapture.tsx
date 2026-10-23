@@ -21,7 +21,7 @@ import type { WarsId } from "../warsReel";
 import type { OrduId } from "../orduReel";
 import type { Rival } from "../karsiReel";
 import type { OkId } from "../okReel";
-import { elfHold, elfIsReady, elfStartPlay, elfWhenReady, type ElfId } from "../elfReel";
+import { elfHasScene, elfHold, elfIsReady, elfLoadDone, elfLoadTotal, elfStartPlay, elfWarm, elfWhenReady, type ElfId } from "../elfReel";
 import { ElfScene } from "./scene/ElfScene";
 import { WEBGL_BLOCKED, webglBlocked, webglOpen } from "../webglOk";
 import type { KalkanId } from "../kalkanReel";
@@ -92,6 +92,7 @@ export function ReelCapture({ soldiers, names, commanders = [], level, pressure,
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
   const [elfReady, setElfReady] = useState(!elf);
+  const [elfDone, setElfDone] = useState(0);
   // Arena3 fetches its packed models first; the scene mounts once they are in memory.
   const [assets, setAssets] = useState(() =>
     arena3 ? { ready: false, done: 0, total: ARENA3_HERO_URLS.length + 1 } : { ready: true, done: 0, total: 0 }
@@ -117,6 +118,7 @@ export function ReelCapture({ soldiers, names, commanders = [], level, pressure,
       setPhase("err");
       return;
     }
+    elfWarm();
     setElfReady(false);
     let stop = false;
     void elfWhenReady().then(() => {
@@ -144,11 +146,13 @@ export function ReelCapture({ soldiers, names, commanders = [], level, pressure,
       }
       if (elf) {
         const loadStart = performance.now();
-        while (!elfIsReady() && performance.now() - loadStart < 90000) {
+        while (!elfIsReady() && performance.now() - loadStart < 40000) {
+          setElfDone(elfLoadDone());
           await wait(80);
           if (stop) return;
         }
-        if (!elfIsReady()) {
+        setElfDone(elfLoadDone());
+        if (!elfHasScene()) {
           setErr("Modeller yüklenemedi. İptal deyip tekrar dene.");
           setPhase("err");
           return;
@@ -288,7 +292,7 @@ export function ReelCapture({ soldiers, names, commanders = [], level, pressure,
 
       {(phase === "boot" || phase === "rec") && (
         <div className="reel-capture-hud">
-          <p>{phase === "boot" ? (!assets.ready || (elf && !elfReady) ? `Modeller yükleniyor…${assets.total ? ` ${assets.done}/${assets.total}` : ""}` : "Sahne hazırlanıyor…") : "Kayıt alınıyor…"}</p>
+          <p>{phase === "boot" ? (!assets.ready || (elf && !elfReady) ? `Modeller yükleniyor… ${elf ? `${elfDone}/${elfLoadTotal()}` : assets.total ? `${assets.done}/${assets.total}` : ""}` : "Sahne hazırlanıyor…") : "Kayıt alınıyor…"}</p>
         </div>
       )}
 

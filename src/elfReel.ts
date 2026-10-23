@@ -91,21 +91,44 @@ export function isElf(id: string | null | undefined): id is ElfId {
   return id === ELF_ID;
 }
 
+export function elfWarm() {
+  for (const url of elfAssets().list) {
+    void fetch(url).catch(() => {
+      /* cache miss is fine; scene fetch retries */
+    });
+  }
+}
+
 const ELF_PIECES = 4;
 let elfLoaded = 0;
+let elfOk = 0;
 let elfPlayAt = 0;
 const elfWait: Array<() => void> = [];
 
 export function elfResetClock() {
   elfLoaded = 0;
+  elfOk = 0;
   elfPlayAt = 0;
   elfWait.length = 0;
 }
 
-export function elfPieceReady() {
+export function elfPieceReady(ok = false) {
   elfLoaded += 1;
+  if (ok) elfOk += 1;
   if (elfLoaded < ELF_PIECES) return;
   for (const fn of elfWait.splice(0)) fn();
+}
+
+export function elfLoadDone() {
+  return elfLoaded;
+}
+
+export function elfLoadTotal() {
+  return ELF_PIECES;
+}
+
+export function elfHasScene() {
+  return elfOk > 0;
 }
 
 export function elfIsReady() {

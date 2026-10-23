@@ -11,8 +11,25 @@ type Gltf = Parameters<Parameters<GLTFLoader["load"]>[1]>[0];
 
 function loadGlb(loader: GLTFLoader, url: string, ok: (gltf: Gltf) => void, fail: (err: unknown) => void) {
   const buf = preloadedGlb(url);
-  if (buf) loader.parse(buf.slice(0), "", ok, fail);
-  else loader.load(url, ok, undefined, fail);
+  if (buf) {
+    loader.parse(buf.slice(0), "", ok, fail);
+    return;
+  }
+  const ctrl = new AbortController();
+  const timer = window.setTimeout(() => ctrl.abort(), 18000);
+  void fetch(url, { signal: ctrl.signal })
+    .then((res) => {
+      if (!res.ok) throw new Error(`${res.status}`);
+      return res.arrayBuffer();
+    })
+    .then((data) => {
+      window.clearTimeout(timer);
+      loader.parse(data, "", ok, fail);
+    })
+    .catch((err) => {
+      window.clearTimeout(timer);
+      fail(err);
+    });
 }
 
 const dummy = new THREE.Object3D();
@@ -30,8 +47,8 @@ function paintFloor(root: THREE.Object3D) {
   const x1 = box.max.x - (box.max.x - box.min.x) * pad;
   const z0 = box.min.z + (box.max.z - box.min.z) * pad;
   const z1 = box.max.z - (box.max.z - box.min.z) * pad;
-  const cols = 28;
-  const rows = 36;
+  const cols = elfPhone() ? 14 : 28;
+  const rows = elfPhone() ? 18 : 36;
   const ys = new Float32Array(cols * rows);
   const top = box.max.y + 6;
   ray.far = box.max.y - box.min.y + 14;
@@ -184,18 +201,27 @@ function ElfFigures({ url, height, count, pick }: { url: string; height: number;
       loader,
       url,
       (gltf) => {
-        if (drop || !group.current) return;
-        const root = gltf.scene;
-        fitFigure(root, height);
-        const next = packsFrom(root, count);
-        pack.current = next;
-        for (const item of next) group.current.add(item.mesh);
-        paintPack(next, count, (i, out) => pick(i, 0, out));
-        elfPieceReady();
+        try {
+          const host = group.current;
+          if (drop || !host) {
+            if (!drop) elfPieceReady(false);
+            return;
+          }
+          const root = gltf.scene;
+          fitFigure(root, height);
+          const next = packsFrom(root, count);
+          pack.current = next;
+          for (const item of next) host.add(item.mesh);
+          paintPack(next, count, (i, out) => pick(i, 0, out));
+          if (!drop) elfPieceReady(next.length > 0);
+        } catch (err) {
+          console.warn("elf model failed", url, err);
+          if (!drop) elfPieceReady(false);
+        }
       },
       (err) => {
         console.warn("elf model failed", url, err);
-        if (!drop) elfPieceReady();
+        if (!drop) elfPieceReady(false);
       }
     );
     return () => {
@@ -220,34 +246,42 @@ function Meydan() {
       loader,
       elfAssets().field,
       (gltf) => {
-        const host = root.current;
-        if (drop || !host) return;
-        const model = gltf.scene;
-        model.updateMatrixWorld(true);
-        const box = new THREE.Box3().setFromObject(model);
-        const size = box.getSize(new THREE.Vector3());
-        const span = Math.max(size.x, size.z, 1);
-        const s = 72 / span;
-        model.scale.setScalar(s);
-        model.updateMatrixWorld(true);
-        const fitted = new THREE.Box3().setFromObject(model);
-        model.position.set(-(fitted.min.x + fitted.max.x) / 2, -fitted.min.y, -(fitted.min.z + fitted.max.z) / 2);
-        model.traverse((obj) => {
-          const mesh = obj as THREE.Mesh;
-          if (!mesh.isMesh) return;
-          mesh.material = keepMat(Array.isArray(mesh.material) ? mesh.material[0] : mesh.material);
-          mesh.frustumCulled = false;
-          mesh.castShadow = false;
-          mesh.receiveShadow = false;
-        });
-        host.add(model);
-        host.updateMatrixWorld(true);
-        paintFloor(host);
-        elfPieceReady();
+        try {
+          const host = root.current;
+          if (drop || !host) {
+            if (!drop) elfPieceReady(false);
+            return;
+          }
+          const model = gltf.scene;
+          model.updateMatrixWorld(true);
+          const box = new THREE.Box3().setFromObject(model);
+          const size = box.getSize(new THREE.Vector3());
+          const span = Math.max(size.x, size.z, 1);
+          const s = 72 / span;
+          model.scale.setScalar(s);
+          model.updateMatrixWorld(true);
+          const fitted = new THREE.Box3().setFromObject(model);
+          model.position.set(-(fitted.min.x + fitted.max.x) / 2, -fitted.min.y, -(fitted.min.z + fitted.max.z) / 2);
+          model.traverse((obj) => {
+            const mesh = obj as THREE.Mesh;
+            if (!mesh.isMesh) return;
+            mesh.material = keepMat(Array.isArray(mesh.material) ? mesh.material[0] : mesh.material);
+            mesh.frustumCulled = false;
+            mesh.castShadow = false;
+            mesh.receiveShadow = false;
+          });
+          host.add(model);
+          host.updateMatrixWorld(true);
+          paintFloor(host);
+          if (!drop) elfPieceReady(true);
+        } catch (err) {
+          console.warn("meydan failed", err);
+          if (!drop) elfPieceReady(false);
+        }
       },
       (err) => {
         console.warn("meydan failed", err);
-        if (!drop) elfPieceReady();
+        if (!drop) elfPieceReady(false);
       }
     );
     return () => {
