@@ -192,12 +192,12 @@ function look(x: number, y: number, z: number, lx: number, ly: number, lz: numbe
   return { x, y, z, lx, ly, lz, fov };
 }
 
-/** Elves hold a shallow crescent on the meydan floor. */
+/** Tight bow line — shoulders almost touch. */
 export function elfAt(i: number, _t: number): ElfPose {
-  const u = (i - (ELF_N - 1) / 2) / Math.max(1, (ELF_N - 1) / 2);
-  const span = (floor.x1 - floor.x0) * 0.36;
-  const x = u * span;
-  const z = floor.zElf + u * u * Math.min(1.4, (floor.z1 - floor.z0) * 0.03);
+  const mid = (ELF_N - 1) / 2;
+  const u = (i - mid) / Math.max(1, mid);
+  const x = (i - mid) * 0.74;
+  const z = floor.zElf + Math.abs(u) * 0.18;
   return {
     x,
     y: elfFloor(x, z),
@@ -258,13 +258,13 @@ const ARROWS: ElfArrow[] = Array.from({ length: 28 }, () => ({ x: 0, y: 0, z: 0,
 function arrowFlight(elf: number, t: number, out: ElfArrow) {
   const cycle = 0.78;
   const phase = (t * 1.12 + elf * 0.17 + (elf % 3) * 0.08) % cycle;
-  if (phase < 0.2 || t < 3.1) return false;
-  const u = (phase - 0.2) / (cycle - 0.2);
+  if (phase < 0.18 || t < 3.1) return false;
+  const u = (phase - 0.18) / (cycle - 0.18);
   const from = elfAt(elf, t);
-  const aim = from.z + 8 + ((elf * 7) % 11) * 1.05 + Math.sin(t * 0.7 + elf) * 1.2;
-  const x0 = from.x + 0.18;
-  const y0 = from.y + 1.42;
-  const z0 = from.z + 0.55;
+  const aim = from.z + 7.2 + ((elf * 7) % 11) * 0.85 + Math.sin(t * 0.7 + elf) * 0.9;
+  const x0 = from.x + 0.22;
+  const y0 = from.y + 1.38;
+  const z0 = from.z + 0.42;
   const x1 = from.x * 0.18 + Math.sin(elf * 1.8) * 1.6;
   const z1 = aim;
   const y1 = elfFloor(x1, z1) + 1.05;
@@ -298,15 +298,15 @@ export function elfCam(t: number): ElfCam {
   const g = elfLift();
   const ez = floor.zElf;
   const mid = (floor.zElf + floor.zSpawn) * 0.5;
-  const wide = look(20, g + 5.1, mid + 3, 0, g + 1.18, mid - 2, 40);
-  const hold = look(15.2, g + 3.3, mid + 1, 0.3, g + 1.25, ez + 7, 36);
-  const charge = look(11.5, g + 2.05, floor.zSpawn - 10, 1.2, g + 1.15, floor.zSpawn - 16, 38);
-  const elfClose = look(2.15, g + 1.58, ez + 3.8, 0.2, g + 1.42, ez + 0.3, 32);
-  const volley = look(1.4, g + 3.4, ez + 9.6, 0.6, g + 1.35, mid, 34);
-  const rain = look(-2, g + 7.4, ez - 8, 0, g + 1.1, mid, 44);
-  const last = look(-7.2, g + 1.72, ez + 14.8, 0.4, g + 1.05, ez + 17.4, 36);
-  const line = look(0.3, g + 1.62, ez + 5.3, 0, g + 1.38, ez + 0.2, 34);
-  const end = look(24, g + 17.5, ez, 0, g + 0.7, mid, 46);
+  const wide = look(2.8, g + 1.68, ez - 2.6, 0.15, g + 1.22, ez + 8.5, 32);
+  const hold = look(-1.9, g + 1.52, ez - 1.8, 0.35, g + 1.32, ez + 5.4, 30);
+  const charge = look(1.55, g + 1.22, ez + 9.4, 0.2, g + 1.08, ez + 16.5, 34);
+  const elfClose = look(0.92, g + 1.46, ez - 1.05, -0.12, g + 1.4, ez + 0.35, 26);
+  const volley = look(0.35, g + 1.78, ez + 1.6, 0.15, g + 1.48, ez + 9.2, 28);
+  const rain = look(-1.05, g + 2.35, ez + 6.2, 0.4, g + 1.38, ez + 13, 30);
+  const last = look(2.15, g + 1.38, ez + 7.6, 0.1, g + 0.82, ez + 11.4, 32);
+  const line = look(-0.7, g + 1.5, ez - 1.25, 0.18, g + 1.36, ez + 1.1, 28);
+  const end = look(5.4, g + 3.6, ez + 3.2, 0, g + 1.05, mid, 36);
   if (t < 2.7) return mixCam(wide, hold, t / 2.7);
   if (t < 6.1) return mixCam(hold, charge, (t - 2.7) / 3.4);
   if (t < 8.6) return mixCam(charge, elfClose, (t - 6.1) / 2.5);

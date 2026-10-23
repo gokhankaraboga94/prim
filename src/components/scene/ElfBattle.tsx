@@ -69,8 +69,17 @@ function paintFloor(root: THREE.Object3D) {
 
 function keepMat(src: THREE.Material) {
   const base = (Array.isArray(src) ? src[0] : src) as THREE.MeshStandardMaterial;
+  const map = base.map ?? null;
+  if (map) {
+    map.colorSpace = THREE.SRGBColorSpace;
+    map.anisotropy = 4;
+    map.minFilter = THREE.LinearMipmapLinearFilter;
+    map.magFilter = THREE.LinearFilter;
+    map.generateMipmaps = true;
+    map.needsUpdate = true;
+  }
   return new THREE.MeshLambertMaterial({
-    map: base.map ?? null,
+    map,
     color: base.color ? base.color.clone() : "#ffffff",
     side: THREE.DoubleSide,
   });
@@ -258,10 +267,44 @@ function Meydan() {
   return <group ref={root} />;
 }
 
+function paintVerts(geo: THREE.BufferGeometry, hex: string) {
+  const n = geo.getAttribute("position").count;
+  const rgb = new Float32Array(n * 3);
+  const c = new THREE.Color(hex);
+  for (let i = 0; i < n; i++) {
+    rgb[i * 3] = c.r;
+    rgb[i * 3 + 1] = c.g;
+    rgb[i * 3 + 2] = c.b;
+  }
+  geo.setAttribute("color", new THREE.BufferAttribute(rgb, 3));
+  return geo;
+}
+
+function arrowGeo() {
+  const shaft = paintVerts(new THREE.CylinderGeometry(0.006, 0.0075, 0.88, 6), "#8a5a2b");
+  const head = paintVerts(new THREE.ConeGeometry(0.024, 0.13, 6), "#b8b4ae");
+  head.translate(0, 0.505, 0);
+  const nock = paintVerts(new THREE.CylinderGeometry(0.009, 0.009, 0.035, 5), "#5a3a1c");
+  nock.translate(0, -0.455, 0);
+  const fletch: THREE.BufferGeometry[] = [];
+  for (let i = 0; i < 3; i++) {
+    const vane = paintVerts(new THREE.BoxGeometry(0.0035, 0.15, 0.048), "#e8d8c0");
+    vane.translate(0, -0.36, 0.028);
+    vane.rotateY((i * Math.PI * 2) / 3);
+    fletch.push(vane);
+  }
+  const merged = mergeGeometries([shaft, head, nock, ...fletch], false) ?? shaft;
+  shaft.dispose();
+  head.dispose();
+  nock.dispose();
+  for (const vane of fletch) vane.dispose();
+  return merged;
+}
+
 function Arrows() {
   const mesh = useRef<THREE.InstancedMesh>(null);
-  const geo = useMemo(() => new THREE.CylinderGeometry(0.018, 0.012, 1.15, 5), []);
-  const mat = useMemo(() => new THREE.MeshStandardMaterial({ color: "#d8c089", metalness: 0.35, roughness: 0.42 }), []);
+  const geo = useMemo(() => arrowGeo(), []);
+  const mat = useMemo(() => new THREE.MeshLambertMaterial({ vertexColors: true }), []);
   useEffect(
     () => () => {
       geo.dispose();
@@ -366,9 +409,9 @@ export function ElfBattle() {
   return (
     <group>
       <DuskSky />
-      <hemisphereLight args={["#f0d4a8", "#3a2a1c", 0.62]} />
-      <directionalLight position={[18, 22, 8]} intensity={1.35} color="#ffc178" />
-      <directionalLight position={[-12, 8, -6]} intensity={0.38} color="#8ea4c4" />
+      <hemisphereLight args={["#f3d8b0", "#3a2a1c", 0.78]} />
+      <directionalLight position={[18, 22, 8]} intensity={1.55} color="#ffc178" />
+      <directionalLight position={[-12, 8, -6]} intensity={0.48} color="#8ea4c4" />
       <Meydan />
       <ElfFigures url={assets.elf} height={1.72} count={ELF_N} pick={(i, t, out) => writePose(elfAt(i, t), out)} />
       <ElfFigures

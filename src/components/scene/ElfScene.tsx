@@ -32,7 +32,6 @@ export function ElfScene({
     let renderer: THREE.WebGLRenderer | null = null;
     let root: Root | null = null;
     let canvas: HTMLCanvasElement | null = null;
-    let ro: ResizeObserver | null = null;
     const start = window.setTimeout(() => {
       if (dead || !host.current) return;
       const node = document.createElement("canvas");
@@ -60,40 +59,34 @@ export function ElfScene({
       }
       renderer.setPixelRatio(1);
       renderer.shadowMap.enabled = false;
-      renderer.toneMapping = THREE.NoToneMapping;
+      renderer.toneMapping = THREE.ACESFilmicToneMapping;
+      renderer.toneMappingExposure = 1.08;
       renderer.outputColorSpace = THREE.SRGBColorSpace;
       renderer.setClearColor("#4a3728", 1);
       root = createRoot(node);
-      const fit = () => {
-        if (!renderer || !root || !host.current) return;
-        const w = Math.max(1, host.current.clientWidth);
-        const h = Math.max(1, host.current.clientHeight);
-        renderer.setSize(w, h, false);
-        root.configure({
-          dpr: 1,
-          gl: renderer,
-          camera: { fov: 40, near: 0.25, far: 320, position: [14, 12, 36] },
-          frameloop: "always",
-          size: { width: w, height: h, top: 0, left: 0 },
-        });
-      };
-      fit();
+      const W = 720;
+      const H = 1280;
+      renderer.setSize(W, H, false);
+      root.configure({
+        dpr: 1,
+        gl: renderer,
+        camera: { fov: 32, near: 0.18, far: 280, position: [2.8, 1.8, -2] },
+        frameloop: "always",
+        size: { width: W, height: H, top: 0, left: 0 },
+      });
       root.render(
         <>
           <color attach="background" args={["#4a3728"]} />
-          <fog attach="fog" args={["#c8b089", 28, 160]} />
+          <fog attach="fog" args={["#c8b089", 46, 130]} />
           <ElfBattle />
           <ElfCam />
         </>
       );
       readyRef.current?.(node);
-      ro = new ResizeObserver(fit);
-      ro.observe(host.current);
     }, 80);
     return () => {
       dead = true;
       window.clearTimeout(start);
-      ro?.disconnect();
       try {
         root?.unmount();
       } catch {
