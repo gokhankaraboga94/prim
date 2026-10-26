@@ -5,13 +5,14 @@ import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import * as THREE from "three";
 import { fitHero } from "./ArenaBattle";
 import { REEL_HOLD } from "../../recordCanvas";
-import { LOOP_HERO, LOOP_SECONDS, LOOP_SPOTS, loopCam } from "../../loopReel";
+import { LOOP_FACE, LOOP_HERO, LOOP_SECONDS, LOOP_SPOTS, loopCam } from "../../loopReel";
 
-const STONE = "#e4c98a";
-const STONE_DARK = "#c4924a";
-const FLOOR = "#f0d7a2";
-const GRASS = "#3cbe62";
-const FLOWER = ["#ff4f8b", "#ffe14a", "#4aa3ff", "#ff7a3c", "#c86bff"] as const;
+const WARM = ["#ff5a36", "#ffd54f", "#ff4d8d", "#22c55e", "#ff8a2a", "#ffe14a"] as const;
+
+function loopPhase(clock: { elapsedTime: number }) {
+  const t = Math.max(0, clock.elapsedTime - REEL_HOLD);
+  return (t / LOOP_SECONDS) * Math.PI * 2;
+}
 
 function Block({
   args,
@@ -32,127 +33,184 @@ function Block({
   );
 }
 
-function Merlons({ axis, at, from, to, n }: { axis: "x" | "z"; at: number; from: number; to: number; n: number }) {
-  const nodes = [];
-  for (let i = 0; i < n; i++) {
-    const t = from + ((to - from) * i) / Math.max(1, n - 1);
-    const position: [number, number, number] = axis === "x" ? [t, 3.72, at] : [at, 3.72, t];
-    const args: [number, number, number] = axis === "x" ? [0.46, 0.5, 0.62] : [0.62, 0.5, 0.46];
-    nodes.push(<Block key={`${axis}:${i}`} args={args} position={position} color="#f2d48a" />);
+function plazaMap() {
+  const canvas = document.createElement("canvas");
+  canvas.width = 1024;
+  canvas.height = 1024;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return new THREE.CanvasTexture(canvas);
+  ctx.fillStyle = "#f6c14a";
+  ctx.fillRect(0, 0, 1024, 1024);
+  const step = 128;
+  for (let y = 0; y < 8; y++) {
+    for (let x = 0; x < 8; x++) {
+      ctx.fillStyle = (x + y) % 2 === 0 ? "#ff5a36" : "#ffe7a3";
+      ctx.beginPath();
+      ctx.moveTo((x + 0.5) * step, y * step);
+      ctx.lineTo((x + 1) * step, (y + 0.5) * step);
+      ctx.lineTo((x + 0.5) * step, (y + 1) * step);
+      ctx.lineTo(x * step, (y + 0.5) * step);
+      ctx.fill();
+    }
   }
-  return <group>{nodes}</group>;
+  const map = new THREE.CanvasTexture(canvas);
+  map.colorSpace = THREE.SRGBColorSpace;
+  map.wrapS = THREE.RepeatWrapping;
+  map.wrapT = THREE.RepeatWrapping;
+  map.repeat.set(8, 10);
+  map.anisotropy = 8;
+  return map;
 }
 
-function Torch({ position }: { position: [number, number, number] }) {
-  const flame = useRef<THREE.Mesh>(null);
+function Canopy({
+  position,
+  color,
+  width,
+}: {
+  position: [number, number, number];
+  color: string;
+  width: number;
+}) {
+  const cloth = useRef<THREE.Group>(null);
   useFrame(({ clock }) => {
-    const t = Math.max(0, clock.elapsedTime - REEL_HOLD);
-    const u = (t / LOOP_SECONDS) * Math.PI * 2;
-    const f = 1 + Math.sin(u * 3 + position[0]) * 0.14;
-    if (flame.current) flame.current.scale.set(0.9 + f * 0.1, f, 0.9 + f * 0.1);
+    const w = loopPhase(clock);
+    if (cloth.current) cloth.current.rotation.z = Math.sin(w * 2 + position[0]) * 0.08;
   });
   return (
     <group position={position}>
-      <mesh position={[0, 0.35, 0]}>
-        <cylinderGeometry args={[0.06, 0.08, 0.7, 6]} />
-        <meshLambertMaterial color="#3a2a16" />
+      <mesh position={[-width * 0.42, 1.25, 0]}>
+        <cylinderGeometry args={[0.07, 0.09, 2.5, 6]} />
+        <meshLambertMaterial color="#3a2412" />
       </mesh>
-      <mesh ref={flame} position={[0, 0.85, 0]}>
-        <coneGeometry args={[0.12, 0.38, 6]} />
-        <meshBasicMaterial color="#ff8a2a" />
+      <mesh position={[width * 0.42, 1.25, 0]}>
+        <cylinderGeometry args={[0.07, 0.09, 2.5, 6]} />
+        <meshLambertMaterial color="#3a2412" />
       </mesh>
+      <group ref={cloth} position={[0, 2.55, 0]}>
+        <mesh>
+          <boxGeometry args={[width, 0.14, 1.55]} />
+          <meshLambertMaterial color={color} />
+        </mesh>
+        <mesh position={[0, -0.22, 0.72]}>
+          <boxGeometry args={[width, 0.36, 0.08]} />
+          <meshLambertMaterial color="#fff6d8" />
+        </mesh>
+      </group>
     </group>
   );
 }
 
-function Banner() {
-  const cloth = useRef<THREE.Mesh>(null);
+function Bunting() {
+  const ref = useRef<THREE.Group>(null);
   useFrame(({ clock }) => {
-    const t = Math.max(0, clock.elapsedTime - REEL_HOLD);
-    const u = (t / LOOP_SECONDS) * Math.PI * 2;
-    if (cloth.current) cloth.current.rotation.y = Math.sin(u * 2) * 0.08;
+    const w = loopPhase(clock);
+    const group = ref.current;
+    if (!group) return;
+    group.children.forEach((child, i) => {
+      child.rotation.z = Math.sin(w * 2 + i * 0.7) * 0.38;
+    });
   });
   return (
-    <group position={[3.15, 0, 2.35]}>
-      <mesh position={[0, 1.15, 0]}>
-        <cylinderGeometry args={[0.05, 0.06, 2.3, 6]} />
-        <meshLambertMaterial color="#3a2a16" />
-      </mesh>
-      <mesh ref={cloth} position={[0.38, 1.85, 0]}>
-        <boxGeometry args={[0.7, 0.48, 0.03]} />
-        <meshLambertMaterial color="#ff5a3c" />
-      </mesh>
+    <group ref={ref} position={[0, 4.35, -2.6]}>
+      {WARM.map((color, i) => (
+        <group key={color + i} position={[-3.6 + i * 1.44, 0, (i % 2) * 0.25]}>
+          <mesh position={[0, -0.28, 0]} rotation={[Math.PI, 0, 0]}>
+            <coneGeometry args={[0.32, 0.62, 3]} />
+            <meshLambertMaterial color={color} />
+          </mesh>
+        </group>
+      ))}
+    </group>
+  );
+}
+
+function Stall({ position, color }: { position: [number, number, number]; color: string }) {
+  return (
+    <group position={position}>
+      <Block args={[1.25, 0.5, 0.62]} position={[0, 0.25, 0]} color="#fff1cc" />
+      <Block args={[1.35, 0.12, 0.7]} position={[0, 0.52, 0]} color={color} />
     </group>
   );
 }
 
 function Flowers() {
   const spots = [
-    [-2.4, 1.7],
-    [-1.9, 1.45],
-    [2.2, 1.55],
-    [1.85, 1.85],
-    [-2.6, -1.7],
-    [2.5, -1.9],
-    [-0.2, 1.9],
-    [0.4, -1.85],
+    [-1.7, 3.1],
+    [1.1, 3.35],
+    [3.2, 2.4],
+    [-3.4, 2.2],
+    [-5.2, -0.4],
+    [5.1, 0.2],
+    [0.2, -4.3],
+    [-2.2, -3.6],
+    [3.6, -3.4],
+    [4.4, 3.0],
   ] as const;
   return (
     <group>
       {spots.map(([x, z], i) => (
-        <mesh key={`${x}:${z}`} position={[x, 0.16, z]}>
-          <sphereGeometry args={[0.13, 8, 6]} />
-          <meshLambertMaterial color={FLOWER[i % FLOWER.length]} />
+        <mesh key={`${x}:${z}`} position={[x, 0.14, z]}>
+          <sphereGeometry args={[0.16 + (i % 3) * 0.04, 8, 6]} />
+          <meshLambertMaterial color={WARM[i % WARM.length]} />
         </mesh>
       ))}
     </group>
   );
 }
 
-function Pennant({ position, color }: { position: [number, number, number]; color: string }) {
+function Pole({ position }: { position: [number, number, number] }) {
+  const bands = ["#ff5a36", "#ffd54f", "#ff4d8d", "#22c55e"];
   return (
     <group position={position}>
-      <mesh position={[0.28, 0, 0]}>
-        <boxGeometry args={[0.55, 0.36, 0.03]} />
-        <meshLambertMaterial color={color} />
-      </mesh>
+      {bands.map((color, i) => (
+        <mesh key={color} position={[0, 0.45 + i * 0.7, 0]}>
+          <cylinderGeometry args={[0.09, 0.09, 0.7, 8]} />
+          <meshLambertMaterial color={color} />
+        </mesh>
+      ))}
     </group>
   );
 }
 
 function Yard() {
+  const map = useMemo(plazaMap, []);
+  useEffect(() => () => map.dispose(), [map]);
   return (
     <group>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.04, 0]} receiveShadow>
-        <circleGeometry args={[22, 40]} />
-        <meshLambertMaterial color={GRASS} />
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.04, -0.4]} receiveShadow>
+        <circleGeometry args={[28, 48]} />
+        <meshLambertMaterial color="#1fbf58" />
       </mesh>
-      <Block args={[9.4, 0.1, 9.4]} position={[0, 0.02, 0]} color={FLOOR} />
-      <Block args={[9.6, 3.4, 0.62]} position={[0, 1.7, -4.35]} color={STONE} />
-      <Block args={[0.62, 3.4, 9.6]} position={[-4.35, 1.7, 0]} color={STONE} />
-      <Block args={[0.62, 3.4, 9.6]} position={[4.35, 1.7, 0]} color={STONE} />
-      <Block args={[8.4, 0.22, 1.05]} position={[0, 1.61, -3.72]} color={STONE_DARK} />
-      <Merlons axis="x" at={-4.35} from={-4.2} to={4.2} n={11} />
-      <Merlons axis="z" at={-4.35} from={-3.8} to={3.8} n={9} />
-      <Merlons axis="z" at={4.35} from={-3.8} to={3.8} n={9} />
-      {[
-        [-4.35, -4.35],
-        [4.35, -4.35],
-        [-4.35, 4.35],
-        [4.35, 4.35],
-      ].map(([x, z]) => (
-        <Block key={`${x}:${z}`} args={[1.7, 5.4, 1.7]} position={[x, 2.7, z]} color={STONE_DARK} />
-      ))}
-      <Block args={[2.4, 0.04, 1.5]} position={[0, 0.1, 0.15]} color="#e23b4a" />
-      <Block args={[1.15, 1.85, 0.72]} position={[-3.45, 0.92, -1.85]} color="#b9833a" />
-      <Block args={[0.85, 1.85, 0.6]} position={[2.85, 0.92, -0.2]} color="#b9833a" />
-      <Pennant position={[-2.2, 3.15, -4.05]} color="#2f6bff" />
-      <Pennant position={[0.2, 3.15, -4.05]} color="#ffd23a" />
-      <Pennant position={[2.3, 3.15, -4.05]} color="#ff4d6d" />
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 1.4]} receiveShadow>
+        <planeGeometry args={[26, 30]} />
+        <meshLambertMaterial map={map} />
+      </mesh>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.045, 0.85]}>
+        <circleGeometry args={[1.9, 40]} />
+        <meshLambertMaterial color="#e23b4a" />
+      </mesh>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.05, 0.85]}>
+        <ringGeometry args={[1.2, 1.42, 40]} />
+        <meshBasicMaterial color="#111111" />
+      </mesh>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.055, 0.85]}>
+        <circleGeometry args={[1.08, 32]} />
+        <meshLambertMaterial color="#ffd54f" />
+      </mesh>
+      <Canopy position={[-4.6, 0, -3.6]} color="#ff4d8d" width={3.1} />
+      <Canopy position={[4.5, 0, -3.7]} color="#22c55e" width={3.1} />
+      <Canopy position={[0.1, 0, -5.1]} color="#ffb300" width={4.2} />
+      <Canopy position={[-5.4, 0, 1.4]} color="#ff5a36" width={2.4} />
+      <Canopy position={[5.5, 0, 1.6]} color="#ffd54f" width={2.4} />
+      <Stall position={[-3.9, 0, 0.35]} color="#ff4d8d" />
+      <Stall position={[3.05, 0, -2.05]} color="#22c55e" />
+      <Pole position={[-3.35, 0, 3.15]} />
+      <Pole position={[3.45, 0, 3.25]} />
+      <Bunting />
       <Flowers />
-      <Torch position={[-3.15, 0, 2.4]} />
-      <Torch position={[3.15, 0, 2.35]} />
-      <Banner />
+      <Block args={[1.1, 2.4, 0.18]} position={[-2.4, 1.2, -4.7]} color="#ff5a36" />
+      <Block args={[1.1, 2.4, 0.18]} position={[2.5, 1.2, -4.7]} color="#ffd54f" />
+      <Block args={[1.4, 2.8, 0.18]} position={[0.05, 1.4, -5.6]} color="#ff4d8d" />
     </group>
   );
 }
@@ -166,12 +224,13 @@ function Sentry({ src, index }: { src: THREE.Group; index: number }) {
       const mesh = obj as THREE.Mesh;
       if (!mesh.isMesh) return;
       const mat = (mesh.material as THREE.MeshLambertMaterial).clone();
-      mat.color.multiplyScalar(0.4);
+      mat.color.multiplyScalar(0.48);
       mesh.material = mat;
     });
     return copy;
   }, [src, spot.hard]);
-  const ref = useRef<THREE.Group>(null);
+  const root = useRef<THREE.Group>(null);
+  const hip = useRef<THREE.Group>(null);
   useEffect(() => {
     if (!spot.hard) return;
     return () => {
@@ -183,13 +242,22 @@ function Sentry({ src, index }: { src: THREE.Group; index: number }) {
     };
   }, [model, spot.hard]);
   useFrame(({ clock }) => {
-    const t = Math.max(0, clock.elapsedTime - REEL_HOLD);
-    const turn = Math.sin((t / LOOP_SECONDS) * Math.PI * 2 + index * 0.7) * (spot.hard ? 0.03 : 0.09);
-    if (ref.current) ref.current.rotation.y = spot.yaw + turn;
+    const w = loopPhase(clock);
+    const phase = index * 0.95;
+    const amp = spot.hard ? 0.4 : 1;
+    if (root.current) root.current.rotation.y = spot.yaw + LOOP_FACE + Math.sin(w + phase) * 0.07 * amp;
+    if (hip.current) {
+      hip.current.rotation.z = Math.sin(w * 2 + phase) * 0.2 * amp;
+      hip.current.position.y = Math.abs(Math.sin(w * 2 + phase)) * 0.11 * spot.scale * amp;
+    }
   });
   return (
-    <group ref={ref} position={[spot.x, spot.y, spot.z]} scale={1.42}>
-      <primitive object={model} />
+    <group ref={root} position={[spot.x, spot.y, spot.z]}>
+      <group ref={hip}>
+        <group scale={spot.scale}>
+          <primitive object={model} />
+        </group>
+      </group>
     </group>
   );
 }
@@ -316,9 +384,9 @@ export function LoopCam() {
 export function LoopBattle() {
   return (
     <group>
-      <ambientLight intensity={0.95} color="#fff6ea" />
-      <directionalLight position={[4, 14, 10]} intensity={2.2} color="#fff1d0" />
-      <directionalLight position={[-6, 8, 6]} intensity={0.55} color="#9fd0ff" />
+      <ambientLight intensity={1.05} color="#fff4e4" />
+      <directionalLight position={[2, 10, 14]} intensity={2.35} color="#fff1d0" />
+      <directionalLight position={[-4, 6, 5]} intensity={0.4} color="#ffd0c8" />
       <Yard />
       <Heroes />
       <LoopCard />
