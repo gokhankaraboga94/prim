@@ -310,52 +310,79 @@ function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: numbe
   ctx.closePath();
 }
 
+const HOOK_FONT = "Montserrat, Helvetica, Arial, sans-serif";
+const HOOK_LINES = ["8 ASKER BURADA", "İKİSİNİ KAÇIRIRSIN"] as const;
+const HOOK_W = 1080;
+const HOOK_H = 480;
+
 function drawLoopCard(canvas: HTMLCanvasElement) {
   const ctx = canvas.getContext("2d");
   if (!ctx) return;
   const w = canvas.width;
   const h = canvas.height;
   ctx.clearRect(0, 0, w, h);
-  roundRect(ctx, 24, 16, w - 48, h - 32, 34);
-  ctx.fillStyle = "#ffd54f";
+  roundRect(ctx, 28, 20, w - 56, h - 40, 42);
+  ctx.fillStyle = "#16120e";
   ctx.fill();
-  ctx.lineWidth = 12;
-  ctx.strokeStyle = "#111111";
+  ctx.lineWidth = 14;
+  ctx.strokeStyle = "#ff5a7a";
   ctx.stroke();
-  const line = "8 ASKERİ BUL!";
-  let size = 128;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.fillStyle = "#111111";
-  ctx.font = `900 ${size}px Inter, Montserrat, Helvetica, Arial, sans-serif`;
-  while (size > 60 && ctx.measureText(line).width > w - 140) {
-    size -= 4;
-    ctx.font = `900 ${size}px Inter, Montserrat, Helvetica, Arial, sans-serif`;
-  }
-  ctx.fillText(line, w / 2, h / 2 + 4);
+  const fit = (text: string, px: number) => {
+    let size = px;
+    ctx.font = `900 ${size}px ${HOOK_FONT}`;
+    while (size > 52 && ctx.measureText(text).width > w - 160) {
+      size -= 2;
+      ctx.font = `900 ${size}px ${HOOK_FONT}`;
+    }
+    return size;
+  };
+  const head = fit(HOOK_LINES[0], 108);
+  const tail = fit(HOOK_LINES[1], 78);
+  ctx.fillStyle = "#fff6ea";
+  ctx.font = `900 ${head}px ${HOOK_FONT}`;
+  ctx.fillText(HOOK_LINES[0], w / 2, h * 0.38);
+  ctx.fillStyle = "#ffd0da";
+  ctx.font = `900 ${tail}px ${HOOK_FONT}`;
+  ctx.fillText(HOOK_LINES[1], w / 2, h * 0.68);
 }
 
 function LoopCard() {
   const size = useThree((s) => s.size);
-  const tex = useMemo(() => {
-    const canvas = document.createElement("canvas");
-    canvas.width = 1080;
-    canvas.height = 280;
-    drawLoopCard(canvas);
-    const map = new THREE.CanvasTexture(canvas);
-    map.colorSpace = THREE.SRGBColorSpace;
-    map.generateMipmaps = false;
-    map.minFilter = THREE.LinearFilter;
-    map.magFilter = THREE.LinearFilter;
-    return map;
+  const [tex, setTex] = useState<THREE.CanvasTexture | null>(null);
+  useEffect(() => {
+    let drop = false;
+    const paint = () => {
+      if (drop) return;
+      const canvas = document.createElement("canvas");
+      canvas.width = HOOK_W;
+      canvas.height = HOOK_H;
+      drawLoopCard(canvas);
+      const map = new THREE.CanvasTexture(canvas);
+      map.colorSpace = THREE.SRGBColorSpace;
+      map.generateMipmaps = false;
+      map.minFilter = THREE.LinearFilter;
+      map.magFilter = THREE.LinearFilter;
+      setTex((prev) => {
+        prev?.dispose();
+        return map;
+      });
+    };
+    paint();
+    document.fonts?.load("900 96px Montserrat").then(paint).catch(() => undefined);
+    return () => {
+      drop = true;
+    };
   }, []);
-  useEffect(() => () => tex.dispose(), [tex]);
-  const w = size.width * 0.72;
-  const h = w * (280 / 1080);
+  useEffect(() => () => tex?.dispose(), [tex]);
+  if (!tex) return null;
+  const w = size.width * 0.8;
+  const h = w * (HOOK_H / HOOK_W);
   return (
     <Hud renderPriority={1}>
       <OrthographicCamera makeDefault position={[0, 0, 10]} />
-      <mesh position={[0, size.height * 0.26, 5]} renderOrder={40}>
+      <mesh position={[0, size.height * 0.3, 5]} renderOrder={40}>
         <planeGeometry args={[w, h]} />
         <meshBasicMaterial map={tex} transparent depthTest={false} toneMapped={false} />
       </mesh>

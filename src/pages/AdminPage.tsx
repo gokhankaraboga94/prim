@@ -1487,7 +1487,7 @@ export function AdminPage() {
           )}
           {isLoop(reelShot) && (
             <p className="muted">
-              Karşılaştırma değil. Geniş renkli avlu, karşıdan tek açı, 6 saniye. Kadın elfin 7 kopyası yüzü kameraya dönük, yerinde dans eder. Yan yana dizili değildir: biri büyük ve yakındır, diğerleri dağınık, ikisi küçük ve tezgahın arkasında zor seçilir. Sekizinci yoktur. Kamera kıpırdamaz, ilk kare son kareyle aynıdır. Ekranda “8 ASKERİ BUL!” durur. Cevap yok. Başlık: “8 asker var. İkisini kaçırırsın.” İlk yorum: “8. askeri bulan var mı?” Cevabı sabitleme.
+              Karşılaştırma değil. Geniş renkli avlu, karşıdan tek açı, 6 saniye. Kadın elfin 7 kopyası yüzü kameraya dönük, yerinde dans eder. Yan yana dizili değildir: biri büyük ve yakındır, diğerleri dağınık, ikisi küçük ve tezgahın arkasında zor seçilir. Sekizinci yoktur. Kamera kıpırdamaz, ilk kare son kareyle aynıdır. Ekranda koyu ada üstünde “8 ASKER BURADA / İKİSİNİ KAÇIRIRSIN” durur. Cevap yok. Başlık: “8 asker var. İkisini kaçırırsın.” İlk yorum: “8. askeri bulan var mı?” Cevabı sabitleme.
             </p>
           )}
           {isOk(reelShot) && (
