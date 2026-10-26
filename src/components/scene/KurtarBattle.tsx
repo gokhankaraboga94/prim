@@ -20,6 +20,7 @@ import {
   kurtarCam,
   kurtarCard,
   kurtarChip,
+  kurtarFaceOn,
   kurtarHold,
   kurtarHp,
   kurtarLead,
@@ -46,13 +47,6 @@ function armsOf(root: THREE.Object3D) {
     if (mesh.isMesh && mesh.userData.armStrike) list.push(mesh.userData.armStrike as THREE.Vector2);
   });
   return list;
-}
-
-function setForm(root: THREE.Object3D, form: number) {
-  root.traverse((obj) => {
-    const slot = obj.userData.form as { value: number } | undefined;
-    if (slot) slot.value = form;
-  });
 }
 
 function stepGait(root: THREE.Object3D, moving: boolean, speed: number, delta: number) {
@@ -288,7 +282,6 @@ function Fighters({ pack }: { pack: Pack }) {
       node.position.set(lead.x, lead.y, lead.z);
       node.rotation.set(lead.kneel, lead.yaw + KURTAR_FACE, 0);
       for (const arm of leadArms) arm.set(lead.strike.lift, lead.strike.chop);
-      setForm(pack.lead, lead.strike.form);
       const striking = lead.strike.chop > 0.35 || lead.strike.lift > 0.72 || lead.kneel > 0.12;
       stepGait(pack.lead, !striking && speed > 0.45, speed, dt);
     }
@@ -313,7 +306,6 @@ function Fighters({ pack }: { pack: Pack }) {
       body.rotation.set(0, pose.yaw + KURTAR_FACE, 0);
       const hit = pose.strike;
       for (const arm of allyArms[i]) arm.set(hit.lift, hit.chop);
-      setForm(pack.allies[i], hit.form);
       const zooming = pose.yaw > 1;
       stepGait(pack.allies[i], pose.show && !zooming && hit.chop < 0.35 && runSpeed > 0.45, runSpeed, dt);
     });
@@ -355,13 +347,15 @@ function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: numbe
   ctx.closePath();
 }
 
-function paintCard(text: string) {
+function paintCard(lines: readonly string[]) {
   const canvas = document.createElement("canvas");
   canvas.width = 980;
-  canvas.height = 220;
+  canvas.height = 420;
   const ctx = canvas.getContext("2d");
   if (!ctx) return canvas;
-  roundRect(ctx, 16, 14, 948, 192, 36);
+  const blockH = lines.length === 1 ? 210 : lines.length === 2 ? 300 : 380;
+  const top = (420 - blockH) / 2;
+  roundRect(ctx, 16, top, 948, blockH, 36);
   ctx.fillStyle = "#ffd54f";
   ctx.fill();
   ctx.lineWidth = 12;
@@ -370,13 +364,11 @@ function paintCard(text: string) {
   ctx.fillStyle = "#111111";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  let size = 92;
+  const size = lines.length === 1 ? 108 : lines.length === 2 ? 92 : 78;
   ctx.font = `900 ${size}px Montserrat, Helvetica, Arial, sans-serif`;
-  while (size > 48 && ctx.measureText(text).width > 820) {
-    size -= 2;
-    ctx.font = `900 ${size}px Montserrat, Helvetica, Arial, sans-serif`;
-  }
-  ctx.fillText(text, 490, 114);
+  const gap = size + 10;
+  const start = 210 - ((lines.length - 1) * gap) / 2;
+  for (let i = 0; i < lines.length; i++) ctx.fillText(lines[i], 490, start + i * gap);
   return canvas;
 }
 
@@ -416,15 +408,19 @@ function KurtarHud() {
   const shown = useRef("");
   const hpKey = useRef("");
   const cards = useMemo(() => {
-    const make = (text: string) => {
-      const map = new THREE.CanvasTexture(paintCard(text));
+    const make = (lines: readonly string[]) => {
+      const map = new THREE.CanvasTexture(paintCard(lines));
       map.colorSpace = THREE.SRGBColorSpace;
       map.generateMipmaps = false;
       map.minFilter = THREE.LinearFilter;
       map.magFilter = THREE.LinearFilter;
       return map;
     };
-    return { save: make("ONU KURTAR"), die: make("CANI BİTİYOR") };
+    return {
+      early: make(["KAFESTEKİ KADIN", "ÖLECEK"]),
+      late: make(["KAFESTEKİ KADIN", "ÖLECEK", "YETİŞMEZSE"]),
+      die: make(["CANI BİTİYOR"]),
+    };
   }, []);
   const hpMap = useMemo(() => {
     const map = new THREE.CanvasTexture(paintHp(100, ""));
@@ -436,15 +432,20 @@ function KurtarHud() {
   }, []);
   useEffect(() => {
     document.fonts?.load("900 80px Montserrat").then(() => {
-      for (const [text, map] of [["ONU KURTAR", cards.save], ["CANI BİTİYOR", cards.die]] as const) {
-        const canvas = paintCard(text);
-        map.image = canvas;
+      const next: Array<[readonly string[], THREE.CanvasTexture]> = [
+        [["KAFESTEKİ KADIN", "ÖLECEK"], cards.early],
+        [["KAFESTEKİ KADIN", "ÖLECEK", "YETİŞMEZSE"], cards.late],
+        [["CANI BİTİYOR"], cards.die],
+      ];
+      for (const [lines, map] of next) {
+        map.image = paintCard(lines);
         map.needsUpdate = true;
       }
     }).catch(() => undefined);
   }, [cards]);
   useEffect(() => () => {
-    cards.save.dispose();
+    cards.early.dispose();
+    cards.late.dispose();
     cards.die.dispose();
     hpMap.dispose();
   }, [cards, hpMap]);
@@ -454,26 +455,27 @@ function KurtarHud() {
     const mat = cardMat.current;
     if (mat) {
       mat.opacity = card.opacity;
-      const next = card.line === "CANI BİTİYOR" ? cards.die : cards.save;
-      if (shown.current !== card.line && card.line) {
-        shown.current = card.line;
+      const key = card.lines.join("|");
+      const next = card.lines.length === 3 ? cards.late : card.lines[0] === "CANI BİTİYOR" ? cards.die : cards.early;
+      if (shown.current !== key && key) {
+        shown.current = key;
         mat.map = next;
         mat.needsUpdate = true;
       }
     }
     const hp = kurtarHp(t);
     const chip = kurtarChip(t);
-    const key = `${hp}:${chip ? chip.d : ""}`;
-    if (hpKey.current !== key) {
-      hpKey.current = key;
+    const hpSig = `${hp}:${chip ? chip.d : ""}`;
+    if (hpKey.current !== hpSig) {
+      hpKey.current = hpSig;
       const canvas = paintHp(hp, chip ? `-${chip.d}` : "");
       hpMap.image = canvas;
       hpMap.needsUpdate = true;
-      if (hpMat.current) hpMat.current.opacity = 1;
     }
+    if (hpMat.current) hpMat.current.opacity = kurtarFaceOn(t) ? 0 : 1;
   });
-  const cardW = size.width * 0.72;
-  const cardH = cardW * (220 / 980);
+  const cardW = size.width * 0.78;
+  const cardH = cardW * (420 / 980);
   const hpW = size.width * 0.4;
   const hpH = hpW * (160 / 420);
   return (
@@ -481,7 +483,7 @@ function KurtarHud() {
       <OrthographicCamera makeDefault position={[0, 0, 10]} />
       <mesh position={[0, size.height * 0.32, 5]} renderOrder={40}>
         <planeGeometry args={[cardW, cardH]} />
-        <meshBasicMaterial ref={cardMat} map={cards.save} transparent depthTest={false} toneMapped={false} opacity={1} />
+        <meshBasicMaterial ref={cardMat} map={cards.early} transparent depthTest={false} toneMapped={false} opacity={1} />
       </mesh>
       <mesh position={[-size.width * 0.26, size.height * 0.2, 5]} renderOrder={41}>
         <planeGeometry args={[hpW, hpH]} />

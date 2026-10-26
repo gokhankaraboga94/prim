@@ -1502,7 +1502,7 @@ export function AdminPage() {
           )}
           {isKurtar(reelShot) && (
             <p className="muted">
-              Üçüncü şahıs. Kayıt, modeller oturunca başlar. Zırhlı kahraman sağ elindeki kılıcı üstten, yandan, saplama ve alttan kullanır. Parmaklığın ardında koyu saçlı kadın elf vardır, başında orklar baştan bekler. Onları keser, kurtaracakken sekiz ork tam çevresine kapanır ve can orada dibe vurur. Diğer kahramanlar sağdan soldan gelir, yüzleri yakın planda görünür, sonra her biri en yakın orka dönüp onu keser. Ekranda “ONU KURTAR”, sonra “CANI BİTİYOR”.
+              Üçüncü şahıs. Kayıt, modeller oturunca başlar. Kılıç sağ elde, tek kavisle iner. İlk yazı “KAFESTEKİ KADIN / ÖLECEK”, 1.5 saniyede “YETİŞMEZSE” eklenir, 4. saniyeden önce gider. Parmaklığın ardında koyu saçlı kadın vardır. Kahraman sarılınca sekiz ork tam çevresine kapanır, can orada dibe vurur, yazı “CANI BİTİYOR”. Gelen kahramanların yüzü yakın plandayken can çubuğu gizlenir. Sonra her biri en yakın orka dönüp onu keser.
             </p>
           )}
           {isLoop(reelShot) && (

@@ -36,9 +36,9 @@ export type KurtarCam = {
   fov: number;
 };
 
-export type KurtarStrike = { lift: number; chop: number; form: number };
+export type KurtarStrike = { lift: number; chop: number };
 
-const GUARD: KurtarStrike = { lift: 0.38, chop: 0.22, form: 0 };
+const GUARD: KurtarStrike = { lift: 0.38, chop: 0.22 };
 
 let playAt = 0;
 let ready = false;
@@ -88,37 +88,34 @@ function clamp(v: number, a: number, b: number) {
 }
 
 function mix(a: KurtarStrike, b: KurtarStrike, k: number): KurtarStrike {
-  return { lift: a.lift + (b.lift - a.lift) * k, chop: a.chop + (b.chop - a.chop) * k, form: b.form };
+  return { lift: a.lift + (b.lift - a.lift) * k, chop: a.chop + (b.chop - a.chop) * k };
 }
 
-function swing(p: number, form: number): KurtarStrike {
-  const cocked: KurtarStrike = { lift: 1, chop: 0, form };
-  const impact: KurtarStrike = { lift: 0.5, chop: 1, form };
-  const guard: KurtarStrike = { ...GUARD, form };
-  if (p <= 0 || p >= 1) return guard;
-  if (p < 0.12) return mix(guard, cocked, smo(p, 0, 0.12));
-  if (p < 0.28) {
-    const k = (p - 0.12) / 0.16;
+function swing(p: number): KurtarStrike {
+  const cocked: KurtarStrike = { lift: 1, chop: 0 };
+  const impact: KurtarStrike = { lift: 0.7, chop: 1 };
+  if (p <= 0 || p >= 1) return GUARD;
+  if (p < 0.28) return mix(GUARD, cocked, smo(p, 0, 0.28));
+  if (p < 0.44) {
+    const k = (p - 0.28) / 0.16;
     return mix(cocked, impact, 1 - (1 - k) * (1 - k) * (1 - k));
   }
-  if (p < 0.36) return impact;
-  if (p < 0.68) return mix(impact, guard, smo(p, 0.36, 0.68));
-  return guard;
+  if (p < 0.52) return impact;
+  if (p < 0.85) return mix(impact, GUARD, smo(p, 0.52, 0.85));
+  return GUARD;
 }
 
-function strikeWindow(t: number, hit: number, dur: number, form: number): KurtarStrike | null {
-  const start = hit - 0.32 * dur;
+function strikeWindow(t: number, hit: number, dur = 0.72): KurtarStrike | null {
+  const start = hit - 0.46 * dur;
   const p = (t - start) / dur;
   if (p < 0 || p > 1) return null;
-  return swing(p, form);
+  return swing(p);
 }
 
-const LEAD_HITS = [0.16, 4.85, 8.15, 9.25, 10.4, 14.15, 15.05, 15.95, 16.85, 21.05, 22.25];
-/** 0 overhead, 1 horizontal, 2 thrust, 3 rising. */
-const LEAD_FORMS = [0, 1, 2, 3, 1, 0, 3, 2, 1, 0, 2];
+const LEAD_HITS = [0.15, 4.85, 8.15, 9.25, 10.4, 14.15, 15.05, 15.95, 16.85, 21.05, 22.25];
 
 const HP_CHIPS = [
-  { t: 0.16, d: 5 },
+  { t: 0.15, d: 5 },
   { t: 4.85, d: 6 },
   { t: 8.15, d: 5 },
   { t: 9.25, d: 6 },
@@ -168,7 +165,7 @@ export type KurtarOrc = {
 };
 
 export const KURTAR_ORCS: readonly KurtarOrc[] = [
-  { id: 0, mesh: 0, x: 0.2, z: 2.55, fromX: 0.2, fromZ: 2.55, enter: -1, hit: 0.16, hide: 3.1 },
+  { id: 0, mesh: 0, x: 0.2, z: 2.55, fromX: 0.2, fromZ: 2.55, enter: -1, hit: 0.15, hide: 3.1 },
   { id: 1, mesh: 1, x: 0.9, z: 5.7, fromX: 2.3, fromZ: 8.6, enter: 3.15, hit: 4.85, hide: 7.2 },
   { id: 2, mesh: 0, x: -0.7, z: 14.2, fromX: -1.8, fromZ: 16.8, enter: 7.45, hit: 8.15, hide: 11.2 },
   { id: 3, mesh: 1, x: 0.75, z: 16.0, fromX: 1.9, fromZ: 18.6, enter: 8.45, hit: 9.25, hide: 12.1 },
@@ -190,10 +187,10 @@ export const KURTAR_ORCS: readonly KurtarOrc[] = [
 ];
 
 export const KURTAR_ALLY_SLOTS = [
-  { x: -2.35, z: 32.55, side: -1, run: 28.45, zoom0: 28.85, zoom1: 29.95, cuts: [{ orc: 17, hit: 34.2, form: 0 }, { orc: 16, hit: 35.15, form: 1 }] },
-  { x: 2.4, z: 32.5, side: 1, run: 29.95, zoom0: 30.15, zoom1: 31.25, cuts: [{ orc: 13, hit: 34.45, form: 1 }, { orc: 14, hit: 35.4, form: 2 }] },
-  { x: -1.7, z: 35.15, side: -1, run: 31.25, zoom0: 31.45, zoom1: 32.55, cuts: [{ orc: 18, hit: 34.7, form: 2 }, { orc: 11, hit: 35.65, form: 3 }] },
-  { x: 1.75, z: 35.2, side: 1, run: 32.55, zoom0: 32.75, zoom1: 33.85, cuts: [{ orc: 12, hit: 34.95, form: 3 }, { orc: 15, hit: 35.9, form: 0 }] },
+  { x: -2.35, z: 32.55, side: -1, run: 28.45, zoom0: 28.85, zoom1: 29.95, cuts: [{ orc: 17, hit: 34.2 }, { orc: 16, hit: 35.15 }] },
+  { x: 2.4, z: 32.5, side: 1, run: 29.95, zoom0: 30.15, zoom1: 31.25, cuts: [{ orc: 13, hit: 34.45 }, { orc: 14, hit: 35.4 }] },
+  { x: -1.7, z: 35.15, side: -1, run: 31.25, zoom0: 31.45, zoom1: 32.55, cuts: [{ orc: 18, hit: 34.7 }, { orc: 11, hit: 35.65 }] },
+  { x: 1.75, z: 35.2, side: 1, run: 32.55, zoom0: 32.75, zoom1: 33.85, cuts: [{ orc: 12, hit: 34.95 }, { orc: 15, hit: 35.9 }] },
 ] as const;
 
 export function kurtarHeroZ(t: number) {
@@ -211,11 +208,11 @@ export function kurtarHeroZ(t: number) {
 export function kurtarLead(t: number) {
   const z = kurtarHeroZ(t);
   let strike = GUARD;
-  const open = strikeWindow(t, LEAD_HITS[0], 1.05, LEAD_FORMS[0]);
+  const open = strikeWindow(t, LEAD_HITS[0], 1.05);
   if (open) strike = open;
   else {
     for (let i = 1; i < LEAD_HITS.length; i++) {
-      const hit = strikeWindow(t, LEAD_HITS[i], 0.36, LEAD_FORMS[i]);
+      const hit = strikeWindow(t, LEAD_HITS[i], 0.78);
       if (hit) {
         strike = hit;
         break;
@@ -260,10 +257,20 @@ export function kurtarBars(t: number) {
   return smo(t, 36.15, 37.35);
 }
 
+export function kurtarFaceOn(t: number) {
+  for (const slot of KURTAR_ALLY_SLOTS) {
+    if (t >= slot.zoom0 && t <= slot.zoom1) return true;
+  }
+  return false;
+}
+
 export function kurtarCard(t: number) {
-  if (t < 3.15) return { line: "ONU KURTAR", opacity: t < 2.55 ? 1 : 1 - smo(t, 2.55, 3.15) };
-  if (t > 24.7 && t < 27.35) return { line: "CANI BİTİYOR", opacity: t < 26.7 ? 1 : 1 - smo(t, 26.7, 27.35) };
-  return { line: "", opacity: 0 };
+  if (t < 3.9) {
+    const lines = t < 1.45 ? ["KAFESTEKİ KADIN", "ÖLECEK"] : ["KAFESTEKİ KADIN", "ÖLECEK", "YETİŞMEZSE"];
+    return { lines, opacity: t < 3.35 ? 1 : 1 - smo(t, 3.35, 3.9) };
+  }
+  if (t > 24.7 && t < 27.35) return { lines: ["CANI BİTİYOR"], opacity: t < 26.7 ? 1 : 1 - smo(t, 26.7, 27.35) };
+  return { lines: [] as string[], opacity: 0 };
 }
 
 export function kurtarAllyPose(i: number, t: number) {
@@ -277,7 +284,7 @@ export function kurtarAllyPose(i: number, t: number) {
   const yaw = zooming ? Math.PI : t < slot.zoom0 ? Math.atan2(slot.x - x, slot.z - z) : Math.atan2(foe.x - x, foe.z - z);
   let strike = GUARD;
   for (const blow of slot.cuts) {
-    const hit = strikeWindow(t, blow.hit, 0.34, blow.form);
+    const hit = strikeWindow(t, blow.hit, 0.7);
     if (hit) strike = hit;
   }
   return { x, y: 0, z, yaw, strike, show: t >= slot.run - 0.05 };
