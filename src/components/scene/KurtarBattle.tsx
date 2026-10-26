@@ -48,6 +48,13 @@ function armsOf(root: THREE.Object3D) {
   return list;
 }
 
+function setForm(root: THREE.Object3D, form: number) {
+  root.traverse((obj) => {
+    const slot = obj.userData.form as { value: number } | undefined;
+    if (slot) slot.value = form;
+  });
+}
+
 function stepGait(root: THREE.Object3D, moving: boolean, speed: number, delta: number) {
   root.traverse((obj) => {
     const gait = obj.userData.gait as THREE.Vector2 | undefined;
@@ -281,6 +288,7 @@ function Fighters({ pack }: { pack: Pack }) {
       node.position.set(lead.x, lead.y, lead.z);
       node.rotation.set(lead.kneel, lead.yaw + KURTAR_FACE, 0);
       for (const arm of leadArms) arm.set(lead.strike.lift, lead.strike.chop);
+      setForm(pack.lead, lead.strike.form);
       const striking = lead.strike.chop > 0.35 || lead.strike.lift > 0.72 || lead.kneel > 0.12;
       stepGait(pack.lead, !striking && speed > 0.45, speed, dt);
     }
@@ -305,6 +313,7 @@ function Fighters({ pack }: { pack: Pack }) {
       body.rotation.set(0, pose.yaw + KURTAR_FACE, 0);
       const hit = pose.strike;
       for (const arm of allyArms[i]) arm.set(hit.lift, hit.chop);
+      setForm(pack.allies[i], hit.form);
       const zooming = pose.yaw > 1;
       stepGait(pack.allies[i], pose.show && !zooming && hit.chop < 0.35 && runSpeed > 0.45, runSpeed, dt);
     });

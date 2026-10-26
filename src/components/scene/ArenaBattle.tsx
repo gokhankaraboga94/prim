@@ -262,6 +262,7 @@ type ArmUniforms = {
   uGait?: { value: THREE.Vector2 };
   uMinY?: { value: number };
   uHeight?: { value: number };
+  uForm?: { value: number };
 };
 
 /** Writes armW/armE onto the geometry and returns the weapon side. `preferSide` forces the weapon hand (-1 is -X, the right hand when the figure faces +Z). */
@@ -336,6 +337,35 @@ const MARCH_GLSL = `
 uniform vec2 uGait;
 uniform float uMinY;
 uniform float uHeight;
+uniform float uForm;
+vec3 armForm(vec3 rel, float wE, float lift, float chop) {
+  vec3 h = armFrame(rel);
+  float bend = -(lift * 1.15 - chop * 0.85);
+  vec3 elbow = vec3(0.0, -armElbow, 0.0);
+  vec3 fore = armRotX(h - elbow, bend) + elbow;
+  h = mix(h, fore, wE);
+  if (uForm < 0.5) {
+    h = armRotZ(h, armSide * (lift * 0.95 - chop * 0.4));
+    h = armRotX(h, lift * 1.05 - chop * 1.9);
+    h.z += chop * 0.16;
+  } else if (uForm < 1.5) {
+    h = armRotZ(h, armSide * (0.25 + lift * 0.7));
+    h = armRotX(h, 0.22 - chop * 0.18);
+    float sweep = -0.25 * lift + 1.65 * chop;
+    float c = cos(sweep);
+    float s = sin(sweep);
+    h = vec3(h.x * c - h.z * s, h.y, h.x * s + h.z * c);
+  } else if (uForm < 2.5) {
+    h = armRotZ(h, armSide * lift * 0.28);
+    h = armRotX(h, -0.12 - chop * 0.22);
+    h.z += 0.08 * lift + 0.7 * chop;
+  } else {
+    h = armRotZ(h, armSide * (0.45 - chop * 0.1));
+    h = armRotX(h, -1.25 + chop * 2.55);
+    h.z += chop * 0.22;
+  }
+  return armFrame(h);
+}
 `;
 
 /** `strikeExpr` reads the strike for this vertex: a uniform for heroes, an instance attribute for foes. */
@@ -354,7 +384,7 @@ export function installArmShader(material: THREE.Material, uniforms: ArmUniforms
       .replace(
         "#include <begin_vertex>",
         `#include <begin_vertex>
-         vec3 armSwung = armSwing(transformed - armPivot, armE, armHit.x, armHit.y, armHit.y * ${march ? "0.28" : "0.2"}) + armPivot;
+         vec3 armSwung = ${march ? "armForm(transformed - armPivot, armE, armHit.x, armHit.y)" : "armSwing(transformed - armPivot, armE, armHit.x, armHit.y, armHit.y * 0.2)"} + armPivot;
          transformed = mix(transformed, armSwung, armW);
          ${march ? `float legYn = (transformed.y - uMinY) / max(uHeight, 0.001);
          float legW = (1.0 - smoothstep(0.38, 0.5, legYn)) * (1.0 - armW) * smoothstep(0.02, 0.07, abs(transformed.x));
@@ -411,8 +441,11 @@ function rigArm(mesh: THREE.Mesh, forwardX: boolean, extra?: RigExtra) {
     uniforms.uMinY = { value: cut.minY };
     uniforms.uHeight = { value: cut.height };
     mesh.userData.gait = gait;
-    expr = "uniform vec2 uStrike;\nvec2 armStrike() { vec2 s = uStrike; s.y *= 1.4; return s; }";
-    key = "kurtar-march-arm";
+    const form = { value: 0 };
+    uniforms.uForm = form;
+    mesh.userData.form = form;
+    expr = "uniform vec2 uStrike;\nvec2 armStrike() { vec2 s = uStrike; s.y *= 1.25; return s; }";
+    key = "kurtar-march-arm-v2";
   }
   installArmShader(material, uniforms, expr, key, Boolean(extra?.march));
   material.needsUpdate = true;

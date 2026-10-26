@@ -10,8 +10,8 @@ export const KURTAR_ALLIES = [
   "/models/arena3/fantasy-a.glb",
   "/models/arena3/fantasy-b.glb",
 ] as const;
-/** Pointed-ear woman in green and gold. The blue-cape archer is a different figure. */
-export const KURTAR_ELF = "/models/arena3/3.glb";
+/** Dark-haired woman. Not the green elf, not the blue-cape archer. */
+export const KURTAR_ELF = "/models/arena3/1.glb";
 export const KURTAR_CAGE_Z = 36.2;
 export const KURTAR_ELF_Z = 37.55;
 export const KURTAR_ORC_A = "/models/new/orc1-lite.glb";
@@ -36,9 +36,9 @@ export type KurtarCam = {
   fov: number;
 };
 
-export type KurtarStrike = { lift: number; chop: number };
+export type KurtarStrike = { lift: number; chop: number; form: number };
 
-const GUARD: KurtarStrike = { lift: 0.38, chop: 0.22 };
+const GUARD: KurtarStrike = { lift: 0.38, chop: 0.22, form: 0 };
 
 let playAt = 0;
 let ready = false;
@@ -88,31 +88,34 @@ function clamp(v: number, a: number, b: number) {
 }
 
 function mix(a: KurtarStrike, b: KurtarStrike, k: number): KurtarStrike {
-  return { lift: a.lift + (b.lift - a.lift) * k, chop: a.chop + (b.chop - a.chop) * k };
+  return { lift: a.lift + (b.lift - a.lift) * k, chop: a.chop + (b.chop - a.chop) * k, form: b.form };
 }
 
-function swing(p: number): KurtarStrike {
-  const cocked: KurtarStrike = { lift: 1, chop: 0 };
-  const impact: KurtarStrike = { lift: 0.55, chop: 1 };
-  if (p <= 0 || p >= 1) return GUARD;
-  if (p < 0.12) return mix(GUARD, cocked, smo(p, 0, 0.12));
+function swing(p: number, form: number): KurtarStrike {
+  const cocked: KurtarStrike = { lift: 1, chop: 0, form };
+  const impact: KurtarStrike = { lift: 0.5, chop: 1, form };
+  const guard: KurtarStrike = { ...GUARD, form };
+  if (p <= 0 || p >= 1) return guard;
+  if (p < 0.12) return mix(guard, cocked, smo(p, 0, 0.12));
   if (p < 0.28) {
     const k = (p - 0.12) / 0.16;
     return mix(cocked, impact, 1 - (1 - k) * (1 - k) * (1 - k));
   }
   if (p < 0.36) return impact;
-  if (p < 0.68) return mix(impact, GUARD, smo(p, 0.36, 0.68));
-  return GUARD;
+  if (p < 0.68) return mix(impact, guard, smo(p, 0.36, 0.68));
+  return guard;
 }
 
-function strikeWindow(t: number, hit: number, dur = 0.38): KurtarStrike | null {
+function strikeWindow(t: number, hit: number, dur: number, form: number): KurtarStrike | null {
   const start = hit - 0.32 * dur;
   const p = (t - start) / dur;
   if (p < 0 || p > 1) return null;
-  return swing(p);
+  return swing(p, form);
 }
 
 const LEAD_HITS = [0.16, 4.85, 8.15, 9.25, 10.4, 14.15, 15.05, 15.95, 16.85, 21.05, 22.25];
+/** 0 overhead, 1 horizontal, 2 thrust, 3 rising. */
+const LEAD_FORMS = [0, 1, 2, 3, 1, 0, 3, 2, 1, 0, 2];
 
 const HP_CHIPS = [
   { t: 0.16, d: 5 },
@@ -159,6 +162,7 @@ export type KurtarOrc = {
   fromX: number;
   fromZ: number;
   enter: number;
+  arrive?: number;
   hit: number;
   hide: number;
 };
@@ -175,19 +179,21 @@ export const KURTAR_ORCS: readonly KurtarOrc[] = [
   { id: 8, mesh: 0, x: 1.55, z: 23.9, fromX: 2.4, fromZ: 27.8, enter: 13.65, hit: 16.85, hide: 18.8 },
   { id: 9, mesh: 1, x: -1.35, z: 35.25, fromX: -1.35, fromZ: 35.25, enter: -1, hit: 21.05, hide: 24.2 },
   { id: 10, mesh: 0, x: 1.35, z: 35.4, fromX: 1.35, fromZ: 35.4, enter: -1, hit: 22.25, hide: 24.4 },
-  { id: 11, mesh: 1, x: -2.55, z: 31.1, fromX: -4.5, fromZ: 29.4, enter: 24.35, hit: 34.55, hide: 37.6 },
-  { id: 12, mesh: 0, x: 2.55, z: 30.9, fromX: 4.5, fromZ: 29.6, enter: 24.45, hit: 34.8, hide: 37.6 },
-  { id: 13, mesh: 1, x: -1.9, z: 34.3, fromX: -4.2, fromZ: 36.6, enter: 24.55, hit: 35.05, hide: 37.6 },
-  { id: 14, mesh: 0, x: 1.95, z: 34.4, fromX: 4.2, fromZ: 36.8, enter: 24.65, hit: 35.3, hide: 37.6 },
-  { id: 15, mesh: 1, x: -0.7, z: 30.1, fromX: -3.4, fromZ: 26.8, enter: 24.5, hit: 35.55, hide: 37.6 },
-  { id: 16, mesh: 0, x: 0.75, z: 29.9, fromX: 3.4, fromZ: 26.6, enter: 24.6, hit: 35.8, hide: 37.6 },
+  { id: 11, mesh: 0, x: 0.15, z: 34.28, fromX: 0.45, fromZ: 37.3, enter: 23.15, arrive: 24.45, hit: 35.65, hide: 37.9 },
+  { id: 12, mesh: 1, x: 1.15, z: 33.9, fromX: 4.15, fromZ: 35.3, enter: 23.2, arrive: 24.48, hit: 34.95, hide: 37.9 },
+  { id: 13, mesh: 0, x: 1.42, z: 33.0, fromX: 4.35, fromZ: 32.7, enter: 23.22, arrive: 24.5, hit: 34.45, hide: 37.9 },
+  { id: 14, mesh: 1, x: 1.1, z: 32.15, fromX: 3.7, fromZ: 30.1, enter: 23.25, arrive: 24.5, hit: 35.4, hide: 37.9 },
+  { id: 15, mesh: 0, x: -0.1, z: 31.72, fromX: -0.35, fromZ: 29.1, enter: 23.28, arrive: 24.52, hit: 35.9, hide: 37.9 },
+  { id: 16, mesh: 1, x: -1.2, z: 32.1, fromX: -3.9, fromZ: 30.3, enter: 23.24, arrive: 24.5, hit: 35.15, hide: 37.9 },
+  { id: 17, mesh: 0, x: -1.45, z: 33.0, fromX: -4.35, fromZ: 33.2, enter: 23.2, arrive: 24.48, hit: 34.2, hide: 37.9 },
+  { id: 18, mesh: 1, x: -1.12, z: 33.95, fromX: -3.55, fromZ: 36.1, enter: 23.18, arrive: 24.46, hit: 34.7, hide: 37.9 },
 ];
 
 export const KURTAR_ALLY_SLOTS = [
-  { x: -2.15, z: 31.4, side: -1, run: 28.45, zoom0: 28.85, zoom1: 29.95, hit: 34.55 },
-  { x: 2.2, z: 31.2, side: 1, run: 29.95, zoom0: 30.15, zoom1: 31.25, hit: 34.8 },
-  { x: -1.65, z: 33.4, side: -1, run: 31.25, zoom0: 31.45, zoom1: 32.55, hit: 35.05 },
-  { x: 1.75, z: 33.5, side: 1, run: 32.55, zoom0: 32.75, zoom1: 33.85, hit: 35.3 },
+  { x: -2.35, z: 32.55, side: -1, run: 28.45, zoom0: 28.85, zoom1: 29.95, cuts: [{ orc: 17, hit: 34.2, form: 0 }, { orc: 16, hit: 35.15, form: 1 }] },
+  { x: 2.4, z: 32.5, side: 1, run: 29.95, zoom0: 30.15, zoom1: 31.25, cuts: [{ orc: 13, hit: 34.45, form: 1 }, { orc: 14, hit: 35.4, form: 2 }] },
+  { x: -1.7, z: 35.15, side: -1, run: 31.25, zoom0: 31.45, zoom1: 32.55, cuts: [{ orc: 18, hit: 34.7, form: 2 }, { orc: 11, hit: 35.65, form: 3 }] },
+  { x: 1.75, z: 35.2, side: 1, run: 32.55, zoom0: 32.75, zoom1: 33.85, cuts: [{ orc: 12, hit: 34.95, form: 3 }, { orc: 15, hit: 35.9, form: 0 }] },
 ] as const;
 
 export function kurtarHeroZ(t: number) {
@@ -205,11 +211,11 @@ export function kurtarHeroZ(t: number) {
 export function kurtarLead(t: number) {
   const z = kurtarHeroZ(t);
   let strike = GUARD;
-  const open = strikeWindow(t, LEAD_HITS[0], 1.05);
+  const open = strikeWindow(t, LEAD_HITS[0], 1.05, LEAD_FORMS[0]);
   if (open) strike = open;
   else {
     for (let i = 1; i < LEAD_HITS.length; i++) {
-      const hit = strikeWindow(t, LEAD_HITS[i], 0.38);
+      const hit = strikeWindow(t, LEAD_HITS[i], 0.36, LEAD_FORMS[i]);
       if (hit) {
         strike = hit;
         break;
@@ -221,7 +227,7 @@ export function kurtarLead(t: number) {
 }
 
 export function kurtarOrcPose(orc: KurtarOrc, t: number) {
-  const k = smo(t, orc.enter, Math.max(orc.enter + 0.05, orc.hit - 0.12));
+  const k = smo(t, orc.enter, orc.arrive ?? Math.max(orc.enter + 0.05, orc.hit - 0.12));
   const fall = clamp((t - orc.hit) / 0.28, 0, 1);
   return {
     x: orc.fromX + (orc.x - orc.fromX) * k,
@@ -266,8 +272,14 @@ export function kurtarAllyPose(i: number, t: number) {
   const x = slot.side * 4.7 + (slot.x - slot.side * 4.7) * arrive;
   const z = 26.4 + (slot.z - 26.4) * arrive;
   const zooming = t >= slot.zoom0 && t <= slot.zoom1;
-  const yaw = zooming ? Math.PI : 0;
-  const strike = strikeWindow(t, slot.hit, 0.36) ?? GUARD;
+  const cut = t < slot.cuts[0].hit + 0.28 ? slot.cuts[0] : slot.cuts[1];
+  const foe = KURTAR_ORCS.find((orc) => orc.id === cut.orc) ?? KURTAR_ORCS[0];
+  const yaw = zooming ? Math.PI : t < slot.zoom0 ? Math.atan2(slot.x - x, slot.z - z) : Math.atan2(foe.x - x, foe.z - z);
+  let strike = GUARD;
+  for (const blow of slot.cuts) {
+    const hit = strikeWindow(t, blow.hit, 0.34, blow.form);
+    if (hit) strike = hit;
+  }
   return { x, y: 0, z, yaw, strike, show: t >= slot.run - 0.05 };
 }
 

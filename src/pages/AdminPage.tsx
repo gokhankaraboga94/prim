@@ -1502,7 +1502,7 @@ export function AdminPage() {
           )}
           {isKurtar(reelShot) && (
             <p className="muted">
-              Üçüncü şahıs. Kayıt, modeller oturunca başlar. Zırhlı kahraman sağ elindeki kılıçla geniş tünelde tek vuruşla ork keser, canı azalır. Parmaklığın ardındaki sivri kulaklı kadın elfin başında orklar baştan bekler. Onları da keser, kurtaracakken sarılır ve canı dibe vurur. Kamera genişler, saran orklar görünür. Diğer kahramanlar sağdan soldan gelir, her birinin yüzü yakın planda görünür, orkları kesip elfi çıkarırlar. İlk karede kılıç inmektedir. Ekranda “ONU KURTAR”, sonra “CANI BİTİYOR”.
+              Üçüncü şahıs. Kayıt, modeller oturunca başlar. Zırhlı kahraman sağ elindeki kılıcı üstten, yandan, saplama ve alttan kullanır. Parmaklığın ardında koyu saçlı kadın elf vardır, başında orklar baştan bekler. Onları keser, kurtaracakken sekiz ork tam çevresine kapanır ve can orada dibe vurur. Diğer kahramanlar sağdan soldan gelir, yüzleri yakın planda görünür, sonra her biri en yakın orka dönüp onu keser. Ekranda “ONU KURTAR”, sonra “CANI BİTİYOR”.
             </p>
           )}
           {isLoop(reelShot) && (
