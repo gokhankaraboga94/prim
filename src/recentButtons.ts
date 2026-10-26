@@ -5,12 +5,14 @@ import { KARSI_ID, KARSI_MODE, KARSI_SECONDS, KARSI0_ID, KARSI0_MODE, KARSI0_SEC
 import { KAYIT_ID, KAYIT_MODE, KAYIT_SECONDS } from "./kayitReel";
 import { HERO_ID, HERO_MODE, HERO_SECONDS } from "./heroReel";
 import { LOOP_ID, LOOP_MODE, LOOP_SECONDS } from "./loopReel";
+import { KURTAR_ID, KURTAR_MODE, KURTAR_SECONDS } from "./kurtarReel";
 import { DRAGON_ID, DRAGON_MODE, DRAGON_SECONDS } from "./dragonReel";
 import { ELF_ID, ELF_MODE, ELF_SECONDS } from "./elfReel";
 export const RECENT_BUTTON_LIMIT = 20;
 
 /** Yeniden eskiye. Bir buton güncellenirse en üste alınır, en alttaki 20'nin dışına düşer. */
 export const RECENT_BUTTONS = [
+  { id: KURTAR_ID, label: `${KURTAR_MODE.label} — ${KURTAR_SECONDS}s`, seconds: KURTAR_SECONDS },
   { id: LOOP_ID, label: `${LOOP_MODE.label} — ${LOOP_SECONDS}s`, seconds: LOOP_SECONDS },
   { id: YEDI_ID, label: `${YEDI_MODE.label} — ${YEDI_SECONDS}s`, seconds: YEDI_SECONDS },
   { id: KARSI3_ID, label: `${KARSI3_MODE.label} — ${KARSI3_SECONDS}s`, seconds: KARSI3_SECONDS },
