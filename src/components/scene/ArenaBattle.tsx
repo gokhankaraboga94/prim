@@ -259,10 +259,13 @@ type ArmUniforms = {
   armSwap: { value: number };
   armPivot: { value: THREE.Vector3 };
   armElbow: { value: number };
+  uGait?: { value: THREE.Vector2 };
+  uMinY?: { value: number };
+  uHeight?: { value: number };
 };
 
-/** Writes armW/armE onto the geometry and returns the weapon side. */
-export function paintArmWeights(geo: THREE.BufferGeometry, forwardX: boolean) {
+/** Writes armW/armE onto the geometry and returns the weapon side. `preferSide` forces the weapon hand (-1 is -X, the right hand when the figure faces +Z). */
+export function paintArmWeights(geo: THREE.BufferGeometry, forwardX: boolean, preferSide?: number) {
   const pos = geo.getAttribute("position") as THREE.BufferAttribute;
   geo.computeBoundingBox();
   const box = geo.boundingBox;
@@ -270,7 +273,8 @@ export function paintArmWeights(geo: THREE.BufferGeometry, forwardX: boolean) {
   const minY = box.min.y;
   const height = Math.max(0.001, box.max.y - minY);
   const lat = (i: number) => (forwardX ? pos.getZ(i) : pos.getX(i));
-  const side = armSide(lat, (i) => pos.getY(i), pos.count, minY, height);
+  const picked = armSide(lat, (i) => pos.getY(i), pos.count, minY, height);
+  const side = preferSide === 1 || preferSide === -1 ? preferSide : picked;
   const armW = new Float32Array(pos.count);
   const armE = new Float32Array(pos.count);
   for (let i = 0; i < pos.count; i++) {
@@ -283,7 +287,39 @@ export function paintArmWeights(geo: THREE.BufferGeometry, forwardX: boolean) {
   const pivot = forwardX
     ? new THREE.Vector3(height * 0.04, minY + height * ARM_PIVOT_Y, side * height * ARM_PIVOT_X)
     : new THREE.Vector3(side * height * ARM_PIVOT_X, minY + height * ARM_PIVOT_Y, 0);
-  return { side, pivot, elbow: height * ARM_ELBOW_DROP };
+  return { side, pivot, elbow: height * ARM_ELBOW_DROP, minY, height };
+}
+
+/** The hanging blade sits below the arm band, so the shoulder swing never reaches it. Pull those vertices into the weapon hand. */
+function weightBlade(geo: THREE.BufferGeometry, side: number) {
+  const pos = geo.getAttribute("position") as THREE.BufferAttribute;
+  const armW = geo.getAttribute("armW") as THREE.BufferAttribute;
+  const armE = geo.getAttribute("armE") as THREE.BufferAttribute;
+  if (!pos || !armW || !armE) return;
+  geo.computeBoundingBox();
+  const box = geo.boundingBox;
+  if (!box) return;
+  const minY = box.min.y;
+  const height = Math.max(0.001, box.max.y - minY);
+  const chest: number[] = [];
+  for (let i = 0; i < pos.count; i++) {
+    const yn = (pos.getY(i) - minY) / height;
+    if (yn < 0.5 || yn > 0.72) continue;
+    chest.push(pos.getX(i));
+  }
+  if (chest.length < 30) return;
+  chest.sort((a, b) => a - b);
+  const cx = chest[chest.length >> 1];
+  for (let i = 0; i < pos.count; i++) {
+    const yn = (pos.getY(i) - minY) / height;
+    if (yn > 0.7) continue;
+    const lat = ((pos.getX(i) - cx) * side) / height;
+    if (lat < 0.2) continue;
+    armW.setX(i, 1);
+    armE.setX(i, 1);
+  }
+  armW.needsUpdate = true;
+  armE.needsUpdate = true;
 }
 
 export function armUniforms(side: number, pivot: THREE.Vector3, elbow: number, forwardX: boolean): ArmUniforms {
@@ -296,13 +332,19 @@ export function armUniforms(side: number, pivot: THREE.Vector3, elbow: number, f
   };
 }
 
+const MARCH_GLSL = `
+uniform vec2 uGait;
+uniform float uMinY;
+uniform float uHeight;
+`;
+
 /** `strikeExpr` reads the strike for this vertex: a uniform for heroes, an instance attribute for foes. */
-export function installArmShader(material: THREE.Material, uniforms: ArmUniforms, strikeExpr: string, key: string) {
+export function installArmShader(material: THREE.Material, uniforms: ArmUniforms, strikeExpr: string, key: string, march = false) {
   material.customProgramCacheKey = () => key;
   material.onBeforeCompile = (shader) => {
     Object.assign(shader.uniforms, uniforms);
     shader.vertexShader = shader.vertexShader
-      .replace("#include <common>", `#include <common>\n${ARM_GLSL}\n${strikeExpr}`)
+      .replace("#include <common>", `#include <common>\n${ARM_GLSL}\n${march ? MARCH_GLSL : ""}\n${strikeExpr}`)
       .replace(
         "#include <beginnormal_vertex>",
         `#include <beginnormal_vertex>
@@ -312,8 +354,27 @@ export function installArmShader(material: THREE.Material, uniforms: ArmUniforms
       .replace(
         "#include <begin_vertex>",
         `#include <begin_vertex>
-         vec3 armSwung = armSwing(transformed - armPivot, armE, armHit.x, armHit.y, armHit.y * 0.2) + armPivot;
-         transformed = mix(transformed, armSwung, armW);`
+         vec3 armSwung = armSwing(transformed - armPivot, armE, armHit.x, armHit.y, armHit.y * ${march ? "0.28" : "0.2"}) + armPivot;
+         transformed = mix(transformed, armSwung, armW);
+         ${march ? `float legYn = (transformed.y - uMinY) / max(uHeight, 0.001);
+         float legW = (1.0 - smoothstep(0.38, 0.5, legYn)) * (1.0 - armW) * smoothstep(0.02, 0.07, abs(transformed.x));
+         float phase = uGait.x + (transformed.x >= 0.0 ? 0.0 : 3.14159265);
+         float stride = sin(phase) * uGait.y * 0.42;
+         float kick = max(sin(phase - 0.65), 0.0) * uGait.y;
+         vec3 hip = vec3(transformed.x, uMinY + uHeight * 0.46, transformed.z);
+         vec3 leg = transformed - hip;
+         float cs = cos(stride);
+         float sn = sin(stride);
+         leg = vec3(leg.x, leg.y * cs - leg.z * sn, leg.y * sn + leg.z * cs);
+         float low = 1.0 - smoothstep(0.18, 0.3, legYn);
+         vec3 knee = vec3(0.0, uMinY + uHeight * 0.24 - hip.y, 0.0);
+         vec3 shin = leg - knee;
+         float kb = -kick * 1.05;
+         float kcs = cos(kb);
+         float ksn = sin(kb);
+         shin = vec3(shin.x, shin.y * kcs - shin.z * ksn, shin.y * ksn + shin.z * kcs);
+         leg = mix(leg, shin + knee, low);
+         transformed = mix(transformed, leg + hip, legW);` : ""}`
       );
   };
 }
@@ -333,18 +394,32 @@ function armSide(getLat: (i: number) => number, getY: (i: number) => number, cou
   return side;
 }
 
+type RigExtra = { side?: number; march?: boolean; blade?: boolean };
+
 /** Heroes: one draw each, strike comes in as a uniform the frame loop updates. */
-function rigArm(mesh: THREE.Mesh, forwardX: boolean) {
-  const cut = paintArmWeights(mesh.geometry, forwardX);
+function rigArm(mesh: THREE.Mesh, forwardX: boolean, extra?: RigExtra) {
+  const cut = paintArmWeights(mesh.geometry, forwardX, extra?.side);
   if (!cut) return;
+  if (extra?.blade) weightBlade(mesh.geometry, cut.side);
   const uniforms = armUniforms(cut.side, cut.pivot, cut.elbow, forwardX);
   const material = Array.isArray(mesh.material) ? mesh.material[0] : mesh.material;
-  installArmShader(material, uniforms, "uniform vec2 uStrike;\nvec2 armStrike() { return uStrike; }", "arena-hero-arm");
+  let expr = "uniform vec2 uStrike;\nvec2 armStrike() { return uStrike; }";
+  let key = "arena-hero-arm";
+  if (extra?.march) {
+    const gait = new THREE.Vector2();
+    uniforms.uGait = { value: gait };
+    uniforms.uMinY = { value: cut.minY };
+    uniforms.uHeight = { value: cut.height };
+    mesh.userData.gait = gait;
+    expr = "uniform vec2 uStrike;\nvec2 armStrike() { vec2 s = uStrike; s.y *= 1.4; return s; }";
+    key = "kurtar-march-arm";
+  }
+  installArmShader(material, uniforms, expr, key, Boolean(extra?.march));
   material.needsUpdate = true;
   mesh.userData.armStrike = uniforms.uStrike.value;
 }
 
-export function fitHero(scene: THREE.Group, yaw: number, light = false, rig = true) {
+export function fitHero(scene: THREE.Group, yaw: number, light = false, rig = true, extra?: RigExtra) {
   scene.updateMatrixWorld(true);
   scene.traverse((obj) => {
     const mesh = obj as THREE.Mesh;
@@ -381,7 +456,7 @@ export function fitHero(scene: THREE.Group, yaw: number, light = false, rig = tr
     const mesh = obj as THREE.Mesh;
     if (!mesh.isMesh) return;
     mesh.frustumCulled = false;
-    if (rig) rigArm(mesh, false);
+    if (rig) rigArm(mesh, false, extra);
   });
   return scene;
 }

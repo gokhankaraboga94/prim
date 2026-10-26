@@ -7,7 +7,9 @@ import { preloadedGlb } from "../../arenaPreload";
 import { fitHero } from "./ArenaBattle";
 import {
   KURTAR_ALLIES,
+  KURTAR_CAGE_Z,
   KURTAR_ELF,
+  KURTAR_ELF_Z,
   KURTAR_FACE,
   KURTAR_LEAD,
   KURTAR_ORCS,
@@ -46,6 +48,83 @@ function armsOf(root: THREE.Object3D) {
   return list;
 }
 
+function stepGait(root: THREE.Object3D, moving: boolean, speed: number, delta: number) {
+  root.traverse((obj) => {
+    const gait = obj.userData.gait as THREE.Vector2 | undefined;
+    if (!gait) return;
+    const target = moving ? Math.min(1, speed / 2.4) : 0;
+    gait.y += (target - gait.y) * Math.min(1, delta * 9);
+    gait.x += Math.max(0, speed) * 3.4 * delta;
+  });
+}
+
+/** Sword on +X is the figure's left. Mirror about the chest so it hangs in the right hand. */
+function mirrorSwordToRight(root: THREE.Object3D) {
+  const meshes: THREE.Mesh[] = [];
+  root.traverse((obj) => {
+    const mesh = obj as THREE.Mesh;
+    if (mesh.isMesh) meshes.push(mesh);
+  });
+  let minY = Infinity;
+  let maxY = -Infinity;
+  for (const mesh of meshes) {
+    const pos = mesh.geometry.getAttribute("position");
+    for (let i = 0; i < pos.count; i++) {
+      const y = pos.getY(i);
+      if (y < minY) minY = y;
+      if (y > maxY) maxY = y;
+    }
+  }
+  const height = Math.max(0.001, maxY - minY);
+  const chest: number[] = [];
+  for (const mesh of meshes) {
+    const pos = mesh.geometry.getAttribute("position");
+    for (let i = 0; i < pos.count; i++) {
+      const yn = (pos.getY(i) - minY) / height;
+      if (yn > 0.5 && yn < 0.72) chest.push(pos.getX(i));
+    }
+  }
+  if (chest.length < 30) return;
+  chest.sort((a, b) => a - b);
+  const cx = chest[chest.length >> 1];
+  let tipX = cx;
+  let tipD = -1;
+  for (const mesh of meshes) {
+    const pos = mesh.geometry.getAttribute("position");
+    for (let i = 0; i < pos.count; i++) {
+      const yn = (pos.getY(i) - minY) / height;
+      if (yn > 0.24) continue;
+      const d = Math.abs(pos.getX(i) - cx);
+      if (d <= tipD) continue;
+      tipD = d;
+      tipX = pos.getX(i);
+    }
+  }
+  if (tipX <= cx) return;
+  for (const mesh of meshes) {
+    const geo = mesh.geometry;
+    const pos = geo.getAttribute("position");
+    const nrm = geo.getAttribute("normal");
+    for (let i = 0; i < pos.count; i++) pos.setX(i, 2 * cx - pos.getX(i));
+    pos.needsUpdate = true;
+    if (nrm) {
+      for (let i = 0; i < nrm.count; i++) nrm.setX(i, -nrm.getX(i));
+      nrm.needsUpdate = true;
+    }
+    const idx = geo.getIndex();
+    if (idx) {
+      for (let i = 0; i < idx.count; i += 3) {
+        const b = idx.getX(i + 1);
+        idx.setX(i + 1, idx.getX(i + 2));
+        idx.setX(i + 2, b);
+      }
+      idx.needsUpdate = true;
+    }
+    geo.computeBoundingBox();
+    geo.computeBoundingSphere();
+  }
+}
+
 function disposeTree(root: THREE.Object3D) {
   root.traverse((obj) => {
     const mesh = obj as THREE.Mesh;
@@ -77,34 +156,35 @@ function Block({
 
 function Tunnel() {
   const ribs = [];
-  for (let i = 0; i < 20; i++) {
-    const z = i * 1.45 - 4.4;
-    const open = z > 16 ? 1 : z > 12 ? 0.45 : 0;
-    const half = 2.05 + open * 3.4;
-    const h = 3.35 + open * 2.2;
-    const stone = i % 2 === 0 ? "#3c342c" : "#2e2924";
+  for (let i = 0; i < 28; i++) {
+    const z = i * 1.75 - 6;
+    const open = z > 33 ? 1 : z > 28 ? 0.4 : 0;
+    const half = 5.15 + open * 1.8;
+    const h = 4.15 + open * 1.5;
+    const stone = i % 2 === 0 ? "#8a7562" : "#746252";
     ribs.push(
-      <Block key={`L${i}`} args={[0.7, h, 1.2]} position={[-half, h / 2, z]} color={stone} />,
-      <Block key={`R${i}`} args={[0.7, h, 1.2]} position={[half, h / 2, z]} color={stone} />,
+      <Block key={`L${i}`} args={[0.9, h, 1.45]} position={[-half, h / 2, z]} color={stone} />,
+      <Block key={`R${i}`} args={[0.9, h, 1.45]} position={[half, h / 2, z]} color={stone} />,
     );
-    if (z < 16) ribs.push(<Block key={`C${i}`} args={[half * 2, 0.45, 1.2]} position={[0, h, z]} color="#241e1a" />);
+    if (z < 16) ribs.push(<Block key={`C${i}`} args={[half * 2 + 0.9, 0.42, 1.45]} position={[0, h, z]} color="#6d5b4b" />);
   }
   return (
     <group>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.02, 14]} receiveShadow>
-        <planeGeometry args={[28, 46]} />
-        <meshLambertMaterial color="#1c1814" />
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.02, 22]} receiveShadow>
+        <planeGeometry args={[22, 64]} />
+        <meshLambertMaterial color="#7a6754" />
       </mesh>
-      <Block args={[2.4, 0.04, 34]} position={[0, 0.02, 12]} color="#3a2418" />
+      <Block args={[10.4, 0.05, 58]} position={[0, 0.02, 22]} color="#8d7864" />
       {ribs}
-      <Block args={[1.1, 2.6, 0.12]} position={[-1.55, 1.5, 0.2]} color="#8e1e24" />
-      <Block args={[0.7, 1.4, 0.08]} position={[1.7, 1.8, 6.4]} color="#c4552a" />
-      <Torch position={[-1.55, 0, -0.4]} />
-      <Torch position={[1.65, 0, 4.8]} />
-      <Torch position={[-1.85, 0, 9.6]} />
-      <Torch position={[2.1, 0, 14.2]} />
-      <Torch position={[-3.4, 0, 20.2]} />
-      <Torch position={[3.4, 0, 20.4]} />
+      <Block args={[1.3, 3.2, 0.12]} position={[-3.6, 1.7, -1.2]} color="#a12830" />
+      <Block args={[0.9, 2.1, 0.1]} position={[3.8, 2.0, 8.5]} color="#d26532" />
+      <Block args={[1.1, 2.4, 0.1]} position={[-4.0, 1.8, 18.5]} color="#8e1e24" />
+      <Torch position={[-4.15, 0, -0.6]} />
+      <Torch position={[4.2, 0, 7.2]} />
+      <Torch position={[-4.3, 0, 16.4]} />
+      <Torch position={[4.35, 0, 26.2]} />
+      <Flame position={[-4.4, 0, 34.2]} />
+      <Flame position={[4.45, 0, 34.6]} />
     </group>
   );
 }
@@ -125,7 +205,27 @@ function Torch({ position }: { position: [number, number, number] }) {
         <coneGeometry args={[0.14, 0.42, 6]} />
         <meshBasicMaterial color="#ff9a3a" />
       </mesh>
-      <pointLight position={[0, 1.8, 0]} color="#ffb068" intensity={2.4} distance={7.5} decay={2} />
+      <pointLight position={[0, 1.8, 0]} color="#ffb068" intensity={1.35} distance={8} decay={2} />
+    </group>
+  );
+}
+
+function Flame({ position }: { position: [number, number, number] }) {
+  const flame = useRef<THREE.Mesh>(null);
+  useFrame(({ clock }) => {
+    const f = 0.85 + Math.sin(clock.elapsedTime * 9 + position[2]) * 0.15;
+    if (flame.current) flame.current.scale.y = f;
+  });
+  return (
+    <group position={position}>
+      <mesh position={[0, 0.85, 0]}>
+        <cylinderGeometry args={[0.05, 0.07, 1.5, 6]} />
+        <meshLambertMaterial color="#2a2118" />
+      </mesh>
+      <mesh ref={flame} position={[0, 1.7, 0]}>
+        <coneGeometry args={[0.14, 0.42, 6]} />
+        <meshBasicMaterial color="#ff9a3a" />
+      </mesh>
     </group>
   );
 }
@@ -137,19 +237,19 @@ function Cage() {
     if (bars.current) bars.current.position.y = lift * 2.6;
   });
   const rods = [];
-  for (let i = 0; i < 7; i++) rods.push(<mesh key={i} position={[-0.9 + i * 0.3, 1.15, 0]}><cylinderGeometry args={[0.045, 0.045, 2.3, 6]} /><meshLambertMaterial color="#14161a" /></mesh>);
+  for (let i = 0; i < 9; i++) rods.push(<mesh key={i} position={[-1.4 + i * 0.35, 1.2, 0]}><cylinderGeometry args={[0.05, 0.05, 2.45, 6]} /><meshLambertMaterial color="#2a2e34" /></mesh>);
   return (
-    <group position={[0, 0, 22.15]}>
-      <Block args={[2.8, 0.16, 2.4]} position={[0, 0.08, 0.7]} color="#4a4034" />
-      <Block args={[8, 4.6, 0.4]} position={[0, 2.3, 2.4]} color="#2a241e" />
-      <Block args={[8, 0.35, 6]} position={[0, 4.5, 0.4]} color="#1a1614" />
-      <mesh position={[0, 1.2, 1.15]}>
-        <sphereGeometry args={[0.55, 12, 10]} />
-        <meshBasicMaterial color="#ffd2a8" transparent opacity={0.22} />
+    <group position={[0, 0, KURTAR_CAGE_Z]}>
+      <Block args={[3.6, 0.16, 2.6]} position={[0, 0.08, 0.8]} color="#6a5a48" />
+      <Block args={[12, 5.2, 0.45]} position={[0, 2.6, 2.6]} color="#5c5146" />
+      <Block args={[12, 0.35, 2.6]} position={[0, 5.05, 2.1]} color="#4e453c" />
+      <mesh position={[0, 1.35, 1.2]}>
+        <sphereGeometry args={[0.7, 12, 10]} />
+        <meshBasicMaterial color="#ffe0bf" transparent opacity={0.28} />
       </mesh>
-      <pointLight position={[0, 2.1, 0.8]} color="#ffc48a" intensity={6} distance={9} decay={2} />
+      <pointLight position={[0, 2.4, 0.6]} color="#ffd0a0" intensity={3.2} distance={11} decay={2} />
       <group ref={bars}>{rods}</group>
-      <Block args={[2.4, 0.16, 0.16]} position={[0, 2.35, 0]} color="#1a1c20" />
+      <Block args={[3.2, 0.16, 0.16]} position={[0, 2.48, 0]} color="#3a3e44" />
     </group>
   );
 }
@@ -168,36 +268,48 @@ function Fighters({ pack }: { pack: Pack }) {
   const orcRefs = useRef<Array<THREE.Group | null>>([]);
   const leadArms = useMemo(() => armsOf(pack.lead), [pack.lead]);
   const allyArms = useMemo(() => pack.allies.map(armsOf), [pack.allies]);
-  useFrame(() => {
+  const prevLead = useRef(0);
+  const prevAlly = useRef<number[]>([0, 0, 0, 0]);
+  useFrame((_, delta) => {
     const t = kurtarT();
+    const dt = Math.min(0.05, delta);
     const lead = kurtarLead(t);
     const node = leadRef.current;
     if (node) {
+      const speed = Math.abs(lead.z - prevLead.current) / Math.max(dt, 1e-4);
+      prevLead.current = lead.z;
       node.position.set(lead.x, lead.y, lead.z);
       node.rotation.set(lead.kneel, lead.yaw + KURTAR_FACE, 0);
       for (const arm of leadArms) arm.set(lead.strike.lift, lead.strike.chop);
+      const striking = lead.strike.chop > 0.35 || lead.strike.lift > 0.72 || lead.kneel > 0.12;
+      stepGait(pack.lead, !striking && speed > 0.45, speed, dt);
     }
     KURTAR_ORCS.forEach((spec, i) => {
       const body = orcRefs.current[i];
       if (!body) return;
       const pose = kurtarOrcPose(spec, t);
       body.visible = pose.show;
-      body.position.set(pose.x, -pose.fall * 0.35, pose.z);
+      body.position.set(pose.x, 0, pose.z);
       const face = Math.atan2(-pose.x, lead.z - pose.z);
-      body.rotation.set(pose.fall * 1.25, face + KURTAR_FACE, 0);
+      body.rotation.set(pose.fall * 1.35, face + KURTAR_FACE, pose.fall * (i % 2 === 0 ? 0.22 : -0.22));
     });
     pack.allies.forEach((_, i) => {
       const body = allyRefs.current[i];
       if (!body) return;
       const pose = kurtarAllyPose(i, t);
+      const prev = prevAlly.current[i] ?? pose.z;
+      const runSpeed = Math.abs(pose.z - prev) / Math.max(dt, 1e-4);
+      prevAlly.current[i] = pose.z;
       body.visible = pose.show;
       body.position.set(pose.x, pose.y, pose.z);
       body.rotation.set(0, pose.yaw + KURTAR_FACE, 0);
       const hit = pose.strike;
       for (const arm of allyArms[i]) arm.set(hit.lift, hit.chop);
+      const zooming = pose.yaw > 1;
+      stepGait(pack.allies[i], pose.show && !zooming && hit.chop < 0.35 && runSpeed > 0.45, runSpeed, dt);
     });
     if (elfRef.current) {
-      elfRef.current.position.set(0, 0, 23.15);
+      elfRef.current.position.set(0, 0, KURTAR_ELF_Z);
       elfRef.current.rotation.y = Math.PI + KURTAR_FACE;
     }
   });
@@ -379,7 +491,7 @@ export function KurtarCam() {
     const shot = kurtarCam(kurtarT());
     persp.fov = shot.fov;
     persp.near = 0.15;
-    persp.far = 80;
+    persp.far = 140;
     persp.updateProjectionMatrix();
     persp.position.set(shot.x, shot.y, shot.z);
     persp.up.set(0, 1, 0);
@@ -408,8 +520,12 @@ export function KurtarBattle() {
           loadGlb(loader, KURTAR_ORC_B),
         ]);
         if (drop) return;
-        const lead = fitHero(leadG.scene, 0, true, true);
-        const allies = [a0, a1, a2, a3].map((gltf) => fitHero(gltf.scene, 0, true, true));
+        mirrorSwordToRight(leadG.scene);
+        const lead = fitHero(leadG.scene, 0, true, true, { side: -1, march: true, blade: true });
+        const allies = [a0, a1, a2, a3].map((gltf) => {
+          mirrorSwordToRight(gltf.scene);
+          return fitHero(gltf.scene, 0, true, true, { side: -1, march: true, blade: true });
+        });
         const elf = fitHero(elfG.scene, 0, true, false);
         const src = [fitHero(orcA.scene, 0, true, false), fitHero(orcB.scene, 0, true, false)];
         const orcs = KURTAR_ORCS.map((spec) => src[spec.mesh].clone(true));
@@ -430,9 +546,11 @@ export function KurtarBattle() {
   }, []);
   return (
     <group>
-      <ambientLight intensity={0.55} color="#c5d0dc" />
-      <directionalLight position={[-3, 8, -8]} intensity={1.55} color="#ffe2c4" />
-      <directionalLight position={[3, 7, 16]} intensity={1.35} color="#ffd0a4" />
+      <hemisphereLight args={["#fff4e4", "#b08968", 0.72]} />
+      <ambientLight intensity={0.78} color="#f3f6fa" />
+      <directionalLight position={[-4, 11, -6]} intensity={2.2} color="#fff3e2" />
+      <directionalLight position={[5, 9, 20]} intensity={1.75} color="#ffe4c4" />
+      <directionalLight position={[0, 14, 28]} intensity={0.9} color="#fff8ee" />
       <Tunnel />
       <Cage />
       {pack && <Fighters pack={pack} />}
