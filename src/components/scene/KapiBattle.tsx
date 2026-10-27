@@ -377,19 +377,19 @@ function Charge({
   const heroRefs = useRef<(THREE.Group | null)[]>([]);
   const arms = useMemo(() => pack.heroes.map((hero) => armsOf(hero)), [pack.heroes]);
   const geo = useMemo(() => arrowGeo(), []);
-  const named = useMemo(() => {
-    const cols = [2, 4, 7, 9];
-    for (let rank = 11; rank >= 0; rank--) {
-      const rows = cols
-        .map((col) => {
-          const i = rank * 12 + col;
-          return { name: roster[i] || "", i };
-        })
-        .filter((row) => row.name);
-      if (rows.length >= 2) return rows;
-    }
-    return [];
-  }, [roster]);
+  const named = useMemo(
+    () =>
+      roster
+        .map((name, i) => ({ name, i }))
+        .filter((row) => {
+          if (!row.name) return false;
+          const rank = Math.floor(row.i / 12);
+          const col = row.i % 12;
+          if (rank < 8 || col < 2 || col > 9) return false;
+          return (col + rank) % 2 === 0;
+        }),
+    [roster]
+  );
   const atlas = useMemo(
     () =>
       buildNameAtlas(
@@ -469,7 +469,7 @@ function Charge({
         if (dir.lengthSq() < 1e-8) continue;
         dummy.position.set(arrowTmp.x, arrowTmp.y, arrowTmp.z);
         dummy.quaternion.setFromUnitVectors(up, dir.normalize());
-        dummy.scale.set(9, 1.25, 9);
+        dummy.scale.set(3.05, 1.55, 3.05);
         dummy.updateMatrix();
         mesh.setMatrixAt(n, dummy.matrix);
         n += 1;
@@ -486,9 +486,10 @@ function Charge({
         if (!cell || cell.sheet !== atlas.sheets.indexOf(sheet)) continue;
         const pose = kapiSoldier(named[n].i, t, faceZ);
         const hide = pose.fall > 0.4;
-        const w = Math.min(cell.sx, 1.9);
+        const rank = Math.floor(named[n].i / 12);
+        const w = Math.min(cell.sx, 2.48);
         const h = (cell.sy * w) / Math.max(cell.sx, 0.01);
-        dummy.position.set(pose.x, hide ? -8 : 3.15, pose.z);
+        dummy.position.set(pose.x, hide ? -8 : 2.12 + (12 - rank) * 1.06, pose.z);
         dummy.quaternion.copy(camera.quaternion);
         dummy.scale.set(hide ? 0.001 : w, hide ? 0.001 : h, 1);
         dummy.updateMatrix();
