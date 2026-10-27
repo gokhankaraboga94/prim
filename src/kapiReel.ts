@@ -1,9 +1,9 @@
-import { frontWalk, frontWallFace } from "./castleLayout";
+import { castleAxes, castleGrow, frontWalk, frontWallFace } from "./castleLayout";
 
 export const KAPI_ID = "kapi" as const;
 export type KapiId = typeof KAPI_ID;
 export const KAPI_MODE = { id: KAPI_ID, label: "kapi" } as const;
-export const KAPI_SECONDS = 20;
+export const KAPI_SECONDS = 30;
 
 export const KAPI_HEROES = [
   "/models/arena3/armored.glb",
@@ -21,11 +21,12 @@ export const KAPI_ARCHERS = 8;
 export const KAPI_EARLY = ["OKLAR", "İNİYOR"] as const;
 export const KAPI_LATE = ["OKLAR", "İNİYOR", "KAPI KIRILACAK"] as const;
 
+const ARCHER_X = [-5.6, -4.0, -2.4, -0.8, 0.8, 2.4, 4.0, 5.6];
 const GAP_X = 1.12;
 const GAP_Z = 1.02;
-const RUN = 15.4;
-const FLIGHT = 0.58;
-const HIT = 15.55;
+const RUN = 20.2;
+const FLIGHT = 0.5;
+export const KAPI_HIT = 20.7;
 
 export function isKapi(id: string | null | undefined): id is KapiId {
   return id === KAPI_ID;
@@ -107,13 +108,13 @@ function swing(p: number): KapiStrike {
 
 export function kapiSwing(t: number): KapiStrike {
   const dur = 0.9;
-  const p = (t - (HIT - 0.46 * dur)) / dur;
+  const p = (t - (KAPI_HIT - 0.46 * dur)) / dur;
   if (p <= 0 || p >= 1) return GUARD;
   return swing(p);
 }
 
 export function kapiRunning(t: number) {
-  return t < 15.15;
+  return t < KAPI_HIT - 0.4;
 }
 
 export function kapiFace(level: number) {
@@ -123,8 +124,8 @@ export function kapiFace(level: number) {
 }
 
 export function kapiLead(t: number, faceZ: number) {
-  const start = faceZ + 22;
-  const end = faceZ + 5.2;
+  const start = faceZ + 58;
+  const end = faceZ + 4.4;
   const u = Math.min(1, Math.max(0, t / RUN));
   return start + (end - start) * u;
 }
@@ -141,34 +142,42 @@ export function kapiSlot(i: number) {
 export const KAPI_HERO_X = [-2.35, -0.8, 0.8, 2.35] as const;
 
 const ORDER = [
-  89, 78, 101, 66, 90, 77, 102, 65, 91, 54, 113, 67, 79, 103, 53, 114, 55, 115, 41, 42, 43, 30, 31, 32, 18, 19, 20, 6,
-  7, 8, 125, 126, 137, 138,
+  78, 102, 66, 91, 77, 54, 103, 67, 42, 79, 113, 55, 41, 114, 43, 30, 115, 31, 18, 19, 6, 7, 125, 126, 137, 138, 20, 32,
 ];
 
 const GROUPS: { t: number; ids: number[] }[] = [
-  { t: 3.35, ids: [76, 88, 100] },
-  { t: 7.55, ids: [65, 66, 67, 68] },
-  { t: 11.15, ids: [53, 54, 55] },
+  { t: 6.3, ids: [4, 8, 16] },
+  { t: 10.7, ids: [17, 28, 29] },
+  { t: 15.1, ids: [33, 44, 45] },
+  { t: 18.6, ids: [56, 57, 68] },
+];
+
+const EYES: { i: number; t: number }[] = [
+  { i: 18, t: 4.35 },
+  { i: 30, t: 8.7 },
+  { i: 42, t: 13.05 },
+  { i: 66, t: 16.9 },
 ];
 
 function buildDeaths() {
   const used = new Set<number>();
-  const out: { i: number; t: number; archer: number }[] = [];
-  const add = (i: number, t: number) => {
+  const out: { i: number; t: number; archer: number; eye: boolean }[] = [];
+  const add = (i: number, t: number, eye = false) => {
     if (used.has(i) || i < 0 || i >= KAPI_N) return;
     used.add(i);
-    out.push({ i, t, archer: i % KAPI_ARCHERS });
+    out.push({ i, t, archer: i % KAPI_ARCHERS, eye });
   };
-  add(89, -0.28);
-  add(78, 0.32);
-  add(101, 0.54);
-  let t = 0.96;
-  for (let n = 3; n < ORDER.length; n++) {
+  add(6, -0.16);
+  add(5, 0.32);
+  add(7, 1.15);
+  for (const eye of EYES) add(eye.i, eye.t, true);
+  let t = 1.35;
+  for (let n = 0; n < ORDER.length; n++) {
     add(ORDER[n], t);
-    t += n % 5 === 0 ? 0.24 : 0.4;
+    t += n % 4 === 0 ? 0.32 : 0.58;
   }
   for (const group of GROUPS) {
-    group.ids.forEach((id, k) => add(id, group.t + k * 0.04));
+    group.ids.forEach((id, k) => add(id, group.t + k * 0.05));
   }
   out.sort((a, b) => a.t - b.t);
   return out;
@@ -190,9 +199,20 @@ export function kapiSoldier(i: number, t: number, faceZ: number) {
 }
 
 export function kapiArchers(level: number) {
-  const face = kapiFace(level);
-  const spread = [-6.4, -4.6, -2.8, -1.15, 1.15, 2.8, 4.6, 6.4];
-  return spread.map((x) => ({ x, y: face.y + 0.08, z: face.z - 0.45 }));
+  const grow = castleGrow(level);
+  const { sy, sz, zShift } = castleAxes(grow);
+  const wallH = 3.85 + ((((Math.max(1, level) - 1) % 5) + 1) * 0.18);
+  const y = (wallH + 2.36) * sy - 1.88;
+  const z = (6.85 + 1.9) * sz + zShift;
+  return ARCHER_X.map((x) => ({ x, y, z }));
+}
+
+export function kapiEye(t: number) {
+  for (const death of KAPI_DEATHS) {
+    if (!death.eye) continue;
+    if (t >= death.t - 0.48 && t <= death.t + 1.15) return death;
+  }
+  return null;
 }
 
 export type KapiArrow = { x: number; y: number; z: number; dx: number; dy: number; dz: number };
@@ -224,25 +244,61 @@ export function kapiArrow(
 }
 
 export function kapiBreak(t: number) {
-  return smo(t, HIT, 17.15);
+  return smo(t, KAPI_HIT, KAPI_HIT + 2.15);
 }
 
-export function kapiCam(t: number, faceZ: number, wallY: number): KapiCam {
+function mixN(a: number, b: number, k: number) {
+  return a + (b - a) * k;
+}
+
+export function kapiCam(t: number, level: number): KapiCam {
+  const face = kapiFace(level);
+  const faceZ = face.z;
+  const eye = kapiEye(t);
+  if (eye) {
+    const pose = kapiSoldier(eye.i, t, faceZ);
+    const aim = kapiSoldier(eye.i, eye.t, faceZ);
+    const post = kapiArchers(level)[eye.archer] ?? kapiArchers(level)[0];
+    const born = eye.t - FLIGHT;
+    const u = Math.min(1, Math.max(0, (t - born) / FLIGHT));
+    const ax = post.x + (aim.x - post.x) * u;
+    const az = post.z + (aim.z - post.z) * u;
+    const ay = post.y + 1.45 + (1.2 - (post.y + 1.45)) * u + Math.sin(u * Math.PI) * 1.15;
+    const dive = smo(t, eye.t, eye.t + 0.85);
+    const z = pose.z - 0.5;
+    if (t < eye.t + 0.08) {
+      return {
+        x: pose.x + 0.46,
+        y: 1.56,
+        z,
+        lx: ax,
+        ly: ay,
+        lz: az,
+        fov: 50,
+      };
+    }
+    return {
+      x: pose.x + 0.12,
+      y: Math.max(0.22, 1.56 - dive * 1.3),
+      z,
+      lx: pose.x,
+      ly: 0.08,
+      lz: z - 2.4,
+      fov: 64,
+    };
+  }
   const lead = kapiLead(t, faceZ);
-  const tail = 3.6 + 12 * GAP_Z;
-  const pull = smo(t, 14.7, 16.4);
-  const y = 2.85 + pull * 2.8;
-  const z = lead + tail + 3.4 - pull * 2;
-  const dist = Math.max(8, z - faceZ);
-  const elev = Math.atan2(wallY * 0.34 - y, dist);
+  const pull = smo(t, KAPI_HIT - 0.3, KAPI_HIT + 1.85);
+  const y = 4.2 + pull * 4;
+  const z = lead + 9.5 + pull * 6;
   return {
-    x: 0.4,
+    x: 0.15,
     y,
     z,
     lx: 0,
-    ly: y + Math.tan(elev) * 10,
-    lz: lead + 2,
-    fov: 58 + pull * 6,
+    ly: mixN(9.5, 16, pull),
+    lz: mixN(faceZ + 2, faceZ - 8, pull),
+    fov: 54 + pull * 10,
   };
 }
 

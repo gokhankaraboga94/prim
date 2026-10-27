@@ -17,6 +17,7 @@ import {
   KAPI_HERO_X,
   KAPI_KNIGHT,
   KAPI_LATE,
+  KAPI_HIT,
   KAPI_N,
   KAPI_ROMAN,
   type KapiArrow,
@@ -132,27 +133,85 @@ function mirrorSwordToRight(root: THREE.Object3D) {
 }
 
 function arrowGeo() {
-  const shaft = new THREE.CylinderGeometry(0.08, 0.08, 1.85, 5);
-  shaft.translate(0, 0.25, 0);
-  const head = new THREE.ConeGeometry(0.16, 0.38, 5);
-  head.translate(0, 1.28, 0);
-  const fletch = new THREE.BoxGeometry(0.28, 0.34, 0.04);
-  fletch.translate(0, -0.52, 0);
+  const shaft = new THREE.CylinderGeometry(0.01, 0.008, 1.45, 5);
+  shaft.translate(0, 0.1, 0);
+  const head = new THREE.ConeGeometry(0.018, 0.14, 5);
+  head.translate(0, 0.88, 0);
+  const fletch = new THREE.BoxGeometry(0.028, 0.09, 0.004);
+  fletch.translate(0, -0.62, 0);
   return mergeGeometries([shaft, head, fletch]) ?? shaft;
 }
 
-function hideSlabs(root: THREE.Object3D) {
+function cutPlinth(root: THREE.Object3D) {
   root.traverse((obj) => {
     const mesh = obj as THREE.Mesh;
     if (!mesh.isMesh) return;
-    mesh.geometry.computeBoundingBox();
-    const box = mesh.geometry.boundingBox;
-    if (!box) return;
-    const sx = box.max.x - box.min.x;
-    const sy = box.max.y - box.min.y;
-    const sz = box.max.z - box.min.z;
-    if (sy < 0.18 && sx > 0.45 && sz > 0.45) mesh.visible = false;
+    const geo = mesh.geometry;
+    const pos = geo.getAttribute("position");
+    if (!pos || pos.count < 12) return;
+    if (!geo.getIndex()) geo.setIndex(Array.from({ length: pos.count }, (_, i) => i));
+    const index = geo.getIndex();
+    if (!index) return;
+    let minY = Infinity;
+    let maxY = -Infinity;
+    for (let i = 0; i < pos.count; i++) {
+      const y = pos.getY(i);
+      if (y < minY) minY = y;
+      if (y > maxY) maxY = y;
+    }
+    const h = maxY - minY;
+    if (h < 1e-4) return;
+    const cut = minY + h * 0.36;
+    let low = 0;
+    let x0 = Infinity;
+    let x1 = -Infinity;
+    let z0 = Infinity;
+    let z1 = -Infinity;
+    for (let i = 0; i < pos.count; i++) {
+      if (pos.getY(i) > cut) continue;
+      low += 1;
+      x0 = Math.min(x0, pos.getX(i));
+      x1 = Math.max(x1, pos.getX(i));
+      z0 = Math.min(z0, pos.getZ(i));
+      z1 = Math.max(z1, pos.getZ(i));
+    }
+    if (low < 12 || Math.max(x1 - x0, z1 - z0) < h * 0.22) return;
+    const src = index.array;
+    const kept: number[] = [];
+    for (let i = 0; i < src.length; i += 3) {
+      const a = src[i];
+      const b = src[i + 1];
+      const c = src[i + 2];
+      if (Math.max(pos.getY(a), pos.getY(b), pos.getY(c)) <= cut) continue;
+      kept.push(a, b, c);
+    }
+    if (kept.length === src.length) return;
+    if (kept.length === 0) {
+      mesh.visible = false;
+      return;
+    }
+    geo.setIndex(kept);
+    geo.computeVertexNormals();
+    geo.computeBoundingBox();
+    geo.computeBoundingSphere();
   });
+}
+
+function seatFeet(root: THREE.Object3D) {
+  root.updateMatrixWorld(true);
+  const box = new THREE.Box3();
+  let hit = false;
+  root.traverse((obj) => {
+    const mesh = obj as THREE.Mesh;
+    if (!mesh.isMesh || !mesh.visible) return;
+    const next = new THREE.Box3().setFromObject(mesh);
+    if (next.isEmpty()) return;
+    if (!hit) {
+      box.copy(next);
+      hit = true;
+    } else box.union(next);
+  });
+  if (hit && Number.isFinite(box.min.y)) root.position.y -= box.min.y;
 }
 
 type Pack = {
@@ -197,7 +256,8 @@ export function KapiBattle({ names, level }: { names: string[]; level: number })
         if (drop) return;
         const knight = buildKnightSoldier(knightGltf.scene);
         fitHero(romanGltf.scene, -Math.PI / 2, true, false);
-        hideSlabs(romanGltf.scene);
+        cutPlinth(romanGltf.scene);
+        seatFeet(romanGltf.scene);
         romanGltf.scene.add(bowMesh());
         const romans = Array.from({ length: KAPI_ARCHERS }, () => romanGltf.scene.clone(true));
         if (drop) return;
@@ -306,7 +366,7 @@ function Charge({
       if (!node) return;
       node.position.set(KAPI_HERO_X[i], 0, lead);
       for (const arm of arms[i]) arm.set(strike.lift, strike.chop);
-      stepGait(node, moving, moving ? 2.1 : 0, delta);
+      stepGait(node, moving, moving ? 4.4 : 0, delta);
     });
 
     const mesh = arrows.current;
@@ -315,13 +375,14 @@ function Charge({
       for (const death of KAPI_DEATHS) {
         if (n >= 24) break;
         const pose = kapiSoldier(death.i, death.t, faceZ);
-        const from = posts[death.archer] ?? posts[0];
+        const post = posts[death.archer] ?? posts[0];
+        const from = { x: post.x, y: post.y + 1.45, z: post.z + 0.15 };
         if (!kapiArrow(t, death.t, from, { x: pose.x, y: 1.2, z: pose.z }, arrowTmp)) continue;
         dir.set(arrowTmp.dx, arrowTmp.dy, arrowTmp.dz);
         if (dir.lengthSq() < 1e-8) continue;
         dummy.position.set(arrowTmp.x, arrowTmp.y, arrowTmp.z);
         dummy.quaternion.setFromUnitVectors(up, dir.normalize());
-        dummy.scale.setScalar(1.45);
+        dummy.scale.setScalar(1);
         dummy.updateMatrix();
         mesh.setMatrixAt(n, dummy.matrix);
         n += 1;
@@ -367,7 +428,7 @@ function Charge({
         <meshLambertMaterial color="#e7eef5" />
       </instancedMesh>
       <instancedMesh ref={arrows} args={[geo, undefined, 24]} frustumCulled={false} count={0}>
-        <meshBasicMaterial color="#ffb03a" />
+        <meshBasicMaterial color="#ffffff" />
       </instancedMesh>
       {atlas.sheets.map((sheet, s) => (
         <instancedMesh
@@ -379,6 +440,7 @@ function Charge({
           }}
         />
       ))}
+      <pointLight position={[0, 8, faceZ - 12]} intensity={8} distance={36} color="#ffe6c2" />
       <Splinters faceZ={faceZ} />
       <KapiHud />
     </group>
@@ -398,19 +460,21 @@ function Splinters({ faceZ }: { faceZ: number }) {
     []
   );
   useFrame(() => {
-    const age = kapiT() - 15.55;
-    const show = age > 0 && age < 2.3;
+    const age = kapiT() - KAPI_HIT;
+    const show = age > 0 && age < 9;
+    const fly = Math.min(age, 1.45);
     seeds.forEach((seed, i) => {
       const mesh = refs.current[i];
       if (!mesh) return;
       mesh.visible = show;
       if (!show) return;
+      const landed = age >= 1.45;
       mesh.position.set(
-        Math.cos(seed.ang) * seed.speed * age,
-        1.5 + seed.up * age - age * age * 2.1,
-        faceZ + 1.1 + Math.sin(seed.ang) * seed.speed * age * 0.4
+        Math.cos(seed.ang) * seed.speed * fly,
+        landed ? 0.12 : 1.5 + seed.up * fly - fly * fly * 2.4,
+        faceZ + 0.6 + Math.sin(seed.ang) * seed.speed * fly * 0.45
       );
-      mesh.rotation.set(age * 3, age * 2, age);
+      mesh.rotation.set(landed ? seed.ang : fly * 4, landed ? 0.4 : fly * 2.4, landed ? 0.2 : fly * 3);
     });
   });
   return (
@@ -519,7 +583,7 @@ export function KapiCam({ level }: { level: number }) {
   const camera = useThree((s) => s.camera) as THREE.PerspectiveCamera;
   const face = useMemo(() => kapiFace(level), [level]);
   useFrame(() => {
-    const shot = kapiCam(kapiT(), face.z, face.y);
+    const shot = kapiCam(kapiT(), level);
     camera.position.set(shot.x, shot.y, shot.z);
     camera.lookAt(shot.lx, shot.ly, shot.lz);
     if (camera.fov !== shot.fov) {

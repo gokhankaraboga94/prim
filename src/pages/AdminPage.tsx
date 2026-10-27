@@ -1547,7 +1547,7 @@ export function AdminPage() {
           )}
           {isKapi(reelShot) && (
             <p className="muted">
-              20 saniye, üçüncü şahıs. Kale bizim kale. Tepede düşman okçuları. Son katılan 150 asker, en yeniler önde; başlarında dört kahraman. Oklar her adımda birer ikişer, ara ara toplu indirir. Finalde kapı kırılır. Yazı durur: 0–1 “OKLAR / İNİYOR”, sonra “KAPI KIRILACAK” eklenir, 4. saniyeden önce gider. Başlık: “Oklar iniyor. Kapı kırılacak.” Cevabı sabitleme.
+              30 saniye. Askerler uzaktan daha hızlı koşar. Kahramanlar omuz kamerası, asker ölürken o askerin gözü. Oklar ince ve beyaz. Okçular sura basar. Kapı kırılınca avlu görünür. Yazı 4. saniyeden önce gider: “OKLAR / İNİYOR”, sonra “KAPI KIRILACAK”. Başlık: “Oklar iniyor. Kapı kırılacak.” Cevabı sabitleme.
             </p>
           )}
           {isKuyu(reelShot) && (

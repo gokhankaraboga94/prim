@@ -217,20 +217,30 @@ function Gatehouse({
   const leftDoor = useRef<THREE.Group>(null);
   const rightDoor = useRef<THREE.Group>(null);
   const grate = useRef<THREE.Group>(null);
+  const throat = useRef<THREE.Mesh>(null);
 
   useFrame((state) => {
     const smash = gateBreak ? Math.max(0, Math.min(1, gateBreak.current)) : -1;
     if (smash >= 0) {
-      const burst = smash > 0.62 ? (smash - 0.62) * 1.7 : 0;
+      const shake = smash > 0.02 && smash < 0.16 ? Math.sin(smash * 90) * 0.04 : 0;
+      const left = smash < 0.1 ? 0 : Math.min(1, (smash - 0.1) / 0.42);
+      const right = smash < 0.22 ? 0 : Math.min(1, (smash - 0.22) / 0.38);
+      const leftFall = Math.max(0, (smash - 0.4) / 0.45);
+      const rightFall = Math.max(0, (smash - 0.55) / 0.4);
       if (leftDoor.current) {
-        leftDoor.current.position.set(-1.14 - burst, 1.12, 1.28 + burst * 0.28);
-        leftDoor.current.rotation.set(smash > 0.4 ? (smash - 0.4) * 0.35 : 0, 0.12 + smash * 1.9, smash > 0.5 ? (smash - 0.5) * 0.5 : 0);
+        leftDoor.current.position.set(-1.14 - left * 0.7, 1.12 - leftFall * 1.45, 1.28 + left * 0.62);
+        leftDoor.current.rotation.set(leftFall * 1.25, left * 1.65 + shake, -leftFall * 0.9);
       }
       if (rightDoor.current) {
-        rightDoor.current.position.set(1.14 + burst, 1.12, 1.28 + burst * 0.28);
-        rightDoor.current.rotation.set(smash > 0.4 ? -(smash - 0.4) * 0.3 : 0, -0.12 - smash * 1.9, smash > 0.5 ? -(smash - 0.5) * 0.42 : 0);
+        rightDoor.current.position.set(1.14 + right * 0.42, 1.12 - rightFall * 1.7, 1.28 + right * 0.28);
+        rightDoor.current.rotation.set(-rightFall * 0.85, -right * 2.15 - shake, rightFall * 1.25);
       }
-      if (grate.current) grate.current.position.y = 1.35 + smash * 4.8;
+      if (grate.current) {
+        grate.current.position.y = 1.35 - smash * 2.55;
+        grate.current.rotation.x = smash * 1.05;
+        grate.current.rotation.z = Math.max(0, smash - 0.3) * 0.55;
+      }
+      if (throat.current) throat.current.visible = smash < 0.12;
       return;
     }
     const recT = state.clock.elapsedTime - REEL_HOLD;
@@ -260,7 +270,7 @@ function Gatehouse({
       </mesh>
       <Block args={[2.7, 0.32, 0.55]} position={[0, 2.52, 1.42]} color={STONE_2} map={stone} lite={lite} />
 
-      <mesh position={[0, 1.2, -0.55]}>
+      <mesh ref={throat} position={[0, 1.2, -0.55]}>
         <boxGeometry args={[2.15, 2.35, 0.55]} />
         <meshStandardMaterial color="#0c0907" polygonOffset polygonOffsetFactor={1} polygonOffsetUnits={1} />
       </mesh>
