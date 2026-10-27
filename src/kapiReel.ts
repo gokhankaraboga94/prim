@@ -222,26 +222,54 @@ export function kapiArrow(
   hit: number,
   from: { x: number; y: number; z: number },
   to: { x: number; y: number; z: number },
-  out: KapiArrow
+  out: KapiArrow,
+  linger = 0,
+  arc = 1.15
 ) {
   const born = hit - FLIGHT;
-  if (t < born || t > hit) return false;
-  const u = (t - born) / FLIGHT;
-  const x = from.x + (to.x - from.x) * u;
-  const z = from.z + (to.z - from.z) * u;
-  const y = from.y + (to.y - from.y) * u + Math.sin(u * Math.PI) * 1.15;
-  const u2 = Math.min(1, u + 0.04);
-  const x2 = from.x + (to.x - from.x) * u2;
-  const z2 = from.z + (to.z - from.z) * u2;
-  const y2 = from.y + (to.y - from.y) * u2 + Math.sin(u2 * Math.PI) * 1.15;
-  out.x = x;
-  out.y = y;
-  out.z = z;
-  out.dx = x2 - x;
-  out.dy = y2 - y;
-  out.dz = z2 - z;
+  if (t < born || t > hit + linger) return false;
+  const u = Math.min(1, (t - born) / FLIGHT);
+  const at = (k: number) => {
+    const x = from.x + (to.x - from.x) * k;
+    const z = from.z + (to.z - from.z) * k;
+    const y = from.y + (to.y - from.y) * k + Math.sin(k * Math.PI) * arc;
+    return { x, y, z };
+  };
+  const here = at(u);
+  const ahead = at(Math.min(1, u + 0.05));
+  const behind = at(Math.max(0, u - 0.05));
+  out.x = here.x;
+  out.y = here.y;
+  out.z = here.z;
+  out.dx = ahead.x - behind.x;
+  out.dy = ahead.y - behind.y;
+  out.dz = ahead.z - behind.z;
   return true;
 }
+
+export type KapiRain = { hit: number; archer: number; x: number; back: number; y: number };
+
+function buildRain() {
+  const out: KapiRain[] = [];
+  let n = 0;
+  for (let wave = 0; wave < 58; wave++) {
+    const base = -0.7 + wave * 0.32;
+    if (base > KAPI_HIT - 0.15) break;
+    for (let k = 0; k < 8; k++) {
+      const i = n++;
+      out.push({
+        hit: base + k * 0.04,
+        archer: (i * 3 + k) % KAPI_ARCHERS,
+        x: ((i * 5) % 9 - 4) * 0.92,
+        back: 1.6 + (i % 10) * 1.28,
+        y: 0.55 + (i % 5) * 0.28,
+      });
+    }
+  }
+  return out;
+}
+
+export const KAPI_RAIN = buildRain();
 
 export function kapiBreak(t: number) {
   return smo(t, KAPI_HIT, KAPI_HIT + 2.15);
@@ -333,9 +361,9 @@ export function kapiCam(t: number, level: number): KapiCam {
 
 export function kapiRoster(names: readonly string[]) {
   const last = names.map((n) => n.trim()).filter(Boolean).slice(-KAPI_N);
-  last.reverse();
-  const out = last.slice(0, KAPI_N);
-  while (out.length < KAPI_N) out.push("");
+  const out = Array.from({ length: KAPI_N }, () => "");
+  const start = KAPI_N - last.length;
+  for (let i = 0; i < last.length; i++) out[start + i] = last[i];
   return out;
 }
 

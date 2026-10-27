@@ -19,10 +19,12 @@ import {
   KAPI_LATE,
   KAPI_HIT,
   KAPI_N,
+  KAPI_RAIN,
   KAPI_ROMAN,
   type KapiArrow,
   kapiArchers,
   kapiArrow,
+  kapiEye,
   kapiBreak,
   kapiCam,
   kapiCard,
@@ -130,6 +132,62 @@ function mirrorSwordToRight(root: THREE.Object3D) {
     geo.computeBoundingBox();
     geo.computeBoundingSphere();
   }
+}
+
+/** The blade weight also grabs a wide right leg. Clear it where the cross-section is a body, and leave the thin sword. */
+function releaseFatLegs(root: THREE.Object3D) {
+  root.traverse((obj) => {
+    const mesh = obj as THREE.Mesh;
+    if (!mesh.isMesh) return;
+    const geo = mesh.geometry;
+    const pos = geo.getAttribute("position");
+    const armW = geo.getAttribute("armW");
+    const armE = geo.getAttribute("armE");
+    if (!pos || !armW || !armE) return;
+    geo.computeBoundingBox();
+    const box = geo.boundingBox;
+    if (!box) return;
+    const minY = box.min.y;
+    const height = Math.max(0.001, box.max.y - minY);
+    const chest: number[] = [];
+    for (let i = 0; i < pos.count; i++) {
+      const yn = (pos.getY(i) - minY) / height;
+      if (yn < 0.5 || yn > 0.72) continue;
+      chest.push(pos.getX(i));
+    }
+    if (chest.length < 30) return;
+    chest.sort((a, b) => a - b);
+    const cx = chest[chest.length >> 1];
+    const bin = 0.03;
+    const bins = 16;
+    const z0 = new Float64Array(bins).fill(Number.POSITIVE_INFINITY);
+    const z1 = new Float64Array(bins).fill(Number.NEGATIVE_INFINITY);
+    const cnt = new Uint32Array(bins);
+    for (let i = 0; i < pos.count; i++) {
+      const yn = (pos.getY(i) - minY) / height;
+      if (yn < 0.02 || yn > 0.5) continue;
+      const lat = (cx - pos.getX(i)) / height;
+      if (lat < 0.06) continue;
+      const b = Math.min(bins - 1, Math.floor(lat / bin));
+      cnt[b] += 1;
+      const z = pos.getZ(i);
+      if (z < z0[b]) z0[b] = z;
+      if (z > z1[b]) z1[b] = z;
+    }
+    for (let i = 0; i < pos.count; i++) {
+      const yn = (pos.getY(i) - minY) / height;
+      if (yn > 0.5) continue;
+      const lat = (cx - pos.getX(i)) / height;
+      if (lat < 0.06) continue;
+      const b = Math.min(bins - 1, Math.floor(lat / bin));
+      if (cnt[b] < 12) continue;
+      if ((z1[b] - z0[b]) / height < 0.14) continue;
+      armW.setX(i, 0);
+      armE.setX(i, 0);
+    }
+    armW.needsUpdate = true;
+    armE.needsUpdate = true;
+  });
 }
 
 function arrowGeo() {
@@ -249,6 +307,7 @@ export function KapiBattle({ names, level }: { names: string[]; level: number })
           if (drop) return;
           mirrorSwordToRight(gltf.scene);
           fitHero(gltf.scene, Math.PI, false, true, { side: -1, march: true, blade: true });
+          releaseFatLegs(gltf.scene);
           heroes.push(gltf.scene);
         }
         const knightGltf = await loadGlb(loader, KAPI_KNIGHT);
@@ -318,25 +377,30 @@ function Charge({
   const heroRefs = useRef<(THREE.Group | null)[]>([]);
   const arms = useMemo(() => pack.heroes.map((hero) => armsOf(hero)), [pack.heroes]);
   const geo = useMemo(() => arrowGeo(), []);
-  const named = useMemo(
-    () =>
-      roster.map((name, i) => ({ name, i })).filter((row) => {
-        const col = row.i % 12;
-        return Boolean(row.name) && Math.floor(row.i / 12) === 11 && (col === 3 || col === 8);
-      }),
-    [roster]
-  );
+  const named = useMemo(() => {
+    const cols = [1, 4, 7, 10];
+    for (let rank = 11; rank >= 0; rank--) {
+      const rows = cols
+        .map((col) => {
+          const i = rank * 12 + col;
+          return { name: roster[i] || "", i };
+        })
+        .filter((row) => row.name);
+      if (rows.length >= 2) return rows;
+    }
+    return [];
+  }, [roster]);
   const atlas = useMemo(
     () =>
       buildNameAtlas(
-        named.map((row) => ({ text: row.name, commander: false, plain: false, fill: "#ffe14a", frame: false })),
+        named.map((row) => ({ text: row.name, commander: false, plain: false, fill: "#ffe14a", frame: true })),
         true,
         true
       ),
     [named]
   );
   useEffect(() => {
-    for (const sheet of atlas.sheets) sheet.material.depthTest = true;
+    for (const sheet of atlas.sheets) sheet.material.depthTest = false;
     return () => atlas.dispose();
   }, [atlas]);
 
@@ -394,6 +458,22 @@ function Charge({
         mesh.setMatrixAt(n, dummy.matrix);
         n += 1;
       }
+      if (!kapiEye(t)) for (const rain of KAPI_RAIN) {
+        if (n >= 64) break;
+        const post = posts[rain.archer] ?? posts[0];
+        const from = { x: post.x, y: post.y + 1.45, z: post.z + 0.15 };
+        const aimLead = kapiLead(rain.hit, faceZ);
+        const to = { x: rain.x, y: rain.y, z: aimLead + rain.back };
+        if (!kapiArrow(t, rain.hit, from, to, arrowTmp, 0.32, 2.4)) continue;
+        dir.set(arrowTmp.dx, arrowTmp.dy, arrowTmp.dz);
+        if (dir.lengthSq() < 1e-8) continue;
+        dummy.position.set(arrowTmp.x, arrowTmp.y, arrowTmp.z);
+        dummy.quaternion.setFromUnitVectors(up, dir.normalize());
+        dummy.scale.set(9, 1.25, 9);
+        dummy.updateMatrix();
+        mesh.setMatrixAt(n, dummy.matrix);
+        n += 1;
+      }
       mesh.count = n;
       mesh.instanceMatrix.needsUpdate = true;
     }
@@ -406,9 +486,11 @@ function Charge({
         if (!cell || cell.sheet !== atlas.sheets.indexOf(sheet)) continue;
         const pose = kapiSoldier(named[n].i, t, faceZ);
         const hide = pose.fall > 0.4;
-        dummy.position.set(pose.x, hide ? -8 : 2.75, pose.z);
+        const w = Math.min(cell.sx, 2.25);
+        const h = (cell.sy * w) / Math.max(cell.sx, 0.01);
+        dummy.position.set(pose.x, hide ? -8 : 3.15, pose.z);
         dummy.quaternion.copy(camera.quaternion);
-        dummy.scale.set(hide ? 0.001 : cell.sx, hide ? 0.001 : cell.sy, 1);
+        dummy.scale.set(hide ? 0.001 : w, hide ? 0.001 : h, 1);
         dummy.updateMatrix();
         inst.setMatrixAt(cell.local, dummy.matrix);
       }
@@ -434,7 +516,7 @@ function Charge({
       <instancedMesh ref={helms} args={[pack.knight.helm, undefined, KAPI_N]} frustumCulled={false} count={KAPI_N}>
         <meshLambertMaterial color="#e7eef5" />
       </instancedMesh>
-      <instancedMesh ref={arrows} args={[geo, undefined, 24]} frustumCulled={false} count={0}>
+      <instancedMesh ref={arrows} args={[geo, undefined, 64]} frustumCulled={false} count={0}>
         <meshBasicMaterial color="#ffffff" />
       </instancedMesh>
       {atlas.sheets.map((sheet, s) => (
