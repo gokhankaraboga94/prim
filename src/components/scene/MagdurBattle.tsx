@@ -38,6 +38,98 @@ function loadGlb(loader: GLTFLoader, url: string) {
   });
 }
 
+function cutPlinth(root: THREE.Object3D) {
+  root.traverse((obj) => {
+    const mesh = obj as THREE.Mesh;
+    if (!mesh.isMesh) return;
+    const geo = mesh.geometry;
+    const pos = geo.getAttribute("position");
+    if (!pos || pos.count < 12) return;
+    if (!geo.getIndex()) geo.setIndex(Array.from({ length: pos.count }, (_, i) => i));
+    const index = geo.getIndex();
+    if (!index) return;
+    let minY = Infinity;
+    let maxY = -Infinity;
+    for (let i = 0; i < pos.count; i++) {
+      const y = pos.getY(i);
+      if (y < minY) minY = y;
+      if (y > maxY) maxY = y;
+    }
+    const h = maxY - minY;
+    if (h < 1e-4) return;
+    let spanX = 0;
+    let spanZ = 0;
+    {
+      let xa = Infinity;
+      let xb = -Infinity;
+      let za = Infinity;
+      let zb = -Infinity;
+      for (let i = 0; i < pos.count; i++) {
+        xa = Math.min(xa, pos.getX(i));
+        xb = Math.max(xb, pos.getX(i));
+        za = Math.min(za, pos.getZ(i));
+        zb = Math.max(zb, pos.getZ(i));
+      }
+      spanX = xb - xa;
+      spanZ = zb - za;
+    }
+    if (spanX > h * 1.8 && spanZ > h * 1.8) {
+      mesh.visible = false;
+      return;
+    }
+    const cut = minY + h * 0.36;
+    let low = 0;
+    let x0 = Infinity;
+    let x1 = -Infinity;
+    let z0 = Infinity;
+    let z1 = -Infinity;
+    for (let i = 0; i < pos.count; i++) {
+      if (pos.getY(i) > cut) continue;
+      low += 1;
+      x0 = Math.min(x0, pos.getX(i));
+      x1 = Math.max(x1, pos.getX(i));
+      z0 = Math.min(z0, pos.getZ(i));
+      z1 = Math.max(z1, pos.getZ(i));
+    }
+    if (low < 12 || Math.max(x1 - x0, z1 - z0) < h * 0.22) return;
+    const src = index.array;
+    const kept: number[] = [];
+    for (let i = 0; i < src.length; i += 3) {
+      const a = src[i];
+      const b = src[i + 1];
+      const c = src[i + 2];
+      if (Math.max(pos.getY(a), pos.getY(b), pos.getY(c)) <= cut) continue;
+      kept.push(a, b, c);
+    }
+    if (kept.length === src.length) return;
+    if (kept.length === 0) {
+      mesh.visible = false;
+      return;
+    }
+    geo.setIndex(kept);
+    geo.computeVertexNormals();
+    geo.computeBoundingBox();
+    geo.computeBoundingSphere();
+  });
+}
+
+function seatFeet(root: THREE.Object3D) {
+  root.updateMatrixWorld(true);
+  const box = new THREE.Box3();
+  let hit = false;
+  root.traverse((obj) => {
+    const mesh = obj as THREE.Mesh;
+    if (!mesh.isMesh || !mesh.visible) return;
+    const next = new THREE.Box3().setFromObject(mesh);
+    if (next.isEmpty()) return;
+    if (!hit) {
+      box.copy(next);
+      hit = true;
+    } else box.union(next);
+  });
+  if (hit && Number.isFinite(box.min.y)) root.position.y -= box.min.y;
+}
+
 function spearGeo() {
   const shaft = new THREE.CylinderGeometry(0.028, 0.02, 2.15, 6);
   shaft.translate(0, 0.15, 0);
@@ -113,8 +205,8 @@ const dummy = new THREE.Object3D();
 const spearTmp: MagdurSpear = { x: 0, y: 0, z: 0, dx: 0, dy: 0, dz: 0 };
 const up = new THREE.Vector3(0, 1, 0);
 const dir = new THREE.Vector3();
-const liveTint = new THREE.Color("#f2f4f8");
-const deadTint = new THREE.Color("#6a625c");
+const liveTint = new THREE.Color("#ffffff");
+const deadTint = new THREE.Color("#243056");
 
 export function MagdurBattle({ names }: { names: string[] }) {
   const [pack, setPack] = useState<{ body: THREE.BufferGeometry; helm: THREE.BufferGeometry; romans: THREE.Group[] } | null>(null);
@@ -149,6 +241,8 @@ export function MagdurBattle({ names }: { names: string[] }) {
         if (drop) return;
         const knight = buildKnightSoldier(knightGltf.scene);
         fitHero(romanGltf.scene, -Math.PI / 2, true, false);
+        cutPlinth(romanGltf.scene);
+        seatFeet(romanGltf.scene);
         const romans = MAGDUR_ROMAN_POSTS.map(() => romanGltf.scene.clone(true));
         if (drop) return;
         setPack({ body: knight.body, helm: knight.helm, romans });
@@ -275,10 +369,10 @@ export function MagdurBattle({ names }: { names: string[] }) {
         </group>
       ))}
       <instancedMesh ref={bodies} args={[pack.body, undefined, MAGDUR_N]} frustumCulled={false}>
-        <meshLambertMaterial color="#f4f7fb" />
+        <meshLambertMaterial color="#1a56e8" />
       </instancedMesh>
       <instancedMesh ref={helms} args={[pack.helm, undefined, MAGDUR_N]} frustumCulled={false}>
-        <meshLambertMaterial color="#d5dbe3" />
+        <meshLambertMaterial color="#e7eef5" />
       </instancedMesh>
       <instancedMesh ref={spears} args={[geo, undefined, 16]} frustumCulled={false} count={0}>
         <meshBasicMaterial color="#e6d2a8" />
