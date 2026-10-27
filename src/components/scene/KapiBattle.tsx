@@ -14,6 +14,7 @@ import {
   KAPI_DEATHS,
   KAPI_EARLY,
   KAPI2_HOOK,
+  KAPI3_HOOK,
   KAPI_HEROES,
   KAPI_HERO_X,
   KAPI_KNIGHT,
@@ -36,6 +37,7 @@ import {
   kapiMarkReady,
   kapiOpening,
   kapiReset,
+  kapiRomanZ,
   kapiRoster,
   kapiRunning,
   kapiSoldier,
@@ -526,9 +528,7 @@ function Charge({
         </group>
       ))}
       {pack.romans.map((roman, i) => (
-        <group key={i} position={[posts[i].x, posts[i].y, posts[i].z]} scale={posts[i].s}>
-          <primitive object={roman} />
-        </group>
+        <RomanPost key={i} index={i} post={posts[i]} roman={roman} />
       ))}
       <instancedMesh ref={bodies} args={[pack.knight.body, undefined, KAPI_N]} frustumCulled={false} count={KAPI_N}>
         <meshLambertMaterial color="#1a56e8" />
@@ -552,6 +552,28 @@ function Charge({
       <pointLight position={[0, 8, faceZ - 12]} intensity={8} distance={36} color="#ffe6c2" />
       <Splinters faceZ={faceZ} />
       <KapiHud />
+    </group>
+  );
+}
+
+function RomanPost({
+  index,
+  post,
+  roman,
+}: {
+  index: number;
+  post: { x: number; y: number; z: number; s: number };
+  roman: THREE.Object3D;
+}) {
+  const ref = useRef<THREE.Group>(null);
+  useFrame(() => {
+    const node = ref.current;
+    if (!node) return;
+    node.position.set(post.x, post.y, kapiRomanZ(index, post.z));
+  });
+  return (
+    <group ref={ref} position={[post.x, post.y, post.z]} scale={post.s}>
+      <primitive object={roman} />
     </group>
   );
 }
@@ -645,13 +667,15 @@ function KapiHud() {
   const size = useThree((s) => s.size);
   const early = useRef<THREE.Mesh>(null);
   const late = useRef<THREE.Mesh>(null);
-  const maps = useMemo(() => [cardTex(KAPI_EARLY), cardTex(KAPI_LATE), cardTex(KAPI2_HOOK)], []);
+  const maps = useMemo(() => [cardTex(KAPI_EARLY), cardTex(KAPI_LATE), cardTex(KAPI2_HOOK), cardTex(KAPI3_HOOK)], []);
   const hook = useRef<THREE.Mesh>(null);
+  const hook3 = useRef<THREE.Mesh>(null);
   useEffect(() => {
     document.fonts?.load("900 80px Montserrat").then(() => {
       maps[0].image = paintCard(KAPI_EARLY);
       maps[1].image = paintCard(KAPI_LATE);
       maps[2].image = paintCard(KAPI2_HOOK);
+      maps[3].image = paintCard(KAPI3_HOOK);
       maps.forEach((map) => {
         map.needsUpdate = true;
       });
@@ -663,8 +687,14 @@ function KapiHud() {
   useFrame(() => {
     const card = kapiCard(kapiT());
     const hookOn = card?.lines[0] === KAPI2_HOOK[0];
-    const earlyOn = card?.lines.length === 2 && !hookOn;
+    const hook3On = card?.lines[0] === KAPI3_HOOK[0];
+    const earlyOn = card?.lines.length === 2 && !hookOn && !hook3On;
     const lateOn = card?.lines.length === 3;
+    if (hook3.current) {
+      hook3.current.visible = Boolean(hook3On);
+      const mat = hook3.current.material as THREE.MeshBasicMaterial;
+      mat.opacity = hook3On ? card!.opacity : 0;
+    }
     if (hook.current) {
       hook.current.visible = Boolean(hookOn);
       const mat = hook.current.material as THREE.MeshBasicMaterial;
@@ -686,6 +716,10 @@ function KapiHud() {
   return (
     <Hud renderPriority={1}>
       <OrthographicCamera makeDefault position={[0, 0, 10]} />
+      <mesh ref={hook3} position={[0, size.height * 0.28, 0]}>
+        <planeGeometry args={[hookW, hookW * (280 / 980)]} />
+        <meshBasicMaterial map={maps[3]} transparent depthTest={false} toneMapped={false} />
+      </mesh>
       <mesh ref={hook} position={[0, size.height * 0.28, 0]}>
         <planeGeometry args={[hookW, hookW * (280 / 980)]} />
         <meshBasicMaterial map={maps[2]} transparent depthTest={false} toneMapped={false} />

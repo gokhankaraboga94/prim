@@ -2,11 +2,14 @@ import { castleAxes, castleGrow, frontWalk, frontWallFace } from "./castleLayout
 
 export const KAPI_ID = "kapi" as const;
 export const KAPI2_ID = "kapi2" as const;
-export type KapiId = typeof KAPI_ID | typeof KAPI2_ID;
+export const KAPI3_ID = "kapi3" as const;
+export type KapiId = typeof KAPI_ID | typeof KAPI2_ID | typeof KAPI3_ID;
 export const KAPI_MODE = { id: KAPI_ID, label: "kapi" } as const;
 export const KAPI2_MODE = { id: KAPI2_ID, label: "kapi2" } as const;
+export const KAPI3_MODE = { id: KAPI3_ID, label: "kapi3" } as const;
 export const KAPI_SECONDS = 38;
 export const KAPI2_SECONDS = KAPI_SECONDS;
+export const KAPI3_SECONDS = KAPI_SECONDS;
 
 export const KAPI_HEROES = [
   "/models/arena3/armored.glb",
@@ -24,6 +27,7 @@ export const KAPI_ARCHERS = 14;
 export const KAPI_EARLY = ["OKLAR", "İNİYOR"] as const;
 export const KAPI_LATE = ["OKLAR", "İNİYOR", "KAPI KIRILACAK"] as const;
 export const KAPI2_HOOK = ["ÇIKAN YOK", "İÇERİ DOLU"] as const;
+export const KAPI3_HOOK = ["KAÇAMAZSIN", "İÇERİ DOLU"] as const;
 
 const ARCHER_X = [-5.6, -4.0, -2.4, -0.8, 0.8, 2.4, 4.0, 5.6];
 const FLANK_X = [-6.4, -4.6, -3.3, 3.3, 4.6, 6.4];
@@ -36,7 +40,11 @@ const RUSH = 8.2;
 export const KAPI_HIT = 20.7;
 
 export function isKapi(id: string | null | undefined): id is KapiId {
-  return id === KAPI_ID || id === KAPI2_ID;
+  return id === KAPI_ID || id === KAPI2_ID || id === KAPI3_ID;
+}
+
+export function isKapi3(id: string | null | undefined): id is typeof KAPI3_ID {
+  return id === KAPI3_ID;
 }
 
 export function isKapi2(id: string | null | undefined): id is typeof KAPI2_ID {
@@ -59,11 +67,11 @@ const GUARD: KapiStrike = { lift: 0.38, chop: 0.22 };
 
 let playAt = 0;
 let ready = false;
-let reel: "kapi" | "kapi2" = "kapi";
+let reel: "kapi" | "kapi2" | "kapi3" = "kapi";
 const waiters: Array<() => void> = [];
 
 export function kapiUse(id: KapiId | null) {
-  reel = id === KAPI2_ID ? "kapi2" : "kapi";
+  reel = id === KAPI3_ID ? "kapi3" : id === KAPI2_ID ? "kapi2" : "kapi";
 }
 
 export function kapiMarkReady() {
@@ -93,11 +101,27 @@ function rawT() {
   return Math.max(0, performance.now() / 1000 - playAt);
 }
 
-/** kapi2 shows the broken gate first, then rejoins the same charge. */
+/** kapi2 and kapi3 replace only the opening, then rejoin the same charge. */
 export function kapiT() {
   const raw = rawT();
-  if (reel !== "kapi2" || raw >= 1.2) return raw;
-  return 22.5 + raw * 1.25;
+  if (reel === "kapi3" && raw < 3.7) return 23.2;
+  if (reel === "kapi2" && raw < 1.2) return 22.5 + raw * 1.25;
+  return raw;
+}
+
+/** Yard romans lunge at the lens during the kapi3 hook. Wall archers stay put. */
+export function kapiRomanZ(index: number, baseZ: number) {
+  if (reel !== "kapi3" || index < KAPI_ARCHERS) return baseZ;
+  const raw = rawT();
+  if (raw >= 3.7) return baseZ;
+  const yard = index - KAPI_ARCHERS;
+  const row = Math.floor(yard / 4);
+  if (raw < 1.05) {
+    if (yard !== 2) return baseZ - 2.4;
+    return baseZ + 0.95 + Math.min(1, raw / 0.95) * 1.2;
+  }
+  const u = Math.min(1, (raw - 1.05) / 2.1);
+  return baseZ + u * (6.4 - row * 0.85);
 }
 
 export function kapiReset() {
@@ -379,10 +403,39 @@ function chargeCam(t: number, level: number, raw: number): KapiCam {
 }
 
 export function kapiOpening() {
-  return reel === "kapi2" && rawT() < 3.87;
+  const raw = rawT();
+  if (reel === "kapi2") return raw < 3.87;
+  if (reel === "kapi3") return raw < 3.7;
+  return false;
+}
+
+function shieldCam(level: number): KapiCam {
+  const { sx, sz, zShift } = castleAxes(castleGrow(level));
+  const x = 0.3 * sx;
+  const z = 4.5 * sz + zShift + 2.05;
+  return { x, y: 1.5, z, lx: x, ly: 1.35, lz: z - 2.2, fov: 32 };
+}
+
+function packCam(level: number, raw: number): KapiCam {
+  const faceZ = kapiFace(level).z;
+  const u = Math.min(1, Math.max(0, (raw - 1.05) / 2.1));
+  return {
+    x: 0.15,
+    y: 1.65,
+    z: faceZ - 7.4,
+    lx: 0,
+    ly: 1.45,
+    lz: faceZ - 14,
+    fov: 50 - u * 12,
+  };
 }
 
 export function kapiCam(t: number, level: number): KapiCam {
+  if (reel === "kapi3") {
+    const raw = rawT();
+    if (raw < 1.05) return shieldCam(level);
+    if (raw < 3.7) return packCam(level, raw);
+  }
   if (reel === "kapi2") {
     const raw = rawT();
     if (raw < 1.2) return breachCam(level, raw);
@@ -460,11 +513,11 @@ export function kapiRoster(names: readonly string[]) {
 }
 
 export function kapiCard(t: number): { lines: readonly string[]; opacity: number } | null {
-  if (reel === "kapi2") {
+  if (reel === "kapi2" || reel === "kapi3") {
     const raw = rawT();
     if (raw >= 3.75) return null;
     const fade = raw < 3.2 ? 1 : 1 - (raw - 3.2) / 0.55;
-    return { lines: KAPI2_HOOK, opacity: Math.max(0, fade) };
+    return { lines: reel === "kapi3" ? KAPI3_HOOK : KAPI2_HOOK, opacity: Math.max(0, fade) };
   }
   if (t < 1.35) return { lines: KAPI_EARLY, opacity: 1 };
   if (t < 3.75) {

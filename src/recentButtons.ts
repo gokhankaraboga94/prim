@@ -8,13 +8,14 @@ import { LOOP_ID, LOOP_MODE, LOOP_SECONDS } from "./loopReel";
 import { KURTAR_ID, KURTAR_MODE, KURTAR_SECONDS } from "./kurtarReel";
 import { GECME_ID, GECME_MODE, GECME_SECONDS } from "./gecmeReel";
 import { KUYU_ID, KUYU_MODE, KUYU_SECONDS } from "./kuyuReel";
-import { KAPI2_ID, KAPI2_MODE, KAPI2_SECONDS, KAPI_ID, KAPI_MODE, KAPI_SECONDS } from "./kapiReel";
+import { KAPI2_ID, KAPI2_MODE, KAPI2_SECONDS, KAPI3_ID, KAPI3_MODE, KAPI3_SECONDS, KAPI_ID, KAPI_MODE, KAPI_SECONDS } from "./kapiReel";
 import { DRAGON_ID, DRAGON_MODE, DRAGON_SECONDS } from "./dragonReel";
 import { ELF_ID, ELF_MODE, ELF_SECONDS } from "./elfReel";
 export const RECENT_BUTTON_LIMIT = 20;
 
 /** Yeniden eskiye. Bir buton güncellenirse en üste alınır, en alttaki 20'nin dışına düşer. */
 export const RECENT_BUTTONS = [
+  { id: KAPI3_ID, label: `${KAPI3_MODE.label} — ${KAPI3_SECONDS}s`, seconds: KAPI3_SECONDS },
   { id: KAPI2_ID, label: `${KAPI2_MODE.label} — ${KAPI2_SECONDS}s`, seconds: KAPI2_SECONDS },
   { id: KAPI_ID, label: `${KAPI_MODE.label} — ${KAPI_SECONDS}s`, seconds: KAPI_SECONDS },
   { id: KUYU_ID, label: `${KUYU_MODE.label} — ${KUYU_SECONDS}s`, seconds: KUYU_SECONDS },
