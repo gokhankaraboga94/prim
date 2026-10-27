@@ -13,6 +13,8 @@ type CastleProps = {
   forceGateOpen?: boolean;
   lite?: boolean;
   wallFight?: boolean;
+  defenders?: boolean;
+  gateBreak?: { current: number } | null;
 };
 
 const STONE = "#8a847c";
@@ -201,12 +203,14 @@ function Gatehouse({
   closed = false,
   forceOpen = false,
   lite = false,
+  gateBreak = null,
 }: {
   wallH: number;
   stone: THREE.Texture | null;
   closed?: boolean;
   forceOpen?: boolean;
   lite?: boolean;
+  gateBreak?: { current: number } | null;
 }) {
   const bars = useMemo(() => Array.from({ length: 7 }, (_, i) => i), []);
   const rails = useMemo(() => Array.from({ length: 4 }, (_, i) => i), []);
@@ -215,6 +219,20 @@ function Gatehouse({
   const grate = useRef<THREE.Group>(null);
 
   useFrame((state) => {
+    const smash = gateBreak ? Math.max(0, Math.min(1, gateBreak.current)) : -1;
+    if (smash >= 0) {
+      const burst = smash > 0.62 ? (smash - 0.62) * 1.7 : 0;
+      if (leftDoor.current) {
+        leftDoor.current.position.set(-1.14 - burst, 1.12, 1.28 + burst * 0.28);
+        leftDoor.current.rotation.set(smash > 0.4 ? (smash - 0.4) * 0.35 : 0, 0.12 + smash * 1.9, smash > 0.5 ? (smash - 0.5) * 0.5 : 0);
+      }
+      if (rightDoor.current) {
+        rightDoor.current.position.set(1.14 + burst, 1.12, 1.28 + burst * 0.28);
+        rightDoor.current.rotation.set(smash > 0.4 ? -(smash - 0.4) * 0.3 : 0, -0.12 - smash * 1.9, smash > 0.5 ? -(smash - 0.5) * 0.42 : 0);
+      }
+      if (grate.current) grate.current.position.y = 1.35 + smash * 4.8;
+      return;
+    }
     const recT = state.clock.elapsedTime - REEL_HOLD;
     const forced = forceOpen ? Math.max(0, Math.min(1, recT / 0.85)) : -1;
     const open = closed ? 0 : forced >= 0 ? forced * forced * (3 - 2 * forced) : sallyGate(sallyLocal(state.clock.elapsedTime));
@@ -346,7 +364,7 @@ function RoundTower({
   );
 }
 
-export function Castle({ level, gateClosed = false, forceGateOpen = false, lite = false, wallFight = false }: CastleProps) {
+export function Castle({ level, gateClosed = false, forceGateOpen = false, lite = false, wallFight = false, defenders = true, gateBreak = null }: CastleProps) {
   const stone = useStoneTexture(!lite);
   const visualTier = ((level - 1) % 5) + 1;
   const grow = castleGrow(level);
@@ -400,7 +418,7 @@ export function Castle({ level, gateClosed = false, forceGateOpen = false, lite 
         </>
       )}
 
-      <Gatehouse wallH={wallH} stone={stone} closed={gateClosed} forceOpen={forceGateOpen} lite={lite} />
+      <Gatehouse wallH={wallH} stone={stone} closed={gateClosed} forceOpen={forceGateOpen} lite={lite} gateBreak={gateBreak} />
       <mesh position={[0, wallH * 0.72, -13.05]}>
         <boxGeometry args={[0.2, 0.62, 0.1]} />
         {lite ? <meshBasicMaterial color={STONE_DARK} /> : <meshStandardMaterial color={STONE_DARK} />}
@@ -494,7 +512,7 @@ export function Castle({ level, gateClosed = false, forceGateOpen = false, lite 
         </>
       )}
     </group>
-    {!lite && <Defenders grow={grow} wallH={wallH} fight={wallFight} />}
+    {!lite && defenders && <Defenders grow={grow} wallH={wallH} fight={wallFight} />}
     </group>
   );
 }
