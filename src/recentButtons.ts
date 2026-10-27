@@ -7,12 +7,14 @@ import { HERO_ID, HERO_MODE, HERO_SECONDS } from "./heroReel";
 import { LOOP_ID, LOOP_MODE, LOOP_SECONDS } from "./loopReel";
 import { KURTAR_ID, KURTAR_MODE, KURTAR_SECONDS } from "./kurtarReel";
 import { GECME_ID, GECME_MODE, GECME_SECONDS } from "./gecmeReel";
+import { KUYU_ID, KUYU_MODE, KUYU_SECONDS } from "./kuyuReel";
 import { DRAGON_ID, DRAGON_MODE, DRAGON_SECONDS } from "./dragonReel";
 import { ELF_ID, ELF_MODE, ELF_SECONDS } from "./elfReel";
 export const RECENT_BUTTON_LIMIT = 20;
 
 /** Yeniden eskiye. Bir buton güncellenirse en üste alınır, en alttaki 20'nin dışına düşer. */
 export const RECENT_BUTTONS = [
+  { id: KUYU_ID, label: `${KUYU_MODE.label} — ${KUYU_SECONDS}s`, seconds: KUYU_SECONDS },
   { id: GECME_ID, label: `${GECME_MODE.label} — ${GECME_SECONDS}s`, seconds: GECME_SECONDS },
   { id: KURTAR_ID, label: `${KURTAR_MODE.label} — ${KURTAR_SECONDS}s`, seconds: KURTAR_SECONDS },
   { id: LOOP_ID, label: `${LOOP_MODE.label} — ${LOOP_SECONDS}s`, seconds: LOOP_SECONDS },
