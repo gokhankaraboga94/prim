@@ -368,7 +368,7 @@ function Charge({
 }: {
   pack: Pack;
   faceZ: number;
-  posts: { x: number; y: number; z: number }[];
+  posts: { x: number; y: number; z: number; s: number }[];
   roster: string[];
 }) {
   const bodies = useRef<THREE.InstancedMesh>(null);
@@ -378,7 +378,7 @@ function Charge({
   const arms = useMemo(() => pack.heroes.map((hero) => armsOf(hero)), [pack.heroes]);
   const geo = useMemo(() => arrowGeo(), []);
   const named = useMemo(() => {
-    const cols = [1, 4, 7, 10];
+    const cols = [2, 4, 7, 9];
     for (let rank = 11; rank >= 0; rank--) {
       const rows = cols
         .map((col) => {
@@ -486,7 +486,7 @@ function Charge({
         if (!cell || cell.sheet !== atlas.sheets.indexOf(sheet)) continue;
         const pose = kapiSoldier(named[n].i, t, faceZ);
         const hide = pose.fall > 0.4;
-        const w = Math.min(cell.sx, 2.25);
+        const w = Math.min(cell.sx, 1.9);
         const h = (cell.sy * w) / Math.max(cell.sx, 0.01);
         dummy.position.set(pose.x, hide ? -8 : 3.15, pose.z);
         dummy.quaternion.copy(camera.quaternion);
@@ -506,7 +506,7 @@ function Charge({
         </group>
       ))}
       {pack.romans.map((roman, i) => (
-        <group key={i} position={[posts[i].x, posts[i].y, posts[i].z]} scale={2.15}>
+        <group key={i} position={[posts[i].x, posts[i].y, posts[i].z]} scale={posts[i].s}>
           <primitive object={roman} />
         </group>
       ))}

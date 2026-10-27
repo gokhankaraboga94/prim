@@ -17,13 +17,14 @@ export const KAPI_URLS = [...KAPI_HEROES, KAPI_KNIGHT, KAPI_ROMAN] as const;
 
 export const KAPI_N = 150;
 export const KAPI_COLS = 12;
-export const KAPI_ARCHERS = 8;
+export const KAPI_ARCHERS = 14;
 export const KAPI_EARLY = ["OKLAR", "İNİYOR"] as const;
 export const KAPI_LATE = ["OKLAR", "İNİYOR", "KAPI KIRILACAK"] as const;
 
 const ARCHER_X = [-5.6, -4.0, -2.4, -0.8, 0.8, 2.4, 4.0, 5.6];
-const GAP_X = 1.12;
-const GAP_Z = 1.02;
+const FLANK_X = [-6.4, -4.6, -3.3, 3.3, 4.6, 6.4];
+const GAP_X = 1.72;
+const GAP_Z = 1.38;
 const RUN = 20.2;
 const FLIGHT = 0.5;
 export const KAPI_HIT = 20.7;
@@ -200,11 +201,16 @@ export function kapiSoldier(i: number, t: number, faceZ: number) {
 
 export function kapiArchers(level: number) {
   const grow = castleGrow(level);
-  const { sy, sz, zShift } = castleAxes(grow);
+  const { sx, sy, sz, zShift } = castleAxes(grow);
   const wallH = 3.85 + ((((Math.max(1, level) - 1) % 5) + 1) * 0.18);
-  const y = (wallH + 2.36) * sy - 1.88;
-  const z = (6.85 + 1.9) * sz + zShift;
-  return ARCHER_X.map((x) => ({ x, y, z }));
+  const gateY = (wallH + 2.36) * sy - 1.88;
+  const gateZ = (6.85 + 1.9) * sz + zShift;
+  const flankY = wallH * sy + 0.35;
+  const flankZ = (7.625 + 0.28) * sz + zShift;
+  return [
+    ...ARCHER_X.map((x) => ({ x, y: gateY, z: gateZ, s: 2.15 })),
+    ...FLANK_X.map((localX) => ({ x: localX * sx, y: flankY, z: flankZ, s: 3.5 })),
+  ];
 }
 
 export function kapiEye(t: number) {
@@ -260,7 +266,7 @@ function buildRain() {
       out.push({
         hit: base + k * 0.04,
         archer: (i * 3 + k) % KAPI_ARCHERS,
-        x: ((i * 5) % 9 - 4) * 0.92,
+        x: ((i * 5) % 9 - 4) * 1.35,
         back: 1.6 + (i % 10) * 1.28,
         y: 0.55 + (i % 5) * 0.28,
       });
@@ -355,7 +361,7 @@ export function kapiCam(t: number, level: number): KapiCam {
     lx: 0,
     ly: mixN(3.2, 11, pull),
     lz: mixN(lead + 2, faceZ - 8, pull),
-    fov: 66 + pull * 4,
+    fov: 72 + pull * 4,
   };
 }
 
