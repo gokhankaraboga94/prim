@@ -39,6 +39,7 @@ import { KURTAR_URLS, kurtarHold, kurtarIsReady, kurtarStart, kurtarWhenReady, t
 import { GECME_URLS, gecmeHold, gecmeIsReady, gecmeStart, gecmeWhenReady, type GecmeId } from "../gecmeReel";
 import { KUYU_URLS, kuyuHold, kuyuIsReady, kuyuStart, kuyuWhenReady, type KuyuId } from "../kuyuReel";
 import { KAPI_URLS, kapiHold, kapiIsReady, kapiStart, kapiWhenReady, type KapiId } from "../kapiReel";
+import { MAGDUR_URLS, magdurHold, magdurIsReady, magdurStart, magdurWhenReady, type MagdurId } from "../magdurReel";
 import { ARENA3_ARENA_URL, ARENA3_HERO_URLS, type Arena2Id, type Arena3Id, type ArenaId } from "../arenaReel";
 import { preloadGlbs } from "../arenaPreload";
 import type { Bout2Id, BoutId } from "../boutReel";
@@ -89,6 +90,7 @@ type ReelCaptureProps = {
   gecme?: GecmeId | null;
   kuyu?: KuyuId | null;
   kapi?: KapiId | null;
+  magdur?: MagdurId | null;
   arena?: ArenaId | null;
   arena2?: Arena2Id | null;
   arena3?: Arena3Id | null;
@@ -101,7 +103,7 @@ type ReelCaptureProps = {
   onClose: () => void;
 };
 
-export function ReelCapture({ soldiers, names, commanders = [], level, pressure, hp, maxHp, seconds, showTitles = true, warLook = false, day = 0, skipCommander = false, shotMode = null, cinema = false, roster = null, saga = null, discover = null, countdown = null, defend = null, vs = null, new1 = null, new2 = null, new3 = null, new4 = null, new5 = null, new6 = null, new62 = null, new7 = null, maze = null, film = null, dragon = null, giant = null, wars = null, ordu = null, karsi = null, ok = null, elf = null, kalkan = null, hero = null, loop = null, kurtar = null, gecme = null, kuyu = null, kapi = null, arena = null, arena2 = null, arena3 = null, bout = null, kayit = null, mix = null, xxx = null, rosterIds = null, onRecorded, onClose }: ReelCaptureProps) {
+export function ReelCapture({ soldiers, names, commanders = [], level, pressure, hp, maxHp, seconds, showTitles = true, warLook = false, day = 0, skipCommander = false, shotMode = null, cinema = false, roster = null, saga = null, discover = null, countdown = null, defend = null, vs = null, new1 = null, new2 = null, new3 = null, new4 = null, new5 = null, new6 = null, new62 = null, new7 = null, maze = null, film = null, dragon = null, giant = null, wars = null, ordu = null, karsi = null, ok = null, elf = null, kalkan = null, hero = null, loop = null, kurtar = null, gecme = null, kuyu = null, kapi = null, magdur = null, arena = null, arena2 = null, arena3 = null, bout = null, kayit = null, mix = null, xxx = null, rosterIds = null, onRecorded, onClose }: ReelCaptureProps) {
   const clip = roster && isJoin(roster) && rosterIds?.length ? rosterDuration(roster, rosterIds.length) : seconds;
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [phase, setPhase] = useState<"boot" | "rec" | "done" | "err">("boot");
@@ -123,13 +125,15 @@ export function ReelCapture({ soldiers, names, commanders = [], level, pressure,
             ? { ready: false, done: 0, total: KUYU_URLS.length }
             : kapi
               ? { ready: false, done: 0, total: KAPI_URLS.length }
-              : { ready: true, done: 0, total: 0 }
+              : magdur
+                ? { ready: false, done: 0, total: MAGDUR_URLS.length }
+                : { ready: true, done: 0, total: 0 }
   );
 
   useEffect(() => {
-    if (!arena3 && !kurtar && !gecme && !kuyu && !kapi) return;
+    if (!arena3 && !kurtar && !gecme && !kuyu && !kapi && !magdur) return;
     let stop = false;
-    const urls = arena3 ? [...ARENA3_HERO_URLS, ARENA3_ARENA_URL] : kurtar ? KURTAR_URLS : gecme ? GECME_URLS : kuyu ? KUYU_URLS : KAPI_URLS;
+    const urls = arena3 ? [...ARENA3_HERO_URLS, ARENA3_ARENA_URL] : kurtar ? KURTAR_URLS : gecme ? GECME_URLS : kuyu ? KUYU_URLS : magdur ? MAGDUR_URLS : KAPI_URLS;
     void preloadGlbs(urls, (done, total) => {
       if (!stop) setAssets({ ready: false, done, total });
     }).then(() => {
@@ -138,7 +142,7 @@ export function ReelCapture({ soldiers, names, commanders = [], level, pressure,
     return () => {
       stop = true;
     };
-  }, [arena3, kurtar, gecme, kuyu, kapi]);
+  }, [arena3, kurtar, gecme, kuyu, kapi, magdur]);
 
   useEffect(() => {
     if (!elf) return;
@@ -173,9 +177,9 @@ export function ReelCapture({ soldiers, names, commanders = [], level, pressure,
         setPhase("err");
         return;
       }
-      if (kurtar || gecme || kuyu || kapi) {
+      if (kurtar || gecme || kuyu || kapi || magdur) {
         const loadStart = performance.now();
-        const sceneReady = kurtar ? kurtarIsReady : gecme ? gecmeIsReady : kuyu ? kuyuIsReady : kapiIsReady;
+        const sceneReady = kurtar ? kurtarIsReady : gecme ? gecmeIsReady : kuyu ? kuyuIsReady : magdur ? magdurIsReady : kapiIsReady;
         while (!sceneReady() && performance.now() - loadStart < 25000) {
           await wait(80);
           if (stop) return;
@@ -188,10 +192,12 @@ export function ReelCapture({ soldiers, names, commanders = [], level, pressure,
         if (kurtar) kurtarHold();
         else if (gecme) gecmeHold();
         else if (kuyu) kuyuHold();
+        else if (magdur) magdurHold();
         else kapiHold();
         if (kurtar) await kurtarWhenReady();
         else if (gecme) await gecmeWhenReady();
         else if (kuyu) await kuyuWhenReady();
+        else if (magdur) await magdurWhenReady();
         else await kapiWhenReady();
       }
       if (elf) {
@@ -219,7 +225,7 @@ export function ReelCapture({ soldiers, names, commanders = [], level, pressure,
         if (stop) return;
         const heavy = isMix9(mix);
         const bits = heavy ? 2_500_000 : xxx && xxxHiRes(xxx) ? 24_000_000 : 8_000_000;
-        const recorded = await recordCanvas(canvas, clip, reelSfxStream(), bits, heavy, kurtar ? kurtarStart : gecme ? gecmeStart : kuyu ? kuyuStart : kapi ? kapiStart : elf ? elfStartPlay : undefined);
+        const recorded = await recordCanvas(canvas, clip, reelSfxStream(), bits, heavy, kurtar ? kurtarStart : gecme ? gecmeStart : kuyu ? kuyuStart : magdur ? magdurStart : kapi ? kapiStart : elf ? elfStartPlay : undefined);
         if (stop) return;
         setBlob(recorded);
         setPreview(URL.createObjectURL(recorded));
@@ -326,6 +332,7 @@ export function ReelCapture({ soldiers, names, commanders = [], level, pressure,
             gecme={gecme}
             kuyu={kuyu}
             kapi={kapi}
+            magdur={magdur}
             arena={arena}
             arena2={arena2}
             arena3={arena3}
@@ -333,7 +340,7 @@ export function ReelCapture({ soldiers, names, commanders = [], level, pressure,
             kayit={kayit}
             mix={mix}
             xxx={xxx}
-            showTitles={showTitles && !mix && !xxx && !new1 && !new2 && !new3 && !new4 && !new5 && !new6 && !new62 && !new7 && !maze && !film && !dragon && !giant && !wars && !ordu && !karsi && !ok && !elf && !kalkan && !hero && !loop && !kurtar && !gecme && !kuyu && !kapi && !arena && !arena2 && !arena3 && !bout && !kayit}
+            showTitles={showTitles && !mix && !xxx && !new1 && !new2 && !new3 && !new4 && !new5 && !new6 && !new62 && !new7 && !maze && !film && !dragon && !giant && !wars && !ordu && !karsi && !ok && !elf && !kalkan && !hero && !loop && !kurtar && !gecme && !kuyu && !kapi && !magdur && !arena && !arena2 && !arena3 && !bout && !kayit}
             rosterIds={rosterIds}
             onReady={(canvas) => {
               canvasRef.current = canvas;
@@ -347,7 +354,7 @@ export function ReelCapture({ soldiers, names, commanders = [], level, pressure,
 
       {(phase === "boot" || phase === "rec") && (
         <div className="reel-capture-hud">
-          <p>{phase === "boot" ? (!assets.ready || (elf && !elfReady) || ((kurtar && !kurtarIsReady()) || (gecme && !gecmeIsReady()) || (kuyu && !kuyuIsReady()) || (kapi && !kapiIsReady())) ? `Modeller yükleniyor… ${elf ? `${elfDone}/${elfLoadTotal()}` : assets.total ? `${assets.done}/${assets.total}` : ""}` : "Sahne hazırlanıyor…") : "Kayıt alınıyor…"}</p>
+          <p>{phase === "boot" ? (!assets.ready || (elf && !elfReady) || ((kurtar && !kurtarIsReady()) || (gecme && !gecmeIsReady()) || (kuyu && !kuyuIsReady()) || (kapi && !kapiIsReady()) || (magdur && !magdurIsReady())) ? `Modeller yükleniyor… ${elf ? `${elfDone}/${elfLoadTotal()}` : assets.total ? `${assets.done}/${assets.total}` : ""}` : "Sahne hazırlanıyor…") : "Kayıt alınıyor…"}</p>
         </div>
       )}
 
