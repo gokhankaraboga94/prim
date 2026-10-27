@@ -318,11 +318,18 @@ function Charge({
   const heroRefs = useRef<(THREE.Group | null)[]>([]);
   const arms = useMemo(() => pack.heroes.map((hero) => armsOf(hero)), [pack.heroes]);
   const geo = useMemo(() => arrowGeo(), []);
-  const named = useMemo(() => roster.map((name, i) => ({ name, i })).filter((row) => row.name && row.i < 12), [roster]);
+  const named = useMemo(
+    () =>
+      roster.map((name, i) => ({ name, i })).filter((row) => {
+        const col = row.i % 12;
+        return Boolean(row.name) && Math.floor(row.i / 12) === 11 && (col === 3 || col === 8);
+      }),
+    [roster]
+  );
   const atlas = useMemo(
     () =>
       buildNameAtlas(
-        named.map((row) => ({ text: row.name, commander: false, plain: false, fill: "#ffe14a", frame: true })),
+        named.map((row) => ({ text: row.name, commander: false, plain: false, fill: "#ffe14a", frame: false })),
         true,
         true
       ),
@@ -399,9 +406,9 @@ function Charge({
         if (!cell || cell.sheet !== atlas.sheets.indexOf(sheet)) continue;
         const pose = kapiSoldier(named[n].i, t, faceZ);
         const hide = pose.fall > 0.4;
-        dummy.position.set(pose.x, hide ? -8 : 2.15, pose.z);
+        dummy.position.set(pose.x, hide ? -8 : 2.75, pose.z);
         dummy.quaternion.copy(camera.quaternion);
-        dummy.scale.set(hide ? 0.001 : cell.sx * 0.42, hide ? 0.001 : cell.sy * 0.42, 1);
+        dummy.scale.set(hide ? 0.001 : cell.sx, hide ? 0.001 : cell.sy, 1);
         dummy.updateMatrix();
         inst.setMatrixAt(cell.local, dummy.matrix);
       }

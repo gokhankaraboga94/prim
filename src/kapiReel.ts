@@ -251,6 +251,22 @@ function mixN(a: number, b: number, k: number) {
   return a + (b - a) * k;
 }
 
+const FORM_TAIL = 3.6 + (Math.ceil(KAPI_N / KAPI_COLS) - 1) * GAP_Z;
+
+const HERO_BEATS: readonly [number, number, number][] = [
+  [5.55, 7.2, 0],
+  [9.95, 11.55, 1],
+  [14.3, 15.75, 2],
+  [18.15, 19.55, 3],
+];
+
+function heroBeat(t: number) {
+  for (const [a, b, i] of HERO_BEATS) {
+    if (t >= a && t < b) return i;
+  }
+  return -1;
+}
+
 export function kapiCam(t: number, level: number): KapiCam {
   const face = kapiFace(level);
   const faceZ = face.z;
@@ -288,17 +304,30 @@ export function kapiCam(t: number, level: number): KapiCam {
     };
   }
   const lead = kapiLead(t, faceZ);
-  const pull = smo(t, KAPI_HIT - 0.3, KAPI_HIT + 1.85);
-  const y = 4.2 + pull * 4;
-  const z = lead + 9.5 + pull * 6;
+  const pull = smo(t, KAPI_HIT - 0.45, KAPI_HIT + 1.7);
+  const hero = pull > 0.05 ? -1 : heroBeat(t);
+  if (hero >= 0) {
+    const hx = KAPI_HERO_X[hero];
+    return {
+      x: hx - 0.28,
+      y: 2.7,
+      z: lead + 3.35,
+      lx: hx,
+      ly: 0.9,
+      lz: lead + 0.2,
+      fov: 54,
+    };
+  }
+  const y = 8.6 + pull * 2.6;
+  const z = lead + FORM_TAIL + 19 - pull * 4;
   return {
-    x: 0.15,
+    x: 0,
     y,
     z,
     lx: 0,
-    ly: mixN(9.5, 16, pull),
-    lz: mixN(faceZ + 2, faceZ - 8, pull),
-    fov: 54 + pull * 10,
+    ly: mixN(3.2, 11, pull),
+    lz: mixN(lead + 2, faceZ - 8, pull),
+    fov: 66 + pull * 4,
   };
 }
 
