@@ -29,6 +29,7 @@ import {
   kapiCam,
   kapiCard,
   kapiFace,
+  kapiGround,
   kapiLead,
   kapiMarkReady,
   kapiReset,
@@ -37,6 +38,7 @@ import {
   kapiSoldier,
   kapiSwing,
   kapiT,
+  kapiYard,
 } from "../../kapiReel";
 
 type Gltf = Parameters<Parameters<GLTFLoader["load"]>[1]>[0];
@@ -302,7 +304,7 @@ export function KapiBattle({ names, level }: { names: string[]; level: number })
   const [pack, setPack] = useState<Pack | null>(null);
   const gate = useRef(0);
   const face = useMemo(() => kapiFace(level), [level]);
-  const posts = useMemo(() => kapiArchers(level), [level]);
+  const posts = useMemo(() => [...kapiArchers(level), ...kapiYard(level)], [level]);
   const roster = useMemo(() => kapiRoster(names), [names]);
 
   useEffect(() => {
@@ -328,7 +330,7 @@ export function KapiBattle({ names, level }: { names: string[]; level: number })
         cutPlinth(romanGltf.scene);
         seatFeet(romanGltf.scene);
         romanGltf.scene.add(bowMesh());
-        const romans = Array.from({ length: KAPI_ARCHERS }, () => romanGltf.scene.clone(true));
+        const romans = Array.from({ length: posts.length }, () => romanGltf.scene.clone(true));
         if (drop) return;
         setPack({ heroes, knight, romans });
       } catch (err) {
@@ -351,7 +353,7 @@ export function KapiBattle({ names, level }: { names: string[]; level: number })
     <group>
       <BreakClock gate={gate} />
       <Castle level={level} pressure={0} defenders={false} gateBreak={gate} />
-      <Charge pack={pack} faceZ={face.z} posts={posts} roster={roster} />
+      <Charge pack={pack} faceZ={face.z} level={level} posts={posts} roster={roster} />
     </group>
   );
 }
@@ -373,11 +375,13 @@ const deadTint = new THREE.Color("#5c616c");
 function Charge({
   pack,
   faceZ,
+  level,
   posts,
   roster,
 }: {
   pack: Pack;
   faceZ: number;
+  level: number;
   posts: { x: number; y: number; z: number; s: number }[];
   roster: string[];
 }) {
@@ -423,7 +427,7 @@ function Charge({
       if (!helm.instanceColor) helm.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(KAPI_N * 3).fill(1), 3);
       for (let i = 0; i < KAPI_N; i++) {
         const pose = kapiSoldier(i, t, faceZ);
-        dummy.position.set(pose.x, 0, pose.z);
+        dummy.position.set(pose.x, kapiGround(pose.z, level), pose.z);
         dummy.rotation.set(-pose.fall * 1.5, Math.PI, pose.fall * ((i % 5) - 2) * 0.2);
         dummy.scale.setScalar(1);
         dummy.updateMatrix();
@@ -445,7 +449,7 @@ function Charge({
     pack.heroes.forEach((_, i) => {
       const node = heroRefs.current[i];
       if (!node) return;
-      node.position.set(KAPI_HERO_X[i], 0, lead);
+      node.position.set(KAPI_HERO_X[i], kapiGround(lead, level), lead);
       for (const arm of arms[i]) arm.set(strike.lift, strike.chop);
       stepGait(node, moving, moving ? 4.4 : 0, delta);
     });

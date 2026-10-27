@@ -1547,7 +1547,7 @@ export function AdminPage() {
           )}
           {isKapi(reelShot) && (
             <p className="muted">
-              30 saniye. Açılış geriden, ordu ve tam isimler görünür. Arada tek kahraman, asker ölürken o askerin gözü. Ok yağmuru ince ve beyaz. Okçular kapıda, sağ ve sol surda. Kapı kırılınca avlu görünür. Yazı 4. saniyeden önce gider: “OKLAR / İNİYOR”, sonra “KAPI KIRILACAK”. Başlık: “Oklar iniyor. Kapı kırılacak.” Cevabı sabitleme.
+              38 saniye. Açılış geriden, ordu ve tam isimler görünür. Arada tek kahraman, asker ölürken o askerin gözü. Ok yağmuru ince ve beyaz. Okçular kapıda, sağ ve sol surda. Kapı kırılınca avluda aynı düşman bekler, ordu içeri koşar. Yazı 4. saniyeden önce gider: “OKLAR / İNİYOR”, sonra “KAPI KIRILACAK”. Başlık: “Oklar iniyor. Kapı kırılacak.” Cevabı sabitleme.
             </p>
           )}
           {isKuyu(reelShot) && (

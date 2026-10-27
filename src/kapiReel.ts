@@ -3,7 +3,7 @@ import { castleAxes, castleGrow, frontWalk, frontWallFace } from "./castleLayout
 export const KAPI_ID = "kapi" as const;
 export type KapiId = typeof KAPI_ID;
 export const KAPI_MODE = { id: KAPI_ID, label: "kapi" } as const;
-export const KAPI_SECONDS = 30;
+export const KAPI_SECONDS = 38;
 
 export const KAPI_HEROES = [
   "/models/arena3/armored.glb",
@@ -27,6 +27,8 @@ const GAP_X = 1.72;
 const GAP_Z = 1.38;
 const RUN = 20.2;
 const FLIGHT = 0.5;
+const RUSH_AT = 21.9;
+const RUSH = 8.2;
 export const KAPI_HIT = 20.7;
 
 export function isKapi(id: string | null | undefined): id is KapiId {
@@ -115,7 +117,8 @@ export function kapiSwing(t: number): KapiStrike {
 }
 
 export function kapiRunning(t: number) {
-  return t < KAPI_HIT - 0.4;
+  if (t < RUN) return true;
+  return t >= RUSH_AT && t < RUSH_AT + RUSH;
 }
 
 export function kapiFace(level: number) {
@@ -126,9 +129,34 @@ export function kapiFace(level: number) {
 
 export function kapiLead(t: number, faceZ: number) {
   const start = faceZ + 58;
-  const end = faceZ + 4.4;
-  const u = Math.min(1, Math.max(0, t / RUN));
-  return start + (end - start) * u;
+  const gate = faceZ + 4.4;
+  if (t <= RUN) return start + (gate - start) * Math.max(0, t) / RUN;
+  if (t <= RUSH_AT) return gate;
+  const yard = faceZ - 14.2;
+  const u = Math.min(1, (t - RUSH_AT) / RUSH);
+  return gate + (yard - gate) * u;
+}
+
+/** Courtyard slab top once a body has crossed the inner lip. Outside the yard the field is y=0. */
+export function kapiGround(z: number, level: number) {
+  const { sy, sz, zShift } = castleAxes(castleGrow(level));
+  const near = 5.05 * sz + zShift;
+  const far = -13.15 * sz + zShift;
+  if (z > near + 0.35 || z < far) return 0;
+  return 0.09 * sy;
+}
+
+/** Same roman archers as the wall, waiting in the yard behind the gate. */
+export function kapiYard(level: number) {
+  const { sx, sy, sz, zShift } = castleAxes(castleGrow(level));
+  const y = 0.09 * sy;
+  const xs = [-0.9, -0.3, 0.3, 0.9];
+  const zs = [4.5, 3.45, 2.45];
+  const out: { x: number; y: number; z: number; s: number }[] = [];
+  for (const localZ of zs) {
+    for (const localX of xs) out.push({ x: localX * sx, y, z: localZ * sz + zShift, s: 2.15 });
+  }
+  return out;
 }
 
 export function kapiSlot(i: number) {
@@ -352,16 +380,16 @@ export function kapiCam(t: number, level: number): KapiCam {
       fov: 54,
     };
   }
-  const y = 8.6 + pull * 2.6;
-  const z = lead + FORM_TAIL + 19 - pull * 4;
+  const y = 8.6 + pull * 0.6;
+  const z = lead + FORM_TAIL + 19 - pull * 3;
   return {
     x: 0,
     y,
     z,
     lx: 0,
-    ly: mixN(3.2, 11, pull),
-    lz: mixN(lead + 2, faceZ - 8, pull),
-    fov: 72 + pull * 4,
+    ly: mixN(3.2, 2.6, pull),
+    lz: mixN(lead + 2, lead - 9, pull),
+    fov: 72 + pull * 2,
   };
 }
 
