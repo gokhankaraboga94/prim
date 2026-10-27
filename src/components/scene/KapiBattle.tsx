@@ -13,6 +13,7 @@ import {
   KAPI_ARCHERS,
   KAPI_DEATHS,
   KAPI_EARLY,
+  KAPI2_HOOK,
   KAPI_HEROES,
   KAPI_HERO_X,
   KAPI_KNIGHT,
@@ -22,6 +23,7 @@ import {
   KAPI_RAIN,
   KAPI_ROMAN,
   type KapiArrow,
+  type KapiId,
   kapiArchers,
   kapiArrow,
   kapiEye,
@@ -32,12 +34,14 @@ import {
   kapiGround,
   kapiLead,
   kapiMarkReady,
+  kapiOpening,
   kapiReset,
   kapiRoster,
   kapiRunning,
   kapiSoldier,
   kapiSwing,
   kapiT,
+  kapiUse,
   kapiYard,
 } from "../../kapiReel";
 
@@ -300,7 +304,8 @@ function bowMesh() {
   return mesh;
 }
 
-export function KapiBattle({ names, level }: { names: string[]; level: number }) {
+export function KapiBattle({ names, level, shot }: { names: string[]; level: number; shot: KapiId }) {
+  kapiUse(shot);
   const [pack, setPack] = useState<Pack | null>(null);
   const gate = useRef(0);
   const face = useMemo(() => kapiFace(level), [level]);
@@ -499,7 +504,7 @@ function Charge({
         const cell = atlas.cells[n];
         if (!cell || cell.sheet !== atlas.sheets.indexOf(sheet)) continue;
         const pose = kapiSoldier(named[n].i, t, faceZ);
-        const hide = pose.fall > 0.4;
+        const hide = pose.fall > 0.4 || kapiOpening();
         const rank = Math.floor(named[n].i / 12);
         const w = Math.min(cell.sx, 2.48);
         const h = (cell.sy * w) / Math.max(cell.sx, 0.01);
@@ -640,13 +645,16 @@ function KapiHud() {
   const size = useThree((s) => s.size);
   const early = useRef<THREE.Mesh>(null);
   const late = useRef<THREE.Mesh>(null);
-  const maps = useMemo(() => [cardTex(KAPI_EARLY), cardTex(KAPI_LATE)], []);
+  const maps = useMemo(() => [cardTex(KAPI_EARLY), cardTex(KAPI_LATE), cardTex(KAPI2_HOOK)], []);
+  const hook = useRef<THREE.Mesh>(null);
   useEffect(() => {
     document.fonts?.load("900 80px Montserrat").then(() => {
       maps[0].image = paintCard(KAPI_EARLY);
       maps[1].image = paintCard(KAPI_LATE);
-      maps[0].needsUpdate = true;
-      maps[1].needsUpdate = true;
+      maps[2].image = paintCard(KAPI2_HOOK);
+      maps.forEach((map) => {
+        map.needsUpdate = true;
+      });
     }).catch(() => undefined);
   }, [maps]);
   useEffect(() => () => {
@@ -654,8 +662,14 @@ function KapiHud() {
   }, [maps]);
   useFrame(() => {
     const card = kapiCard(kapiT());
-    const earlyOn = card?.lines.length === 2;
+    const hookOn = card?.lines[0] === KAPI2_HOOK[0];
+    const earlyOn = card?.lines.length === 2 && !hookOn;
     const lateOn = card?.lines.length === 3;
+    if (hook.current) {
+      hook.current.visible = Boolean(hookOn);
+      const mat = hook.current.material as THREE.MeshBasicMaterial;
+      mat.opacity = hookOn ? card!.opacity : 0;
+    }
     if (early.current) {
       early.current.visible = Boolean(earlyOn);
       const mat = early.current.material as THREE.MeshBasicMaterial;
@@ -668,9 +682,14 @@ function KapiHud() {
     }
   });
   const cardW = size.width * 0.58;
+  const hookW = size.width * 0.5;
   return (
     <Hud renderPriority={1}>
       <OrthographicCamera makeDefault position={[0, 0, 10]} />
+      <mesh ref={hook} position={[0, size.height * 0.28, 0]}>
+        <planeGeometry args={[hookW, hookW * (280 / 980)]} />
+        <meshBasicMaterial map={maps[2]} transparent depthTest={false} toneMapped={false} />
+      </mesh>
       <mesh ref={early} position={[0, size.height * 0.32, 0]}>
         <planeGeometry args={[cardW, cardW * (280 / 980)]} />
         <meshBasicMaterial map={maps[0]} transparent depthTest={false} toneMapped={false} />
@@ -683,7 +702,8 @@ function KapiHud() {
   );
 }
 
-export function KapiCam({ level }: { level: number }) {
+export function KapiCam({ level, shot }: { level: number; shot: KapiId }) {
+  kapiUse(shot);
   const camera = useThree((s) => s.camera) as THREE.PerspectiveCamera;
   const face = useMemo(() => kapiFace(level), [level]);
   useFrame(() => {

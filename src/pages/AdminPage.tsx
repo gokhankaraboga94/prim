@@ -47,7 +47,7 @@ import { LOOP_ID, LOOP_MODE, LOOP_SECONDS, isLoop, type LoopId } from "../loopRe
 import { KURTAR_ID, KURTAR_MODE, KURTAR_SECONDS, isKurtar, type KurtarId } from "../kurtarReel";
 import { GECME_ID, GECME_MODE, GECME_SECONDS, isGecme, type GecmeId } from "../gecmeReel";
 import { KUYU_ID, KUYU_MODE, KUYU_SECONDS, isKuyu, type KuyuId } from "../kuyuReel";
-import { KAPI_ID, KAPI_MODE, KAPI_SECONDS, isKapi, type KapiId } from "../kapiReel";
+import { KAPI2_ID, KAPI2_MODE, KAPI2_SECONDS, KAPI_ID, KAPI_MODE, KAPI_SECONDS, isKapi, isKapi2, type KapiId } from "../kapiReel";
 import { ARENA2_ID, ARENA2_MODE, ARENA2_SECONDS, ARENA3_ID, ARENA3_MODE, ARENA3_SECONDS, ARENA_ID, ARENA_MODE, ARENA_SECONDS, isArena, isArena2, isArena3, type Arena2Id, type Arena3Id, type ArenaId } from "../arenaReel";
 import { BOUT2_ID, BOUT2_MODE, BOUT2_SECONDS, BOUT_ID, BOUT_MODE, BOUT_SECONDS, isBout, isBout2, type Bout2Id, type BoutId } from "../boutReel";
 import { KAYIT_ID, KAYIT_MODE, KAYIT_SECONDS, isKayit, type KayitId } from "../kayitReel";
@@ -1281,6 +1281,18 @@ export function AdminPage() {
             </button>
             <button
               type="button"
+              className={reelShot === KAPI2_ID ? "on" : ""}
+              onClick={() => {
+                setReelShot((cur) => (cur === KAPI2_ID ? null : KAPI2_ID));
+                setReelSeconds(KAPI2_SECONDS);
+                setReelText(false);
+                setReelSkipCmd(true);
+              }}
+            >
+              {KAPI2_MODE.label} — {KAPI2_SECONDS}s
+            </button>
+            <button
+              type="button"
               className={reelShot === KAPI_ID ? "on" : ""}
               onClick={() => {
                 setReelShot((cur) => (cur === KAPI_ID ? null : KAPI_ID));
@@ -1545,7 +1557,12 @@ export function AdminPage() {
               Karşıtakipçi3’ün aynısı, üstüne 7 bayrak. Altısı sarı ve durduğu kesitte sayılır. Yedincisi açılışta komutanın topuğunun yanında, çimin renginde, yerde yatar; tepeden bakınca çizgi gibi kalır. Videoda cevap yok. Başlık: “7 bayrak var. Birini kaçırırsın.” Yorum isteme, cevabı sabitleme. İnsanlar “7. nerede, ben 6 tane buldum” diye yazar ve başa sarar.
             </p>
           )}
-          {isKapi(reelShot) && (
+          {isKapi2(reelShot) && (
+            <p className="muted">
+              38 saniye. Asker ve kale kapi ile aynı. İlk 4 saniye ayrı: açılış kırık kapının içinden, içerideki düşman kadrajı doldurur. Sonra kesme, askerler merceğe koşar. Yazı güvenli bölgede, 4. saniyeden önce gider: “ÇIKAN YOK / İÇERİ DOLU”. Başlık: “Çıkan yok. İçeri dolu.” Cevabı sabitleme.
+            </p>
+          )}
+          {reelShot === KAPI_ID && (
             <p className="muted">
               38 saniye. Açılış geriden, ordu ve tam isimler görünür. Arada tek kahraman, asker ölürken o askerin gözü. Ok yağmuru ince ve beyaz. Okçular kapıda, sağ ve sol surda. Kapı kırılınca avluda aynı düşman bekler, ordu içeri koşar. Yazı 4. saniyeden önce gider: “OKLAR / İNİYOR”, sonra “KAPI KIRILACAK”. Başlık: “Oklar iniyor. Kapı kırılacak.” Cevabı sabitleme.
             </p>

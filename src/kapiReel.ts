@@ -1,9 +1,12 @@
 import { castleAxes, castleGrow, frontWalk, frontWallFace } from "./castleLayout";
 
 export const KAPI_ID = "kapi" as const;
-export type KapiId = typeof KAPI_ID;
+export const KAPI2_ID = "kapi2" as const;
+export type KapiId = typeof KAPI_ID | typeof KAPI2_ID;
 export const KAPI_MODE = { id: KAPI_ID, label: "kapi" } as const;
+export const KAPI2_MODE = { id: KAPI2_ID, label: "kapi2" } as const;
 export const KAPI_SECONDS = 38;
+export const KAPI2_SECONDS = KAPI_SECONDS;
 
 export const KAPI_HEROES = [
   "/models/arena3/armored.glb",
@@ -20,6 +23,7 @@ export const KAPI_COLS = 12;
 export const KAPI_ARCHERS = 14;
 export const KAPI_EARLY = ["OKLAR", "İNİYOR"] as const;
 export const KAPI_LATE = ["OKLAR", "İNİYOR", "KAPI KIRILACAK"] as const;
+export const KAPI2_HOOK = ["ÇIKAN YOK", "İÇERİ DOLU"] as const;
 
 const ARCHER_X = [-5.6, -4.0, -2.4, -0.8, 0.8, 2.4, 4.0, 5.6];
 const FLANK_X = [-6.4, -4.6, -3.3, 3.3, 4.6, 6.4];
@@ -32,7 +36,11 @@ const RUSH = 8.2;
 export const KAPI_HIT = 20.7;
 
 export function isKapi(id: string | null | undefined): id is KapiId {
-  return id === KAPI_ID;
+  return id === KAPI_ID || id === KAPI2_ID;
+}
+
+export function isKapi2(id: string | null | undefined): id is typeof KAPI2_ID {
+  return id === KAPI2_ID;
 }
 
 export type KapiCam = {
@@ -51,7 +59,12 @@ const GUARD: KapiStrike = { lift: 0.38, chop: 0.22 };
 
 let playAt = 0;
 let ready = false;
+let reel: "kapi" | "kapi2" = "kapi";
 const waiters: Array<() => void> = [];
+
+export function kapiUse(id: KapiId | null) {
+  reel = id === KAPI2_ID ? "kapi2" : "kapi";
+}
 
 export function kapiMarkReady() {
   ready = true;
@@ -75,9 +88,16 @@ export function kapiStart() {
   playAt = performance.now() / 1000;
 }
 
-export function kapiT() {
+function rawT() {
   if (!playAt) return 0;
   return Math.max(0, performance.now() / 1000 - playAt);
+}
+
+/** kapi2 shows the broken gate first, then rejoins the same charge. */
+export function kapiT() {
+  const raw = rawT();
+  if (reel !== "kapi2" || raw >= 1.2) return raw;
+  return 22.5 + raw * 1.25;
 }
 
 export function kapiReset() {
@@ -329,7 +349,45 @@ function heroBeat(t: number) {
   return -1;
 }
 
+function breachCam(level: number, raw: number): KapiCam {
+  const faceZ = kapiFace(level).z;
+  const u = Math.min(1, raw / 1.2);
+  return {
+    x: 0.1,
+    y: 1.45,
+    z: faceZ - 9.1 - u * 1.5,
+    lx: 0,
+    ly: 2.05,
+    lz: faceZ - 16,
+    fov: 40 - u * 6,
+  };
+}
+
+function chargeCam(t: number, level: number, raw: number): KapiCam {
+  const faceZ = kapiFace(level).z;
+  const lead = kapiLead(t, faceZ);
+  const u = Math.min(1, Math.max(0, (raw - 1.2) / 2.67));
+  return {
+    x: 0,
+    y: 1.72,
+    z: lead - (5.2 - u * 1.1),
+    lx: 0,
+    ly: 1.55,
+    lz: lead + 0.8,
+    fov: 40 - u * 4,
+  };
+}
+
+export function kapiOpening() {
+  return reel === "kapi2" && rawT() < 3.87;
+}
+
 export function kapiCam(t: number, level: number): KapiCam {
+  if (reel === "kapi2") {
+    const raw = rawT();
+    if (raw < 1.2) return breachCam(level, raw);
+    if (raw < 3.87) return chargeCam(t, level, raw);
+  }
   const face = kapiFace(level);
   const faceZ = face.z;
   const eye = kapiEye(t);
@@ -402,6 +460,12 @@ export function kapiRoster(names: readonly string[]) {
 }
 
 export function kapiCard(t: number): { lines: readonly string[]; opacity: number } | null {
+  if (reel === "kapi2") {
+    const raw = rawT();
+    if (raw >= 3.75) return null;
+    const fade = raw < 3.2 ? 1 : 1 - (raw - 3.2) / 0.55;
+    return { lines: KAPI2_HOOK, opacity: Math.max(0, fade) };
+  }
   if (t < 1.35) return { lines: KAPI_EARLY, opacity: 1 };
   if (t < 3.75) {
     const fade = t < 3.2 ? 1 : 1 - (t - 3.2) / 0.55;

@@ -1002,7 +1002,7 @@ function SceneContent({
       {hero && <HeroBattle names={names} />}
       {loop && <LoopBattle />}
       {kuyu && <KuyuBattle />}
-      {kapi && <KapiBattle names={names} level={level} />}
+      {kapi && <KapiBattle names={names} level={level} shot={kapi} />}
       {gecme && <GecmeBattle />}
       {kurtar && <KurtarBattle />}
       {pit && (
@@ -1031,7 +1031,7 @@ function SceneContent({
       ) : bout ? (
         <DuelCam />
       ) : kapi ? (
-        <KapiCam level={level} />
+        <KapiCam level={level} shot={kapi} />
       ) : kuyu ? (
         <KuyuCam />
       ) : gecme ? (
