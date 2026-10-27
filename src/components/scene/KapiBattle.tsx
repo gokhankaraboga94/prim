@@ -134,7 +134,7 @@ function mirrorSwordToRight(root: THREE.Object3D) {
   }
 }
 
-/** The blade weight also grabs a wide right leg. Clear it where the cross-section is a body, and leave the thin sword. */
+/** The blade weight also grabs a slim right boot. A blade is a thin column that runs down the body; a foot is a short lump. Leave the blade, clear the rest. */
 function releaseFatLegs(root: THREE.Object3D) {
   root.traverse((obj) => {
     const mesh = obj as THREE.Mesh;
@@ -159,9 +159,11 @@ function releaseFatLegs(root: THREE.Object3D) {
     chest.sort((a, b) => a - b);
     const cx = chest[chest.length >> 1];
     const bin = 0.03;
-    const bins = 16;
+    const bins = 24;
     const z0 = new Float64Array(bins).fill(Number.POSITIVE_INFINITY);
     const z1 = new Float64Array(bins).fill(Number.NEGATIVE_INFINITY);
+    const y0 = new Float64Array(bins).fill(Number.POSITIVE_INFINITY);
+    const y1 = new Float64Array(bins).fill(Number.NEGATIVE_INFINITY);
     const cnt = new Uint32Array(bins);
     for (let i = 0; i < pos.count; i++) {
       const yn = (pos.getY(i) - minY) / height;
@@ -173,6 +175,15 @@ function releaseFatLegs(root: THREE.Object3D) {
       const z = pos.getZ(i);
       if (z < z0[b]) z0[b] = z;
       if (z > z1[b]) z1[b] = z;
+      if (yn < y0[b]) y0[b] = yn;
+      if (yn > y1[b]) y1[b] = yn;
+    }
+    const blade = new Uint8Array(bins);
+    for (let b = 0; b < bins; b++) {
+      if (!cnt[b]) continue;
+      const thin = (z1[b] - z0[b]) / height < 0.07;
+      const tall = y1[b] - y0[b] > 0.32;
+      if (thin && tall) blade[b] = 1;
     }
     for (let i = 0; i < pos.count; i++) {
       const yn = (pos.getY(i) - minY) / height;
@@ -180,8 +191,7 @@ function releaseFatLegs(root: THREE.Object3D) {
       const lat = (cx - pos.getX(i)) / height;
       if (lat < 0.06) continue;
       const b = Math.min(bins - 1, Math.floor(lat / bin));
-      if (cnt[b] < 12) continue;
-      if ((z1[b] - z0[b]) / height < 0.14) continue;
+      if (blade[b]) continue;
       armW.setX(i, 0);
       armE.setX(i, 0);
     }
@@ -306,7 +316,7 @@ export function KapiBattle({ names, level }: { names: string[]; level: number })
           const gltf = await loadGlb(loader, url);
           if (drop) return;
           mirrorSwordToRight(gltf.scene);
-          fitHero(gltf.scene, Math.PI, false, true, { side: -1, march: true, blade: true });
+          fitHero(gltf.scene, Math.PI, false, true, { side: -1, march: true, blade: true, soft: true });
           releaseFatLegs(gltf.scene);
           heroes.push(gltf.scene);
         }

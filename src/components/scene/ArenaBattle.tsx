@@ -339,7 +339,7 @@ uniform float uHeight;
 `;
 
 /** `strikeExpr` reads the strike for this vertex: a uniform for heroes, an instance attribute for foes. */
-export function installArmShader(material: THREE.Material, uniforms: ArmUniforms, strikeExpr: string, key: string, march = false) {
+export function installArmShader(material: THREE.Material, uniforms: ArmUniforms, strikeExpr: string, key: string, march = false, soft = false) {
   material.customProgramCacheKey = () => key;
   material.onBeforeCompile = (shader) => {
     Object.assign(shader.uniforms, uniforms);
@@ -359,7 +359,7 @@ export function installArmShader(material: THREE.Material, uniforms: ArmUniforms
          ${march ? `float legYn = (transformed.y - uMinY) / max(uHeight, 0.001);
          float legW = (1.0 - smoothstep(0.38, 0.5, legYn)) * (1.0 - armW) * smoothstep(0.02, 0.07, abs(transformed.x));
          float phase = uGait.x + (transformed.x >= 0.0 ? 0.0 : 3.14159265);
-         float stride = sin(phase) * uGait.y * 0.42;
+         float stride = sin(phase) * uGait.y * ${soft ? "0.26" : "0.42"};
          float kick = max(sin(phase - 0.65), 0.0) * uGait.y;
          vec3 hip = vec3(transformed.x, uMinY + uHeight * 0.46, transformed.z);
          vec3 leg = transformed - hip;
@@ -369,7 +369,7 @@ export function installArmShader(material: THREE.Material, uniforms: ArmUniforms
          float low = 1.0 - smoothstep(0.18, 0.3, legYn);
          vec3 knee = vec3(0.0, uMinY + uHeight * 0.24 - hip.y, 0.0);
          vec3 shin = leg - knee;
-         float kb = -kick * 1.05;
+         float kb = -kick * ${soft ? "0.0" : "1.05"};
          float kcs = cos(kb);
          float ksn = sin(kb);
          shin = vec3(shin.x, shin.y * kcs - shin.z * ksn, shin.y * ksn + shin.z * kcs);
@@ -394,7 +394,7 @@ function armSide(getLat: (i: number) => number, getY: (i: number) => number, cou
   return side;
 }
 
-type RigExtra = { side?: number; march?: boolean; blade?: boolean };
+type RigExtra = { side?: number; march?: boolean; blade?: boolean; soft?: boolean };
 
 /** Heroes: one draw each, strike comes in as a uniform the frame loop updates. */
 function rigArm(mesh: THREE.Mesh, forwardX: boolean, extra?: RigExtra) {
@@ -412,9 +412,9 @@ function rigArm(mesh: THREE.Mesh, forwardX: boolean, extra?: RigExtra) {
     uniforms.uHeight = { value: cut.height };
     mesh.userData.gait = gait;
     expr = "uniform vec2 uStrike;\nvec2 armStrike() { return uStrike; }";
-    key = "kurtar-march-arm-v3";
+    key = extra?.soft ? "kapi-march-arm-soft" : "kurtar-march-arm-v3";
   }
-  installArmShader(material, uniforms, expr, key, Boolean(extra?.march));
+  installArmShader(material, uniforms, expr, key, Boolean(extra?.march), Boolean(extra?.soft));
   material.needsUpdate = true;
   mesh.userData.armStrike = uniforms.uStrike.value;
 }
