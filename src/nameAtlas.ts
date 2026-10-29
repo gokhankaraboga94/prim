@@ -8,6 +8,7 @@ export type NameItem = {
   plain?: boolean;
   fill?: string;
   frame?: boolean;
+  plate?: string;
 };
 
 export type NameCell = {
@@ -103,7 +104,8 @@ function labelOf(item: NameItem) {
 
 function itemKey(item: NameItem) {
   const color = item.fill ? `:${item.fill}` : "";
-  return `${item.commander ? "c" : "n"}:${item.plain ? "p" : "a"}${color}:${labelOf(item)}`;
+  const plate = item.plate ? `:p${item.plate}` : "";
+  return `${item.commander ? "c" : "n"}:${item.plain ? "p" : "a"}${color}${plate}:${labelOf(item)}`;
 }
 
 function paintCell(
@@ -119,7 +121,8 @@ function paintCell(
   fill?: string,
   crisp = false,
   sharp = false,
-  frame = false
+  frame = false,
+  plate?: string
 ) {
   ctx.clearRect(x, y, w, h);
   if (!text) return 0;
@@ -133,7 +136,7 @@ function paintCell(
     ctx.arcTo(x + pad, y + h - pad, x + pad, y + pad, rad);
     ctx.arcTo(x + pad, y + pad, x + w - pad, y + pad, rad);
     ctx.closePath();
-    ctx.fillStyle = "#000000";
+    ctx.fillStyle = plate || "#000000";
     ctx.fill();
   }
   let size = commander ? cmdFont : font;
@@ -212,7 +215,7 @@ export function buildNameAtlas(items: NameItem[], crisp = false, sharp = false):
       const col = i % cols;
       const row = Math.floor(i / cols);
       const text = labelOf(item);
-      const tw = paintCell(ctx, col * cell.w, row * cell.h, cell.w, cell.h, text, item.commander, cell.font, cell.cmd, item.fill, crisp || sharp, sharp, Boolean(item.frame));
+      const tw = paintCell(ctx, col * cell.w, row * cell.h, cell.w, cell.h, text, item.commander, cell.font, cell.cmd, item.fill, crisp || sharp, sharp, Boolean(item.frame), item.plate);
       const sy = item.commander ? syBase * 1.12 : syBase;
       const sx = Math.min(2.9, sy * Math.max(1.15, (tw + 18) / cell.h));
       uniqueCells.push({

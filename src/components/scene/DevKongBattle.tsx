@@ -120,9 +120,9 @@ export function DevKongBattle({ names }: { names: string[] }) {
   const atlas = useMemo(
     () =>
       buildNameAtlas(
-        named.map((row) => ({ text: row.name, commander: false, plain: false, fill: "#ffe14a", frame: true })),
+        named.map((row) => ({ text: row.name, commander: false, plain: false, fill: "#111111", frame: true, plate: "rgba(255,255,255,0.58)" })),
         true,
-        true,
+        false,
       ),
     [named],
   );
@@ -236,7 +236,8 @@ export function DevKongBattle({ names }: { names: string[] }) {
         const dz = seat.z - camera.position.z;
         const dist = Math.hypot(dx, dy, dz);
         const high = camera.position.y > 8;
-        const w = !show || (!high && dist < 6.5) ? 0.001 : high ? Math.min(1.35, Math.max(0.95, dist * 0.03)) : Math.min(cell.sx, 0.58, 0.16 + dist * 0.035);
+        const base = high ? Math.min(1.35, Math.max(0.95, dist * 0.03)) : Math.min(0.58, 0.16 + dist * 0.035);
+        const w = show ? base * 1.5 : 0.001;
         const h = (cell.sy * w) / Math.max(cell.sx, 0.01);
         dummy.position.set(seat.x, show ? (high ? 2.55 : 2.05) : -8, seat.z);
         dummy.quaternion.copy(camera.quaternion);

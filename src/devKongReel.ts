@@ -179,10 +179,7 @@ export function devKongCam(t: number): DevKongCam {
 }
 
 export function devKongNames(t: number) {
-  if (t < 1.05) return false;
-  if (t < OPEN_END) return true;
-  const kind = Math.floor((t - OPEN_END) / BEAT) % 5;
-  return kind <= 2 || kind === 4;
+  return t >= 0;
 }
 
 export function devKongHideHp(t: number) {
