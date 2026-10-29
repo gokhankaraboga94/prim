@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
-import { Hud, OrthographicCamera } from "@react-three/drei";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import * as THREE from "three";
@@ -9,13 +8,11 @@ import { buildNameAtlas } from "../../nameAtlas";
 import { buildKnightSoldier } from "../../knightSoldier";
 import { fitHero } from "./ArenaBattle";
 import {
-  KARE_HOOK,
   KARE_KNIGHT,
   KARE_OURS,
   KARE_ROMAN,
   KARE_ROMANS,
   kareCam,
-  kareCard,
   kareFace,
   kareFall,
   kareFriend,
@@ -151,69 +148,6 @@ function bakeRoman(root: THREE.Object3D) {
   const merged = mergeGeometries(parts, false);
   merged?.computeVertexNormals();
   return merged;
-}
-
-function paintCard(lines: readonly string[]) {
-  const canvas = document.createElement("canvas");
-  canvas.width = 980;
-  canvas.height = 280;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) return canvas;
-  ctx.beginPath();
-  ctx.moveTo(60, 22);
-  ctx.arcTo(952, 22, 952, 258, 32);
-  ctx.arcTo(952, 258, 28, 258, 32);
-  ctx.arcTo(28, 258, 28, 22, 32);
-  ctx.arcTo(28, 22, 952, 22, 32);
-  ctx.closePath();
-  ctx.fillStyle = "#ffd54f";
-  ctx.fill();
-  ctx.lineWidth = 12;
-  ctx.strokeStyle = "#111111";
-  ctx.stroke();
-  ctx.fillStyle = "#111111";
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  ctx.font = "900 84px Montserrat, Helvetica, Arial, sans-serif";
-  lines.forEach((line, i) => ctx.fillText(line, 490, 104 + i * 94));
-  return canvas;
-}
-
-function KareHud() {
-  const size = useThree((s) => s.size);
-  const mesh = useRef<THREE.Mesh>(null);
-  const map = useMemo(() => {
-    const tex = new THREE.CanvasTexture(paintCard(KARE_HOOK));
-    tex.colorSpace = THREE.SRGBColorSpace;
-    tex.generateMipmaps = false;
-    tex.minFilter = THREE.LinearFilter;
-    tex.magFilter = THREE.LinearFilter;
-    return tex;
-  }, []);
-  useEffect(() => {
-    document.fonts?.load("900 80px Montserrat").then(() => {
-      map.image = paintCard(KARE_HOOK);
-      map.needsUpdate = true;
-    }).catch(() => undefined);
-    return () => map.dispose();
-  }, [map]);
-  useFrame(() => {
-    const card = kareCard(kareT());
-    if (!mesh.current) return;
-    mesh.current.visible = Boolean(card && card.opacity > 0.02);
-    const mat = mesh.current.material as THREE.MeshBasicMaterial;
-    mat.opacity = card?.opacity ?? 0;
-  });
-  const w = size.width * 0.5;
-  return (
-    <Hud renderPriority={1}>
-      <OrthographicCamera makeDefault position={[0, 0, 10]} />
-      <mesh ref={mesh} position={[0, size.height * 0.28, 0]}>
-        <planeGeometry args={[w, w * (280 / 980)]} />
-        <meshBasicMaterial map={map} transparent depthTest={false} toneMapped={false} />
-      </mesh>
-    </Hud>
-  );
 }
 
 const dummy = new THREE.Object3D();
@@ -393,7 +327,6 @@ export function KareBattle({ names }: { names: string[] }) {
           }}
         />
       ))}
-      <KareHud />
     </group>
   );
 }

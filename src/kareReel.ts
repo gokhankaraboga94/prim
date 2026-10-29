@@ -3,14 +3,13 @@ export type KareId = typeof KARE_ID;
 export const KARE_MODE = { id: KARE_ID, label: "kare" } as const;
 export const KARE_SECONDS = 60;
 export const KARE_OURS = 100;
-export const KARE_ROMANS = 1000;
+export const KARE_ROMANS = 2000;
 export const KARE_KNIGHT = "/models/knight.glb";
 export const KARE_ROMAN = "/models/roman.glb";
 export const KARE_URLS = [KARE_KNIGHT, KARE_ROMAN] as const;
-export const KARE_HOOK = ["ÇIKIŞ YOK", "KARE KAPANIYOR"] as const;
 
 const PER_RANK = 100;
-const GAP = 0.7;
+const GAP = 0.38;
 const OPEN_END = 3.7;
 const CLOSE_END = 56;
 const ROW_AT = 4.6;
@@ -179,9 +178,8 @@ export function isKare(id: string | null | undefined): id is KareId {
 
 export function kareCam(t: number): KareCam {
   const ang = 0.35 + t * 0.028;
-  const u = Math.min(1, t / 58);
-  const s = u * u * (3 - 2 * u);
-  const pull = 1.05 - s * 0.2;
+  const u = Math.min(1, Math.max(0, t) / KARE_SECONDS);
+  const pull = 1.05 - u * 0.36;
   return {
     x: Math.cos(ang) * 8 * pull,
     y: 62 * pull,
@@ -220,10 +218,4 @@ export function kareSpear(i: number, t: number, out: KareSpear) {
 
 export function kareShowNames(t: number) {
   return t >= OPEN_END;
-}
-
-export function kareCard(t: number): { lines: readonly string[]; opacity: number } | null {
-  if (t >= 3.75) return null;
-  const fade = t < 3.15 ? 1 : 1 - (t - 3.15) / 0.6;
-  return { lines: KARE_HOOK, opacity: Math.max(0, fade) };
 }
