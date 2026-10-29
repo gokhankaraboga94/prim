@@ -232,12 +232,13 @@ export function DevKongBattle({ names }: { names: string[] }) {
         if (!cell || cell.sheet !== atlas.sheets.indexOf(sheet)) continue;
         const seat = devFriend(named[n].i);
         const dx = seat.x - camera.position.x;
-        const dy = 1.9 - camera.position.y;
+        const dy = 2.4 - camera.position.y;
         const dz = seat.z - camera.position.z;
         const dist = Math.hypot(dx, dy, dz);
-        const w = !show || dist < 6.5 ? 0.001 : Math.min(cell.sx, 0.58, 0.16 + dist * 0.035);
+        const high = camera.position.y > 8;
+        const w = !show || (!high && dist < 6.5) ? 0.001 : high ? Math.min(1.35, Math.max(0.95, dist * 0.03)) : Math.min(cell.sx, 0.58, 0.16 + dist * 0.035);
         const h = (cell.sy * w) / Math.max(cell.sx, 0.01);
-        dummy.position.set(seat.x, show ? 2.05 : -8, seat.z);
+        dummy.position.set(seat.x, show ? (high ? 2.55 : 2.05) : -8, seat.z);
         dummy.quaternion.copy(camera.quaternion);
         dummy.scale.set(show ? w : 0.001, show ? h : 0.001, 1);
         dummy.updateMatrix();
