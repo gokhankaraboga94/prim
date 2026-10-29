@@ -16,6 +16,7 @@ import {
   KARE_ROMANS,
   kareCam,
   kareCard,
+  kareFace,
   kareFall,
   kareFriend,
   kareMarkReady,
@@ -295,7 +296,7 @@ export function KareBattle({ names }: { names: string[] }) {
         const seat = kareFriend(i);
         const fall = kareFall(i, t);
         dummy.position.set(seat.x, fall * 0.02, seat.z);
-        dummy.rotation.set(fall * 1.35, seat.yaw, fall * 0.12);
+        dummy.rotation.set(fall * 1.25, fall > 0.02 ? kareFace(i) : seat.yaw, 0);
         dummy.scale.set(1, 1, 1);
         dummy.updateMatrix();
         body.setMatrixAt(i, dummy.matrix);
@@ -325,7 +326,7 @@ export function KareBattle({ names }: { names: string[] }) {
     if (volley) {
       let n = 0;
       for (let i = 0; i < KARE_OURS; i++) {
-        if (n >= 12) break;
+        if (n >= 36) break;
         if (!kareSpear(i, t, spearTmp)) continue;
         dir.set(spearTmp.dx, spearTmp.dy, spearTmp.dz);
         if (dir.lengthSq() < 1e-8) continue;
@@ -379,7 +380,7 @@ export function KareBattle({ names }: { names: string[] }) {
       <instancedMesh ref={romans} args={[pack.roman, undefined, KARE_ROMANS]} frustumCulled={false}>
         <meshLambertMaterial vertexColors />
       </instancedMesh>
-      <instancedMesh ref={spears} args={[spearMesh, undefined, 12]} frustumCulled={false} count={0}>
+      <instancedMesh ref={spears} args={[spearMesh, undefined, 36]} frustumCulled={false} count={0}>
         <meshBasicMaterial color="#f3e6c8" />
       </instancedMesh>
       {atlas.sheets.map((sheet, s) => (

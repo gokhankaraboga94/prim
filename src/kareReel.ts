@@ -13,9 +13,16 @@ const PER_RANK = 100;
 const GAP = 0.7;
 const OPEN_END = 3.7;
 const CLOSE_END = 56;
-const ROW_AT = 4.4;
-const ROW_GAP = 5.1;
+const ROW_AT = 4.6;
+const ROW_GAP = 9.2;
 const FLIGHT = 0.7;
+const FACE = [Math.PI, Math.PI / 2, 0, -Math.PI / 2] as const;
+const OUT = [
+  { x: 0, z: -1 },
+  { x: 1, z: 0 },
+  { x: 0, z: 1 },
+  { x: -1, z: 0 },
+] as const;
 
 export type KareCam = {
   x: number;
@@ -59,10 +66,52 @@ export function kareRoman(i: number, t: number) {
   return { x, z, yaw: Math.atan2(-x, -z) };
 }
 
-export function kareHit(i: number) {
-  const row = Math.floor(i / 10);
+function edgeChoices(i: number) {
   const col = i % 10;
-  return ROW_AT + row * ROW_GAP + col * 0.11;
+  const row = Math.floor(i / 10);
+  return [
+    { side: 0, d: row, along: col },
+    { side: 1, d: 9 - col, along: row },
+    { side: 2, d: 9 - row, along: 9 - col },
+    { side: 3, d: col, along: 9 - row },
+  ].sort((a, b) => a.d - b.d || a.side - b.side);
+}
+
+function buildEdges() {
+  const out: { side: number; d: number; along: number }[] = Array(100);
+  const buckets: Record<string, number[]> = { "0,1": [], "0,3": [], "1,2": [], "2,3": [] };
+  for (let i = 0; i < 100; i++) {
+    const tied = edgeChoices(i).filter((x) => x.d === edgeChoices(i)[0].d);
+    if (tied.length === 1) out[i] = tied[0];
+    else buckets[tied.map((x) => x.side).sort().join(",")].push(i);
+  }
+  const prefer: Record<string, number[]> = {
+    "0,3": [3, 0, 3, 0, 3],
+    "0,1": [0, 1, 0, 1, 0],
+    "1,2": [1, 2, 1, 2, 1],
+    "2,3": [2, 3, 2, 3, 2],
+  };
+  for (const key of Object.keys(buckets)) {
+    buckets[key].forEach((i, n) => {
+      out[i] = edgeChoices(i).find((x) => x.side === prefer[key][n]) ?? edgeChoices(i)[0];
+    });
+  }
+  return out;
+}
+
+const EDGES = buildEdges();
+
+export function kareEdge(i: number) {
+  return EDGES[i];
+}
+
+export function kareHit(i: number) {
+  const edge = kareEdge(i);
+  return ROW_AT + edge.d * ROW_GAP + (edge.along / 9) * 0.85;
+}
+
+export function kareFace(i: number) {
+  return FACE[kareEdge(i).side];
 }
 
 export function kareFall(i: number, t: number) {
@@ -129,8 +178,10 @@ export function isKare(id: string | null | undefined): id is KareId {
 }
 
 export function kareCam(t: number): KareCam {
-  const ang = 0.35 + t * 0.04;
-  const pull = 1.2;
+  const ang = 0.35 + t * 0.028;
+  const u = Math.min(1, t / 58);
+  const s = u * u * (3 - 2 * u);
+  const pull = 1.05 - s * 0.2;
   return {
     x: Math.cos(ang) * 8 * pull,
     y: 62 * pull,
@@ -149,10 +200,11 @@ export function kareSpear(i: number, t: number, out: KareSpear) {
   const born = hit - FLIGHT;
   if (t < born || t > hit + 0.08) return false;
   const seat = kareFriend(i);
+  const outDir = OUT[kareEdge(i).side];
   const u = Math.min(1, (t - born) / FLIGHT);
   const at = (k: number) => ({
-    x: seat.x,
-    z: seat.z - 8.4 + 8.4 * k,
+    x: seat.x + outDir.x * 7.6 * (1 - k),
+    z: seat.z + outDir.z * 7.6 * (1 - k),
     y: 1.7 + Math.sin(k * Math.PI) * 2.8,
   });
   const here = at(u);
