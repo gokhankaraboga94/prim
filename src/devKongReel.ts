@@ -97,7 +97,7 @@ function footCam(t: number): DevKongCam {
     y: 6.8,
     z: z0 - 56,
     lx: 0,
-    ly: 5.2,
+    ly: 7.2,
     lz: devKongZ(t),
     fov: 28 - u,
   };
@@ -110,9 +110,9 @@ function soldierEye(t: number): DevKongCam {
     y: 1.62,
     z: seat.z + 0.55,
     lx: 0,
-    ly: 8.2,
+    ly: 6.6,
     lz: devKongZ(t),
-    fov: 34,
+    fov: 42,
   };
 }
 
@@ -123,9 +123,9 @@ function soldierTps(t: number): DevKongCam {
     y: 2.85,
     z: seat.z - 5.2,
     lx: 0.2,
-    ly: 7.2,
+    ly: 5.6,
     lz: devKongZ(t) + 1,
-    fov: 40,
+    fov: 46,
   };
 }
 
@@ -135,9 +135,9 @@ function lineCam(t: number): DevKongCam {
     y: 2.7,
     z: -11.2,
     lx: 0,
-    ly: 7.6,
+    ly: 5.8,
     lz: devKongZ(t),
-    fov: 46,
+    fov: 50,
   };
 }
 

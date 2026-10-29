@@ -4,6 +4,7 @@ import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import * as THREE from "three";
 import { preloadedGlb } from "../../arenaPreload";
+import { dropGroundSlab } from "../../groundSlab";
 import { buildNameAtlas } from "../../nameAtlas";
 import { buildKnightSoldier } from "../../knightSoldier";
 import {
@@ -56,72 +57,6 @@ function toLambert(root: THREE.Object3D) {
   });
 }
 
-function cutPlinth(root: THREE.Object3D) {
-  root.traverse((obj) => {
-    const mesh = obj as THREE.Mesh;
-    if (!mesh.isMesh) return;
-    const geo = mesh.geometry;
-    const pos = geo.getAttribute("position");
-    if (!pos || pos.count < 12) return;
-    if (!geo.getIndex()) geo.setIndex(Array.from({ length: pos.count }, (_, i) => i));
-    const index = geo.getIndex();
-    if (!index) return;
-    let minY = Infinity;
-    let maxY = -Infinity;
-    let xa = Infinity;
-    let xb = -Infinity;
-    let za = Infinity;
-    let zb = -Infinity;
-    for (let i = 0; i < pos.count; i++) {
-      const y = pos.getY(i);
-      if (y < minY) minY = y;
-      if (y > maxY) maxY = y;
-      xa = Math.min(xa, pos.getX(i));
-      xb = Math.max(xb, pos.getX(i));
-      za = Math.min(za, pos.getZ(i));
-      zb = Math.max(zb, pos.getZ(i));
-    }
-    const h = maxY - minY;
-    if (h < 1e-4) return;
-    if (xb - xa > h * 1.8 && zb - za > h * 1.8) {
-      mesh.visible = false;
-      return;
-    }
-    const cut = minY + h * 0.36;
-    let low = 0;
-    let x0 = Infinity;
-    let x1 = -Infinity;
-    let z0 = Infinity;
-    let z1 = -Infinity;
-    for (let i = 0; i < pos.count; i++) {
-      if (pos.getY(i) > cut) continue;
-      low += 1;
-      x0 = Math.min(x0, pos.getX(i));
-      x1 = Math.max(x1, pos.getX(i));
-      z0 = Math.min(z0, pos.getZ(i));
-      z1 = Math.max(z1, pos.getZ(i));
-    }
-    if (low < 12 || Math.max(x1 - x0, z1 - z0) < h * 0.22) return;
-    const src = index.array;
-    const kept: number[] = [];
-    for (let i = 0; i < src.length; i += 3) {
-      const a = src[i];
-      const b = src[i + 1];
-      const c = src[i + 2];
-      if (Math.max(pos.getY(a), pos.getY(b), pos.getY(c)) <= cut) continue;
-      kept.push(a, b, c);
-    }
-    if (kept.length === src.length || kept.length === 0) {
-      if (kept.length === 0) mesh.visible = false;
-      return;
-    }
-    geo.setIndex(kept);
-    geo.computeVertexNormals();
-    geo.computeBoundingBox();
-    geo.computeBoundingSphere();
-  });
-}
-
 function seatFeet(root: THREE.Object3D) {
   root.updateMatrixWorld(true);
   const box = new THREE.Box3().setFromObject(root);
@@ -140,7 +75,11 @@ function fitKong(root: THREE.Object3D) {
     -((box.min.z + box.max.z) / 2) * fit,
   );
   toLambert(root);
-  cutPlinth(root);
+  root.traverse((obj) => {
+    const mesh = obj as THREE.Mesh;
+    if (!mesh.isMesh) return;
+    mesh.geometry = dropGroundSlab(mesh.geometry);
+  });
   seatFeet(root);
 }
 
