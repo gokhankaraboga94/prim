@@ -11,9 +11,11 @@ export const KARE_HOOK = ["ÇIKIŞ YOK", "KARE KAPANIYOR"] as const;
 
 const PER_RANK = 100;
 const GAP = 0.7;
-const LEAD = 12;
 const OPEN_END = 3.7;
 const CLOSE_END = 56;
+const ROW_AT = 4.4;
+const ROW_GAP = 5.1;
+const FLIGHT = 0.7;
 
 export type KareCam = {
   x: number;
@@ -30,13 +32,6 @@ export function kareHalf(t: number) {
   const u = Math.min(1, (t - OPEN_END) / (CLOSE_END - OPEN_END));
   const s = 1 - Math.pow(1 - u, 1.2);
   return 8.6 - s * 1.45;
-}
-
-export function kareLead(t: number) {
-  if (t < 1.05) return 2.6 + (t / 1.05) * 0.7;
-  const back = Math.min(1, (t - 1.05) / 2.5);
-  const s = back * back * (3 - 2 * back);
-  return 3.3 * (1 - s);
 }
 
 export function kareRoman(i: number, t: number) {
@@ -61,13 +56,20 @@ export function kareRoman(i: number, t: number) {
     x = -h;
     z = -along;
   }
-  if (i === LEAD) {
-    const len = Math.hypot(x, z) || 1;
-    const lead = kareLead(t);
-    x -= (x / len) * lead;
-    z -= (z / len) * lead;
-  }
   return { x, z, yaw: Math.atan2(-x, -z) };
+}
+
+export function kareHit(i: number) {
+  const row = Math.floor(i / 10);
+  const col = i % 10;
+  return ROW_AT + row * ROW_GAP + col * 0.11;
+}
+
+export function kareFall(i: number, t: number) {
+  const when = kareHit(i);
+  if (t < when) return 0;
+  const k = Math.min(1, (t - when) / 0.75);
+  return k * k * (3 - 2 * k);
 }
 
 export function kareFriend(i: number) {
@@ -126,31 +128,13 @@ export function isKare(id: string | null | undefined): id is KareId {
   return id === KARE_ID;
 }
 
-function faceCam(t: number): KareCam {
-  const start = kareRoman(LEAD, 0);
-  const now = kareRoman(LEAD, t);
-  const len = Math.hypot(start.x, start.z) || 1;
-  const ix = -start.x / len;
-  const iz = -start.z / len;
-  const u = Math.min(1, t / 1.05);
+export function kareCam(t: number): KareCam {
+  const ang = 0.35 + t * 0.04;
+  const pull = 1.2;
   return {
-    x: start.x + ix * 0.55 + -iz * 2.15,
-    y: 1.4,
-    z: start.z + iz * 0.55 + ix * 2.15,
-    lx: now.x,
-    ly: 1.42,
-    lz: now.z,
-    fov: 32 - u * 3,
-  };
-}
-
-function squareCam(t: number): KareCam {
-  const u = Math.min(1, (t - 1.05) / 2.65);
-  const ang = 0.35 + u * 0.55;
-  return {
-    x: Math.cos(ang) * 8,
-    y: 62 - u * 4,
-    z: Math.sin(ang) * 8,
+    x: Math.cos(ang) * 8 * pull,
+    y: 62 * pull,
+    z: Math.sin(ang) * 8 * pull,
     lx: 0,
     ly: 0,
     lz: 0,
@@ -158,62 +142,32 @@ function squareCam(t: number): KareCam {
   };
 }
 
-function wallCam(t: number, u: number): KareCam {
-  const h = kareHalf(t);
-  return {
-    x: Math.sin(t * 0.35) * 1.15,
-    y: 1.7,
-    z: -4.15 + u * 0.7,
-    lx: 0,
-    ly: 1.15,
-    lz: -h,
-    fov: 44 - u * 5,
-  };
-}
+export type KareSpear = { x: number; y: number; z: number; dx: number; dy: number; dz: number };
 
-function gapCam(t: number, u: number): KareCam {
-  const h = kareHalf(t);
-  const ang = -0.55 + u * 1.05;
-  const r = Math.max(6.6, h - 0.85);
-  return {
-    x: Math.sin(ang) * r,
-    y: 1.52,
-    z: -Math.cos(ang) * r,
-    lx: 0,
-    ly: 1.1,
-    lz: 0,
-    fov: 40,
-  };
-}
-
-function orbitCam(t: number): KareCam {
-  const ang = t * 0.22;
-  return {
-    x: Math.cos(ang) * 10,
-    y: 46 + Math.sin(t * 0.4) * 1.4,
-    z: Math.sin(ang) * 10,
-    lx: 0,
-    ly: 0,
-    lz: 0,
-    fov: 36,
-  };
-}
-
-export function kareCam(t: number): KareCam {
-  if (t < 1.05) return faceCam(t);
-  if (t < OPEN_END) return squareCam(t);
-  const beat = Math.floor((t - OPEN_END) / 4.4);
-  const u = ((t - OPEN_END) % 4.4) / 4.4;
-  const kind = beat % 3;
-  if (kind === 0) return wallCam(t, u);
-  if (kind === 1) return gapCam(t, u);
-  return orbitCam(t);
+export function kareSpear(i: number, t: number, out: KareSpear) {
+  const hit = kareHit(i);
+  const born = hit - FLIGHT;
+  if (t < born || t > hit + 0.08) return false;
+  const seat = kareFriend(i);
+  const u = Math.min(1, (t - born) / FLIGHT);
+  const at = (k: number) => ({
+    x: seat.x,
+    z: seat.z - 8.4 + 8.4 * k,
+    y: 1.7 + Math.sin(k * Math.PI) * 2.8,
+  });
+  const here = at(u);
+  const next = at(Math.min(1, u + 0.045));
+  out.x = here.x;
+  out.y = here.y;
+  out.z = here.z;
+  out.dx = next.x - here.x;
+  out.dy = next.y - here.y;
+  out.dz = next.z - here.z;
+  return true;
 }
 
 export function kareShowNames(t: number) {
-  if (t < OPEN_END) return false;
-  const beat = Math.floor((t - OPEN_END) / 4.4);
-  return beat % 3 !== 2;
+  return t >= OPEN_END;
 }
 
 export function kareCard(t: number): { lines: readonly string[]; opacity: number } | null {

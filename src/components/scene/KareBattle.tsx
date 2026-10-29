@@ -16,13 +16,16 @@ import {
   KARE_ROMANS,
   kareCam,
   kareCard,
+  kareFall,
   kareFriend,
   kareMarkReady,
   kareReset,
   kareRoman,
   kareRoster,
   kareShowNames,
+  kareSpear,
   kareT,
+  type KareSpear,
 } from "../../kareReel";
 
 type Gltf = Parameters<Parameters<GLTFLoader["load"]>[1]>[0];
@@ -213,7 +216,19 @@ function KareHud() {
 }
 
 const dummy = new THREE.Object3D();
+const spearTmp: KareSpear = { x: 0, y: 0, z: 0, dx: 0, dy: 0, dz: 0 };
+const up = new THREE.Vector3(0, 1, 0);
+const dir = new THREE.Vector3();
 const liveTint = new THREE.Color("#ffffff");
+const deadTint = new THREE.Color("#243056");
+
+function spearGeo() {
+  const shaft = new THREE.CylinderGeometry(0.055, 0.04, 3.4, 5);
+  shaft.translate(0, 0.2, 0);
+  const head = new THREE.ConeGeometry(0.12, 0.42, 5);
+  head.translate(0, 2.05, 0);
+  return mergeGeometries([shaft, head]) ?? shaft;
+}
 
 export function KareBattle({ names }: { names: string[] }) {
   const [pack, setPack] = useState<{ body: THREE.BufferGeometry; helm: THREE.BufferGeometry; roman: THREE.BufferGeometry } | null>(null);
@@ -221,6 +236,8 @@ export function KareBattle({ names }: { names: string[] }) {
   const bodies = useRef<THREE.InstancedMesh>(null);
   const helms = useRef<THREE.InstancedMesh>(null);
   const romans = useRef<THREE.InstancedMesh>(null);
+  const spears = useRef<THREE.InstancedMesh>(null);
+  const spearMesh = useMemo(() => spearGeo(), []);
   const named = useMemo(
     () => roster.map((name, i) => ({ name, i })).filter((row) => row.name),
     [roster],
@@ -276,14 +293,16 @@ export function KareBattle({ names }: { names: string[] }) {
     if (body && helm) {
       for (let i = 0; i < KARE_OURS; i++) {
         const seat = kareFriend(i);
-        dummy.position.set(seat.x, 0, seat.z);
-        dummy.rotation.set(0, seat.yaw, 0);
+        const fall = kareFall(i, t);
+        dummy.position.set(seat.x, fall * 0.02, seat.z);
+        dummy.rotation.set(fall * 1.35, seat.yaw, fall * 0.12);
         dummy.scale.set(1, 1, 1);
         dummy.updateMatrix();
         body.setMatrixAt(i, dummy.matrix);
         helm.setMatrixAt(i, dummy.matrix);
-        body.setColorAt(i, liveTint);
-        helm.setColorAt(i, liveTint);
+        const tint = fall > 0.35 ? deadTint : liveTint;
+        body.setColorAt(i, tint);
+        helm.setColorAt(i, tint);
       }
       body.instanceMatrix.needsUpdate = true;
       helm.instanceMatrix.needsUpdate = true;
@@ -302,6 +321,24 @@ export function KareBattle({ names }: { names: string[] }) {
       }
       wall.instanceMatrix.needsUpdate = true;
     }
+    const volley = spears.current;
+    if (volley) {
+      let n = 0;
+      for (let i = 0; i < KARE_OURS; i++) {
+        if (n >= 12) break;
+        if (!kareSpear(i, t, spearTmp)) continue;
+        dir.set(spearTmp.dx, spearTmp.dy, spearTmp.dz);
+        if (dir.lengthSq() < 1e-8) continue;
+        dummy.position.set(spearTmp.x, spearTmp.y, spearTmp.z);
+        dummy.quaternion.setFromUnitVectors(up, dir.normalize());
+        dummy.scale.set(1, 1, 1);
+        dummy.updateMatrix();
+        volley.setMatrixAt(n, dummy.matrix);
+        n += 1;
+      }
+      volley.count = n;
+      volley.instanceMatrix.needsUpdate = true;
+    }
     const show = kareShowNames(t);
     for (const sheet of atlas.sheets) {
       const inst = sheet.geometry.userData.mesh as THREE.InstancedMesh | undefined;
@@ -310,11 +347,12 @@ export function KareBattle({ names }: { names: string[] }) {
         const cell = atlas.cells[n];
         if (!cell || cell.sheet !== atlas.sheets.indexOf(sheet)) continue;
         const seat = kareFriend(named[n].i);
+        const hide = !show || kareFall(named[n].i, t) > 0.3;
         const w = Math.min(cell.sx, 1.28);
         const h = (cell.sy * w) / Math.max(cell.sx, 0.01);
-        dummy.position.set(seat.x, show ? 1.78 + (named[n].i % 4) * 0.38 : -8, seat.z);
+        dummy.position.set(seat.x, hide ? -8 : 1.78 + (named[n].i % 4) * 0.38, seat.z);
         dummy.quaternion.copy(camera.quaternion);
-        dummy.scale.set(show ? w : 0.001, show ? h : 0.001, 1);
+        dummy.scale.set(hide ? 0.001 : w, hide ? 0.001 : h, 1);
         dummy.updateMatrix();
         inst.setMatrixAt(cell.local, dummy.matrix);
       }
@@ -340,6 +378,9 @@ export function KareBattle({ names }: { names: string[] }) {
       </instancedMesh>
       <instancedMesh ref={romans} args={[pack.roman, undefined, KARE_ROMANS]} frustumCulled={false}>
         <meshLambertMaterial vertexColors />
+      </instancedMesh>
+      <instancedMesh ref={spears} args={[spearMesh, undefined, 12]} frustumCulled={false} count={0}>
+        <meshBasicMaterial color="#f3e6c8" />
       </instancedMesh>
       {atlas.sheets.map((sheet, s) => (
         <instancedMesh

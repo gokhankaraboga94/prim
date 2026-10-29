@@ -1601,7 +1601,7 @@ export function AdminPage() {
           )}
           {isKare(reelShot) && (
             <p className="muted">
-              60 saniye. Son katılan 100 mavi asker ortada. 1000 roman kare duvar olup yaklaşır, modelin alt zemini yok. İlk saniye bir roman merceğe koşar. 1. saniyede tepeden kare küçülür. Yazı 4. saniyeden önce gider: “ÇIKIŞ YOK / KARE KAPANIYOR”. Başlık: “Çıkış yok. Kare kapanıyor.” Cevabı sabitleme.
+              60 saniye, kamera yalnız tepede ve önceki tepe plandan yüzde 20 uzak. Son katılan 100 mavi asker ortada. 1000 roman kare duvar olup yaklaşır, modelin alt zemini yok. Romanlar mızrakla sıraları güneyden kuzeye indirir. Yazı 4. saniyeden önce gider: “ÇIKIŞ YOK / KARE KAPANIYOR”. Başlık: “Çıkış yok. Kare kapanıyor.” Cevabı sabitleme.
             </p>
           )}
           {isMagdur(reelShot) && (
