@@ -1,58 +1,32 @@
 export const KUYULAR_ID = "kuyular" as const;
 export type KuyularId = typeof KUYULAR_ID;
 export const KUYULAR_MODE = { id: KUYULAR_ID, label: "kuyular" } as const;
-export const KUYULAR_SECONDS = 42;
+export const KUYULAR_SECONDS = 58;
 export const KUYULAR_BLUE = "/models/blue.glb";
 export const KUYULAR_URLS = [KUYULAR_BLUE] as const;
-export const BLUE_N = 100;
+export const BLUE_N = 70;
 
-const INNER_N = 40;
-const OUTER_N = 60;
-const INNER_R = 6.6;
-const OUTER_R = 10.2;
+const INNER_N = 30;
+const OUTER_N = 40;
+const INNER_R = 5;
+const OUTER_R = 7.8;
+const STEP = 0.8;
+const OPEN0 = -0.2;
 
 export type Side = "blue";
 export type Seat = { x: number; z: number; yaw: number; live: boolean };
 
 type Well = { t: number; x: number; z: number; soldier: number };
 
-/** One soldier per hole. Steps are around the ring from the front; negatives wrap. */
-const PLAN: { t: number; outer: boolean; steps: number }[] = [
-  { t: -0.22, outer: true, steps: -2 },
-  { t: 1.4, outer: false, steps: 20 },
-  { t: 3.7, outer: true, steps: 18 },
-  { t: 6.0, outer: false, steps: -8 },
-  { t: 8.4, outer: true, steps: -22 },
-  { t: 10.8, outer: false, steps: 6 },
-  { t: 13.2, outer: true, steps: 32 },
-  { t: 15.6, outer: false, steps: 2 },
-  { t: 18.0, outer: true, steps: -30 },
-  { t: 20.4, outer: false, steps: 0 },
-  { t: 22.8, outer: true, steps: -12 },
-  { t: 25.2, outer: false, steps: 12 },
-  { t: 27.6, outer: true, steps: -15 },
-  { t: 30.0, outer: false, steps: 8 },
-  { t: 32.4, outer: true, steps: -16 },
-  { t: 34.8, outer: false, steps: 16 },
-  { t: 37.2, outer: true, steps: 12 },
-];
-
 export type KuyularHit = { open: number; order: number; stagger: number; well: number };
 
 const hits = new Map<number, KuyularHit>();
+let wells: Well[] = [];
+let alive = 0;
 
 function ease(u: number) {
   const x = Math.max(0, Math.min(1, u));
   return x * x * (3 - 2 * x);
-}
-
-function wrap(k: number, n: number) {
-  return ((k % n) + n) % n;
-}
-
-function soldierIndex(outer: boolean, steps: number) {
-  if (outer) return INNER_N + wrap(OUTER_N - 1 + steps, OUTER_N);
-  return wrap(Math.floor(INNER_N / 2) + steps, INNER_N);
 }
 
 export function blueSeat(i: number): Seat {
@@ -68,22 +42,40 @@ export function blueSeat(i: number): Seat {
   return { x, z, yaw: Math.atan2(-x, -z), live: false };
 }
 
-const WELLS: Well[] = PLAN.map((step) => {
-  const soldier = soldierIndex(step.outer, step.steps);
-  const seat = blueSeat(soldier);
-  return { t: step.t, x: seat.x, z: seat.z, soldier };
-});
+function apart(a: number, b: number) {
+  const A = blueSeat(a);
+  const B = blueSeat(b);
+  return Math.hypot(A.x - B.x, A.z - B.z);
+}
 
-function buildHits() {
-  const used = new Set<number>();
-  WELLS.forEach((well, wi) => {
-    if (used.has(well.soldier)) return;
-    used.add(well.soldier);
+/** One random soldier stays. The rest drop in an order that jumps across the ring. */
+function buildCast() {
+  hits.clear();
+  alive = Math.floor(Math.random() * BLUE_N);
+  const unused: number[] = [];
+  for (let i = 0; i < BLUE_N; i++) if (i !== alive) unused.push(i);
+  const front = unused.filter((i) => i >= INNER_N).sort((a, b) => blueSeat(a).z - blueSeat(b).z);
+  const first = front[Math.floor(Math.random() * Math.min(3, front.length))];
+  const order = [first];
+  unused.splice(unused.indexOf(first), 1);
+  while (unused.length) {
+    const prev = order[order.length - 1];
+    const ranked = unused.map((i) => ({ i, d: apart(prev, i) })).sort((a, b) => b.d - a.d);
+    const band = ranked.slice(0, Math.min(5, ranked.length));
+    const pick = band[Math.floor(Math.random() * band.length)].i;
+    order.push(pick);
+    unused.splice(unused.indexOf(pick), 1);
+  }
+  wells = order.map((soldier, index) => {
+    const seat = blueSeat(soldier);
+    return { t: OPEN0 + index * STEP, x: seat.x, z: seat.z, soldier };
+  });
+  wells.forEach((well, wi) => {
     hits.set(well.soldier, { open: well.t, order: 0, stagger: 0, well: wi });
   });
 }
 
-buildHits();
+buildCast();
 
 export function kuyularHit(_side: Side, i: number) {
   return hits.get(i) ?? null;
@@ -93,7 +85,7 @@ export function kuyularFall(side: Side, i: number, t: number) {
   const hit = kuyularHit(side, i);
   if (!hit) return 0;
   if (t < hit.open) return 0;
-  return ease((t - hit.open) / 0.78);
+  return ease((t - hit.open) / 0.72);
 }
 
 export function kuyularRoster(names: readonly string[]) {
@@ -108,27 +100,36 @@ export function kuyularNamed(_i: number) {
   return true;
 }
 
-export type KuyularCam = { x: number; y: number; z: number; lx: number; ly: number; lz: number; fov: number };
-
-function focusWell(t: number) {
-  let well = WELLS[0];
-  for (const next of WELLS) {
-    if (next.t <= t + 0.45) well = next;
-  }
-  return well;
+export function kuyularAlive() {
+  return alive;
 }
 
+export function kuyularFocus(t: number) {
+  let idx = 0;
+  for (let i = 0; i < wells.length; i++) {
+    if (wells[i].t <= t + 0.02) idx = i;
+  }
+  const well = wells[idx];
+  const prev = idx > 0 ? wells[idx - 1].soldier : well.soldier;
+  const u = idx === 0 ? 1 : Math.max(0, Math.min(1, (t - well.t) / 0.28));
+  const last = wells[wells.length - 1]?.t ?? 0;
+  const fade = t > last + 0.75 ? Math.min(1, (t - last - 0.75) / 0.4) : 0;
+  return { index: well.soldier, prev, u, fade };
+}
+
+export type KuyularCam = { x: number; y: number; z: number; lx: number; ly: number; lz: number; fov: number };
+
 export function kuyularCam(t: number): KuyularCam {
-  const well = focusWell(t);
-  const i = WELLS.indexOf(well);
-  if (t < 1) return { x: well.x * 0.35, y: 14, z: well.z - 6, lx: well.x * 0.5, ly: 0.7, lz: well.z, fov: 50 };
-  if (t < 3.2 || t > 39.2) return { x: 0, y: 36, z: 1.2, lx: 0, ly: 0, lz: 0, fov: 62 };
-  if (i % 2 === 0) return { x: well.x * 0.3, y: 18, z: well.z - 4.2, lx: well.x, ly: 0.2, lz: well.z, fov: 46 };
-  return { x: well.x * 0.15, y: 11, z: well.z - 2.8, lx: well.x, ly: 0.45, lz: well.z, fov: 40 };
+  const first = wells[0];
+  const last = wells[wells.length - 1]?.t ?? 0;
+  if (t < 1 && first) return { x: first.x * 0.3, y: 12, z: first.z - 5.2, lx: first.x, ly: 0.6, lz: first.z, fov: 46 };
+  if (t > last + 1.05) return { x: 0, y: 24, z: 0.3, lx: 0, ly: 0, lz: 0, fov: 52 };
+  if (t < 3.2) return { x: 0, y: 30, z: 0.6, lx: 0, ly: 0, lz: 0, fov: 56 };
+  return { x: 0, y: 32, z: 0.4, lx: 0, ly: 0, lz: 0, fov: 58 };
 }
 
 export function kuyularWells() {
-  return WELLS.map((well) => ({ ...well, radius: 0.55 }));
+  return wells.map((well) => ({ ...well, radius: 0.5 }));
 }
 
 let playAt = 0;
@@ -166,6 +167,7 @@ export function kuyularT() {
 export function kuyularReset() {
   ready = false;
   playAt = 0;
+  buildCast();
 }
 
 export function isKuyular(id: string | null | undefined): id is KuyularId {

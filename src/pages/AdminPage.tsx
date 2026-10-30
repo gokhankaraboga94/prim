@@ -1708,7 +1708,7 @@ export function AdminPage() {
           )}
           {isKuyular(reelShot) && (
             <p className="muted">
-              42 saniye. Ekranda kanca yazısı yok. 100 mavi, iki sıra çember, araları açık, üstlerinde son katılanların isimleri. Düşman yok. Daire kuyular rastgele açılır, her biri tam bir askerin altında. Tek tek düşerler. İlk karede öndeki asker kuyuya düşüyor. 1. saniyede çember görünür, karşı sırada ikinci kuyu açılır.
+              58 saniye. Kanca cümlesi yok. 70 mavi, son katılanlar, iki sıra çember. Düşman yok. Biri rastgele ayakta kalır, diğerleri tek tek tam altlarındaki kuyuya düşer. Düşenin adı ekranın üstünde, kenardan bir parmak aşağıda. Yeni düşüşte ad kayarak değişir. Sonda tek kişi kalır.
             </p>
           )}
           {isDovus(reelShot) && (

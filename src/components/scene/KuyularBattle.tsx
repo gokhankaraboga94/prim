@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
+import { Hud, OrthographicCamera } from "@react-three/drei";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { clone as cloneSkinned } from "three/examples/jsm/utils/SkeletonUtils.js";
 import * as THREE from "three";
@@ -12,6 +13,7 @@ import {
   blueSeat,
   kuyularCam,
   kuyularFall,
+  kuyularFocus,
   kuyularHit,
   kuyularMarkReady,
   kuyularNamed,
@@ -257,7 +259,7 @@ export function KuyularBattle({ names }: { names: string[] }) {
         const dx = seat.x - camera.position.x;
         const dz = seat.z - camera.position.z;
         const dist = Math.hypot(dx, camera.position.y, dz);
-        const w = shown ? Math.min(0.46, 0.18 + dist * 0.006) : 0.001;
+        const w = shown ? Math.min(0.42, 0.16 + dist * 0.005) : 0.001;
         const h = (cell.sy * w) / Math.max(cell.sx, 0.01);
         dummy.position.set(seat.x, y, seat.z);
         dummy.quaternion.copy(camera.quaternion);
@@ -289,7 +291,84 @@ export function KuyularBattle({ names }: { names: string[] }) {
           }}
         />
       ))}
+      <KuyularBanner roster={roster} />
     </group>
+  );
+}
+
+function fitName(ctx: CanvasRenderingContext2D, name: string, max: number) {
+  let size = 92;
+  ctx.font = `900 ${size}px Arial, sans-serif`;
+  while (size > 42 && ctx.measureText(name).width > max) {
+    size -= 4;
+    ctx.font = `900 ${size}px Arial, sans-serif`;
+  }
+  return size;
+}
+
+function paintBanner(canvas: HTMLCanvasElement, prev: string, next: string, u: number, fade: number) {
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return;
+  const w = canvas.width;
+  const h = canvas.height;
+  ctx.clearRect(0, 0, w, h);
+  const alpha = 1 - fade;
+  if (alpha < 0.02) return;
+  const draw = (name: string, y: number, a: number) => {
+    if (!name || a < 0.02) return;
+    const size = fitName(ctx, name, w - 80);
+    ctx.globalAlpha = alpha * a;
+    ctx.lineWidth = Math.max(8, size * 0.14);
+    ctx.strokeStyle = "#140e08";
+    ctx.fillStyle = "#fff8ee";
+    ctx.strokeText(name, w / 2, y);
+    ctx.fillText(name, w / 2, y);
+  };
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.lineJoin = "round";
+  const y = h * 0.42;
+  if (prev && prev !== next && u < 1) draw(prev, y - u * 78, 1 - u);
+  draw(next, y + (1 - u) * 78, Math.max(u, prev === next ? 1 : u));
+  ctx.globalAlpha = 1;
+}
+
+function KuyularBanner({ roster }: { roster: string[] }) {
+  const size = useThree((s) => s.size);
+  const shown = useRef("");
+  const tex = useMemo(() => {
+    const canvas = document.createElement("canvas");
+    canvas.width = 1080;
+    canvas.height = 360;
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.generateMipmaps = false;
+    texture.minFilter = THREE.LinearFilter;
+    texture.magFilter = THREE.LinearFilter;
+    texture.colorSpace = THREE.SRGBColorSpace;
+    return texture;
+  }, []);
+  useEffect(() => () => tex.dispose(), [tex]);
+  useFrame(() => {
+    const focus = kuyularFocus(kuyularT());
+    const next = roster[focus.index] ?? "";
+    const prev = roster[focus.prev] ?? "";
+    const key = `${prev}|${next}|${focus.u.toFixed(2)}|${focus.fade.toFixed(2)}`;
+    if (shown.current === key) return;
+    shown.current = key;
+    paintBanner(tex.image as HTMLCanvasElement, prev, next, focus.u, focus.fade);
+    tex.needsUpdate = true;
+  });
+  const gap = size.height * 0.055;
+  const h = size.height * 0.16;
+  const w = size.width;
+  return (
+    <Hud renderPriority={1}>
+      <OrthographicCamera makeDefault position={[0, 0, 10]} />
+      <mesh position={[0, size.height / 2 - gap - h / 2, 4]} renderOrder={40}>
+        <planeGeometry args={[w, h]} />
+        <meshBasicMaterial map={tex} transparent depthTest={false} toneMapped={false} />
+      </mesh>
+    </Hud>
   );
 }
 
