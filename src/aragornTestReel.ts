@@ -1,7 +1,7 @@
 export const ARAGORN_ID = "aragorn-test" as const;
 export type AragornId = typeof ARAGORN_ID;
 export const ARAGORN_MODE = { id: ARAGORN_ID, label: "aragorn test (2)" } as const;
-export const ARAGORN_SECONDS = 8;
+export const ARAGORN_SECONDS = 16;
 export const ARAGORN_ISKELET = "/models/islelet.glb";
 export const ARAGORN_URLS = [ARAGORN_ISKELET] as const;
 

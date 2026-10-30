@@ -95,6 +95,11 @@ function plantBones(root: THREE.Object3D) {
   return mesh;
 }
 
+function findBone(root: THREE.Object3D, name: string) {
+  const safe = THREE.PropertyBinding.sanitizeNodeName(name);
+  return root.getObjectByName(safe) as THREE.Bone | undefined;
+}
+
 function swing(walk: Walk, name: string, x: number, z: number) {
   const bone = walk.bones[name];
   const rest = walk.rest[name];
@@ -107,15 +112,15 @@ function swing(walk: Walk, name: string, x: number, z: number) {
 function stepPose(walk: Walk, t: number) {
   const step = Math.sin(t * 6.2);
   const wave = Math.sin(t * 9);
-  swing(walk, "mixamorig:LeftUpLeg", 0, step * 0.55);
-  swing(walk, "mixamorig:RightUpLeg", 0, -step * 0.55);
-  swing(walk, "mixamorig:LeftLeg", 0, -0.3 - Math.max(0, -step) * 0.85);
-  swing(walk, "mixamorig:RightLeg", 0, -0.3 - Math.max(0, step) * 0.85);
-  swing(walk, "mixamorig:LeftArm", 0, -step * 0.35);
-  swing(walk, "mixamorig:LeftForeArm", 0.25, 0);
-  swing(walk, "mixamorig:RightArm", 2.55, 0);
-  swing(walk, "mixamorig:RightForeArm", 0.45 + wave * 0.4, 0);
-  swing(walk, "mixamorig:RightHand", 0, wave * 0.65);
+  swing(walk, "mixamorig:LeftUpLeg", 0, step * 0.7);
+  swing(walk, "mixamorig:RightUpLeg", 0, -step * 0.7);
+  swing(walk, "mixamorig:LeftLeg", 0, -0.35 - Math.max(0, -step) * 1.05);
+  swing(walk, "mixamorig:RightLeg", 0, -0.35 - Math.max(0, step) * 1.05);
+  swing(walk, "mixamorig:LeftArm", 0, -step * 0.45);
+  swing(walk, "mixamorig:LeftForeArm", 0.3, 0);
+  swing(walk, "mixamorig:RightArm", 2.5, wave * 0.35);
+  swing(walk, "mixamorig:RightForeArm", 0.55 + wave * 0.55, 0);
+  swing(walk, "mixamorig:RightHand", 0, wave * 0.8);
   const hips = walk.bones["mixamorig:Hips"];
   if (hips) hips.position.y = walk.hipsY + Math.abs(step) * 0.012;
   walk.mesh.skeleton.update();
@@ -138,7 +143,7 @@ export function AragornTest() {
         const mesh = plantBones(model);
         fit(model);
         const holder = new THREE.Group();
-        holder.rotation.y = -Math.PI / 2;
+        holder.rotation.y = Math.PI / 2;
         holder.add(model);
         host.current?.add(holder);
         if (!mesh) return;
@@ -157,8 +162,11 @@ export function AragornTest() {
         const bones: Walk["bones"] = {};
         const rest: Walk["rest"] = {};
         for (const name of names) {
-          const bone = model.getObjectByName(name) as THREE.Bone | undefined;
-          if (!bone) continue;
+          const bone = findBone(model, name);
+          if (!bone) {
+            console.warn("kemik yok", name);
+            continue;
+          }
           bones[name] = bone;
           rest[name] = bone.quaternion.clone();
         }
