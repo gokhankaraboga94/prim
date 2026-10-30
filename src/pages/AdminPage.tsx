@@ -1646,7 +1646,7 @@ export function AdminPage() {
           )}
           {isKirmizi(reelShot) && (
             <p className="muted">
-              48 saniye. Ekranda yazı yok. 25 mavi asker, üstlerinde son katılanların isimleri. 40 kırmızı düşman. Açılıştan sonra iki hat birbirine girer, dip dibe vurur. İkisi de kendi iskeletiyle vurur. Can barı yok. Ölümler dağınık, bir sıra birlikte düşmez. Gök mavi. İlk saniye kılıç merceğe gelir. 1. saniyede kesme: mavi omuzdan. Sonra tepeden ve omuz planı.
+              48 saniye. Ekranda yazı yok. 25 mavi asker, üstlerinde son katılanların isimleri; isimler 4. saniyeden önce yok. 40 kırmızı düşman, baştan dip dibe. İkisi de kendi iskeletiyle vurur, boşta durmaz. Can barı yok. İlk saniye kılıç merceğe gelir. 1. saniyede kesme: hatlar görünür, o kılıcın karşısındaki mavi düşer. Sonra omuz, kütle, hat içi. Sonda kırmızılar yere iner, mavi ayakta kalır. Ölümler dağınık, bir sıra birlikte düşmez. Gök mavi.
             </p>
           )}
           {isSavas(reelShot) && (

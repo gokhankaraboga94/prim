@@ -1,0 +1,10 @@
+---
+description: Yeni video veya açılıştan önce dokuman okunur
+alwaysApply: true
+---
+
+# Reels
+
+Yeni bir video butonu yazmadan, ya da mevcut bir videonun açılışını veya gövdesini değiştirmeden önce `dokuman` dosyasının tamamını oku. Üretimi o dosyadaki kontrole göre kur: ilk kare bir neden verir, ilk 3 saniye yeni bir gelişme getirir, devam vaadi öder, boş tekrar kalmaz.
+
+Kullanıcının açık şartı (sessiz, ekranda yazı yok, süre, kadro) genel Reels tavsiyesinin önüne geçer. Geçme oranını ölçülmeden söyleme. `dokuman` dosyasını commit etme.

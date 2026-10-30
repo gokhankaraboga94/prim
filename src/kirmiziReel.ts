@@ -9,10 +9,14 @@ export const KIRMIZI_URLS = [KIRMIZI_BLUE, KIRMIZI_RED] as const;
 export const BLUE_N = 25;
 export const RED_N = 40;
 
-const OPEN_END = 3.7;
-const BEAT = 5.1;
-const BLUE_CYCLE = 3.15;
-const RED_CYCLE = 3.35;
+/** Names stay off through the two opening shots. */
+const NAMES_AT = 3.7;
+/** The blue standing in front of the opening sword. He falls on the second shot. */
+const OPEN_VICTIM = 2;
+const OPEN_FALL = 1.12;
+const RED_SWING = 1.92;
+const BLUE_SWING = 2.71;
+const COMBO = 2.96;
 
 export type KirmiziWho = "blue" | "red";
 
@@ -34,15 +38,16 @@ export function kirmiziRoster(names: readonly string[]) {
   return out;
 }
 
+/** Front ranks already stand in sword range. They do not spend the opening walking in. */
 export function kirmiziSeat(who: KirmiziWho, i: number) {
   if (who === "blue") {
     const col = i % 5;
     const row = Math.floor(i / 5);
-    return { x: (col - 2) * 1.28, z: -1.7 - row * 1.22, yaw: 0 };
+    return { x: (col - 2) * 1.22, z: -0.78 - row * 1.16, yaw: 0 };
   }
   const col = i % 8;
   const row = Math.floor(i / 8);
-  return { x: (col - 3.5) * 1.08, z: 1.45 + row * 1.15, yaw: Math.PI };
+  return { x: (col - 3.5) * 1.02, z: 0.64 + row * 1.06, yaw: Math.PI };
 }
 
 function unit(i: number, salt: number) {
@@ -50,19 +55,25 @@ function unit(i: number, salt: number) {
   return x - Math.floor(x);
 }
 
-function spreadDeaths(n: number, take: number, start: number, end: number, salt: number) {
-  const ids = Array.from({ length: n }, (_, i) => i).sort((a, b) => unit(a, salt) - unit(b, salt));
+function pickDeaths(n: number, take: number, start: number, end: number, salt: number, skip: number[] = []) {
+  const banned = new Set(skip);
+  const ids = Array.from({ length: n }, (_, i) => i).filter((i) => !banned.has(i));
+  ids.sort((a, b) => unit(a, salt) - unit(b, salt));
   const at = new Map<number, number>();
-  for (let k = 0; k < take; k++) {
+  const count = Math.min(take, ids.length);
+  for (let k = 0; k < count; k++) {
     const i = ids[k];
-    const u = (k + unit(i, salt + 9) * 0.72) / take;
+    const u = (k + unit(i, salt + 9) * 0.72) / count;
     at.set(i, start + Math.min(0.97, u) * (end - start));
   }
   return at;
 }
 
-const blueDeaths = spreadDeaths(BLUE_N, 9, 12, 36, 4);
-const redDeaths = spreadDeaths(RED_N, 16, 9, 38, 11);
+const blueDeaths = pickDeaths(BLUE_N, 8, 6.4, 32, 4, [OPEN_VICTIM]);
+blueDeaths.set(OPEN_VICTIM, OPEN_FALL);
+const redEarly = pickDeaths(RED_N, 22, 5.2, 34, 11);
+const redDeaths = pickDeaths(RED_N, 18, 34.5, 43.2, 19, [...redEarly.keys()]);
+for (const [i, at] of redEarly) redDeaths.set(i, at);
 
 function blueDie(i: number) {
   return blueDeaths.get(i) ?? 1e9;
@@ -72,13 +83,30 @@ function redDie(i: number) {
   return redDeaths.get(i) ?? 1e9;
 }
 
+function redShift(i: number) {
+  if (i === 4) return 0.58;
+  return 0.2 + unit(i, 2) * 1.5;
+}
+
+function blueShift(i: number) {
+  if (i === OPEN_VICTIM) return 0.18;
+  return 0.35 + unit(i, 5) * 2.1;
+}
+
+function swingLen(who: KirmiziWho, i: number) {
+  if (who === "blue") return BLUE_SWING;
+  return i % 3 === 2 ? COMBO : RED_SWING;
+}
+
+function localOf(who: KirmiziWho, i: number, t: number) {
+  return (t + (who === "blue" ? blueShift(i) : redShift(i))) % swingLen(who, i);
+}
+
 function swinging(who: KirmiziWho, i: number, t: number) {
   if (t >= (who === "blue" ? blueDie(i) : redDie(i))) return false;
-  const cycle = who === "blue" ? BLUE_CYCLE : RED_CYCLE;
-  const shift = who === "blue" ? 2.45 + (i % 4) * 0.12 : 0.48 + (i % 5) * 0.11;
-  const local = (t + shift) % cycle;
-  if (who === "blue") return local > 0.55 && local < 0.95;
-  return local > 0.48 && local < 0.82;
+  const local = localOf(who, i, t);
+  if (who === "blue") return local > 0.5 && local < 1.0;
+  return local > 0.45 && local < 0.85;
 }
 
 function shoved(who: KirmiziWho, i: number, t: number) {
@@ -93,94 +121,76 @@ function shoved(who: KirmiziWho, i: number, t: number) {
   return false;
 }
 
-/** After the opening sword, both lines step in and stay chest to chest. */
-function meet(t: number) {
-  if (t <= 1.05) return 0;
-  const u = Math.min(1, (t - 1.05) / 1.8);
-  const e = u * u * (3 - 2 * u);
-  return e * 1.05;
-}
-
 export function kirmiziPose(who: KirmiziWho, i: number, t: number): KirmiziPose {
   const seat = kirmiziSeat(who, i);
   const dieAt = who === "blue" ? blueDie(i) : redDie(i);
-  const step = meet(t >= dieAt ? dieAt : t);
-  const z0 = who === "blue" ? seat.z + step : seat.z - step;
   if (t >= dieAt) {
     if (who === "red") {
-      return { x: seat.x, z: z0, yaw: seat.yaw, rx: 0, clip: "Death_B", time: Math.min(1.87, t - dieAt), dead: true };
+      return { x: seat.x, z: seat.z, yaw: seat.yaw, rx: 0, clip: "Death_B", time: Math.min(1.87, t - dieAt), dead: true };
     }
     const u = Math.min(1, (t - dieAt) / 0.7);
     const e = u * u * (3 - 2 * u);
-    return { x: seat.x, z: z0, yaw: 0, rx: e * 1.45, clip: "Attack_Ground_Pound", time: 0.04, dead: true };
+    return { x: seat.x, z: seat.z, yaw: 0, rx: e * 1.45, clip: "Attack_Ground_Pound", time: 0.04, dead: true };
   }
-  const cycle = who === "blue" ? BLUE_CYCLE : RED_CYCLE;
-  const shift = who === "blue" ? 2.45 + (i % 4) * 0.12 : 0.48 + (i % 5) * 0.11;
-  const local = (t + shift) % cycle;
-  let clip = who === "red" ? "Idle_A" : "Attack_Ground_Pound";
-  let time = who === "red" ? (t + i * 0.17) % 3.13 : 0.04;
-  let attacking = false;
-  if (who === "red") {
-    if (i % 6 === 0 && local > 2.05) {
-      clip = "Backflip";
-      time = Math.min(2.49, local - 2.05);
-    } else if (local < 1.92) {
-      clip = i % 3 === 2 ? "Sword_Regular_Combo" : "Sword_Attack";
-      time = local;
-      attacking = true;
-    }
-  } else if (local < 2.71) {
-    clip = "Attack_Ground_Pound";
-    time = local;
-    attacking = local > 0.3 && local < 2.2;
-  }
-  const push = attacking ? Math.sin(Math.min(1, local / 1.5) * Math.PI) * 0.22 : 0;
-  const z = who === "blue" ? z0 + push : z0 - push;
+  const local = localOf(who, i, t);
+  const clip = who === "red" ? (i % 3 === 2 ? "Sword_Regular_Combo" : "Sword_Attack") : "Attack_Ground_Pound";
+  const push = Math.sin(Math.min(1, local / (who === "blue" ? 0.85 : 0.7)) * Math.PI) * 0.16;
+  const z = who === "blue" ? seat.z + push : seat.z - push;
   return {
     x: seat.x,
     z,
     yaw: seat.yaw,
     rx: shoved(who, i, t) ? 0.2 : 0,
     clip,
-    time,
+    time: local,
     dead: false,
   };
 }
 
 export function kirmiziNames(t: number) {
-  return t >= OPEN_END;
+  return t >= NAMES_AT;
 }
 
 export type KirmiziCam = { x: number; y: number; z: number; lx: number; ly: number; lz: number; fov: number };
 
 function bladeCam(): KirmiziCam {
   const red = kirmiziSeat("red", 4);
-  return { x: red.x + 0.42, y: 1.24, z: red.z - 1.35, lx: red.x, ly: 1.12, lz: red.z - 0.35, fov: 32 };
+  return { x: red.x + 0.06, y: 1.32, z: red.z - 0.95, lx: red.x, ly: 1.16, lz: red.z - 0.18, fov: 26 };
 }
 
-function openTps(): KirmiziCam {
-  return { x: -0.35, y: 2.25, z: -7.6, lx: 0.15, ly: 1.15, lz: 0.15, fov: 46 };
+function crashCam(): KirmiziCam {
+  return { x: -2.1, y: 1.72, z: -3.55, lx: 0.15, ly: 1.0, lz: 0.15, fov: 44 };
 }
 
-function overhead(t: number): KirmiziCam {
-  const drift = Math.sin(t * 0.33) * 1.6;
-  return { x: drift, y: 22, z: 0.8, lx: 0, ly: 0, lz: 0.2, fov: 48 };
+function blueShoulder(): KirmiziCam {
+  return { x: 0.85, y: 2.15, z: -3.35, lx: 0.2, ly: 1.15, lz: 0.55, fov: 42 };
 }
 
-function blueTps(): KirmiziCam {
-  return { x: 1.35, y: 2.55, z: -8.1, lx: 0.1, ly: 1.2, lz: 0.1, fov: 44 };
+function overhead(t: number, y: number): KirmiziCam {
+  return { x: Math.sin(t * 0.4) * 0.8, y, z: 0.35, lx: 0, ly: 0.2, lz: 0, fov: 42 };
 }
 
-function redTps(): KirmiziCam {
-  return { x: -1.1, y: 2.5, z: 8.4, lx: 0.15, ly: 1.15, lz: -0.1, fov: 44 };
+function lineCam(): KirmiziCam {
+  return { x: 2.4, y: 1.35, z: -0.15, lx: 0.1, ly: 1.05, lz: 0.05, fov: 40 };
+}
+
+function redShoulder(): KirmiziCam {
+  return { x: -0.7, y: 2.05, z: 3.15, lx: 0.1, ly: 1.1, lz: -0.2, fov: 42 };
+}
+
+function resultCam(): KirmiziCam {
+  return { x: -0.35, y: 2.85, z: -4.4, lx: 0.05, ly: 0.9, lz: 0.15, fov: 40 };
 }
 
 export function kirmiziCam(t: number): KirmiziCam {
-  if (t < 1.05) return bladeCam();
-  if (t < OPEN_END) return openTps();
-  const step = Math.floor((t - OPEN_END) / BEAT);
-  if (step % 2 === 0) return overhead(t);
-  return step % 4 === 1 ? blueTps() : redTps();
+  if (t < 1) return bladeCam();
+  if (t < 3.2) return crashCam();
+  if (t < 9) return blueShoulder();
+  if (t < 16) return overhead(t, 14);
+  if (t < 24) return lineCam();
+  if (t < 33) return redShoulder();
+  if (t < 42) return overhead(t, 11);
+  return resultCam();
 }
 
 let playAt = 0;
