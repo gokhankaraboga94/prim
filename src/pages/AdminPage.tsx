@@ -1693,7 +1693,7 @@ export function AdminPage() {
           )}
           {isDovus(reelShot) && (
             <p className="muted">
-              20 saniye. Ekranda yazı yok. İskeletli model iki kırmızıyla göğüs göğüse. İlk karede kol uzanmış, kılıç havada. 2. saniyede soldaki kırmızı düşer. Sağdaki dövüşür, 12. saniyede o da düşer. İskeletlinin gövdesi yerinde kalır, yalnızca kolu vurur.
+              20 saniye. Ekranda yazı yok. İskeletli model iki kırmızıyla göğüs göğüse. İki elinde de silah var, kollar sırayla ve hızlı iner. İlk karede sağ kol vuruşta. 2. saniyede soldaki kırmızı düşer. Sağdaki dövüşür, 12. saniyede o da düşer. Gövde yerinde kalır.
             </p>
           )}
           {isAragorn(reelShot) && (

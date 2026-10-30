@@ -119,10 +119,17 @@ function swing(arm: Arm, name: string, x: number, z: number) {
   bone.quaternion.copy(rest).multiply(qz).multiply(qx);
 }
 
+function chop(t: number, offset: number) {
+  return Math.pow(Math.max(0, Math.sin(t * 9.4 + offset)), 0.35);
+}
+
 function strike(arm: Arm, t: number) {
-  const reach = 0.22 + 0.5 * Math.max(0, Math.sin(t * 4.6 + 1.15));
-  swing(arm, "mixamorig:RightArm", -0.35, reach);
-  swing(arm, "mixamorig:RightForeArm", 0.2, 0);
+  const right = chop(t, 0.4);
+  const left = chop(t, Math.PI + 0.4);
+  swing(arm, "mixamorig:RightArm", -0.2, -0.25 + right * 1.3);
+  swing(arm, "mixamorig:RightForeArm", 0.1 + right * 0.45, 0);
+  swing(arm, "mixamorig:LeftArm", -0.2, -0.25 + left * 1.3);
+  swing(arm, "mixamorig:LeftForeArm", 0.1 + left * 0.45, 0);
   const hips = arm.bones["mixamorig:Hips"];
   hips?.updateWorldMatrix(true, true);
   arm.mesh.skeleton.update();
@@ -151,7 +158,7 @@ export function DovusBattle() {
         heroHold.add(hero);
         host.current?.add(heroHold);
         if (mesh) {
-          const names = ["mixamorig:Hips", "mixamorig:RightArm", "mixamorig:RightForeArm"];
+          const names = ["mixamorig:Hips", "mixamorig:RightArm", "mixamorig:RightForeArm", "mixamorig:LeftArm", "mixamorig:LeftForeArm"];
           const bones: Arm["bones"] = {};
           const rest: Arm["rest"] = {};
           for (const name of names) {
