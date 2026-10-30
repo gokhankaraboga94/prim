@@ -60,6 +60,7 @@ import { BOUT2_ID, BOUT2_MODE, BOUT2_SECONDS, BOUT_ID, BOUT_MODE, BOUT_SECONDS, 
 import { KAYIT_ID, KAYIT_MODE, KAYIT_SECONDS, isKayit, type KayitId } from "../kayitReel";
 import { unlockReelSfx } from "../reelSfx";
 import { RECENT_BUTTONS, RECENT_BUTTON_LIMIT } from "../recentButtons";
+import { GlbInspectCard } from "../components/GlbInspectCard";
 
 function skippedNote(skipped: string[]): string {
   if (!skipped.length) return "";
@@ -424,7 +425,7 @@ export function AdminPage() {
         <div>
           <p className="join-kicker">Komuta paneli</p>
           <h1>Kuşatma yönetimi</h1>
-          <p className="join-kicker">sürüm 109 — toplu isim sil</p>
+          <p className="join-kicker">sürüm 110 — model analizi</p>
         </div>
         <button type="button" className="btn-ghost" onClick={() => signOut(auth)}>
           Çıkış
@@ -461,6 +462,7 @@ export function AdminPage() {
       {msg && !capturing && <p className="admin-msg">{msg}</p>}
 
       {!capturing && <div className="admin-grid">
+        <GlbInspectCard />
         <section className="admin-card">
           <h2>Asker sayısı</h2>
           <p className="muted">
