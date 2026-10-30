@@ -19,6 +19,7 @@ import {
   kuyularNamed,
   kuyularReset,
   kuyularRoster,
+  kuyularShowPlates,
   kuyularT,
   kuyularWells,
   type Side,
@@ -254,7 +255,7 @@ export function KuyularBattle({ names }: { names: string[] }) {
         const row = labeled[n];
         const seat = blueSeat(row.i);
         const e = kuyularFall("blue", row.i, t);
-        const shown = e < 0.4;
+        const shown = e < 0.4 && kuyularShowPlates(t);
         const y = shown ? -e * 3.1 + 2.15 : -12;
         const dx = seat.x - camera.position.x;
         const dz = seat.z - camera.position.z;

@@ -1708,7 +1708,7 @@ export function AdminPage() {
           )}
           {isKuyular(reelShot) && (
             <p className="muted">
-              58 saniye. Kanca cümlesi yok. 70 mavi, son katılanlar, iki sıra çember. Düşman yok. Biri rastgele ayakta kalır, diğerleri tek tek tam altlarındaki kuyuya düşer. Düşenin adı ekranın üstünde, kenardan bir parmak aşağıda. Yeni düşüşte ad kayarak değişir. Sonda tek kişi kalır.
+              61 saniye. Kanca cümlesi yok. 70 mavi, son katılanlar, iki sıra çember. Düşman yok. Biri rastgele ayakta kalır, diğerleri tek tek tam altlarındaki kuyuya düşer. Düşenin adı ekranın üstünde, kenardan bir parmak aşağıda. Yeni düşüşte ad kayarak değişir. En sonda kalanın adı aynı yerde belirir, kamera ona yaklaşır.
             </p>
           )}
           {isDovus(reelShot) && (

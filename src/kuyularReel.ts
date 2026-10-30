@@ -1,7 +1,7 @@
 export const KUYULAR_ID = "kuyular" as const;
 export type KuyularId = typeof KUYULAR_ID;
 export const KUYULAR_MODE = { id: KUYULAR_ID, label: "kuyular" } as const;
-export const KUYULAR_SECONDS = 58;
+export const KUYULAR_SECONDS = 61;
 export const KUYULAR_BLUE = "/models/blue.glb";
 export const KUYULAR_URLS = [KUYULAR_BLUE] as const;
 export const BLUE_N = 70;
@@ -110,22 +110,57 @@ export function kuyularFocus(t: number) {
     if (wells[i].t <= t + 0.02) idx = i;
   }
   const well = wells[idx];
+  const last = wells[wells.length - 1];
+  const winAt = (last?.t ?? 0) + 0.7;
+  if (t >= winAt && last) {
+    return { index: alive, prev: last.soldier, u: Math.min(1, (t - winAt) / 0.34), fade: 0 };
+  }
   const prev = idx > 0 ? wells[idx - 1].soldier : well.soldier;
   const u = idx === 0 ? 1 : Math.max(0, Math.min(1, (t - well.t) / 0.28));
+  return { index: well.soldier, prev, u, fade: 0 };
+}
+
+export function kuyularShowPlates(t: number) {
   const last = wells[wells.length - 1]?.t ?? 0;
-  const fade = t > last + 0.75 ? Math.min(1, (t - last - 0.75) / 0.4) : 0;
-  return { index: well.soldier, prev, u, fade };
+  return t < last + 0.7;
 }
 
 export type KuyularCam = { x: number; y: number; z: number; lx: number; ly: number; lz: number; fov: number };
+
+function lerp(a: number, b: number, u: number) {
+  return a + (b - a) * u;
+}
 
 export function kuyularCam(t: number): KuyularCam {
   const first = wells[0];
   const last = wells[wells.length - 1]?.t ?? 0;
   if (t < 1 && first) return { x: first.x * 0.3, y: 12, z: first.z - 5.2, lx: first.x, ly: 0.6, lz: first.z, fov: 46 };
-  if (t > last + 1.05) return { x: 0, y: 24, z: 0.3, lx: 0, ly: 0, lz: 0, fov: 52 };
-  if (t < 3.2) return { x: 0, y: 30, z: 0.6, lx: 0, ly: 0, lz: 0, fov: 56 };
-  return { x: 0, y: 32, z: 0.4, lx: 0, ly: 0, lz: 0, fov: 58 };
+  const high = t < 3.2 ? { x: 0, y: 30, z: 0.6, lx: 0, ly: 0, lz: 0, fov: 56 } : { x: 0, y: 32, z: 0.4, lx: 0, ly: 0, lz: 0, fov: 58 };
+  const start = last + 0.5;
+  if (t <= start) return high;
+  const seat = blueSeat(alive);
+  const span = Math.hypot(seat.x, seat.z) || 1;
+  const fx = -seat.x / span;
+  const fz = -seat.z / span;
+  const close = {
+    x: seat.x + fx * 3.15,
+    y: 1.12,
+    z: seat.z + fz * 3.15,
+    lx: seat.x,
+    ly: 0.92,
+    lz: seat.z,
+    fov: 30,
+  };
+  const u = ease(Math.min(1, (t - start) / 1.35));
+  return {
+    x: lerp(high.x, close.x, u),
+    y: lerp(high.y, close.y, u),
+    z: lerp(high.z, close.z, u),
+    lx: lerp(high.lx, close.lx, u),
+    ly: lerp(high.ly, close.ly, u),
+    lz: lerp(high.lz, close.lz, u),
+    fov: lerp(high.fov, close.fov, u),
+  };
 }
 
 export function kuyularWells() {
