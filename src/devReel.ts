@@ -125,7 +125,7 @@ export function isDevFast(id: string | null | undefined) {
   return id === DEV14_ID || id === DEV15_ID;
 }
 
-/** DEV15: DEV14 with the giant at half size; the crowd and camera close in so soldiers read bigger. */
+/** DEV15: half-size Godzilla, planted. He uses his own clips; the crowd still closes in. */
 export function isDevSmall(id: string | null | undefined) {
   return id === DEV15_ID;
 }
@@ -351,12 +351,102 @@ const TURN_AFTER = 0.15;
 const TURN_BEFORE = 0.3;
 const kickTimes = new Map<number, number[]>();
 
-function stillKicks(n: number) {
-  const count = Math.max(1, Math.floor(n));
-  const hit = kickTimes.get(count);
+const Z_ATTACK = 1.0667;
+const Z_TAIL = 2.7333;
+const Z_WALK = 1.15;
+const Z_HIT = 0.55;
+const Z_TAIL_HIT = 0.95;
+
+type ZClip = "Attack" | "Tail Attack" | "Walk";
+type ZBeat = { start: number; dur: number; clip: ZClip; contact: number | null; kind: "hit" | "tail" | "walk" };
+
+/** DEV15 only. Attack, Attack, Tail Attack, a short Walk, then again. */
+function zillaBeats(): ZBeat[] {
+  const hit = kickTimes.get(-1) as unknown as ZBeat[] | undefined;
   if (hit) return hit;
-  const times = [...new Set(planOf(count, true, true).die)].sort((a, b) => a - b);
-  kickTimes.set(count, times);
+  const pattern: { clip: ZClip; dur: number; kind: ZBeat["kind"]; at: number | null }[] = [
+    { clip: "Attack", dur: Z_ATTACK, kind: "hit", at: Z_HIT },
+    { clip: "Attack", dur: Z_ATTACK, kind: "hit", at: Z_HIT },
+    { clip: "Tail Attack", dur: Z_TAIL, kind: "tail", at: Z_TAIL_HIT },
+    { clip: "Walk", dur: Z_WALK, kind: "walk", at: null },
+  ];
+  const out: ZBeat[] = [];
+  let t = FIGHT;
+  let i = 0;
+  while (t < FAST_LAST - 0.2) {
+    const step = pattern[i % pattern.length];
+    if (step.kind !== "walk" && t + 0.4 > FAST_LAST) break;
+    out.push({
+      start: t,
+      dur: step.dur,
+      clip: step.clip,
+      contact: step.at == null ? null : t + step.at,
+      kind: step.kind,
+    });
+    t += step.dur + 0.06;
+    i += 1;
+  }
+  kickTimes.set(-1, out as unknown as number[]);
+  return out;
+}
+
+export function zillaPlayback(t: number): { name: ZClip; time: number } {
+  if (t < FIGHT) return { name: "Walk", time: t % 3.1 };
+  const beats = zillaBeats();
+  for (const beat of beats) {
+    if (t < beat.start + beat.dur) return { name: beat.clip, time: Math.max(0, t - beat.start) };
+  }
+  const last = beats[beats.length - 1];
+  return last ? { name: last.clip, time: Math.min(last.dur, Math.max(0, t - last.start)) } : { name: "Walk", time: 0 };
+}
+
+type ZillaFate = { wound: Float64Array; die: Float64Array; fling: Uint8Array };
+const zillaFates = new Map<number, ZillaFate>();
+
+function zillaFate(n: number): ZillaFate {
+  const hit = zillaFates.get(n);
+  if (hit) return hit;
+  const wound = new Float64Array(n);
+  const die = new Float64Array(n);
+  const fling = new Uint8Array(n);
+  wound.fill(1e9);
+  die.fill(1e9);
+  for (const beat of zillaBeats()) {
+    if (beat.contact == null || beat.kind === "walk") continue;
+    const g = devGiantPose(beat.contact, true, n);
+    const fx = Math.sin(g.yaw);
+    const fz = Math.cos(g.yaw);
+    const scored: { i: number; s: number }[] = [];
+    for (let i = 0; i < n; i++) {
+      if (die[i] < 1e8) continue;
+      const live = ringAt(i, n, beat.contact, true, false, true);
+      const forward = (live.x - g.x) * fx + (live.z - g.z) * fz;
+      if (forward < 1.2) continue;
+      const side = (live.x - g.x) * Math.cos(g.yaw) - (live.z - g.z) * Math.sin(g.yaw);
+      const fresh = wound[i] < 1e8 ? 0 : 1;
+      scored.push({ i, s: (beat.kind === "hit" ? fresh * 800 : 0) + side * side * 0.12 - forward });
+    }
+    scored.sort((a, b) => a.s - b.s || a.i - b.i);
+    const batch = Math.min(beat.kind === "tail" ? 10 : 8, scored.length);
+    for (let j = 0; j < batch; j++) {
+      const i = scored[j].i;
+      if (beat.kind === "tail") {
+        die[i] = beat.contact;
+        fling[i] = 1;
+      } else if (wound[i] < 1e8) die[i] = beat.contact;
+      else wound[i] = beat.contact;
+    }
+  }
+  const fate = { wound, die, fling };
+  zillaFates.set(n, fate);
+  return fate;
+}
+
+function stillKicks(_n: number) {
+  const hit = kickTimes.get(0);
+  if (hit) return hit;
+  const times = zillaBeats().flatMap((beat) => (beat.contact == null ? [] : [beat.contact]));
+  kickTimes.set(0, times);
   return times;
 }
 
@@ -502,6 +592,7 @@ export function devKick(t: number, soldiers: number, fast = false) {
 const kickPlans = new Map<string, Float64Array>();
 
 function kickPlan(n: number, fast = false, small = false) {
+  if (small) return zillaFate(n).die;
   const key = `${n}:${fast ? "f" : ""}${small ? "s" : ""}`;
   const k = devSize(small);
   const hit = kickPlans.get(key);
@@ -1132,11 +1223,11 @@ function tailHits(n: number) {
   return at;
 }
 
-export function devAlive(recT: number, soldiers: number, big = false, sword = false, snake = false, devs = false, kick = false, fast = false) {
+export function devAlive(recT: number, soldiers: number, big = false, sword = false, snake = false, devs = false, kick = false, fast = false, small = false) {
   const n = Math.max(0, Math.floor(soldiers));
   if (n <= 0) return 0;
   if (kick) {
-    const die = kickPlan(n, fast);
+    const die = small ? zillaFate(n).die : kickPlan(n, fast);
     const t = Math.max(0, recT);
     let alive = 0;
     for (let i = 0; i < n; i++) if (t < die[i]) alive += 1;
@@ -1163,6 +1254,63 @@ export function devAlive(recT: number, soldiers: number, big = false, sword = fa
   return alive;
 }
 
+function zillaSoldier(i: number, n: number, t: number, out: New1Pose) {
+  const fate = zillaFate(n);
+  const dieAt = fate.die[i];
+  const woundAt = fate.wound[i];
+  const liveAt = dieAt < 1e8 ? dieAt : t;
+  const live = ringAt(i, n, liveAt, true, false, true);
+  const g = live.g;
+  const fx = Math.sin(g.yaw);
+  const fz = Math.cos(g.yaw);
+  if (t >= dieAt && fate.fling[i]) {
+    const sx = Math.cos(g.yaw);
+    const sz = -Math.sin(g.yaw);
+    const u = Math.min(1, (t - dieAt) / FLING);
+    const dist = u * u * 14;
+    out.x = live.x + (sx * 0.82 + fx * 0.4) * dist;
+    out.z = live.z + (sz * 0.82 + fz * 0.4) * dist;
+    out.y = u < 1 ? Math.sin(u * Math.PI) * 6.2 : 0.08;
+    out.rx = u < 1 ? 0.35 + u * 2.6 : 1.5;
+    out.ry = live.ry + (u < 1 ? u * 4.2 : 0.2);
+    out.rz = (i % 2 ? 1 : -1) * (u < 1 ? u * 1.4 : 0.35);
+    out.s = 1;
+    return;
+  }
+  if (t >= dieAt) {
+    const u = Math.min(1, (t - dieAt) / 0.7);
+    const e = u * u * (3 - 2 * u);
+    out.x = live.x + fx * e * 0.4;
+    out.z = live.z + fz * e * 0.4;
+    out.y = Math.sin(u * Math.PI) * 0.28;
+    out.rx = 0.2 + e * 1.35;
+    out.ry = live.ry;
+    out.rz = (i % 2 ? 0.45 : -0.45) * e;
+    out.s = 1;
+    return;
+  }
+  if (woundAt < 1e8 && t >= woundAt) {
+    const age = t - woundAt;
+    const shove = Math.min(1, age / 0.32);
+    out.x = live.x - fx * shove * 0.6;
+    out.z = live.z - fz * shove * 0.6;
+    out.y = 0;
+    out.rx = 0.2 + (age < 0.5 ? Math.sin((age / 0.5) * Math.PI) * 0.65 : 0.26);
+    out.ry = live.ry;
+    out.rz = 0;
+    out.s = 1;
+    return;
+  }
+  const bob = Math.sin(t * 8 + i);
+  out.x = live.x;
+  out.z = live.z;
+  out.y = Math.abs(bob) * 0.04;
+  out.rx = 0.2 + bob * 0.05;
+  out.ry = live.ry;
+  out.rz = 0;
+  out.s = 1;
+}
+
 export function devFriendAt(i: number, n: number, recT: number, out: New1Pose, big = false, sword = false, snake = false, devs = false, kick = false, fast = false, small = false) {
   const count = Math.max(0, Math.floor(n));
   const t = Math.max(0, recT);
@@ -1178,6 +1326,10 @@ export function devFriendAt(i: number, n: number, recT: number, out: New1Pose, b
   }
   if (snake || devs) {
     snakeFriendAt(i, count, t, out, devs);
+    return;
+  }
+  if (kick && small) {
+    zillaSoldier(i, count, t, out);
     return;
   }
   const dieAt = kick ? kickPlan(count, fast, small)[i] : planOf(count, big).die[i];

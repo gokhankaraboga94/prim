@@ -3,7 +3,7 @@ import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { REEL_HOLD } from "../../recordCanvas";
-import { devKick, type KickModel } from "../../devReel";
+import { devKick, zillaPlayback, type KickModel } from "../../devReel";
 import { simplifySkinned } from "../../knightSoldier";
 import { dropGroundSlab } from "../../groundSlab";
 
@@ -215,6 +215,100 @@ function splitBody(src: THREE.BufferGeometry, rig: KickRig) {
     return { geo, hipW, kneeW, ankleW, ids: new Uint32Array(ids), rest: positions.slice(), restN: normals ? normals.slice() : null };
   };
   return { body: bake(bodyTris, false).geo, leg: bake(legTris, true) };
+}
+
+function toLambert(root: THREE.Object3D) {
+  root.traverse((obj) => {
+    const mesh = obj as THREE.Mesh;
+    if (!mesh.isMesh) return;
+    const src = (Array.isArray(mesh.material) ? mesh.material[0] : mesh.material) as THREE.MeshStandardMaterial;
+    const next = new THREE.MeshLambertMaterial({
+      map: src.map ?? null,
+      color: src.color ? src.color.clone() : "#ffffff",
+    });
+    src.map = null;
+    src.normalMap?.dispose();
+    src.roughnessMap?.dispose();
+    src.metalnessMap?.dispose();
+    src.dispose();
+    mesh.material = next;
+    mesh.castShadow = false;
+    mesh.receiveShadow = false;
+    mesh.frustumCulled = false;
+  });
+}
+
+/** Godzilla keeps its skeleton. DEV15 plays Attack, Tail Attack and Walk. Death stays unused. */
+export function GodzillaRig() {
+  const host = useRef<THREE.Group>(null);
+  const mixer = useRef<THREE.AnimationMixer | null>(null);
+  const actions = useRef<Partial<Record<"Attack" | "Tail Attack" | "Walk", THREE.AnimationAction>>>({});
+  const shown = useRef("");
+  useEffect(() => {
+    const loader = new GLTFLoader();
+    let drop = false;
+    loader.load("/models/godzilla.glb", (gltf) => {
+      const root = host.current;
+      if (drop || !root) return;
+      const model = gltf.scene;
+      toLambert(model);
+      model.updateMatrixWorld(true);
+      const box = new THREE.Box3().setFromObject(model);
+      const span = Math.max(0.001, box.max.y - box.min.y);
+      const fit = HEIGHT / span;
+      model.scale.setScalar(fit);
+      model.position.set(
+        -((box.min.x + box.max.x) / 2) * fit,
+        -box.min.y * fit,
+        -((box.min.z + box.max.z) / 2) * fit,
+      );
+      const mix = new THREE.AnimationMixer(model);
+      const next: Partial<Record<"Attack" | "Tail Attack" | "Walk", THREE.AnimationAction>> = {};
+      for (const clip of gltf.animations) {
+        if (clip.name !== "Attack" && clip.name !== "Tail Attack" && clip.name !== "Walk") continue;
+        const action = mix.clipAction(clip);
+        action.loop = THREE.LoopOnce;
+        action.clampWhenFinished = true;
+        next[clip.name] = action;
+      }
+      next.Walk?.play();
+      mixer.current = mix;
+      actions.current = next;
+      shown.current = "Walk";
+      root.add(model);
+    });
+    return () => {
+      drop = true;
+      mixer.current?.stopAllAction();
+      mixer.current = null;
+      const root = host.current;
+      if (!root) return;
+      root.traverse((obj) => {
+        const mesh = obj as THREE.Mesh;
+        if (!mesh.isMesh) return;
+        mesh.geometry?.dispose();
+        const mat = mesh.material as THREE.MeshLambertMaterial;
+        mat.map?.dispose();
+        mat.dispose();
+      });
+      root.clear();
+    };
+  }, []);
+  useFrame(({ clock }) => {
+    const mix = mixer.current;
+    const bag = actions.current;
+    if (!mix) return;
+    const play = zillaPlayback(Math.max(0, clock.elapsedTime - REEL_HOLD));
+    const action = bag[play.name];
+    if (!action) return;
+    if (shown.current !== play.name) {
+      bag[shown.current as "Attack" | "Tail Attack" | "Walk"]?.stop();
+      action.reset().play();
+      shown.current = play.name;
+    }
+    mix.setTime(play.time);
+  });
+  return <group ref={host} />;
 }
 
 export function HulkModel({ soldiers, model: kind = "hulk", fast = false }: { soldiers: number; model?: KickModel; fast?: boolean }) {
