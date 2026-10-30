@@ -10,6 +10,7 @@ import {
   BASKA_N,
   BASKA_URL,
   baskaCam,
+  baskaGap,
   baskaMarkReady,
   baskaPose,
   baskaReset,
@@ -82,6 +83,7 @@ function fit(root: THREE.Object3D) {
 
 export function BaskaBattle({ names }: { names: string[] }) {
   const host = useRef<THREE.Group>(null);
+  const crack = useRef<THREE.Mesh>(null);
   const pack = useRef<Man[]>([]);
   const roster = useMemo(() => baskaRoster(names), [names]);
   const named = useMemo(() => roster.map((name, i) => ({ name, i })).filter((row) => row.name), [roster]);
@@ -150,9 +152,16 @@ export function BaskaBattle({ names }: { names: string[] }) {
     const t = baskaT();
     for (const man of pack.current) {
       const pose = baskaPose(man.i, t);
-      man.host.position.set(pose.x, 0, pose.z);
+      man.host.position.set(pose.x, pose.y, pose.z);
       man.host.rotation.set(pose.rx, pose.yaw, 0);
       man.mix.setTime(pose.time);
+    }
+    const gap = baskaGap(t);
+    const split = crack.current;
+    if (split) {
+      const width = Math.max(0.2, gap.to - gap.from);
+      split.scale.set(width, 1, 1);
+      split.position.x = (gap.from + gap.to) / 2;
     }
     const high = camera.position.y > 4;
     for (const sheet of atlas.sheets) {
@@ -170,7 +179,7 @@ export function BaskaBattle({ names }: { names: string[] }) {
         const base = high ? Math.min(1.7, Math.max(1.15, dist * 0.055)) : Math.min(0.95, 0.46 + dist * 0.04);
         const w = up ? base * 1.7 : 0.001;
         const h = (cell.sy * w) / Math.max(cell.sx, 0.01);
-        dummy.position.set(pose.x, up ? (high ? 2.85 : 2.25) : -12, pose.z);
+        dummy.position.set(pose.x, up ? pose.y + (high ? 2.85 : 2.25) : -12, pose.z);
         dummy.quaternion.copy(camera.quaternion);
         dummy.scale.set(w, up ? h : 0.001, 1);
         dummy.updateMatrix();
@@ -184,9 +193,13 @@ export function BaskaBattle({ names }: { names: string[] }) {
     <group>
       <hemisphereLight args={["#d7e6f4", "#6a5848", 1.4]} />
       <directionalLight position={[6, 14, -4]} intensity={1.8} color="#fff4e0" />
-      <mesh rotation={[-Math.PI / 2, 0, 0]}>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
         <planeGeometry args={[40, 40]} />
         <meshLambertMaterial color="#6a734c" />
+      </mesh>
+      <mesh ref={crack} rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.04, 0]}>
+        <planeGeometry args={[1, 1.35]} />
+        <meshLambertMaterial color="#14110e" />
       </mesh>
       <group ref={host} />
       {atlas.sheets.map((sheet, s) => (

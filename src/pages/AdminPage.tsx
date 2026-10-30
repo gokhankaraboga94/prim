@@ -1661,7 +1661,7 @@ export function AdminPage() {
           )}
           {isBaska(reelShot) && (
             <p className="muted">
-              12 saniye. Ekranda kanca yazısı yok. 13 mavi asker, animasyonlu model. İsimler üstlerinde, düşenin ismi gider. İlk saniye öndeki asker merceğe devrilir, arkada yumruk iner. 1. saniyede kesme: halka ve isimler, üçü yerde. Ortadaki her vuruşta başka yöne döner. Son üçü üstüne yürür, o vuruşta düşer. Sonda son katılan ayakta.
+              12 saniye. Ekranda kanca yazısı yok. Yer yarılıyor. 8 mavi asker, animasyonlu model, üstlerinde son katılanların isimleri. İlk saniye en öndeki yarıkla birlikte merceğe düşer. 1. saniyede kesme: sıra görünür, yarık uzar, iki kişi daha iner. Yarık son ismin ayağında durur. O ayakta kalır ve yere basar.
             </p>
           )}
           {isKirmizi(reelShot) && (
