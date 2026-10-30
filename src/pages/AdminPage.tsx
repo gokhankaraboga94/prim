@@ -1602,7 +1602,7 @@ export function AdminPage() {
             <p className="muted">DEV13 gibi telefona uygun; dev eklenen kırmızı canavar (1,5 MB). Video 20 saniye: askerler 15. saniyeye kadar ölür, her tekme daha çok asker götürür. Tekmelenen askerler 3 kat yükseğe fırlar, dönerek düşer.</p>
           )}
           {isDev15(reelShot) && (
-            <p className="muted">52 saniye. Biraz daha büyük, yerinde. Godzilla kendi iskeletiyle saldırır, kuyruk sallar ve arada yürür. Kuyruğun değdiği asker fırlar, düşer, ölür. Normal darbe iki vuruşta öldürür. Düşüşler aynı anda değil. Gövdenin arkasında kalan isim görünmez. Oklar model gelene kadar bekler.</p>
+            <p className="muted">52 saniye. Biraz daha büyük, yerinde. Godzilla kendi iskeletiyle saldırır, kuyruk sallar ve arada yürür. Kuyruğun değdiği asker fırlar, düşer, ölür. Normal darbe iki vuruşta öldürür, her vuruşta iki kat asker düşer. Düşüşler aynı anda değil. Kamera aynı mesafeden daire çizer. Gövdenin arkasında kalan isim görünmez. Oklar model gelene kadar bekler.</p>
           )}
           {isBout(reelShot) && (
             <p className="muted">52 saniye. DEV9’daki çim. King Kong sadece ekrandan uzak olan sol eliyle yumruk atar, ork baltalarıyla karşılık verir. Vuruşlar seri. İkisinin de üstünde kırmızı can barı var. Kıyasıya dövüşürler, ork düşer.</p>
@@ -1646,7 +1646,7 @@ export function AdminPage() {
           )}
           {isKirmizi(reelShot) && (
             <p className="muted">
-              48 saniye. Ekranda yazı yok. 25 mavi asker, üstlerinde son katılanların isimleri. 40 kırmızı düşman. İkisi de kendi iskeletiyle vurur. Can barı yok. Ölümler dağınık, bir sıra birlikte düşmez. Gök mavi. İlk saniye kılıç merceğe gelir. 1. saniyede kesme: mavi omuzdan. Sonra tepeden ve omuz planı.
+              48 saniye. Ekranda yazı yok. 25 mavi asker, üstlerinde son katılanların isimleri. 40 kırmızı düşman. Açılıştan sonra iki hat birbirine girer, dip dibe vurur. İkisi de kendi iskeletiyle vurur. Can barı yok. Ölümler dağınık, bir sıra birlikte düşmez. Gök mavi. İlk saniye kılıç merceğe gelir. 1. saniyede kesme: mavi omuzdan. Sonra tepeden ve omuz planı.
             </p>
           )}
           {isSavas(reelShot) && (

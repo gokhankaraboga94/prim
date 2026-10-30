@@ -93,16 +93,26 @@ function shoved(who: KirmiziWho, i: number, t: number) {
   return false;
 }
 
+/** After the opening sword, both lines step in and stay chest to chest. */
+function meet(t: number) {
+  if (t <= 1.05) return 0;
+  const u = Math.min(1, (t - 1.05) / 1.8);
+  const e = u * u * (3 - 2 * u);
+  return e * 1.05;
+}
+
 export function kirmiziPose(who: KirmiziWho, i: number, t: number): KirmiziPose {
   const seat = kirmiziSeat(who, i);
   const dieAt = who === "blue" ? blueDie(i) : redDie(i);
+  const step = meet(t >= dieAt ? dieAt : t);
+  const z0 = who === "blue" ? seat.z + step : seat.z - step;
   if (t >= dieAt) {
     if (who === "red") {
-      return { x: seat.x, z: seat.z, yaw: seat.yaw, rx: 0, clip: "Death_B", time: Math.min(1.87, t - dieAt), dead: true };
+      return { x: seat.x, z: z0, yaw: seat.yaw, rx: 0, clip: "Death_B", time: Math.min(1.87, t - dieAt), dead: true };
     }
     const u = Math.min(1, (t - dieAt) / 0.7);
     const e = u * u * (3 - 2 * u);
-    return { x: seat.x, z: seat.z, yaw: 0, rx: e * 1.45, clip: "Attack_Ground_Pound", time: 0.04, dead: true };
+    return { x: seat.x, z: z0, yaw: 0, rx: e * 1.45, clip: "Attack_Ground_Pound", time: 0.04, dead: true };
   }
   const cycle = who === "blue" ? BLUE_CYCLE : RED_CYCLE;
   const shift = who === "blue" ? 2.45 + (i % 4) * 0.12 : 0.48 + (i % 5) * 0.11;
@@ -124,8 +134,8 @@ export function kirmiziPose(who: KirmiziWho, i: number, t: number): KirmiziPose 
     time = local;
     attacking = local > 0.3 && local < 2.2;
   }
-  const push = attacking ? Math.sin(Math.min(1, local / 1.5) * Math.PI) * 0.58 : 0;
-  const z = who === "blue" ? seat.z + push : seat.z - push;
+  const push = attacking ? Math.sin(Math.min(1, local / 1.5) * Math.PI) * 0.22 : 0;
+  const z = who === "blue" ? z0 + push : z0 - push;
   return {
     x: seat.x,
     z,
@@ -149,7 +159,7 @@ function bladeCam(): KirmiziCam {
 }
 
 function openTps(): KirmiziCam {
-  return { x: -0.35, y: 2.25, z: -7.6, lx: 0.15, ly: 1.15, lz: 1.5, fov: 46 };
+  return { x: -0.35, y: 2.25, z: -7.6, lx: 0.15, ly: 1.15, lz: 0.15, fov: 46 };
 }
 
 function overhead(t: number): KirmiziCam {
@@ -158,11 +168,11 @@ function overhead(t: number): KirmiziCam {
 }
 
 function blueTps(): KirmiziCam {
-  return { x: 1.35, y: 2.55, z: -8.1, lx: 0.1, ly: 1.2, lz: 1.8, fov: 44 };
+  return { x: 1.35, y: 2.55, z: -8.1, lx: 0.1, ly: 1.2, lz: 0.1, fov: 44 };
 }
 
 function redTps(): KirmiziCam {
-  return { x: -1.1, y: 2.5, z: 8.4, lx: 0.15, ly: 1.15, lz: -1.4, fov: 44 };
+  return { x: -1.1, y: 2.5, z: 8.4, lx: 0.15, ly: 1.15, lz: -0.1, fov: 44 };
 }
 
 export function kirmiziCam(t: number): KirmiziCam {

@@ -516,7 +516,7 @@ function zillaFate(n: number): ZillaFate {
       scored.push({ i, s: fresh * 800 + side * side * 0.12 - forward });
     }
     scored.sort((a, b) => a.s - b.s || a.i - b.i);
-    const batch = Math.min(8, scored.length);
+    const batch = Math.min(16, scored.length);
     for (let j = 0; j < batch; j++) {
       const i = scored[j].i;
       const at = beat.contact + zillaJitter(i) * 0.9;
@@ -1561,6 +1561,21 @@ export function devFriendAt(i: number, n: number, recT: number, out: New1Pose, b
 export function sampleDevCam(recT: number, big = false, devs = false, backOff = 1, fast = false, small = false): ShotPose {
   const t = Math.max(0, recT);
   const g = devGiantPose(t, small);
+  if (small) {
+    const pull = (backOff > 0 ? backOff : 1) * 1.05;
+    const ly = 5.4 * devSize(true);
+    const radius = Math.hypot(28, 48) * pull;
+    const ang = Math.atan2(28, -48) + t * ((Math.PI * 2) / 24);
+    return {
+      x: g.x + Math.sin(ang) * radius,
+      y: ly + (34 - ly) * pull,
+      z: g.z + Math.cos(ang) * radius,
+      lx: g.x,
+      ly,
+      lz: g.z,
+      fov: 42,
+    };
+  }
   const push = (small ? ZILLA_LAST : lastDeath(fast)) - 4;
   const u = t <= push ? 0 : Math.min(1, (t - push) / (fast ? 4 : 6));
   const e = u * u * (3 - 2 * u);
