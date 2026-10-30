@@ -3,8 +3,9 @@ export type AragornId = typeof ARAGORN_ID;
 export const ARAGORN_MODE = { id: ARAGORN_ID, label: "aragorn test" } as const;
 export const ARAGORN_SECONDS = 8;
 export const ARAGORN_URL = "/models/aragorn.glb";
+export const ARAGORN2_URL = "/models/aragorn2.glb";
 export const ARAGORN_RED = "/models/red.glb";
-export const ARAGORN_URLS = [ARAGORN_URL, ARAGORN_RED] as const;
+export const ARAGORN_URLS = [ARAGORN_URL, ARAGORN2_URL, ARAGORN_RED] as const;
 
 /** Red clips, in order, two seconds each. The test is whether Aragorn moves with them. */
 export const ARAGORN_CLIPS = ["Sword_Attack", "Sprint", "Sword_Regular_Combo", "Death_B"] as const;
@@ -17,7 +18,7 @@ export function aragornClip(t: number) {
 export type AragornCam = { x: number; y: number; z: number; lx: number; ly: number; lz: number; fov: number };
 
 export function aragornCam(): AragornCam {
-  return { x: 0, y: 1.45, z: -4.6, lx: 0, ly: 1.05, lz: 0, fov: 38 };
+  return { x: 0, y: 1.6, z: -16, lx: 0, ly: 0.9, lz: 0, fov: 34 };
 }
 
 let playAt = 0;

@@ -1676,7 +1676,7 @@ export function AdminPage() {
           )}
           {isAragorn(reelShot) && (
             <p className="muted">
-              Test, 8 saniye. Solda aragorn, sağda kırmızı. İkisine de kırmızının kılıç, koşu, kombo ve ölüm klibi verilir. Aragorn modelinde iskelet yok. Sağdaki oynar, soldaki durur.
+              Test, 8 saniye. Solda aragorn, ortada aragorn2, sağda kırmızı. Üçüne de kırmızının kılıç, koşu, kombo ve ölüm klibi verilir. İlk modelde iskelet yok, durur. aragorn2 ve kırmızı aynı kemik adlarıyla oynar.
             </p>
           )}
           {isBaska(reelShot) && (

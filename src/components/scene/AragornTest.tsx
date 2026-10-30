@@ -4,6 +4,7 @@ import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import * as THREE from "three";
 import { preloadedGlb } from "../../arenaPreload";
 import {
+  ARAGORN2_URL,
   ARAGORN_RED,
   ARAGORN_URL,
   aragornCam,
@@ -15,14 +16,13 @@ import {
 
 type Gltf = Parameters<Parameters<GLTFLoader["load"]>[1]>[0];
 
-type Pair = {
+type Rig = {
   mix: THREE.AnimationMixer;
   shown: string;
   bag: Record<string, THREE.AnimationAction>;
-  redMix: THREE.AnimationMixer;
-  redShown: string;
-  redBag: Record<string, THREE.AnimationAction>;
 };
+
+type Line = { rigs: Rig[] };
 
 const HEIGHT = 1.82;
 
@@ -77,9 +77,26 @@ function boundTracks(root: THREE.Object3D, clip: THREE.AnimationClip) {
   return hit;
 }
 
+function mountRig(root: THREE.Object3D, clips: THREE.AnimationClip[], label: string): Rig {
+  const mix = new THREE.AnimationMixer(root);
+  const bag: Record<string, THREE.AnimationAction> = {};
+  let bound = 0;
+  for (const clip of clips) {
+    bound = Math.max(bound, boundTracks(root, clip));
+    const action = mix.clipAction(clip);
+    action.loop = THREE.LoopOnce;
+    action.clampWhenFinished = true;
+    bag[clip.name] = action;
+  }
+  const first = bag.Sword_Attack ?? Object.values(bag)[0];
+  first?.reset().play();
+  console.warn(bound > 0 ? `${label} kemik eslesti: ${bound}` : `${label} iskeleti yok, kirmizi klibi baglanamadi`);
+  return { mix, shown: first?.getClip().name ?? "", bag };
+}
+
 export function AragornTest() {
   const host = useRef<THREE.Group>(null);
-  const pack = useRef<Pair | null>(null);
+  const pack = useRef<Line | null>(null);
 
   useEffect(() => {
     let drop = false;
@@ -87,47 +104,30 @@ export function AragornTest() {
     const loader = new GLTFLoader();
     void (async () => {
       try {
-        const [hero, red] = await Promise.all([loadGlb(loader, ARAGORN_URL), loadGlb(loader, ARAGORN_RED)]);
+        const [hero, hero2, red] = await Promise.all([
+          loadGlb(loader, ARAGORN_URL),
+          loadGlb(loader, ARAGORN2_URL),
+          loadGlb(loader, ARAGORN_RED),
+        ]);
         if (drop) return;
-        const model = hero.scene;
-        toLambert(model);
-        fit(model);
-        const holder = new THREE.Group();
-        holder.position.x = -1.15;
-        holder.rotation.y = Math.PI;
-        holder.add(model);
-        const redModel = red.scene;
-        toLambert(redModel);
-        fit(redModel);
-        const redHolder = new THREE.Group();
-        redHolder.position.x = 1.15;
-        redHolder.rotation.y = Math.PI;
-        redHolder.add(redModel);
-        host.current?.add(holder, redHolder);
-
-        const mix = new THREE.AnimationMixer(model);
-        const bag: Record<string, THREE.AnimationAction> = {};
-        let bound = 0;
-        for (const clip of red.animations) {
-          bound = Math.max(bound, boundTracks(model, clip));
-          const action = mix.clipAction(clip);
-          action.loop = THREE.LoopOnce;
-          action.clampWhenFinished = true;
-          bag[clip.name] = action;
+        const seats: Array<[Gltf, number, string]> = [
+          [hero, -1.75, "aragorn"],
+          [hero2, 0, "aragorn2"],
+          [red, 1.75, "kirmizi"],
+        ];
+        const rigs: Rig[] = [];
+        for (const [file, x, label] of seats) {
+          const model = file.scene;
+          toLambert(model);
+          fit(model);
+          const holder = new THREE.Group();
+          holder.position.x = x;
+          holder.rotation.y = Math.PI;
+          holder.add(model);
+          host.current?.add(holder);
+          rigs.push(mountRig(model, red.animations, label));
         }
-        const redMix = new THREE.AnimationMixer(redModel);
-        const redBag: Record<string, THREE.AnimationAction> = {};
-        for (const clip of red.animations) {
-          const action = redMix.clipAction(clip);
-          action.loop = THREE.LoopOnce;
-          action.clampWhenFinished = true;
-          redBag[clip.name] = action;
-        }
-        const first = bag.Sword_Attack ?? Object.values(bag)[0];
-        first?.reset().play();
-        redBag.Sword_Attack?.reset().play();
-        pack.current = { mix, shown: first?.getClip().name ?? "", bag, redMix, redShown: "Sword_Attack", redBag };
-        console.warn(bound > 0 ? `aragorn kemik eslesti: ${bound}` : "aragorn iskeleti yok, kirmizi klibi baglanamadi");
+        pack.current = { rigs };
       } catch (err) {
         console.warn("aragorn test", err);
       } finally {
@@ -136,8 +136,7 @@ export function AragornTest() {
     })();
     return () => {
       drop = true;
-      pack.current?.mix.stopAllAction();
-      pack.current?.redMix.stopAllAction();
+      for (const rig of pack.current?.rigs ?? []) rig.mix.stopAllAction();
       pack.current = null;
       host.current?.clear();
       aragornReset();
@@ -148,20 +147,15 @@ export function AragornTest() {
     const live = pack.current;
     if (!live) return;
     const play = aragornClip(aragornT());
-    const action = live.bag[play.name];
-    if (action && live.shown !== play.name) {
-      live.bag[live.shown]?.stop();
-      action.reset().play();
-      live.shown = play.name;
+    for (const rig of live.rigs) {
+      const action = rig.bag[play.name];
+      if (action && rig.shown !== play.name) {
+        rig.bag[rig.shown]?.stop();
+        action.reset().play();
+        rig.shown = play.name;
+      }
+      if (action) rig.mix.setTime(Math.min(action.getClip().duration - 0.001, play.time));
     }
-    if (action) live.mix.setTime(Math.min(action.getClip().duration - 0.001, play.time));
-    const redAction = live.redBag[play.name];
-    if (redAction && live.redShown !== play.name) {
-      live.redBag[live.redShown]?.stop();
-      redAction.reset().play();
-      live.redShown = play.name;
-    }
-    if (redAction) live.redMix.setTime(Math.min(redAction.getClip().duration - 0.001, play.time));
   });
 
   return (
@@ -169,7 +163,7 @@ export function AragornTest() {
       <hemisphereLight args={["#d7e6f4", "#6a5848", 1.4]} />
       <directionalLight position={[4, 12, -6]} intensity={1.7} color="#fff4e0" />
       <mesh rotation={[-Math.PI / 2, 0, 0]}>
-        <planeGeometry args={[20, 20]} />
+        <planeGeometry args={[40, 40]} />
         <meshLambertMaterial color="#6a734c" />
       </mesh>
       <group ref={host} />
