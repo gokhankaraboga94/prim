@@ -114,13 +114,13 @@ function stepPose(walk: Walk, t: number) {
   const wave = Math.sin(t * 9);
   swing(walk, "mixamorig:LeftUpLeg", 0, step * 0.7);
   swing(walk, "mixamorig:RightUpLeg", 0, -step * 0.7);
-  swing(walk, "mixamorig:LeftLeg", 0, -0.35 - Math.max(0, -step) * 1.05);
-  swing(walk, "mixamorig:RightLeg", 0, -0.35 - Math.max(0, step) * 1.05);
+  swing(walk, "mixamorig:LeftLeg", 0, -0.08 - Math.max(0, -step) * 0.28);
+  swing(walk, "mixamorig:RightLeg", 0, -0.08 - Math.max(0, step) * 0.28);
   swing(walk, "mixamorig:LeftArm", 0, -step * 0.45);
   swing(walk, "mixamorig:LeftForeArm", 0.3, 0);
-  swing(walk, "mixamorig:RightArm", -1.25, 0);
-  swing(walk, "mixamorig:RightForeArm", wave * 0.28, 0);
-  swing(walk, "mixamorig:RightHand", wave * 0.2, 0);
+  swing(walk, "mixamorig:RightArm", -1.27 + wave * 0.24, 0);
+  swing(walk, "mixamorig:RightForeArm", wave * 0.22, 0);
+  swing(walk, "mixamorig:RightHand", wave * 0.16, 0);
   const hips = walk.bones["mixamorig:Hips"];
   if (hips) hips.position.y = walk.hipsY + Math.abs(step) * 0.012;
   walk.mesh.skeleton.update();
