@@ -1678,7 +1678,7 @@ export function AdminPage() {
           )}
           {isAragorn(reelShot) && (
             <p className="muted">
-              Test, 8 saniye. Solda aragorn, ortada iskeletli model, sağda kırmızı. Ortadaki ve sağdaki kırmızının kılıç, koşu, kombo ve ölüm klibini oynar. Soldaki modelde iskelet yok, durur.
+              Test, 8 saniye. İskeletli model. Kırmızı klip yok. Yerinde yürür, sağ elini sallar.
             </p>
           )}
           {isBaska(reelShot) && (
