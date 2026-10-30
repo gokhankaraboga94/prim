@@ -3,9 +3,9 @@ export type AragornId = typeof ARAGORN_ID;
 export const ARAGORN_MODE = { id: ARAGORN_ID, label: "aragorn test" } as const;
 export const ARAGORN_SECONDS = 8;
 export const ARAGORN_URL = "/models/aragorn.glb";
-export const ARAGORN2_URL = "/models/aragorn2.glb";
+export const ARAGORN_ISKELET = "/models/islelet.glb";
 export const ARAGORN_RED = "/models/red.glb";
-export const ARAGORN_URLS = [ARAGORN_URL, ARAGORN2_URL, ARAGORN_RED] as const;
+export const ARAGORN_URLS = [ARAGORN_URL, ARAGORN_ISKELET, ARAGORN_RED] as const;
 
 /** Red clips, in order, two seconds each. The test is whether Aragorn moves with them. */
 export const ARAGORN_CLIPS = ["Sword_Attack", "Sprint", "Sword_Regular_Combo", "Death_B"] as const;

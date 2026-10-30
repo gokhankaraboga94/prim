@@ -4,7 +4,7 @@ import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import * as THREE from "three";
 import { preloadedGlb } from "../../arenaPreload";
 import {
-  ARAGORN2_URL,
+  ARAGORN_ISKELET,
   ARAGORN_RED,
   ARAGORN_URL,
   aragornCam,
@@ -68,6 +68,112 @@ function fit(root: THREE.Object3D) {
   );
 }
 
+/** Red bone name → Mixamo bone on islelet.glb. Root has no matching joint. */
+const TO_MIXAMO: Record<string, string> = {
+  pelvis: "mixamorig:Hips",
+  spine_01: "mixamorig:Spine",
+  spine_02: "mixamorig:Spine1",
+  spine_03: "mixamorig:Spine2",
+  neck_01: "mixamorig:Neck",
+  head: "mixamorig:Head",
+  head_leaf: "mixamorig:HeadTop_End",
+  clavicle_l: "mixamorig:LeftShoulder",
+  upperarm_l: "mixamorig:LeftArm",
+  lowerarm_l: "mixamorig:LeftForeArm",
+  hand_l: "mixamorig:LeftHand",
+  index_01_l: "mixamorig:LeftHandIndex1",
+  index_02_l: "mixamorig:LeftHandIndex2",
+  index_03_l: "mixamorig:LeftHandIndex3",
+  index_04_leaf_l: "mixamorig:LeftHandIndex4",
+  middle_01_l: "mixamorig:LeftHandMiddle1",
+  middle_02_l: "mixamorig:LeftHandMiddle2",
+  middle_03_l: "mixamorig:LeftHandMiddle3",
+  middle_04_leaf_l: "mixamorig:LeftHandMiddle4",
+  pinky_01_l: "mixamorig:LeftHandPinky1",
+  pinky_02_l: "mixamorig:LeftHandPinky2",
+  pinky_03_l: "mixamorig:LeftHandPinky3",
+  pinky_04_leaf_l: "mixamorig:LeftHandPinky4",
+  ring_01_l: "mixamorig:LeftHandRing1",
+  ring_02_l: "mixamorig:LeftHandRing2",
+  ring_03_l: "mixamorig:LeftHandRing3",
+  ring_04_leaf_l: "mixamorig:LeftHandRing4",
+  thumb_01_l: "mixamorig:LeftHandThumb1",
+  thumb_02_l: "mixamorig:LeftHandThumb2",
+  thumb_03_l: "mixamorig:LeftHandThumb3",
+  thumb_04_leaf_l: "mixamorig:LeftHandThumb4",
+  clavicle_r: "mixamorig:RightShoulder",
+  upperarm_r: "mixamorig:RightArm",
+  lowerarm_r: "mixamorig:RightForeArm",
+  hand_r: "mixamorig:RightHand",
+  index_01_r: "mixamorig:RightHandIndex1",
+  index_02_r: "mixamorig:RightHandIndex2",
+  index_03_r: "mixamorig:RightHandIndex3",
+  index_04_leaf_r: "mixamorig:RightHandIndex4",
+  middle_01_r: "mixamorig:RightHandMiddle1",
+  middle_02_r: "mixamorig:RightHandMiddle2",
+  middle_03_r: "mixamorig:RightHandMiddle3",
+  middle_04_leaf_r: "mixamorig:RightHandMiddle4",
+  pinky_01_r: "mixamorig:RightHandPinky1",
+  pinky_02_r: "mixamorig:RightHandPinky2",
+  pinky_03_r: "mixamorig:RightHandPinky3",
+  pinky_04_leaf_r: "mixamorig:RightHandPinky4",
+  ring_01_r: "mixamorig:RightHandRing1",
+  ring_02_r: "mixamorig:RightHandRing2",
+  ring_03_r: "mixamorig:RightHandRing3",
+  ring_04_leaf_r: "mixamorig:RightHandRing4",
+  thumb_01_r: "mixamorig:RightHandThumb1",
+  thumb_02_r: "mixamorig:RightHandThumb2",
+  thumb_03_r: "mixamorig:RightHandThumb3",
+  thumb_04_leaf_r: "mixamorig:RightHandThumb4",
+  thigh_l: "mixamorig:LeftUpLeg",
+  calf_l: "mixamorig:LeftLeg",
+  foot_l: "mixamorig:LeftFoot",
+  ball_l: "mixamorig:LeftToeBase",
+  ball_leaf_l: "mixamorig:LeftToe_End",
+  thigh_r: "mixamorig:RightUpLeg",
+  calf_r: "mixamorig:RightLeg",
+  foot_r: "mixamorig:RightFoot",
+  ball_r: "mixamorig:RightToeBase",
+  ball_leaf_r: "mixamorig:RightToe_End",
+};
+
+function retargetClip(clip: THREE.AnimationClip, source: THREE.Object3D, target: THREE.Object3D) {
+  const tracks: THREE.KeyframeTrack[] = [];
+  const q = new THREE.Quaternion();
+  const out = new THREE.Quaternion();
+  for (const track of clip.tracks) {
+    const dot = track.name.lastIndexOf(".");
+    const bone = track.name.slice(0, dot);
+    const prop = track.name.slice(dot + 1);
+    const dstName = TO_MIXAMO[bone];
+    const srcBone = source.getObjectByName(bone);
+    const dstBone = dstName ? target.getObjectByName(dstName) : undefined;
+    if (!dstName || !srcBone || !dstBone) continue;
+    if (prop === "quaternion") {
+      const inv = srcBone.quaternion.clone().invert();
+      const rest = dstBone.quaternion;
+      const values = track.values.slice();
+      for (let i = 0; i < values.length; i += 4) {
+        q.fromArray(values, i);
+        out.copy(rest).multiply(inv).multiply(q);
+        out.toArray(values, i);
+      }
+      tracks.push(new THREE.QuaternionKeyframeTrack(`${dstName}.quaternion`, track.times, values));
+    } else if (prop === "position") {
+      const from = srcBone.position;
+      const rest = dstBone.position;
+      const values = track.values.slice();
+      for (let i = 0; i < values.length; i += 3) {
+        values[i] = rest.x + (values[i] - from.x);
+        values[i + 1] = rest.y + (values[i + 1] - from.y);
+        values[i + 2] = rest.z + (values[i + 2] - from.z);
+      }
+      tracks.push(new THREE.VectorKeyframeTrack(`${dstName}.position`, track.times, values));
+    }
+  }
+  return new THREE.AnimationClip(clip.name, clip.duration, tracks);
+}
+
 function boundTracks(root: THREE.Object3D, clip: THREE.AnimationClip) {
   let hit = 0;
   for (const track of clip.tracks) {
@@ -104,19 +210,20 @@ export function AragornTest() {
     const loader = new GLTFLoader();
     void (async () => {
       try {
-        const [hero, hero2, red] = await Promise.all([
+        const [hero, skel, red] = await Promise.all([
           loadGlb(loader, ARAGORN_URL),
-          loadGlb(loader, ARAGORN2_URL),
+          loadGlb(loader, ARAGORN_ISKELET),
           loadGlb(loader, ARAGORN_RED),
         ]);
         if (drop) return;
-        const seats: Array<[Gltf, number, string]> = [
-          [hero, -1.75, "aragorn"],
-          [hero2, 0, "aragorn2"],
-          [red, 1.75, "kirmizi"],
+        const mixamoClips = red.animations.map((clip) => retargetClip(clip, red.scene, skel.scene));
+        const seats: Array<[Gltf, number, string, THREE.AnimationClip[]]> = [
+          [hero, -1.75, "aragorn", red.animations],
+          [skel, 0, "iskelet", mixamoClips],
+          [red, 1.75, "kirmizi", red.animations],
         ];
         const rigs: Rig[] = [];
-        for (const [file, x, label] of seats) {
+        for (const [file, x, label, clips] of seats) {
           const model = file.scene;
           toLambert(model);
           fit(model);
@@ -125,7 +232,7 @@ export function AragornTest() {
           holder.rotation.y = Math.PI;
           holder.add(model);
           host.current?.add(holder);
-          rigs.push(mountRig(model, red.animations, label));
+          rigs.push(mountRig(model, clips, label));
         }
         pack.current = { rigs };
       } catch (err) {
