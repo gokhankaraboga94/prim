@@ -182,7 +182,7 @@ export const DEV11_SECONDS = DEV_SECONDS;
 export const DEV12_SECONDS = DEV_SECONDS;
 export const DEV13_SECONDS = DEV_SECONDS;
 export const DEV14_SECONDS = 20;
-export const DEV15_SECONDS = 36;
+export const DEV15_SECONDS = 52;
 export const SNAKE_SECONDS = DEV_SECONDS;
 export const DEVS_SECONDS = DEV_SECONDS;
 export const DEV_N = 300;
@@ -357,7 +357,7 @@ const Z_WALK = 1.15;
 const Z_HIT = 0.55;
 const Z_TAIL_HIT = 0.95;
 /** Last swing still lands, and the fling finishes, inside DEV15_SECONDS. */
-const ZILLA_LAST = 30;
+const ZILLA_LAST = 42;
 const TAIL_REACH = 2.2;
 /** Tail tip and mid, in the half-size giant's local frame. The strike crosses -X to +X out front. */
 const TAIL_SWEEP: { t: number; tip: [number, number, number]; mid: [number, number, number] }[] = [
@@ -494,7 +494,7 @@ function zillaFate(n: number): ZillaFate {
           }
         }
         if (best <= reach) {
-          die[i] = when;
+          die[i] = when + zillaJitter(i + 40) * 0.62;
           fling[i] = 1;
         }
       }
@@ -516,8 +516,9 @@ function zillaFate(n: number): ZillaFate {
     const batch = Math.min(8, scored.length);
     for (let j = 0; j < batch; j++) {
       const i = scored[j].i;
-      if (wound[i] < 1e8) die[i] = beat.contact;
-      else wound[i] = beat.contact;
+      const at = beat.contact + zillaJitter(i) * 0.9;
+      if (wound[i] < 1e8) die[i] = at;
+      else wound[i] = at;
     }
   }
   const fate = { wound, die, fling };
@@ -574,26 +575,58 @@ function zillaTailNow(t: number): [number, number, number][] {
   return [mix(a.mid, b.mid), mix(a.tip, b.tip)];
 }
 
-/** Names behind the half-size body stay hidden, and the hidden band turns with him and his tail. */
-function zillaNameHidden(sx: number, sz: number, cx: number, cz: number, t: number) {
+function zillaJitter(i: number) {
+  const x = Math.sin(i * 91.7 + 17.3) * 43758.5453;
+  return x - Math.floor(x);
+}
+
+/** Body plus the tail, in the half-size giant's local frame. Big enough to match what the mesh actually covers. */
+const ZILLA_BOX = { minX: -5.4, maxX: 5.4, minY: 0, maxY: 8.8, minZ: -7.2, maxZ: 4.8 };
+
+function rayHitsBox(ax: number, ay: number, az: number, bx: number, by: number, bz: number) {
+  const dx = bx - ax;
+  const dy = by - ay;
+  const dz = bz - az;
+  let t0 = 0;
+  let t1 = 1;
+  const slab = (origin: number, delta: number, min: number, max: number) => {
+    if (Math.abs(delta) < 1e-8) return origin >= min && origin <= max;
+    let a = (min - origin) / delta;
+    let b = (max - origin) / delta;
+    if (a > b) {
+      const swap = a;
+      a = b;
+      b = swap;
+    }
+    t0 = Math.max(t0, a);
+    t1 = Math.min(t1, b);
+    return t0 <= t1;
+  };
+  if (!slab(ax, dx, ZILLA_BOX.minX, ZILLA_BOX.maxX)) return false;
+  if (!slab(ay, dy, ZILLA_BOX.minY, ZILLA_BOX.maxY)) return false;
+  if (!slab(az, dz, ZILLA_BOX.minZ, ZILLA_BOX.maxZ)) return false;
+  return t0 < 0.97 && t1 > 0.03;
+}
+
+/** Hide a name when the body or the moving tail sits between the camera and that soldier. */
+function zillaNameHidden(sx: number, sz: number, cx: number, cz: number, cy: number, t: number) {
   const g = devGiantPose(t, true);
-  const vx = g.x - cx;
-  const vz = g.z - cz;
-  const vlen = Math.hypot(vx, vz) || 1;
-  const fx = vx / vlen;
-  const fz = vz / vlen;
-  const along = (sx - g.x) * fx + (sz - g.z) * fz;
-  const side = Math.abs((sx - g.x) * fz - (sz - g.z) * fx);
-  const facing = Math.sin(g.yaw) * fx + Math.cos(g.yaw) * fz;
-  const half = 3.4 + (1 - Math.abs(facing)) * 6.8;
-  if (along > 0.45 && along < 20 && side < half) return true;
-  const cy = Math.cos(g.yaw);
-  const syaw = Math.sin(g.yaw);
+  const c = Math.cos(g.yaw);
+  const s = Math.sin(g.yaw);
+  const local = (x: number, z: number) => {
+    const dx = x - g.x;
+    const dz = z - g.z;
+    return { x: dx * c - dz * s, z: dx * s + dz * c };
+  };
+  const cam = local(cx, cz);
+  const man = local(sx, sz);
+  if (man.x > ZILLA_BOX.minX && man.x < ZILLA_BOX.maxX && man.z > ZILLA_BOX.minZ && man.z < ZILLA_BOX.maxZ) return true;
+  if (rayHitsBox(cam.x, cy, cam.z, man.x, 1.15, man.z)) return true;
   const camSoldier = Math.hypot(cx - sx, cz - sz);
   for (const p of zillaTailNow(t)) {
-    const wx = g.x + p[0] * cy + p[2] * syaw;
-    const wz = g.z - p[0] * syaw + p[2] * cy;
-    if (Math.hypot(sx - wx, sz - wz) < 2.3 && Math.hypot(cx - wx, cz - wz) + 0.35 < camSoldier) return true;
+    const wx = g.x + p[0] * c + p[2] * s;
+    const wz = g.z - p[0] * s + p[2] * c;
+    if (Math.hypot(sx - wx, sz - wz) < 2.6 && Math.hypot(cx - wx, cz - wz) + 0.3 < camSoldier) return true;
   }
   return false;
 }
@@ -601,7 +634,7 @@ function zillaNameHidden(sx: number, sz: number, cx: number, cz: number, t: numb
 export function devNameCovered(sx: number, sz: number, cx: number, cz: number, recT: number, big: boolean, wide = false, small = false, sy = 2.4, cy = 40) {
   const k = devSize(small);
   const g = devGiantPose(Math.max(0, recT), small);
-  if (small) return zillaNameHidden(sx, sz, cx, cz, Math.max(0, recT));
+  if (small) return zillaNameHidden(sx, sz, cx, cz, cy, Math.max(0, recT));
   if (wide) {
     const yaw = g.yaw;
     const vx = sx - cx;

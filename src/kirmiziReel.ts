@@ -1,7 +1,7 @@
 export const KIRMIZI_ID = "kirmizi-mavi" as const;
 export type KirmiziId = typeof KIRMIZI_ID;
 export const KIRMIZI_MODE = { id: KIRMIZI_ID, label: "kırmızı-mavi" } as const;
-export const KIRMIZI_SECONDS = 32;
+export const KIRMIZI_SECONDS = 48;
 export const KIRMIZI_BLUE = "/models/blue.glb";
 export const KIRMIZI_RED = "/models/red.glb";
 export const KIRMIZI_URLS = [KIRMIZI_BLUE, KIRMIZI_RED] as const;
@@ -45,14 +45,31 @@ export function kirmiziSeat(who: KirmiziWho, i: number) {
   return { x: (col - 3.5) * 1.08, z: 1.45 + row * 1.15, yaw: Math.PI };
 }
 
+function unit(i: number, salt: number) {
+  const x = Math.sin(i * 127.1 + salt * 311.7) * 43758.5453;
+  return x - Math.floor(x);
+}
+
+function spreadDeaths(n: number, take: number, start: number, end: number, salt: number) {
+  const ids = Array.from({ length: n }, (_, i) => i).sort((a, b) => unit(a, salt) - unit(b, salt));
+  const at = new Map<number, number>();
+  for (let k = 0; k < take; k++) {
+    const i = ids[k];
+    const u = (k + unit(i, salt + 9) * 0.72) / take;
+    at.set(i, start + Math.min(0.97, u) * (end - start));
+  }
+  return at;
+}
+
+const blueDeaths = spreadDeaths(BLUE_N, 9, 12, 36, 4);
+const redDeaths = spreadDeaths(RED_N, 16, 9, 38, 11);
+
 function blueDie(i: number) {
-  if (i % 5 !== 2) return 1e9;
-  return 12.4 + (i % 5) * 2.8;
+  return blueDeaths.get(i) ?? 1e9;
 }
 
 function redDie(i: number) {
-  if (i % 4 !== 1) return 1e9;
-  return 9.4 + (i % 8) * 1.85;
+  return redDeaths.get(i) ?? 1e9;
 }
 
 function swinging(who: KirmiziWho, i: number, t: number) {
