@@ -176,7 +176,7 @@ export function BaskaBattle({ names }: { names: string[] }) {
         const dy = 2.4 - camera.position.y;
         const dz = pose.z - camera.position.z;
         const dist = Math.hypot(dx, dy, dz);
-        const base = high ? Math.min(1.7, Math.max(1.15, dist * 0.055)) : Math.min(0.95, 0.46 + dist * 0.04);
+        const base = Math.min(0.62, 0.28 + dist * 0.012);
         const w = up ? base * 1.7 : 0.001;
         const h = (cell.sy * w) / Math.max(cell.sx, 0.01);
         dummy.position.set(pose.x, up ? pose.y + (high ? 2.85 : 2.25) : -12, pose.z);
@@ -197,9 +197,9 @@ export function BaskaBattle({ names }: { names: string[] }) {
         <planeGeometry args={[40, 40]} />
         <meshLambertMaterial color="#6a734c" />
       </mesh>
-      <mesh ref={crack} rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.04, 0]}>
-        <planeGeometry args={[1, 1.35]} />
-        <meshLambertMaterial color="#14110e" />
+      <mesh ref={crack} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.08, -0.35]} renderOrder={2}>
+        <planeGeometry args={[1, 4.2]} />
+        <meshBasicMaterial color="#070605" />
       </mesh>
       <group ref={host} />
       {atlas.sheets.map((sheet, s) => (

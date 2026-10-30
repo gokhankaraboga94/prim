@@ -24,7 +24,7 @@ function ease(u: number) {
 }
 
 export function baskaX(i: number) {
-  return -2.45 + i * 0.78;
+  return (i - 3.5) * 1.9;
 }
 
 /** Last joined names sit at the end. The newest name is the one the crack does not reach. */
@@ -50,31 +50,31 @@ export function baskaPose(i: number, t: number): BaskaPose {
   const at = dropAt(i);
   if (t < at) return { x, y: 0, z: 0, yaw: Math.PI, rx: 0, time: 0.08, dead: false };
   const e = ease((t - at) / 0.7);
-  const into = i === 0 ? e * 1.35 : e * 0.15;
-  return { x, y: -e * 3.1, z: -into, yaw: Math.PI, rx: e * 1.35, time: 0.08, dead: e > 0.35 };
+  const into = i === 0 ? e * 1.6 : e * 0.55;
+  return { x, y: -e * 2.4, z: -into, yaw: Math.PI, rx: e * 1.35, time: 0.08, dead: e > 0.35 };
 }
 
 /** Dark split in the ground. It grows with each fall and stops before the last name. */
 export function baskaGap(t: number) {
-  let to = baskaX(0) - 0.15;
+  let to = baskaX(0) + 0.85;
   for (let i = 0; i < LAST; i++) {
-    if (t >= DROP[i]) to = baskaX(i) + 0.42;
+    if (t >= DROP[i]) to = baskaX(i) + 1.15;
   }
-  return { from: baskaX(0) - 0.42, to: Math.min(to, baskaX(LAST) - 0.62) };
+  return { from: baskaX(0) - 0.95, to: Math.min(to, baskaX(LAST) - 1.15) };
 }
 
 export type BaskaCam = { x: number; y: number; z: number; lx: number; ly: number; lz: number; fov: number };
 
 export function baskaCam(t: number): BaskaCam {
   const first = baskaPose(0, t);
-  if (t < 1) return { x: first.x, y: 1.05, z: -2.35, lx: first.x, ly: 0.85, lz: first.z, fov: 28 };
-  if (t < 3.2) return { x: 0.2, y: 2.6, z: -6.4, lx: 0.1, ly: 0.4, lz: 0, fov: 44 };
+  if (t < 1) return { x: first.x, y: 2.4, z: -8.5, lx: first.x, ly: 0.7, lz: 0.2, fov: 42 };
+  if (t < 3.2) return { x: 0, y: 8.2, z: -24, lx: 0, ly: 0.5, lz: 0, fov: 48 };
   if (t < 8.2) {
     const i = DROP.findIndex((at) => t < at + 0.7);
     const man = baskaPose(i < 0 ? 6 : i, t);
-    return { x: man.x + 1.15, y: 1.45, z: -2.5, lx: man.x, ly: 0.7, lz: 0, fov: 38 };
+    return { x: man.x * 0.35, y: 6.4, z: -18, lx: man.x, ly: 0.5, lz: 0, fov: 46 };
   }
-  return { x: baskaX(LAST) - 0.15, y: 1.65, z: -3.5, lx: baskaX(LAST), ly: 0.7, lz: 0.1, fov: 36 };
+  return { x: baskaX(LAST) * 0.25, y: 7.2, z: -20, lx: baskaX(LAST) * 0.4, ly: 0.55, lz: 0, fov: 46 };
 }
 
 let playAt = 0;
