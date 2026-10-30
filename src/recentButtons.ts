@@ -20,6 +20,7 @@ export const RECENT_BUTTON_LIMIT = 20;
 
 /** Yeniden eskiye. Bir buton güncellenirse en üste alınır, en alttaki 20'nin dışına düşer. */
 export const RECENT_BUTTONS = [
+  { id: DEV15_ID, label: `${DEV15_MODE.label} — ${DEV15_SECONDS}s`, seconds: DEV15_SECONDS },
   { id: KIRMIZI_ID, label: `${KIRMIZI_MODE.label} — ${KIRMIZI_SECONDS}s`, seconds: KIRMIZI_SECONDS },
   { id: SAVAS_ID, label: `${SAVAS_MODE.label} — ${SAVAS_SECONDS}s`, seconds: SAVAS_SECONDS },
   { id: DEVKONG_ID, label: `${DEVKONG_MODE.label} — ${DEVKONG_SECONDS}s`, seconds: DEVKONG_SECONDS },
@@ -38,7 +39,6 @@ export const RECENT_BUTTONS = [
   { id: KARSI2_ID, label: `${KARSI2_MODE.label} — ${KARSI2_SECONDS}s`, seconds: KARSI2_SECONDS },
   { id: KARSI0_ID, label: `${KARSI0_MODE.label} — ${KARSI0_SECONDS}s`, seconds: KARSI0_SECONDS },
   { id: KARSI_ID, label: `${KARSI_MODE.label} — ${KARSI_SECONDS}s`, seconds: KARSI_SECONDS },
-  { id: DEV15_ID, label: `${DEV15_MODE.label} — ${DEV15_SECONDS}s`, seconds: DEV15_SECONDS },
   { id: DEV14_ID, label: `${DEV14_MODE.label} — ${DEV14_SECONDS}s`, seconds: DEV14_SECONDS },
   { id: DEV13_ID, label: `${DEV13_MODE.label} — ${DEV13_SECONDS}s`, seconds: DEV13_SECONDS },
   { id: DEV12_ID, label: `${DEV12_MODE.label} — ${DEV12_SECONDS}s`, seconds: DEV12_SECONDS },

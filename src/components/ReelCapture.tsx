@@ -16,7 +16,7 @@ import { type New1Id, type New2Id, type New3Id, type New4Id, type New5Id, type N
 import type { LabId } from "../mazeReel";
 import type { FilmId } from "../filmReel";
 import type { DragonId } from "../dragonReel";
-import type { GiantId } from "../devReel";
+import { isDevSmall, zillaHold, zillaIsReady, zillaStart, type GiantId } from "../devReel";
 import type { WarsId } from "../warsReel";
 import type { OrduId } from "../orduReel";
 import type { Rival } from "../karsiReel";
@@ -143,13 +143,15 @@ export function ReelCapture({ soldiers, names, commanders = [], level, pressure,
                   ? { ready: false, done: 0, total: KARE_URLS.length }
                 : magdur
                   ? { ready: false, done: 0, total: MAGDUR_URLS.length }
-                  : { ready: true, done: 0, total: 0 }
+                  : isDevSmall(giant)
+                    ? { ready: false, done: 0, total: 1 }
+                    : { ready: true, done: 0, total: 0 }
   );
 
   useEffect(() => {
-    if (!arena3 && !kurtar && !gecme && !kuyu && !kapi && !magdur && !kare && !devKong && !savas && !kirmizi) return;
+    if (!arena3 && !kurtar && !gecme && !kuyu && !kapi && !magdur && !kare && !devKong && !savas && !kirmizi && !isDevSmall(giant)) return;
     let stop = false;
-    const urls = arena3 ? [...ARENA3_HERO_URLS, ARENA3_ARENA_URL] : kurtar ? KURTAR_URLS : gecme ? GECME_URLS : kuyu ? KUYU_URLS : devKong ? DEVKONG_URLS : savas ? SAVAS_URLS : kirmizi ? KIRMIZI_URLS : kare ? KARE_URLS : magdur ? MAGDUR_URLS : KAPI_URLS;
+    const urls = arena3 ? [...ARENA3_HERO_URLS, ARENA3_ARENA_URL] : kurtar ? KURTAR_URLS : gecme ? GECME_URLS : kuyu ? KUYU_URLS : devKong ? DEVKONG_URLS : savas ? SAVAS_URLS : kirmizi ? KIRMIZI_URLS : kare ? KARE_URLS : magdur ? MAGDUR_URLS : isDevSmall(giant) ? ["/models/godzilla.glb"] : KAPI_URLS;
     void preloadGlbs(urls, (done, total) => {
       if (!stop) setAssets({ ready: false, done, total });
     }).then(() => {
@@ -158,7 +160,7 @@ export function ReelCapture({ soldiers, names, commanders = [], level, pressure,
     return () => {
       stop = true;
     };
-  }, [arena3, kurtar, gecme, kuyu, kapi, magdur, kare, devKong, savas, kirmizi]);
+  }, [arena3, kurtar, gecme, kuyu, kapi, magdur, kare, devKong, savas, kirmizi, giant]);
 
   useEffect(() => {
     if (!elf) return;
@@ -224,6 +226,19 @@ export function ReelCapture({ soldiers, names, commanders = [], level, pressure,
         else if (magdur) await magdurWhenReady();
         else await kapiWhenReady();
       }
+      if (isDevSmall(giant)) {
+        const loadStart = performance.now();
+        while (!zillaIsReady() && performance.now() - loadStart < 50000) {
+          await wait(80);
+          if (stop) return;
+        }
+        if (!zillaIsReady()) {
+          setErr("Sahne hazırlanamadı. İptal deyip tekrar dene.");
+          setPhase("err");
+          return;
+        }
+        zillaHold();
+      }
       if (elf) {
         const loadStart = performance.now();
         while (!elfIsReady() && performance.now() - loadStart < 40000) {
@@ -249,7 +264,7 @@ export function ReelCapture({ soldiers, names, commanders = [], level, pressure,
         if (stop) return;
         const heavy = isMix9(mix);
         const bits = heavy ? 2_500_000 : xxx && xxxHiRes(xxx) ? 24_000_000 : 8_000_000;
-        const recorded = await recordCanvas(canvas, clip, reelSfxStream(), bits, heavy, kurtar ? kurtarStart : gecme ? gecmeStart : kuyu ? kuyuStart : devKong ? devKongStart : savas ? savasStart : kirmizi ? kirmiziStart : kare ? kareStart : magdur ? magdurStart : kapi ? kapiStart : elf ? elfStartPlay : undefined);
+        const recorded = await recordCanvas(canvas, clip, reelSfxStream(), bits, heavy, isDevSmall(giant) ? zillaStart : kurtar ? kurtarStart : gecme ? gecmeStart : kuyu ? kuyuStart : devKong ? devKongStart : savas ? savasStart : kirmizi ? kirmiziStart : kare ? kareStart : magdur ? magdurStart : kapi ? kapiStart : elf ? elfStartPlay : undefined);
         if (stop) return;
         setBlob(recorded);
         setPreview(URL.createObjectURL(recorded));

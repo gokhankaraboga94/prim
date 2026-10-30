@@ -3,7 +3,7 @@ import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { REEL_HOLD } from "../../recordCanvas";
-import { devKick, zillaPlayback, type KickModel } from "../../devReel";
+import { devKick, zillaMarkReady, zillaPlayback, zillaReset, zillaT, type KickModel } from "../../devReel";
 import { simplifySkinned } from "../../knightSoldier";
 import { dropGroundSlab } from "../../groundSlab";
 
@@ -247,6 +247,7 @@ export function GodzillaRig() {
   useEffect(() => {
     const loader = new GLTFLoader();
     let drop = false;
+    zillaReset();
     loader.load("/models/godzilla.glb", (gltf) => {
       const root = host.current;
       if (drop || !root) return;
@@ -276,6 +277,11 @@ export function GodzillaRig() {
       actions.current = next;
       shown.current = "Walk";
       root.add(model);
+      zillaMarkReady();
+    }, undefined, () => {
+      if (drop) return;
+      console.warn("godzilla yuklenemedi");
+      zillaMarkReady();
     });
     return () => {
       drop = true;
@@ -294,11 +300,11 @@ export function GodzillaRig() {
       root.clear();
     };
   }, []);
-  useFrame(({ clock }) => {
+  useFrame(() => {
     const mix = mixer.current;
     const bag = actions.current;
     if (!mix) return;
-    const play = zillaPlayback(Math.max(0, clock.elapsedTime - REEL_HOLD));
+    const play = zillaPlayback(zillaT());
     const action = bag[play.name];
     if (!action) return;
     if (shown.current !== play.name) {

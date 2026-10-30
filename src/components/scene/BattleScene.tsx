@@ -60,7 +60,7 @@ import { DuelBattle, DuelCam, HulkKongBattle } from "./DuelBattle";
 import { isBout2, type Bout2Id, type BoutId } from "../../boutReel";
 import { KAYIT_FIELD, sampleKayitCam, type KayitId } from "../../kayitReel";
 import { Dragon } from "./Dragon";
-import { DEV2_ID, DEV2_N, DEV_N, isDev6, isDev7, isDev8, isDev9, isDev10, isKicker, kickModel, isDevFast, isDevSmall, isDevAll, isDevBig, isDevDread, isDevSword, isDevs, isSnake, sampleDevCam, type GiantId } from "../../devReel";
+import { DEV2_ID, DEV2_N, DEV_N, isDev6, isDev7, isDev8, isDev9, isDev10, isKicker, kickModel, isDevFast, isDevSmall, isDevAll, isDevBig, isDevDread, isDevSword, isDevs, isSnake, sampleDevCam, zillaT, type GiantId } from "../../devReel";
 import { Maze } from "./Maze";
 import { FilmFoes } from "./FilmFoes";
 import { DevHealthBar, Giant } from "./Giant";
@@ -229,7 +229,7 @@ function CinematicCam({
     const persp = perspCam.current;
     if (!persp) return;
     const aspect = size.width / Math.max(1, size.height);
-    const recT = Math.max(0, clock.elapsedTime - REEL_HOLD);
+    const recT = isDevSmall(giant) ? zillaT() : Math.max(0, clock.elapsedTime - REEL_HOLD);
     const { cmd, turn, pullStart } = reelBeats(duration, skipCommander);
 
     const form = armyFrame(soldiers, commanders, Boolean(kayit) || Boolean(xxx && xxxSquare(xxx)));

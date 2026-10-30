@@ -16,7 +16,7 @@ import { NEW6_ARCHERS, NEW62_ARCHERS, new1FriendAt, new2FriendAt, new2VisualFrie
 import { labFriendAt, labRosterIds } from "../../mazeReel";
 import { FILM_DOWN, filmFriendAt, filmRoster } from "../../filmReel";
 import { dragonFriendAt, dragonIsArcher } from "../../dragonReel";
-import { DEV2_N, DEV_N, devFriendAt, devIsArcher, devIsSpear, devNameCovered, devSnakeStriking } from "../../devReel";
+import { DEV2_N, DEV_N, devFriendAt, devIsArcher, devIsSpear, devNameCovered, devSnakeStriking, zillaT } from "../../devReel";
 import { buildKnightSoldier } from "../../knightSoldier";
 import { sfxArrowLoose, sfxBowDraw, sfxVolleyPeak } from "../../reelSfx";
 import { raidCount, sallyHunting, sallyLiveIndex, sallyLocal, sallyRaiderAt, swordArmPose, swordStyleAt, swordSwingU } from "../../siegeEvent";
@@ -1195,7 +1195,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
 
   function poseSoldier(soldier: number, t: number) {
     if (giant) {
-      devFriendAt(soldier, layout.rest.length, t - REEL_HOLD, vsPose, giantBig, giantSword, giantSnake || giantDevs, giantDevs, giantKick, giantFast, giantSmall);
+      devFriendAt(soldier, layout.rest.length, giantSmall ? zillaT() : t - REEL_HOLD, vsPose, giantBig, giantSword, giantSnake || giantDevs, giantDevs, giantKick, giantFast, giantSmall);
       pos.set(vsPose.x, vsPose.y, vsPose.z);
       return;
     }
@@ -1344,7 +1344,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
 
   function placeBodies(t: number, cam?: THREE.Camera) {
     const { scale } = form;
-    const recT = t - REEL_HOLD;
+    const recT = giantSmall ? zillaT() : t - REEL_HOLD;
     const huntIds = roster ? (rosterIds?.length ? rosterIds : rosterSoldierIds(names, Math.max(visible, names.length, Math.floor(count)))) : [];
     const beat = roster ? rosterBeat(roster, recT, duration, huntIds) : null;
     const liveIds = beat && beat.id === "pack" ? beat.ids : null;
@@ -2172,7 +2172,10 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
         }
       }
     }
-    if (t >= nextShot.current && shots.current.length < cap) {
+    if (giantSmall && zillaT() <= 0) {
+      shots.current.length = 0;
+      if (arrows.current) arrows.current.count = 0;
+    } else if (t >= nextShot.current && shots.current.length < cap) {
       const pair = visible > 6 && shots.current.length === 0 && (hunt || Math.random() < 0.38);
       const burst = volley?.active
         ? volley.burst

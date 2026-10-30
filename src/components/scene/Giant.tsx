@@ -6,7 +6,7 @@ import { formatCount } from "../../game";
 import { REEL_HOLD } from "../../recordCanvas";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
-import { devAlive, devClubHit, devGiantAt, devGiantPose, devKick, devMaceSwing, devSize, devSnakeBite, devSwordPose, devTailLash, devTroopHit, devTroopSlot, devWaitArrow, TROOP_N, TROOP_SCALE, type KickModel } from "../../devReel";
+import { devAlive, devClubHit, devGiantAt, devGiantPose, devKick, devMaceSwing, devSize, devSnakeBite, devSwordPose, devTailLash, devTroopHit, devTroopSlot, devWaitArrow, zillaIsReady, zillaT, TROOP_N, TROOP_SCALE, type KickModel } from "../../devReel";
 import { KongModel } from "./Kong";
 import { DemonModel } from "./Demon";
 import { GodzillaRig, HulkModel } from "./Hulk";
@@ -111,7 +111,7 @@ const HEAD_BAR = 2.5;
 function HeadHp({ soldiers, kick = false, fast = false, small = false }: { soldiers: number; kick?: boolean; fast?: boolean; small?: boolean }) {
   const fill = useRef<THREE.Mesh>(null);
   useFrame(({ clock }) => {
-    const alive = devAlive(Math.max(0, clock.elapsedTime - REEL_HOLD), soldiers, true, !kick, false, false, kick, fast, small);
+    const alive = devAlive(small ? zillaT() : Math.max(0, clock.elapsedTime - REEL_HOLD), soldiers, true, !kick, false, false, kick, fast, small);
     const u = Math.max(0, Math.min(1, alive / Math.max(1, soldiers)));
     const mesh = fill.current;
     if (!mesh) return;
@@ -678,7 +678,7 @@ function GiantBody({ soldiers, big, sword, dread, flesh = false, ape = false, de
   const eye = useMemo(() => new THREE.MeshStandardMaterial({ color: "#ff3a18", emissive: "#ff1a08", emissiveIntensity: 2.4, roughness: 0.28 }), []);
   const horn = useMemo(() => new THREE.MeshStandardMaterial({ color: "#1a1816", metalness: 0.45, roughness: 0.55 }), []);
   useFrame(({ clock }) => {
-    const t = Math.max(0, clock.elapsedTime - REEL_HOLD);
+    const t = small ? zillaT() : Math.max(0, clock.elapsedTime - REEL_HOLD);
     const g = devGiantPose(t, small, soldiers);
     if (hulk) {
       const kick = kickModel === "godzilla" ? { lunge: 0 } : devKick(t, soldiers, fast);
@@ -890,9 +890,9 @@ function ArrowVolley({ big, snake = false, devs = false, soldiers = 0, small = f
   const lastHit = useRef(new Float32Array(ARROWS));
   useFrame(({ clock }) => {
     if (!mesh.current) return;
-    const t = Math.max(0, clock.elapsedTime - REEL_HOLD);
+    const t = small ? zillaT() : Math.max(0, clock.elapsedTime - REEL_HOLD);
     const g = devGiantPose(t, small, soldiers);
-    const shooting = small ? Math.ceil((ARROWS * devAlive(t, soldiers, true, false, false, false, true, true, true)) / Math.max(1, soldiers)) : ARROWS;
+    const shooting = small && zillaIsReady() ? Math.ceil((ARROWS * devAlive(t, soldiers, true, false, false, false, true, true, true)) / Math.max(1, soldiers)) : small ? 0 : ARROWS;
     const cy = Math.cos(g.yaw);
     const sy = Math.sin(g.yaw);
     const nArrow = devs ? 36 : ARROWS;
@@ -1328,7 +1328,7 @@ function DevHealthPlate({ soldiers, big, sword, snake, devs, kick, fast, small }
     return map;
   }, []);
   useFrame(({ clock }) => {
-    const alive = devAlive(Math.max(0, clock.elapsedTime - REEL_HOLD), soldiers, big, sword, snake, devs, kick, fast, small);
+    const alive = devAlive(small ? zillaT() : Math.max(0, clock.elapsedTime - REEL_HOLD), soldiers, big, sword, snake, devs, kick, fast, small);
     const canvas = tex.image as HTMLCanvasElement;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;

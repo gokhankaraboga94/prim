@@ -182,7 +182,7 @@ export const DEV11_SECONDS = DEV_SECONDS;
 export const DEV12_SECONDS = DEV_SECONDS;
 export const DEV13_SECONDS = DEV_SECONDS;
 export const DEV14_SECONDS = 20;
-export const DEV15_SECONDS = DEV14_SECONDS;
+export const DEV15_SECONDS = 36;
 export const SNAKE_SECONDS = DEV_SECONDS;
 export const DEVS_SECONDS = DEV_SECONDS;
 export const DEV_N = 300;
@@ -356,6 +356,62 @@ const Z_TAIL = 2.7333;
 const Z_WALK = 1.15;
 const Z_HIT = 0.55;
 const Z_TAIL_HIT = 0.95;
+/** Last swing still lands, and the fling finishes, inside DEV15_SECONDS. */
+const ZILLA_LAST = 30;
+const TAIL_REACH = 2.2;
+/** Tail tip and mid, in the half-size giant's local frame. The strike crosses -X to +X out front. */
+const TAIL_SWEEP: { t: number; tip: [number, number, number]; mid: [number, number, number] }[] = [
+  { t: 0.85, tip: [-6.78, 3.52, 5.68], mid: [-3.74, 1.87, 5.41] },
+  { t: 0.95, tip: [-3.42, 5.25, 8.57], mid: [-1.71, 2.72, 6.94] },
+  { t: 1.05, tip: [2.44, 5.17, 8.82], mid: [1.64, 2.55, 6.7] },
+  { t: 1.15, tip: [6.66, 3.6, 4.89], mid: [3.96, 1.66, 3.9] },
+];
+const TAIL_REST: [number, number, number][] = [
+  [-1.16, 0.59, -5.11],
+  [-0.66, 0.23, -1.7],
+  [0, 2.7, 1.73],
+];
+
+let zillaReady = false;
+let zillaPlayAt = 0;
+const zillaWaiters: (() => void)[] = [];
+
+export function zillaReset() {
+  zillaReady = false;
+  zillaPlayAt = 0;
+}
+
+export function zillaMarkReady() {
+  if (zillaReady) return;
+  zillaReady = true;
+  const pending = zillaWaiters.splice(0);
+  for (const fn of pending) fn();
+}
+
+export function zillaIsReady() {
+  return zillaReady;
+}
+
+export function zillaWhenReady() {
+  if (zillaReady) return Promise.resolve();
+  return new Promise<void>((resolve) => {
+    zillaWaiters.push(resolve);
+  });
+}
+
+export function zillaHold() {
+  zillaPlayAt = 0;
+}
+
+export function zillaStart() {
+  zillaPlayAt = performance.now();
+}
+
+/** DEV15 stays on the opening pose until the skeleton is in the scene and the recording starts. */
+export function zillaT() {
+  if (!zillaReady || zillaPlayAt <= 0) return 0;
+  return Math.max(0, (performance.now() - zillaPlayAt) / 1000);
+}
 
 type ZClip = "Attack" | "Tail Attack" | "Walk";
 type ZBeat = { start: number; dur: number; clip: ZClip; contact: number | null; kind: "hit" | "tail" | "walk" };
@@ -373,9 +429,9 @@ function zillaBeats(): ZBeat[] {
   const out: ZBeat[] = [];
   let t = FIGHT;
   let i = 0;
-  while (t < FAST_LAST - 0.2) {
+  while (t < ZILLA_LAST - 0.2) {
     const step = pattern[i % pattern.length];
-    if (step.kind !== "walk" && t + 0.4 > FAST_LAST) break;
+    if (step.kind !== "walk" && t + 0.4 > ZILLA_LAST) break;
     out.push({
       start: t,
       dur: step.dur,
@@ -414,6 +470,36 @@ function zillaFate(n: number): ZillaFate {
   for (const beat of zillaBeats()) {
     if (beat.contact == null || beat.kind === "walk") continue;
     const g = devGiantPose(beat.contact, true, n);
+    if (beat.kind === "tail") {
+      const cy = Math.cos(g.yaw);
+      const sy = Math.sin(g.yaw);
+      const reach = TAIL_REACH * TAIL_REACH;
+      for (let i = 0; i < n; i++) {
+        if (die[i] < 1e8) continue;
+        const live = ringAt(i, n, beat.contact, true, false, true);
+        let best = 1e9;
+        let when = beat.contact;
+        for (const sample of TAIL_SWEEP) {
+          for (let u = 0; u <= 1; u += 0.5) {
+            const lx = sample.mid[0] + (sample.tip[0] - sample.mid[0]) * u;
+            const lz = sample.mid[2] + (sample.tip[2] - sample.mid[2]) * u;
+            if (lz < 2.4) continue;
+            const wx = g.x + lx * cy + lz * sy;
+            const wz = g.z - lx * sy + lz * cy;
+            const d = (live.x - wx) * (live.x - wx) + (live.z - wz) * (live.z - wz);
+            if (d < best) {
+              best = d;
+              when = beat.start + sample.t;
+            }
+          }
+        }
+        if (best <= reach) {
+          die[i] = when;
+          fling[i] = 1;
+        }
+      }
+      continue;
+    }
     const fx = Math.sin(g.yaw);
     const fz = Math.cos(g.yaw);
     const scored: { i: number; s: number }[] = [];
@@ -424,16 +510,13 @@ function zillaFate(n: number): ZillaFate {
       if (forward < 1.2) continue;
       const side = (live.x - g.x) * Math.cos(g.yaw) - (live.z - g.z) * Math.sin(g.yaw);
       const fresh = wound[i] < 1e8 ? 0 : 1;
-      scored.push({ i, s: (beat.kind === "hit" ? fresh * 800 : 0) + side * side * 0.12 - forward });
+      scored.push({ i, s: fresh * 800 + side * side * 0.12 - forward });
     }
     scored.sort((a, b) => a.s - b.s || a.i - b.i);
-    const batch = Math.min(beat.kind === "tail" ? 10 : 8, scored.length);
+    const batch = Math.min(8, scored.length);
     for (let j = 0; j < batch; j++) {
       const i = scored[j].i;
-      if (beat.kind === "tail") {
-        die[i] = beat.contact;
-        fling[i] = 1;
-      } else if (wound[i] < 1e8) die[i] = beat.contact;
+      if (wound[i] < 1e8) die[i] = beat.contact;
       else wound[i] = beat.contact;
     }
   }
@@ -472,37 +555,53 @@ export function devGiantPose(t: number, still = false, soldiers = 0) {
 
 /** The crowd closes in as it thins, so the outer rings come within reach of the foot. */
 function stillClose(t: number) {
-  const p = Math.max(0, Math.min(1, (t - FIGHT) / (FAST_LAST - FIGHT)));
+  const p = Math.max(0, Math.min(1, (t - FIGHT) / (ZILLA_LAST - FIGHT)));
   return 1 - p * 0.6;
 }
-const STILL_BODY_R = 3.2;
-const STILL_BODY_H = 12.4;
+function zillaTailNow(t: number): [number, number, number][] {
+  const play = zillaPlayback(t);
+  if (play.name !== "Tail Attack") return TAIL_REST;
+  let i = 0;
+  while (i < TAIL_SWEEP.length - 1 && TAIL_SWEEP[i + 1].t < play.time) i++;
+  const a = TAIL_SWEEP[Math.max(0, i)];
+  const b = TAIL_SWEEP[Math.min(TAIL_SWEEP.length - 1, i + 1)];
+  const u = a === b ? 0 : Math.max(0, Math.min(1, (play.time - a.t) / (b.t - a.t)));
+  const mix = (p: [number, number, number], q: [number, number, number]): [number, number, number] => [
+    p[0] + (q[0] - p[0]) * u,
+    p[1] + (q[1] - p[1]) * u,
+    p[2] + (q[2] - p[2]) * u,
+  ];
+  return [mix(a.mid, b.mid), mix(a.tip, b.tip)];
+}
 
-/** Line of sight from the camera to a name tag passes through the half-size giant's body. */
-function stillCovers(g: { x: number; z: number }, sx: number, sy: number, sz: number, cx: number, cy: number, cz: number) {
-  const dx = sx - cx;
-  const dz = sz - cz;
-  const ox = cx - g.x;
-  const oz = cz - g.z;
-  const a = dx * dx + dz * dz;
-  if (a < 1e-6) return false;
-  const b = 2 * (ox * dx + oz * dz);
-  const c = ox * ox + oz * oz - STILL_BODY_R * STILL_BODY_R;
-  const disc = b * b - 4 * a * c;
-  if (disc <= 0) return false;
-  const root = Math.sqrt(disc);
-  const t0 = Math.max(0, (-b - root) / (2 * a));
-  const t1 = Math.min(1, (-b + root) / (2 * a));
-  if (t0 >= t1) return false;
-  const y0 = cy + (sy - cy) * t0;
-  const y1 = cy + (sy - cy) * t1;
-  return Math.min(y0, y1) < STILL_BODY_H && Math.max(y0, y1) > 0;
+/** Names behind the half-size body stay hidden, and the hidden band turns with him and his tail. */
+function zillaNameHidden(sx: number, sz: number, cx: number, cz: number, t: number) {
+  const g = devGiantPose(t, true);
+  const vx = g.x - cx;
+  const vz = g.z - cz;
+  const vlen = Math.hypot(vx, vz) || 1;
+  const fx = vx / vlen;
+  const fz = vz / vlen;
+  const along = (sx - g.x) * fx + (sz - g.z) * fz;
+  const side = Math.abs((sx - g.x) * fz - (sz - g.z) * fx);
+  const facing = Math.sin(g.yaw) * fx + Math.cos(g.yaw) * fz;
+  const half = 3.4 + (1 - Math.abs(facing)) * 6.8;
+  if (along > 0.45 && along < 20 && side < half) return true;
+  const cy = Math.cos(g.yaw);
+  const syaw = Math.sin(g.yaw);
+  const camSoldier = Math.hypot(cx - sx, cz - sz);
+  for (const p of zillaTailNow(t)) {
+    const wx = g.x + p[0] * cy + p[2] * syaw;
+    const wz = g.z - p[0] * syaw + p[2] * cy;
+    if (Math.hypot(sx - wx, sz - wz) < 2.3 && Math.hypot(cx - wx, cz - wz) + 0.35 < camSoldier) return true;
+  }
+  return false;
 }
 
 export function devNameCovered(sx: number, sz: number, cx: number, cz: number, recT: number, big: boolean, wide = false, small = false, sy = 2.4, cy = 40) {
   const k = devSize(small);
   const g = devGiantPose(Math.max(0, recT), small);
-  if (wide && small) return stillCovers(g, sx, sy, sz, cx, cy, cz);
+  if (small) return zillaNameHidden(sx, sz, cx, cz, Math.max(0, recT));
   if (wide) {
     const yaw = g.yaw;
     const vx = sx - cx;
@@ -1426,7 +1525,7 @@ export function devFriendAt(i: number, n: number, recT: number, out: New1Pose, b
 export function sampleDevCam(recT: number, big = false, devs = false, backOff = 1, fast = false, small = false): ShotPose {
   const t = Math.max(0, recT);
   const g = devGiantPose(t, small);
-  const push = lastDeath(fast) - 4;
+  const push = (small ? ZILLA_LAST : lastDeath(fast)) - 4;
   const u = t <= push ? 0 : Math.min(1, (t - push) / (fast ? 4 : 6));
   const e = u * u * (3 - 2 * u);
   const side = (devs ? 36 : big ? 30 : 28) - e * (devs ? 1 : big ? 5 : 6);
