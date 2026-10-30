@@ -1,114 +1,99 @@
 export const KUYULAR_ID = "kuyular" as const;
 export type KuyularId = typeof KUYULAR_ID;
 export const KUYULAR_MODE = { id: KUYULAR_ID, label: "kuyular" } as const;
-export const KUYULAR_SECONDS = 48;
+export const KUYULAR_SECONDS = 42;
 export const KUYULAR_BLUE = "/models/blue.glb";
-export const KUYULAR_RED = "/models/red.glb";
-export const KUYULAR_URLS = [KUYULAR_BLUE, KUYULAR_RED] as const;
-export const BLUE_N = 200;
-export const RED_N = 300;
+export const KUYULAR_URLS = [KUYULAR_BLUE] as const;
+export const BLUE_N = 100;
 
-export type Side = "blue" | "red";
+const INNER_N = 40;
+const OUTER_N = 60;
+const INNER_R = 6.6;
+const OUTER_R = 10.2;
+
+export type Side = "blue";
 export type Seat = { x: number; z: number; yaw: number; live: boolean };
 
-type Well = {
-  t: number;
-  x: number;
-  z: number;
-  n: number;
-  side: Side | "both";
-  stagger: number;
-  reach: number;
-};
+type Well = { t: number; x: number; z: number; soldier: number };
 
-/** Circles on the field. Negative open time means the first hole is already eating at frame 0. */
-const WELLS: Well[] = [
-  { t: -0.22, x: -4.8, z: -2.4, n: 5, side: "blue", stagger: 0, reach: 3.4 },
-  { t: 1.35, x: 6.8, z: 3.4, n: 1, side: "red", stagger: 0, reach: 2.8 },
-  { t: 4.6, x: 5.4, z: -16.5, n: 10, side: "blue", stagger: 0.16, reach: 4.6 },
-  { t: 9.2, x: -7.2, z: 14.5, n: 5, side: "red", stagger: 0, reach: 3.8 },
-  { t: 13.5, x: -5.6, z: -11, n: 1, side: "blue", stagger: 0, reach: 2.8 },
-  { t: 18, x: 7.4, z: 8.2, n: 10, side: "red", stagger: 0.14, reach: 4.6 },
-  { t: 23, x: 1.2, z: -7.2, n: 5, side: "blue", stagger: 0.18, reach: 3.6 },
-  { t: 28, x: -1.4, z: 18, n: 1, side: "red", stagger: 0, reach: 3 },
-  { t: 33, x: 6.2, z: -0.2, n: 10, side: "both", stagger: 0.1, reach: 3.8 },
-  { t: 38.5, x: -2.4, z: -19, n: 5, side: "blue", stagger: 0, reach: 3.6 },
-  { t: 43, x: 2.6, z: 12.5, n: 10, side: "red", stagger: 0, reach: 4.2 },
+/** One soldier per hole. Steps are around the ring from the front; negatives wrap. */
+const PLAN: { t: number; outer: boolean; steps: number }[] = [
+  { t: -0.22, outer: true, steps: -2 },
+  { t: 1.4, outer: false, steps: 20 },
+  { t: 3.7, outer: true, steps: 18 },
+  { t: 6.0, outer: false, steps: -8 },
+  { t: 8.4, outer: true, steps: -22 },
+  { t: 10.8, outer: false, steps: 6 },
+  { t: 13.2, outer: true, steps: 32 },
+  { t: 15.6, outer: false, steps: 2 },
+  { t: 18.0, outer: true, steps: -30 },
+  { t: 20.4, outer: false, steps: 0 },
+  { t: 22.8, outer: true, steps: -12 },
+  { t: 25.2, outer: false, steps: 12 },
+  { t: 27.6, outer: true, steps: -15 },
+  { t: 30.0, outer: false, steps: 8 },
+  { t: 32.4, outer: true, steps: -16 },
+  { t: 34.8, outer: false, steps: 16 },
+  { t: 37.2, outer: true, steps: 12 },
 ];
 
 export type KuyularHit = { open: number; order: number; stagger: number; well: number };
 
-const hits = new Map<string, KuyularHit>();
+const hits = new Map<number, KuyularHit>();
 
 function ease(u: number) {
   const x = Math.max(0, Math.min(1, u));
   return x * x * (3 - 2 * x);
 }
 
-const FRONT = [5, 6, 4, 7, 3, 8, 2, 9, 1, 10, 0, 11];
+function wrap(k: number, n: number) {
+  return ((k % n) + n) % n;
+}
+
+function soldierIndex(outer: boolean, steps: number) {
+  if (outer) return INNER_N + wrap(OUTER_N - 1 + steps, OUTER_N);
+  return wrap(Math.floor(INNER_N / 2) + steps, INNER_N);
+}
 
 export function blueSeat(i: number): Seat {
-  const front = BLUE_N - 1 - i;
-  if (front < 12) return { x: (FRONT[front] - 5.5) * 1.12, z: -0.82, yaw: 0, live: true };
-  const k = front - 12;
-  const col = k % 10;
-  const row = Math.floor(k / 10);
-  return { x: (col - 4.5) * 1.32, z: -2.35 - row * 1.18, yaw: 0, live: false };
+  const outer = i >= INNER_N;
+  const n = outer ? OUTER_N : INNER_N;
+  const k = outer ? i - INNER_N : i;
+  const front = outer ? OUTER_N - 1 : Math.floor(INNER_N / 2);
+  const stagger = outer ? 0 : 0.5;
+  const angle = Math.PI + ((k - front + stagger) * Math.PI * 2) / n;
+  const r = outer ? OUTER_R : INNER_R;
+  const x = Math.sin(angle) * r;
+  const z = Math.cos(angle) * r;
+  return { x, z, yaw: Math.atan2(-x, -z), live: false };
 }
 
-export function redSeat(i: number): Seat {
-  if (i < 12) return { x: (i - 5.5) * 1.12, z: 0.95, yaw: Math.PI, live: true };
-  const k = i - 12;
-  const col = k % 15;
-  const row = Math.floor(k / 15);
-  return { x: (col - 7) * 1.18, z: 2.45 + row * 1.12, yaw: Math.PI, live: false };
-}
-
-function seatOf(side: Side, i: number) {
-  return side === "blue" ? blueSeat(i) : redSeat(i);
-}
+const WELLS: Well[] = PLAN.map((step) => {
+  const soldier = soldierIndex(step.outer, step.steps);
+  const seat = blueSeat(soldier);
+  return { t: step.t, x: seat.x, z: seat.z, soldier };
+});
 
 function buildHits() {
-  const used = new Set<string>();
+  const used = new Set<number>();
   WELLS.forEach((well, wi) => {
-    const pool: { side: Side; i: number; d: number }[] = [];
-    const consider = (side: Side, n: number) => {
-      if (well.side !== "both" && well.side !== side) return;
-      for (let i = 0; i < n; i++) {
-        const s = seatOf(side, i);
-        const dx = s.x - well.x;
-        const dz = s.z - well.z;
-        pool.push({ side, i, d: dx * dx + dz * dz });
-      }
-    };
-    consider("blue", BLUE_N);
-    consider("red", RED_N);
-    pool.sort((a, b) => a.d - b.d);
-    let got = 0;
-    for (const man of pool) {
-      if (got >= well.n) break;
-      if (man.d > well.reach * well.reach) break;
-      const id = `${man.side}:${man.i}`;
-      if (used.has(id)) continue;
-      used.add(id);
-      hits.set(id, { open: well.t, order: got, stagger: well.stagger, well: wi });
-      got += 1;
-    }
+    if (used.has(well.soldier)) return;
+    used.add(well.soldier);
+    hits.set(well.soldier, { open: well.t, order: 0, stagger: 0, well: wi });
   });
 }
 
 buildHits();
 
-export function kuyularHit(side: Side, i: number) {
-  return hits.get(`${side}:${i}`) ?? null;
+export function kuyularHit(_side: Side, i: number) {
+  return hits.get(i) ?? null;
 }
 
 export function kuyularFall(side: Side, i: number, t: number) {
   const hit = kuyularHit(side, i);
   if (!hit) return 0;
-  const at = hit.open + hit.order * hit.stagger;
-  if (t < at) return 0;
-  return ease((t - at) / 0.78);
+  if (t < hit.open) return 0;
+  return ease((t - hit.open) / 0.78);
 }
 
 export function kuyularRoster(names: readonly string[]) {
@@ -119,10 +104,8 @@ export function kuyularRoster(names: readonly string[]) {
   return out;
 }
 
-export function kuyularNamed(i: number) {
-  const seat = blueSeat(i);
-  if (seat.live || seat.z > -4.2) return true;
-  return kuyularHit("blue", i) != null;
+export function kuyularNamed(_i: number) {
+  return true;
 }
 
 export type KuyularCam = { x: number; y: number; z: number; lx: number; ly: number; lz: number; fov: number };
@@ -130,20 +113,22 @@ export type KuyularCam = { x: number; y: number; z: number; lx: number; ly: numb
 function focusWell(t: number) {
   let well = WELLS[0];
   for (const next of WELLS) {
-    if (t + 0.35 >= next.t) well = next;
+    if (next.t <= t + 0.45) well = next;
   }
   return well;
 }
 
 export function kuyularCam(t: number): KuyularCam {
   const well = focusWell(t);
-  if (t < 1) return { x: well.x, y: 13, z: well.z - 1.4, lx: well.x, ly: 0, lz: well.z, fov: 42 };
-  if (t < 3.2) return { x: 0.6, y: 28, z: 0.6, lx: 0.6, ly: 0, lz: 0.4, fov: 50 };
-  return { x: well.x, y: 18, z: well.z - 2, lx: well.x, ly: 0, lz: well.z, fov: 44 };
+  const i = WELLS.indexOf(well);
+  if (t < 1) return { x: well.x * 0.35, y: 14, z: well.z - 6, lx: well.x * 0.5, ly: 0.7, lz: well.z, fov: 50 };
+  if (t < 3.2 || t > 39.2) return { x: 0, y: 36, z: 1.2, lx: 0, ly: 0, lz: 0, fov: 62 };
+  if (i % 2 === 0) return { x: well.x * 0.3, y: 18, z: well.z - 4.2, lx: well.x, ly: 0.2, lz: well.z, fov: 46 };
+  return { x: well.x * 0.15, y: 11, z: well.z - 2.8, lx: well.x, ly: 0.45, lz: well.z, fov: 40 };
 }
 
 export function kuyularWells() {
-  return WELLS.map((well) => ({ ...well, radius: well.n >= 10 ? 2.35 : well.n >= 5 ? 1.6 : 0.9 }));
+  return WELLS.map((well) => ({ ...well, radius: 0.55 }));
 }
 
 let playAt = 0;

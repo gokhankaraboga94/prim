@@ -9,8 +9,6 @@ import { buildNameAtlas } from "../../nameAtlas";
 import {
   BLUE_N,
   KUYULAR_BLUE,
-  KUYULAR_RED,
-  RED_N,
   blueSeat,
   kuyularCam,
   kuyularFall,
@@ -21,7 +19,6 @@ import {
   kuyularRoster,
   kuyularT,
   kuyularWells,
-  redSeat,
   type Side,
 } from "../../kuyularReel";
 
@@ -177,15 +174,13 @@ export function KuyularBattle({ names }: { names: string[] }) {
     const loader = new GLTFLoader();
     void (async () => {
       try {
-        const [blueFile, redFile] = await Promise.all([loadGlb(loader, KUYULAR_BLUE), loadGlb(loader, KUYULAR_RED)]);
+        const blueFile = await loadGlb(loader, KUYULAR_BLUE);
         if (drop || !host.current) return;
-        const bakedBlue = prepare(blueFile, "Attack_Ground_Pound", 0.55);
-        const bakedRed = prepare(redFile, "Sword_Attack", 0.7);
+        const bakedBlue = prepare(blueFile, "Attack_Ground_Pound", 0.08);
         const root = host.current;
         const blues = crowd(root, bakedBlue, "blue", BLUE_N, "Attack_Ground_Pound", blueSeat);
-        const reds = crowd(root, bakedRed, "red", RED_N, "Sword_Attack", redSeat);
-        drops.current = [...blues.drops, ...reds.drops];
-        live.current = [...blues.live, ...reds.live];
+        drops.current = blues.drops;
+        live.current = blues.live;
         const holeMat = new THREE.MeshBasicMaterial({ color: "#070605" });
         const views: WellView[] = kuyularWells().map((well) => {
           const mesh = new THREE.Mesh(new THREE.CircleGeometry(1, 28), holeMat);
@@ -218,14 +213,14 @@ export function KuyularBattle({ names }: { names: string[] }) {
     const t = kuyularT();
     for (const man of live.current) {
       const e = kuyularFall(man.side, man.i, t);
-      const seat = man.side === "blue" ? blueSeat(man.i) : redSeat(man.i);
+      const seat = blueSeat(man.i);
       man.host.position.set(seat.x, -e * 3.1, seat.z);
       man.host.rotation.set(e * 1.2, seat.yaw, 0);
       if (e === 0) man.mix.setTime((t * 0.85 + man.phase) % Math.max(0.05, man.dur));
     }
     for (const body of drops.current) {
       const e = kuyularFall(body.side, body.i, t);
-      const seat = body.side === "blue" ? blueSeat(body.i) : redSeat(body.i);
+      const seat = blueSeat(body.i);
       if (e > 0 && !body.hidden) {
         dummy.position.set(seat.x, -8, seat.z);
         dummy.scale.setScalar(0.001);
@@ -262,7 +257,7 @@ export function KuyularBattle({ names }: { names: string[] }) {
         const dx = seat.x - camera.position.x;
         const dz = seat.z - camera.position.z;
         const dist = Math.hypot(dx, camera.position.y, dz);
-        const w = shown ? Math.min(0.7, 0.22 + dist * 0.012) : 0.001;
+        const w = shown ? Math.min(0.46, 0.18 + dist * 0.006) : 0.001;
         const h = (cell.sy * w) / Math.max(cell.sx, 0.01);
         dummy.position.set(seat.x, y, seat.z);
         dummy.quaternion.copy(camera.quaternion);
