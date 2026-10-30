@@ -125,14 +125,17 @@ export function isDevFast(id: string | null | undefined) {
   return id === DEV14_ID || id === DEV15_ID;
 }
 
-/** DEV15: half-size Godzilla, planted. He uses his own clips; the crowd still closes in. */
+/** DEV15: Godzilla planted, a bit under full size. The crowd still closes in. */
 export function isDevSmall(id: string | null | undefined) {
   return id === DEV15_ID;
 }
 
 export function devSize(small: boolean) {
-  return small ? 0.5 : 1;
+  return small ? 0.72 : 1;
 }
+
+/** Tail samples and the name box were measured at half size. */
+const ZILLA_GROW = 0.72 / 0.5;
 
 export type KickModel = "hulk" | "alien" | "alien-lite" | "red-monster" | "godzilla";
 
@@ -358,7 +361,7 @@ const Z_HIT = 0.55;
 const Z_TAIL_HIT = 0.95;
 /** Last swing still lands, and the fling finishes, inside DEV15_SECONDS. */
 const ZILLA_LAST = 42;
-const TAIL_REACH = 2.2;
+const TAIL_REACH = 2.2 * ZILLA_GROW;
 /** Tail tip and mid, in the half-size giant's local frame. The strike crosses -X to +X out front. */
 const TAIL_SWEEP: { t: number; tip: [number, number, number]; mid: [number, number, number] }[] = [
   { t: 0.85, tip: [-6.78, 3.52, 5.68], mid: [-3.74, 1.87, 5.41] },
@@ -481,8 +484,8 @@ function zillaFate(n: number): ZillaFate {
         let when = beat.contact;
         for (const sample of TAIL_SWEEP) {
           for (let u = 0; u <= 1; u += 0.5) {
-            const lx = sample.mid[0] + (sample.tip[0] - sample.mid[0]) * u;
-            const lz = sample.mid[2] + (sample.tip[2] - sample.mid[2]) * u;
+            const lx = (sample.mid[0] + (sample.tip[0] - sample.mid[0]) * u) * ZILLA_GROW;
+            const lz = (sample.mid[2] + (sample.tip[2] - sample.mid[2]) * u) * ZILLA_GROW;
             if (lz < 2.4) continue;
             const wx = g.x + lx * cy + lz * sy;
             const wz = g.z - lx * sy + lz * cy;
@@ -581,7 +584,7 @@ function zillaJitter(i: number) {
 }
 
 /** Body plus the tail, in the half-size giant's local frame. Big enough to match what the mesh actually covers. */
-const ZILLA_BOX = { minX: -5.4, maxX: 5.4, minY: 0, maxY: 8.8, minZ: -7.2, maxZ: 4.8 };
+const ZILLA_BOX = { minX: -5.4 * ZILLA_GROW, maxX: 5.4 * ZILLA_GROW, minY: 0, maxY: 8.8 * ZILLA_GROW, minZ: -7.2 * ZILLA_GROW, maxZ: 4.8 * ZILLA_GROW };
 
 function rayHitsBox(ax: number, ay: number, az: number, bx: number, by: number, bz: number) {
   const dx = bx - ax;
@@ -624,9 +627,9 @@ function zillaNameHidden(sx: number, sz: number, cx: number, cz: number, cy: num
   if (rayHitsBox(cam.x, cy, cam.z, man.x, 1.15, man.z)) return true;
   const camSoldier = Math.hypot(cx - sx, cz - sz);
   for (const p of zillaTailNow(t)) {
-    const wx = g.x + p[0] * c + p[2] * s;
-    const wz = g.z - p[0] * s + p[2] * c;
-    if (Math.hypot(sx - wx, sz - wz) < 2.6 && Math.hypot(cx - wx, cz - wz) + 0.3 < camSoldier) return true;
+    const wx = g.x + p[0] * ZILLA_GROW * c + p[2] * ZILLA_GROW * s;
+    const wz = g.z - p[0] * ZILLA_GROW * s + p[2] * ZILLA_GROW * c;
+    if (Math.hypot(sx - wx, sz - wz) < 2.6 * ZILLA_GROW && Math.hypot(cx - wx, cz - wz) + 0.3 < camSoldier) return true;
   }
   return false;
 }
@@ -839,7 +842,7 @@ function ringAt(i: number, n: number, t: number, big = false, snake = false, sma
     return { x, z, ry: Math.atan2(ax - x, az - z), ang, g, archer };
   }
   const rad = small
-    ? archer ? 7.4 + (10.6 + ring * 2.05) * stillClose(t) : 7.4 + ring * 1.9 * stillClose(t)
+    ? archer ? 9.6 + (10.6 + ring * 2.05) * stillClose(t) : 9.6 + ring * 1.9 * stillClose(t)
     : archer ? (big ? 30 + ring * 2.05 : 20 + ring * 1.7) : big ? 13.8 + ring * 1.9 : 8.2 + ring * 1.45;
   const x = g.x + Math.sin(ang) * rad;
   const z = g.z + Math.cos(ang) * rad;
