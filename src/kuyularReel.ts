@@ -23,17 +23,17 @@ type Well = {
 
 /** Circles on the field. Negative open time means the first hole is already eating at frame 0. */
 const WELLS: Well[] = [
-  { t: -0.22, x: 0.2, z: -0.9, n: 5, side: "blue", stagger: 0, reach: 2.4 },
-  { t: 1.35, x: 0.4, z: 1.15, n: 1, side: "red", stagger: 0, reach: 2.2 },
-  { t: 4.6, x: -4.2, z: -3.4, n: 10, side: "blue", stagger: 0.16, reach: 4.2 },
-  { t: 9.2, x: 4.6, z: 3.8, n: 5, side: "red", stagger: 0, reach: 3.2 },
-  { t: 13.5, x: 0.1, z: -6.2, n: 1, side: "blue", stagger: 0, reach: 2.4 },
-  { t: 18, x: -3.4, z: 6.4, n: 10, side: "red", stagger: 0.14, reach: 4.4 },
-  { t: 23, x: 3.8, z: -4.8, n: 5, side: "blue", stagger: 0.18, reach: 3.4 },
-  { t: 28, x: 0, z: 8.2, n: 1, side: "red", stagger: 0, reach: 2.6 },
-  { t: 33, x: -1.2, z: 0.15, n: 10, side: "both", stagger: 0.1, reach: 3.6 },
-  { t: 38.5, x: 2.2, z: -8.4, n: 5, side: "blue", stagger: 0, reach: 3.2 },
-  { t: 43, x: -0.4, z: 2.4, n: 10, side: "red", stagger: 0, reach: 4 },
+  { t: -0.22, x: -4.8, z: -2.4, n: 5, side: "blue", stagger: 0, reach: 3.4 },
+  { t: 1.35, x: 6.8, z: 3.4, n: 1, side: "red", stagger: 0, reach: 2.8 },
+  { t: 4.6, x: 5.4, z: -16.5, n: 10, side: "blue", stagger: 0.16, reach: 4.6 },
+  { t: 9.2, x: -7.2, z: 14.5, n: 5, side: "red", stagger: 0, reach: 3.8 },
+  { t: 13.5, x: -5.6, z: -11, n: 1, side: "blue", stagger: 0, reach: 2.8 },
+  { t: 18, x: 7.4, z: 8.2, n: 10, side: "red", stagger: 0.14, reach: 4.6 },
+  { t: 23, x: 1.2, z: -7.2, n: 5, side: "blue", stagger: 0.18, reach: 3.6 },
+  { t: 28, x: -1.4, z: 18, n: 1, side: "red", stagger: 0, reach: 3 },
+  { t: 33, x: 6.2, z: -0.2, n: 10, side: "both", stagger: 0.1, reach: 3.8 },
+  { t: 38.5, x: -2.4, z: -19, n: 5, side: "blue", stagger: 0, reach: 3.6 },
+  { t: 43, x: 2.6, z: 12.5, n: 10, side: "red", stagger: 0, reach: 4.2 },
 ];
 
 export type KuyularHit = { open: number; order: number; stagger: number; well: number };
@@ -137,9 +137,9 @@ function focusWell(t: number) {
 
 export function kuyularCam(t: number): KuyularCam {
   const well = focusWell(t);
-  if (t < 1) return { x: well.x, y: 2.8, z: well.z - 5.6, lx: well.x, ly: 0.35, lz: well.z, fov: 40 };
-  if (t < 3.2) return { x: 0, y: 7.4, z: -13.5, lx: 0, ly: 0.4, lz: 0.2, fov: 48 };
-  return { x: well.x * 0.35, y: 6.6, z: well.z - 11.5, lx: well.x, ly: 0.3, lz: well.z, fov: 46 };
+  if (t < 1) return { x: well.x, y: 13, z: well.z - 1.4, lx: well.x, ly: 0, lz: well.z, fov: 42 };
+  if (t < 3.2) return { x: 0.6, y: 28, z: 0.6, lx: 0.6, ly: 0, lz: 0.4, fov: 50 };
+  return { x: well.x, y: 18, z: well.z - 2, lx: well.x, ly: 0, lz: well.z, fov: 44 };
 }
 
 export function kuyularWells() {

@@ -1708,7 +1708,7 @@ export function AdminPage() {
           )}
           {isKuyular(reelShot) && (
             <p className="muted">
-              48 saniye. Ekranda kanca yazısı yok. 200 mavi, üstlerinde son katılanların isimleri. Karşıda 300 kırmızı, kılıç sallıyorlar. Haritada daire kuyular açılıyor. Kimi tek kişi, kimi 5, kimi 10 yutuyor. Hem mavi hem kırmızı düşüyor. İlk karede ortadaki kuyu 5 maviyi yutuyor.
+              48 saniye. Ekranda kanca yazısı yok. Kamera tepeden. 200 mavi, üstlerinde son katılanların isimleri. Karşıda 300 kırmızı, kılıç sallıyorlar. Daire kuyular birbirinden uzak yerlerde açılıyor. Kimi tek kişi, kimi 5, kimi 10 yutuyor. Hem mavi hem kırmızı düşüyor. İlk karede soldaki kuyu 5 maviyi yutuyor.
             </p>
           )}
           {isDovus(reelShot) && (
