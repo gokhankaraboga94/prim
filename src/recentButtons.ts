@@ -13,12 +13,14 @@ import { MAGDUR_ID, MAGDUR_MODE, MAGDUR_SECONDS } from "./magdurReel";
 import { KARE_ID, KARE_MODE, KARE_SECONDS } from "./kareReel";
 import { DEVKONG_ID, DEVKONG_MODE, DEVKONG_SECONDS } from "./devKongReel";
 import { SAVAS_ID, SAVAS_MODE, SAVAS_SECONDS } from "./savasReel";
+import { KIRMIZI_ID, KIRMIZI_MODE, KIRMIZI_SECONDS } from "./kirmiziReel";
 import { DRAGON_ID, DRAGON_MODE, DRAGON_SECONDS } from "./dragonReel";
 import { ELF_ID, ELF_MODE, ELF_SECONDS } from "./elfReel";
 export const RECENT_BUTTON_LIMIT = 20;
 
 /** Yeniden eskiye. Bir buton güncellenirse en üste alınır, en alttaki 20'nin dışına düşer. */
 export const RECENT_BUTTONS = [
+  { id: KIRMIZI_ID, label: `${KIRMIZI_MODE.label} — ${KIRMIZI_SECONDS}s`, seconds: KIRMIZI_SECONDS },
   { id: SAVAS_ID, label: `${SAVAS_MODE.label} — ${SAVAS_SECONDS}s`, seconds: SAVAS_SECONDS },
   { id: DEVKONG_ID, label: `${DEVKONG_MODE.label} — ${DEVKONG_SECONDS}s`, seconds: DEVKONG_SECONDS },
   { id: KARE_ID, label: `${KARE_MODE.label} — ${KARE_SECONDS}s`, seconds: KARE_SECONDS },
