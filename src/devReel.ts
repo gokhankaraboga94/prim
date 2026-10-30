@@ -1570,7 +1570,7 @@ export function sampleDevCam(recT: number, big = false, devs = false, backOff = 
   const lx = g.x;
   const ly = (devs ? 4 : big ? 9.2 : 5.4) * devSize(small);
   const lz = g.z + 2;
-  const pull = (backOff > 0 ? backOff : 1) * (small ? 0.72 : 1);
+  const pull = (backOff > 0 ? backOff : 1) * (small ? 1.05 : 1);
   return {
     x: lx + (g.x + side - lx) * pull,
     y: ly + (height - ly) * pull,
