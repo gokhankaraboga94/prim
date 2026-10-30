@@ -1616,7 +1616,7 @@ export function AdminPage() {
           )}
           {isDevKong(reelShot) && (
             <p className="muted">
-              52 saniye. Ekranda yazı yok. Son katılan 200 mavi asker. King Kong karşıdan yürüyerek gelir, mızrak ve ok yer, canı iner ama ölmez. Tepeden plan yok. İlk saniye gövdesi merceğe girer. 1. saniyede kesme: onun gözünden minik askerler. Sonra asker gözü, asker omzu, sıra boyu, Kong omzu ve yine Kong gözü.
+              52 saniye. Ekranda yazı yok. Son katılan 200 mavi asker. Godzilla karşıdan koşarak gelir, yürür, saldırır ve kuyruk sallar. Mızrak ve ok yer, canı iner ama ölmez. Tepeden plan yok. İlk saniye gövdesi merceğe koşar. 1. saniyede kesme: askerin gözünden saldırı. Sonra asker omzu, sıra boyu, onun omzu ve onun gözü. İsimler 4. saniyeden önce yok.
             </p>
           )}
           {isKare(reelShot) && (

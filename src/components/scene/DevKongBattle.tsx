@@ -4,7 +4,6 @@ import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import * as THREE from "three";
 import { preloadedGlb } from "../../arenaPreload";
-import { dropGroundSlab } from "../../groundSlab";
 import { buildNameAtlas } from "../../nameAtlas";
 import { buildKnightSoldier } from "../../knightSoldier";
 import {
@@ -15,6 +14,7 @@ import {
   devFriend,
   devKongBolt,
   devKongCam,
+  devKongClip,
   devKongHideHp,
   devKongHp,
   devKongMarkReady,
@@ -23,6 +23,7 @@ import {
   devKongRoster,
   devKongT,
   devKongZ,
+  type DevKongClipName,
   type DevKongShot,
 } from "../../devKongReel";
 
@@ -75,11 +76,6 @@ function fitKong(root: THREE.Object3D) {
     -((box.min.z + box.max.z) / 2) * fit,
   );
   toLambert(root);
-  root.traverse((obj) => {
-    const mesh = obj as THREE.Mesh;
-    if (!mesh.isMesh) return;
-    mesh.geometry = dropGroundSlab(mesh.geometry);
-  });
   seatFeet(root);
 }
 
@@ -102,7 +98,7 @@ const dir = new THREE.Vector3();
 const liveTint = new THREE.Color("#ffffff");
 
 export function DevKongBattle({ names }: { names: string[] }) {
-  const [pack, setPack] = useState<{ body: THREE.BufferGeometry; helm: THREE.BufferGeometry; kong: THREE.Group } | null>(null);
+  const [pack, setPack] = useState<{ body: THREE.BufferGeometry; helm: THREE.BufferGeometry; kong: THREE.Group; clips: THREE.AnimationClip[] } | null>(null);
   const roster = useMemo(() => devKongRoster(names), [names]);
   const bodies = useRef<THREE.InstancedMesh>(null);
   const helms = useRef<THREE.InstancedMesh>(null);
@@ -111,6 +107,9 @@ export function DevKongBattle({ names }: { names: string[] }) {
   const kongRef = useRef<THREE.Group>(null);
   const bar = useRef<THREE.Mesh>(null);
   const plate = useRef<THREE.Group>(null);
+  const mixer = useRef<THREE.AnimationMixer | null>(null);
+  const actions = useRef<Partial<Record<DevKongClipName, THREE.AnimationAction>>>({});
+  const shown = useRef("");
   const spearMesh = useMemo(() => boltGeo(true), []);
   const arrowMesh = useMemo(() => boltGeo(false), []);
   const named = useMemo(
@@ -139,7 +138,7 @@ export function DevKongBattle({ names }: { names: string[] }) {
         const knight = buildKnightSoldier(knightGltf.scene);
         fitKong(kongGltf.scene);
         if (drop) return;
-        setPack({ body: knight.body, helm: knight.helm, kong: kongGltf.scene });
+        setPack({ body: knight.body, helm: knight.helm, kong: kongGltf.scene, clips: kongGltf.animations });
       } catch (err) {
         console.warn("dev-kong", err);
       } finally {
@@ -153,11 +152,31 @@ export function DevKongBattle({ names }: { names: string[] }) {
   }, []);
 
   useEffect(() => {
+    if (!pack) return;
+    const mix = new THREE.AnimationMixer(pack.kong);
+    const next: Partial<Record<DevKongClipName, THREE.AnimationAction>> = {};
+    for (const clip of pack.clips) {
+      if (clip.name !== "Run" && clip.name !== "Walk" && clip.name !== "Attack" && clip.name !== "Tail Attack") continue;
+      const action = mix.clipAction(clip);
+      action.loop = THREE.LoopRepeat;
+      next[clip.name] = action;
+    }
+    next.Run?.play();
+    mixer.current = mix;
+    actions.current = next;
+    shown.current = "Run";
+    return () => {
+      mix.stopAllAction();
+      mixer.current = null;
+    };
+  }, [pack]);
+
+  useEffect(() => {
     for (const sheet of atlas.sheets) sheet.material.depthTest = true;
     return () => atlas.dispose();
   }, [atlas]);
 
-  useFrame(({ camera }) => {
+  useFrame(({ camera }, delta) => {
     if (!pack) return;
     const t = devKongT();
     const body = bodies.current;
@@ -184,6 +203,16 @@ export function DevKongBattle({ names }: { names: string[] }) {
       host.position.set(0, 0, devKongZ(t));
       host.rotation.set(0, Math.PI, 0);
     }
+    const mix = mixer.current;
+    const want = devKongClip(t);
+    const bag = actions.current;
+    if (mix && bag[want] && shown.current !== want) {
+      bag[want].reset().fadeIn(0.18).play();
+      const prev = bag[shown.current as DevKongClipName];
+      prev?.fadeOut(0.18);
+      shown.current = want;
+    }
+    mix?.update(Math.min(delta, 0.05));
     const hp = devKongHp(t);
     const hideHp = devKongHideHp(t);
     if (plate.current) {

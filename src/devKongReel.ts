@@ -4,7 +4,7 @@ export const DEVKONG_MODE = { id: DEVKONG_ID, label: "dev-kong" } as const;
 export const DEVKONG_SECONDS = 52;
 export const DEVKONG_OURS = 200;
 export const DEVKONG_KNIGHT = "/models/knight.glb";
-export const DEVKONG_KONG = "/models/bigfoot.glb";
+export const DEVKONG_KONG = "/models/godzilla.glb";
 export const DEVKONG_URLS = [DEVKONG_KNIGHT, DEVKONG_KONG] as const;
 
 const OPEN_END = 3.7;
@@ -21,12 +21,24 @@ export type DevKongCam = {
   fov: number;
 };
 
+export type DevKongClipName = "Run" | "Walk" | "Attack" | "Tail Attack";
+
 export function devKongZ(t: number) {
-  const base = 36 - Math.min(1, t / 50) * 18;
-  if (t < 1.05) return base - (t / 1.05) * 2.6;
-  const back = Math.min(1, (t - 1.05) / 1.5);
-  const s = back * back * (3 - 2 * back);
-  return base - 2.6 * (1 - s);
+  if (t < 1.05) return 42 - (t / 1.05) * 8;
+  const u = Math.min(1, (t - 1.05) / 48);
+  return 34 - u * 12;
+}
+
+export function devKongClip(t: number): DevKongClipName {
+  if (t < 2.15) return "Run";
+  if (t < OPEN_END) return "Attack";
+  const local = (t - OPEN_END) % BEAT;
+  const beat = Math.floor((t - OPEN_END) / BEAT) % 5;
+  if (beat === 0 && local > 2.4) return "Attack";
+  if (beat === 1 && local > 0.8 && local < 3.8) return "Tail Attack";
+  if (beat === 3 && local > 1.4 && local < 2.8) return "Attack";
+  if (beat === 4 || (beat === 2 && local < 1.4)) return "Run";
+  return "Walk";
 }
 
 export function devKongHp(t: number) {
@@ -91,15 +103,14 @@ export function devKongBolt(volley: Volley, t: number, out: DevKongShot) {
 
 function footCam(t: number): DevKongCam {
   const z0 = devKongZ(0);
-  const u = Math.min(1, t / 1.05);
   return {
-    x: 7.4,
-    y: 6.8,
-    z: z0 - 56,
+    x: 3.4,
+    y: 5.2,
+    z: z0 - 40,
     lx: 0,
-    ly: 7.2,
+    ly: 6.6,
     lz: devKongZ(t),
-    fov: 28 - u,
+    fov: 36,
   };
 }
 
@@ -169,7 +180,7 @@ function kongEye(t: number): DevKongCam {
 
 export function devKongCam(t: number): DevKongCam {
   if (t < 1.05) return footCam(t);
-  if (t < OPEN_END) return kongEye(t);
+  if (t < OPEN_END) return soldierEye(t);
   const kind = Math.floor((t - OPEN_END) / BEAT) % 5;
   if (kind === 0) return soldierEye(t);
   if (kind === 1) return soldierTps(t);
@@ -179,12 +190,11 @@ export function devKongCam(t: number): DevKongCam {
 }
 
 export function devKongNames(t: number) {
-  return t >= 0;
+  return t >= OPEN_END;
 }
 
 export function devKongHideHp(t: number) {
-  if (t < 1.05) return false;
-  if (t < OPEN_END) return true;
+  if (t < OPEN_END) return false;
   return Math.floor((t - OPEN_END) / BEAT) % 5 >= 3;
 }
 
