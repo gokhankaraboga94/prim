@@ -134,10 +134,10 @@ export function devSize(small: boolean) {
   return small ? 0.5 : 1;
 }
 
-export type KickModel = "hulk" | "alien" | "alien-lite" | "red-monster";
+export type KickModel = "hulk" | "alien" | "alien-lite" | "red-monster" | "godzilla";
 
 export function kickModel(id: string | null | undefined): KickModel {
-  return id === DEV14_ID || id === DEV15_ID ? "red-monster" : id === DEV13_ID ? "alien-lite" : id === DEV12_ID ? "alien" : "hulk";
+  return id === DEV15_ID ? "godzilla" : id === DEV14_ID ? "red-monster" : id === DEV13_ID ? "alien-lite" : id === DEV12_ID ? "alien" : "hulk";
 }
 
 export function isDevDread(id: string | null | undefined) {

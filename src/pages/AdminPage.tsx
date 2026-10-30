@@ -1572,7 +1572,7 @@ export function AdminPage() {
             <p className="muted">DEV13 gibi telefona uygun; dev eklenen kırmızı canavar (1,5 MB). Video 20 saniye: askerler 15. saniyeye kadar ölür, her tekme daha çok asker götürür. Tekmelenen askerler 3 kat yükseğe fırlar, dönerek düşer.</p>
           )}
           {isDev15(reelShot) && (
-            <p className="muted">DEV14'ün aynısı; tek fark dev yarı boyda. Askerler deve daha yakın dizilir, kamera da yaklaşır, böylece askerler ekranda daha büyük görünür.</p>
+            <p className="muted">DEV14 ile aynı tekme ve yarı boy. Dev artık Godzilla.</p>
           )}
           {isBout(reelShot) && (
             <p className="muted">52 saniye. DEV9’daki çim. King Kong sadece ekrandan uzak olan sol eliyle yumruk atar, ork baltalarıyla karşılık verir. Vuruşlar seri. İkisinin de üstünde kırmızı can barı var. Kıyasıya dövüşürler, ork düşer.</p>

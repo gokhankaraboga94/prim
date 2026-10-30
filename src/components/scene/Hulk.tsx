@@ -92,7 +92,25 @@ const MONSTER_RIG: KickRig = {
   },
 };
 
-const RIGS: Record<KickModel, KickRig> = { hulk: HULK_RIG, alien: ALIEN_RIG, "alien-lite": ALIEN_LITE_RIG, "red-monster": MONSTER_RIG };
+/** Godzilla stands facing +z. The kicking leg is the +x foot, in front of the body. */
+const GODZILLA_RIG: KickRig = {
+  url: "/models/godzilla.glb",
+  hip: new THREE.Vector3(0.12, 0.3, 0.22),
+  knee: new THREE.Vector3(0.12, 0.15, 0.22),
+  ankle: new THREE.Vector3(0.13, 0.04, 0.24),
+  cell: 0.016,
+  bake: false,
+  leg: (x, y, z) => {
+    if (x < 0.05 || y > 0.34 || z < 0.08) return null;
+    const hip = fade(0.34, 0.24, y) * fade(0.05, 0.1, x);
+    if (hip <= 0) return null;
+    const knee = hip > 0.85 ? fade(0.2, 0.12, y) : 0;
+    const ankle = knee > 0.9 ? fade(0.08, 0.03, y) : 0;
+    return { hip, knee, ankle };
+  },
+};
+
+const RIGS: Record<KickModel, KickRig> = { hulk: HULK_RIG, alien: ALIEN_RIG, "alien-lite": ALIEN_LITE_RIG, "red-monster": MONSTER_RIG, godzilla: GODZILLA_RIG };
 const qHip = new THREE.Quaternion();
 const qKnee = new THREE.Quaternion();
 const qAnkle = new THREE.Quaternion();
