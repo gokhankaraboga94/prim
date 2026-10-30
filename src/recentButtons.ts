@@ -17,12 +17,14 @@ import { KIRMIZI_ID, KIRMIZI_MODE, KIRMIZI_SECONDS } from "./kirmiziReel";
 import { BASKA_ID, BASKA_MODE, BASKA_SECONDS } from "./baskaReel";
 import { ARAGORN_ID, ARAGORN_MODE, ARAGORN_SECONDS } from "./aragornTestReel";
 import { DOVUS_ID, DOVUS_MODE, DOVUS_SECONDS } from "./dovusReel";
+import { KUYULAR_ID, KUYULAR_MODE, KUYULAR_SECONDS } from "./kuyularReel";
 import { DRAGON_ID, DRAGON_MODE, DRAGON_SECONDS } from "./dragonReel";
 import { ELF_ID, ELF_MODE, ELF_SECONDS } from "./elfReel";
 export const RECENT_BUTTON_LIMIT = 20;
 
 /** Yeniden eskiye. Bir buton güncellenirse en üste alınır, en alttaki 20'nin dışına düşer. */
 export const RECENT_BUTTONS = [
+  { id: KUYULAR_ID, label: `${KUYULAR_MODE.label} — ${KUYULAR_SECONDS}s`, seconds: KUYULAR_SECONDS },
   { id: DOVUS_ID, label: `${DOVUS_MODE.label} — ${DOVUS_SECONDS}s`, seconds: DOVUS_SECONDS },
   { id: ARAGORN_ID, label: `${ARAGORN_MODE.label} — ${ARAGORN_SECONDS}s`, seconds: ARAGORN_SECONDS },
   { id: BASKA_ID, label: `${BASKA_MODE.label} — ${BASKA_SECONDS}s`, seconds: BASKA_SECONDS },
