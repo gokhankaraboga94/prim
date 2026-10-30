@@ -989,7 +989,7 @@ function SceneContent({
   return (
     <>
       <color attach="background" args={[kirmizi ? "#c5d0dc" : savas ? "#b7c6d4" : devKong ? "#9eb6cc" : kare ? "#8ea4b8" : magdur ? "#2c3644" : kuyu ? "#1a1614" : gecme ? "#6a5848" : kurtar ? "#3a322a" : loop ? "#2ea2ff" : pit ? "#8ec6f4" : hero ? "#7eb6ee" : kalkan ? "#07080d" : elf ? "#4a3728" : dragon ? "#7f97ad" : film ? "#9eb4c8" : maze ? "#9eb0c4" : slaughter ? "#8f9aa0" : "#7eb6ee"]} />
-      <fog attach="fog" args={kirmizi ? ["#c5d0dc", 12, 42] : savas ? ["#b7c6d4", 55, 160] : devKong ? ["#9eb6cc", 70, 190] : kare ? ["#8ea4b8", 150, 280] : magdur ? ["#2c3644", 18, 52] : kuyu ? ["#1a1614", 5, 16] : gecme ? ["#c4ad96", 14, 46] : kurtar ? ["#6d5e50", 26, 82] : loop ? ["#9ed6ff", 70, 200] : kayit ? ["#9ec8ee", 28000, 70000] : pit ? ["#c5e4f8", 40, 180] : hero ? ["#b9d6f2", 36, 150] : kalkan ? ["#07080d", 24, 72] : elf ? ["#c8b089", 40, 220] : ok ? ["#c5dff2", 140, 820] : wars ? ["#c8c4ba", 180 * warsScale, 780 * warsScale] : ordu ? ["#d5e4f2", orduFog?.near ?? 78, orduFog?.far ?? 420] : dragon ? ["#c5d4e2", 70, 420] : film ? ["#d5e4f2", 80, 460] : giant || bout ? ["#d5e4f2", 90, 520] : maze ? ["#c6d0da", 340, 720] : slaughter ? ["#c4b89a", 240, 980] : defend ? (isDefend3(defend) ? ["#9ec8ee", 1100, 3200] : sortie ? ["#9ec8ee", 600, 2200] : ["#9ec8ee", 1400, 4200]) : field ? ["#9ec8ee", 140, 720] : ["#9ec8ee", 380, 1500]} />
+      <fog attach="fog" args={kirmizi ? ["#c5d0dc", 28, 110] : savas ? ["#b7c6d4", 55, 160] : devKong ? ["#9eb6cc", 70, 190] : kare ? ["#8ea4b8", 150, 280] : magdur ? ["#2c3644", 18, 52] : kuyu ? ["#1a1614", 5, 16] : gecme ? ["#c4ad96", 14, 46] : kurtar ? ["#6d5e50", 26, 82] : loop ? ["#9ed6ff", 70, 200] : kayit ? ["#9ec8ee", 28000, 70000] : pit ? ["#c5e4f8", 40, 180] : hero ? ["#b9d6f2", 36, 150] : kalkan ? ["#07080d", 24, 72] : elf ? ["#c8b089", 40, 220] : ok ? ["#c5dff2", 140, 820] : wars ? ["#c8c4ba", 180 * warsScale, 780 * warsScale] : ordu ? ["#d5e4f2", orduFog?.near ?? 78, orduFog?.far ?? 420] : dragon ? ["#c5d4e2", 70, 420] : film ? ["#d5e4f2", 80, 460] : giant || bout ? ["#d5e4f2", 90, 520] : maze ? ["#c6d0da", 340, 720] : slaughter ? ["#c4b89a", 240, 980] : defend ? (isDefend3(defend) ? ["#9ec8ee", 1100, 3200] : sortie ? ["#9ec8ee", 600, 2200] : ["#9ec8ee", 1400, 4200]) : field ? ["#9ec8ee", 140, 720] : ["#9ec8ee", 380, 1500]} />
       {!maze && !kalkan && !hero && !loop && !kurtar && !gecme && !kuyu && !magdur && !kare && !devKong && !savas && !kirmizi && !pit && !elf && <SkyDome cheap={Boolean(defend) && !isDefend3(defend)} />}
       {!maze && !kalkan && !hero && !loop && !kurtar && !gecme && !kuyu && !magdur && !kare && !devKong && !savas && !kirmizi && !pit && !elf && <SteelSky />}
       {!maze && !kalkan && !hero && !loop && !kurtar && !gecme && !kuyu && !magdur && !kare && !devKong && !savas && !kirmizi && !pit && !elf && <DayLights cinematic={cinematic} slim={Boolean(defend) && !isDefend3(defend)} warm={slaughter || Boolean(dragon)} />}
@@ -1025,7 +1025,7 @@ function SceneContent({
       {kapi && <KapiBattle names={names} level={level} shot={kapi} />}
       {devKong && <DevKongBattle names={names} />}
       {savas && <SavasBattle names={names} />}
-      {kirmizi && <KirmiziBattle />}
+      {kirmizi && <KirmiziBattle names={names} />}
       {kare && <KareBattle names={names} />}
       {magdur && <MagdurBattle names={names} />}
       {gecme && <GecmeBattle />}

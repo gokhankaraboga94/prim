@@ -20,8 +20,8 @@ export const RECENT_BUTTON_LIMIT = 20;
 
 /** Yeniden eskiye. Bir buton güncellenirse en üste alınır, en alttaki 20'nin dışına düşer. */
 export const RECENT_BUTTONS = [
-  { id: DEV15_ID, label: `${DEV15_MODE.label} — ${DEV15_SECONDS}s`, seconds: DEV15_SECONDS },
   { id: KIRMIZI_ID, label: `${KIRMIZI_MODE.label} — ${KIRMIZI_SECONDS}s`, seconds: KIRMIZI_SECONDS },
+  { id: DEV15_ID, label: `${DEV15_MODE.label} — ${DEV15_SECONDS}s`, seconds: DEV15_SECONDS },
   { id: SAVAS_ID, label: `${SAVAS_MODE.label} — ${SAVAS_SECONDS}s`, seconds: SAVAS_SECONDS },
   { id: DEVKONG_ID, label: `${DEVKONG_MODE.label} — ${DEVKONG_SECONDS}s`, seconds: DEVKONG_SECONDS },
   { id: KARE_ID, label: `${KARE_MODE.label} — ${KARE_SECONDS}s`, seconds: KARE_SECONDS },

@@ -1,23 +1,36 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+import { clone as cloneSkinned } from "three/examples/jsm/utils/SkeletonUtils.js";
 import * as THREE from "three";
 import { preloadedGlb } from "../../arenaPreload";
 import { simplifySkinned } from "../../knightSoldier";
+import { buildNameAtlas } from "../../nameAtlas";
 import {
+  BLUE_N,
   KIRMIZI_BLUE,
   KIRMIZI_RED,
+  RED_N,
   kirmiziCam,
-  kirmiziClip,
-  kirmiziHp,
   kirmiziMarkReady,
-  kirmiziPlace,
+  kirmiziNames,
+  kirmiziPose,
   kirmiziReset,
+  kirmiziRoster,
   kirmiziT,
   type KirmiziWho,
 } from "../../kirmiziReel";
 
 type Gltf = Parameters<Parameters<GLTFLoader["load"]>[1]>[0];
+
+type Man = {
+  who: KirmiziWho;
+  i: number;
+  host: THREE.Group;
+  mix: THREE.AnimationMixer;
+  bag: Record<string, THREE.AnimationAction>;
+  shown: string;
+};
 
 function loadGlb(loader: GLTFLoader, url: string) {
   const buf = preloadedGlb(url);
@@ -71,19 +84,49 @@ function fit(root: THREE.Object3D, height: number) {
   );
 }
 
-const HEIGHT = 1.82;
+function spawn(who: KirmiziWho, proto: THREE.Object3D, gltf: Gltf, count: number) {
+  const men: Man[] = [];
+  for (let i = 0; i < count; i++) {
+    const model = i === 0 ? proto : cloneSkinned(proto);
+    const host = new THREE.Group();
+    host.add(model);
+    const mix = new THREE.AnimationMixer(model);
+    const bag: Record<string, THREE.AnimationAction> = {};
+    for (const clip of gltf.animations) {
+      const action = mix.clipAction(clip);
+      action.loop = THREE.LoopOnce;
+      action.clampWhenFinished = true;
+      bag[clip.name] = action;
+    }
+    const first = who === "red" ? "Sword_Attack" : "Attack_Ground_Pound";
+    bag[first]?.reset().play();
+    men.push({ who, i, host, mix, bag, shown: first });
+  }
+  return men;
+}
 
-export function KirmiziBattle() {
-  const [pair, setPair] = useState<{ blue: THREE.Group; red: THREE.Group } | null>(null);
-  const blueRef = useRef<THREE.Group>(null);
-  const redRef = useRef<THREE.Group>(null);
-  const blueBar = useRef<THREE.Mesh>(null);
-  const redBar = useRef<THREE.Mesh>(null);
-  const bluePlate = useRef<THREE.Group>(null);
-  const redPlate = useRef<THREE.Group>(null);
-  const mixers = useRef<Partial<Record<KirmiziWho, THREE.AnimationMixer>>>({});
-  const actions = useRef<Partial<Record<KirmiziWho, Record<string, THREE.AnimationAction>>>>({});
-  const shown = useRef<Partial<Record<KirmiziWho, string>>>({});
+const HEIGHT = 1.82;
+const dummy = new THREE.Object3D();
+
+export function KirmiziBattle({ names }: { names: string[] }) {
+  const host = useRef<THREE.Group>(null);
+  const men = useRef<Man[]>([]);
+  const roster = useMemo(() => kirmiziRoster(names), [names]);
+  const named = useMemo(() => roster.map((name, i) => ({ name, i })).filter((row) => row.name), [roster]);
+  const atlas = useMemo(
+    () =>
+      buildNameAtlas(
+        named.map((row) => ({ text: row.name, commander: false, plain: false, fill: "#111111", frame: true, plate: "rgba(255,255,255,0.58)" })),
+        true,
+        false,
+      ),
+    [named],
+  );
+
+  useEffect(() => {
+    for (const sheet of atlas.sheets) sheet.material.depthTest = true;
+    return () => atlas.dispose();
+  }, [atlas]);
 
   useEffect(() => {
     let drop = false;
@@ -93,29 +136,20 @@ export function KirmiziBattle() {
       try {
         const [blueGltf, redGltf] = await Promise.all([loadGlb(loader, KIRMIZI_BLUE), loadGlb(loader, KIRMIZI_RED)]);
         if (drop) return;
-        const mount = (who: KirmiziWho, gltf: Gltf, cell: number) => {
+        const prep = (gltf: Gltf, cell: number) => {
           const model = gltf.scene;
           if (cell > 0) thin(model, cell);
           toLambert(model);
           fit(model, HEIGHT);
-          const mix = new THREE.AnimationMixer(model);
-          const bag: Record<string, THREE.AnimationAction> = {};
-          for (const clip of gltf.animations) {
-            const action = mix.clipAction(clip);
-            action.loop = THREE.LoopOnce;
-            action.clampWhenFinished = true;
-            bag[clip.name] = action;
-          }
-          const first = who === "red" ? "Sword_Attack" : "Attack_Ground_Pound";
-          bag[first]?.reset().play();
-          mixers.current[who] = mix;
-          actions.current[who] = bag;
-          shown.current[who] = first;
           return model;
         };
-        const blue = mount("blue", blueGltf, 0.004);
-        const red = mount("red", redGltf, 0);
-        if (!drop) setPair({ blue, red });
+        const blues = spawn("blue", prep(blueGltf, 0.01), blueGltf, BLUE_N);
+        const reds = spawn("red", prep(redGltf, 0.012), redGltf, RED_N);
+        if (drop) return;
+        const root = host.current;
+        const army = [...blues, ...reds];
+        for (const man of army) root?.add(man.host);
+        men.current = army;
       } catch (err) {
         console.warn("kirmizi-mavi", err);
       } finally {
@@ -124,79 +158,74 @@ export function KirmiziBattle() {
     })();
     return () => {
       drop = true;
-      mixers.current.blue?.stopAllAction();
-      mixers.current.red?.stopAllAction();
-      mixers.current = {};
+      for (const man of men.current) man.mix.stopAllAction();
+      men.current = [];
+      host.current?.clear();
       kirmiziReset();
     };
   }, []);
 
   useFrame(({ camera }) => {
     const t = kirmiziT();
-    const pose = (who: KirmiziWho, host: THREE.Group | null, bar: THREE.Mesh | null, plate: THREE.Group | null) => {
-      const place = kirmiziPlace(who, t);
-      if (host) {
-        host.position.set(place.x, 0, place.z);
-        host.rotation.set(place.rx, place.yaw, 0);
-      }
-      const hp = kirmiziHp(who, t);
-      if (plate) plate.lookAt(camera.position);
-      if (bar) {
-        bar.scale.x = Math.max(0.04, hp);
-        bar.position.x = -0.72 + 1.44 * hp * 0.5;
-      }
-      const mix = mixers.current[who];
-      const bag = actions.current[who];
-      if (!mix || !bag) return;
-      const play = kirmiziClip(who, t);
-      const action = bag[play.name];
-      if (!action) return;
-      if (shown.current[who] !== play.name) {
-        const prev = bag[shown.current[who] ?? ""];
-        prev?.stop();
+    for (const man of men.current) {
+      const pose = kirmiziPose(man.who, man.i, t);
+      man.host.position.set(pose.x, 0, pose.z);
+      man.host.rotation.set(pose.rx, pose.yaw, 0);
+      const action = man.bag[pose.clip];
+      if (!action) continue;
+      if (man.shown !== pose.clip) {
+        man.bag[man.shown]?.stop();
         action.reset().play();
-        shown.current[who] = play.name;
+        man.shown = pose.clip;
       }
-      mix.setTime(play.time);
-    };
-    pose("blue", blueRef.current, blueBar.current, bluePlate.current);
-    pose("red", redRef.current, redBar.current, redPlate.current);
+      man.mix.setTime(pose.time);
+    }
+    const show = kirmiziNames(t);
+    const high = camera.position.y > 8;
+    for (const sheet of atlas.sheets) {
+      const inst = sheet.geometry.userData.mesh as THREE.InstancedMesh | undefined;
+      if (!inst) continue;
+      for (let n = 0; n < named.length; n++) {
+        const cell = atlas.cells[n];
+        if (!cell || cell.sheet !== atlas.sheets.indexOf(sheet)) continue;
+        const pose = kirmiziPose("blue", named[n].i, t);
+        const up = show && !pose.dead;
+        const dx = pose.x - camera.position.x;
+        const dy = 2.3 - camera.position.y;
+        const dz = pose.z - camera.position.z;
+        const dist = Math.hypot(dx, dy, dz);
+        const base = high ? Math.min(1.45, Math.max(0.9, dist * 0.028)) : Math.min(0.62, 0.18 + dist * 0.032);
+        const w = up ? base * 1.45 : 0.001;
+        const h = (cell.sy * w) / Math.max(cell.sx, 0.01);
+        dummy.position.set(pose.x, up ? (high ? 2.65 : 2.15) : -12, pose.z);
+        dummy.quaternion.copy(camera.quaternion);
+        dummy.scale.set(w, up ? h : 0.001, 1);
+        dummy.updateMatrix();
+        inst.setMatrixAt(cell.local, dummy.matrix);
+      }
+      inst.instanceMatrix.needsUpdate = true;
+    }
   });
 
   return (
     <group>
       <hemisphereLight args={["#d7e6f4", "#6a5848", 1.4]} />
-      <directionalLight position={[6, 12, 4]} intensity={1.85} color="#fff4e0" />
+      <directionalLight position={[8, 18, 6]} intensity={1.85} color="#fff4e0" />
       <mesh rotation={[-Math.PI / 2, 0, 0]}>
-        <planeGeometry args={[40, 40]} />
+        <planeGeometry args={[80, 80]} />
         <meshLambertMaterial color="#6a734c" />
       </mesh>
-      <group ref={blueRef}>
-        {pair && <primitive object={pair.blue} />}
-        <group ref={bluePlate} position={[0, 2.15, 0]}>
-          <mesh position={[0, 0, -0.02]}>
-            <planeGeometry args={[1.6, 0.18]} />
-            <meshBasicMaterial color="#1a120e" side={THREE.DoubleSide} />
-          </mesh>
-          <mesh ref={blueBar}>
-            <planeGeometry args={[1.44, 0.1]} />
-            <meshBasicMaterial color="#2f6fe0" side={THREE.DoubleSide} />
-          </mesh>
-        </group>
-      </group>
-      <group ref={redRef}>
-        {pair && <primitive object={pair.red} />}
-        <group ref={redPlate} position={[0, 2.15, 0]}>
-          <mesh position={[0, 0, -0.02]}>
-            <planeGeometry args={[1.6, 0.18]} />
-            <meshBasicMaterial color="#1a120e" side={THREE.DoubleSide} />
-          </mesh>
-          <mesh ref={redBar}>
-            <planeGeometry args={[1.44, 0.1]} />
-            <meshBasicMaterial color="#e23b3b" side={THREE.DoubleSide} />
-          </mesh>
-        </group>
-      </group>
+      <group ref={host} />
+      {atlas.sheets.map((sheet, s) => (
+        <instancedMesh
+          key={s}
+          args={[sheet.geometry, sheet.material, Math.max(1, sheet.count)]}
+          frustumCulled={false}
+          ref={(node) => {
+            sheet.geometry.userData.mesh = node;
+          }}
+        />
+      ))}
     </group>
   );
 }

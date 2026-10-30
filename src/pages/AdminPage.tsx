@@ -1646,7 +1646,7 @@ export function AdminPage() {
           )}
           {isKirmizi(reelShot) && (
             <p className="muted">
-              32 saniye. Ekranda yazı yok. Kırmızı düşman kılıçla vurur, mavi asker yer yumruğuyla karşılık verir. İkisi de kendi iskeletini kullanır. Can iner. Kırmızı sonda düşer. İlk saniye kılıç merceğe gelir. 1. saniyede kesme: mavinin gözünden. Sonra omuz, karşı göz ve yan plan. Tepeden plan yok.
+              32 saniye. Ekranda yazı yok. 25 mavi asker, üstlerinde son katılanların isimleri. 40 kırmızı düşman. İkisi de kendi iskeletiyle vurur. Can barı yok. İlk saniye kılıç merceğe gelir. 1. saniyede kesme: mavi omuzdan. Sonra tepeden ve omuz planı.
             </p>
           )}
           {isSavas(reelShot) && (
