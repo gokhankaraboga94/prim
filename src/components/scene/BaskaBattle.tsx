@@ -167,7 +167,7 @@ export function BaskaBattle({ names }: { names: string[] }) {
         const dy = 2.4 - camera.position.y;
         const dz = pose.z - camera.position.z;
         const dist = Math.hypot(dx, dy, dz);
-        const base = high ? Math.min(1.6, Math.max(1.05, dist * 0.05)) : Math.min(0.72, 0.28 + dist * 0.04);
+        const base = high ? Math.min(1.7, Math.max(1.15, dist * 0.055)) : Math.min(0.95, 0.46 + dist * 0.04);
         const w = up ? base * 1.7 : 0.001;
         const h = (cell.sy * w) / Math.max(cell.sx, 0.01);
         dummy.position.set(pose.x, up ? (high ? 2.85 : 2.25) : -12, pose.z);
