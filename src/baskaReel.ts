@@ -1,94 +1,67 @@
 export const BASKA_ID = "baska" as const;
 export type BaskaId = typeof BASKA_ID;
 export const BASKA_MODE = { id: BASKA_ID, label: "başka" } as const;
-export const BASKA_SECONDS = 16;
-export const BASKA_URL = "/models/knight.glb";
+export const BASKA_SECONDS = 14;
+export const BASKA_URL = "/models/blue.glb";
+export const BASKA_N = 13;
+export const BASKA_CENTER = 12;
 
-const NAMES_AT = 3.7;
-const COLS = 5;
-const ROWS = 4;
+const SWING = 2.71;
+const HIT = 0.62;
 
-export type BaskaPose = { x: number; z: number; yaw: number; step: number };
+export type BaskaPose = {
+  x: number;
+  z: number;
+  yaw: number;
+  rx: number;
+  time: number;
+  dead: boolean;
+};
 
-function ease(u: number) {
-  const x = Math.max(0, Math.min(1, u));
-  return x * x * (3 - 2 * x);
+function unit(i: number) {
+  const x = Math.sin(i * 91.7 + 17.3) * 43758.5453;
+  return x - Math.floor(x);
 }
 
-/** 19 soldiers. The center of the front rank is empty: that is the one who left. */
-export function baskaArmyCount() {
-  return COLS * ROWS - 1;
-}
-
-export function baskaSeat(i: number) {
-  let n = 0;
-  for (let row = 0; row < ROWS; row++) {
-    for (let col = 0; col < COLS; col++) {
-      if (row === 0 && col === 2) continue;
-      if (n === i) return { x: (col - 2) * 1.18, z: row * 1.12, col, row };
-      n += 1;
-    }
-  }
-  return { x: 0, z: 0, col: 0, row: 0 };
-}
-
-/** The man beside the empty slot. He looks, takes one step, and stops. */
-export function baskaNoticer() {
-  for (let i = 0; i < baskaArmyCount(); i++) {
-    const seat = baskaSeat(i);
-    if (seat.row === 0 && seat.col === 3) return i;
-  }
-  return 0;
-}
-
+/** Last joined names sit at the end. The newest name is the one still standing. */
 export function baskaRoster(names: readonly string[]) {
-  const trimmed = names.map((name) => name.trim()).filter(Boolean);
-  const last = trimmed.length ? trimmed[trimmed.length - 1] : "";
-  return last;
+  const last = names.map((name) => name.trim()).filter(Boolean).slice(-BASKA_N);
+  const out = Array.from({ length: BASKA_N }, () => "");
+  const start = BASKA_N - last.length;
+  for (let i = 0; i < last.length; i++) out[start + i] = last[i];
+  return out;
 }
 
-function leaverZ(t: number) {
-  if (t < 1) return -1.85 + (-3.55 - -1.85) * ease(t);
-  if (t < 7.5) return -3.55 + (-5.7 - -3.55) * ease((t - 1) / 6.5);
-  return -5.7;
+function dieAt(i: number) {
+  if (i === BASKA_CENTER) return 1e9;
+  return 0.85 + Math.floor(i / 3) * 1.7 + unit(i) * 0.28;
 }
 
-export function baskaLeaver(t: number): BaskaPose {
-  const z = leaverZ(t);
-  const turn = t < 7.6 ? 0 : ease((t - 7.6) / 1.8);
-  const yaw = Math.PI * (1 - turn);
-  return { x: 0, z, yaw, step: 0 };
-}
-
-export function baskaMan(i: number, t: number): BaskaPose {
-  const seat = baskaSeat(i);
-  if (i !== baskaNoticer()) return { x: seat.x, z: seat.z, yaw: 0, step: 0 };
-  const look = t < 4 ? 0 : ease((t - 4) / 1.2);
-  const step = t < 5.5 ? 0 : ease((t - 5.5) / 1.1);
-  return { x: seat.x, z: seat.z - step * 0.72, yaw: look * Math.PI, step };
-}
-
-export function baskaNames(t: number) {
-  return t >= NAMES_AT;
+export function baskaPose(i: number, t: number): BaskaPose {
+  if (i === BASKA_CENTER) {
+    return { x: 0, z: 0, yaw: Math.PI, rx: 0, time: (t + HIT) % SWING, dead: false };
+  }
+  const ang = (i / (BASKA_N - 1)) * Math.PI * 2;
+  const x = Math.sin(ang) * 2.55;
+  const z = Math.cos(ang) * 2.55;
+  const yaw = Math.atan2(-x, -z);
+  const at = dieAt(i);
+  if (t >= at) {
+    const u = Math.min(1, (t - at) / 0.65);
+    const e = u * u * (3 - 2 * u);
+    return { x, z, yaw, rx: e * 1.45, time: 0.04, dead: true };
+  }
+  const swing = (t + HIT) % SWING;
+  return { x, z, yaw, rx: swing > 0.55 && swing < 0.95 ? 0.2 : 0, time: 0.06, dead: false };
 }
 
 export type BaskaCam = { x: number; y: number; z: number; lx: number; ly: number; lz: number; fov: number };
 
 export function baskaCam(t: number): BaskaCam {
-  const man = baskaLeaver(t);
-  if (t < 1) {
-    return { x: 0.06, y: 1.36, z: -4.2, lx: man.x, ly: 1.22, lz: man.z + 0.2, fov: 30 };
-  }
-  if (t < 3.2) {
-    return { x: 0.35, y: 2.35, z: 5.4, lx: 0, ly: 1.15, lz: -2.2, fov: 46 };
-  }
-  if (t < 8) {
-    return { x: 2.15, y: 1.7, z: man.z + 0.15, lx: man.x, ly: 1.2, lz: man.z, fov: 40 };
-  }
-  if (t < 12) {
-    return { x: 2.05, y: 1.72, z: -3.6, lx: 0.1, ly: 1.25, lz: -2.4, fov: 40 };
-  }
-  return { x: 1.55, y: 1.58, z: -4.35, lx: 0.05, ly: 1.28, lz: -1.4, fov: 36 };
+  if (t < 1) return { x: 0.12, y: 1.18, z: -2.15, lx: 0, ly: 1.02, lz: -0.05, fov: 28 };
+  if (t < 3.2) return { x: 0.15, y: 6.8, z: -5.1, lx: 0, ly: 0.3, lz: 0.15, fov: 44 };
+  if (t < 8) return { x: -2.6, y: 2.35, z: -3.4, lx: 0.15, ly: 1.05, lz: 0.35, fov: 46 };
+  return { x: 0.35, y: 2.9, z: -5.4, lx: 0, ly: 1.05, lz: 0, fov: 40 };
 }
 
 let playAt = 0;

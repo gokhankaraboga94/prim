@@ -202,7 +202,7 @@ export function ReelCapture({ soldiers, names, commanders = [], level, pressure,
       if (kurtar || gecme || kuyu || kapi || magdur || kare || devKong || savas || kirmizi || baska) {
         const loadStart = performance.now();
         const sceneReady = kurtar ? kurtarIsReady : gecme ? gecmeIsReady : kuyu ? kuyuIsReady : devKong ? devKongIsReady : savas ? savasIsReady : kirmizi ? kirmiziIsReady : baska ? baskaIsReady : kare ? kareIsReady : magdur ? magdurIsReady : kapiIsReady;
-        while (!sceneReady() && performance.now() - loadStart < (savas || kirmizi ? 50000 : 25000)) {
+        while (!sceneReady() && performance.now() - loadStart < (savas || kirmizi || baska ? 50000 : 25000)) {
           await wait(80);
           if (stop) return;
         }

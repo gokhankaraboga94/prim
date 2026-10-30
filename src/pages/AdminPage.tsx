@@ -1661,7 +1661,7 @@ export function AdminPage() {
           )}
           {isBaska(reelShot) && (
             <p className="muted">
-              16 saniye. Ekranda yazı yok. Savaş yok. Son katılan asker ordudan çıkar, merceğe yürür, durur ve arkasına bakar. Ordu yerinde kalır. Yanındaki bir asker döner, bir adım atar, o da durur. İsmi 4. saniyeden sonra görünür.
+              14 saniye. Ekranda kanca yazısı yok. 13 mavi asker, animasyonlu model. Üstlerinde son katılanların isimleri, düşeninki kaybolur. Ortadaki yere vurur. İlk saniye yumruk merceğe iner. 1. saniyede kesme: isimler görünür, ön halka düşer. Her vuruşta bir halka daha düşer. Sonda son katılan ayakta kalır.
             </p>
           )}
           {isKirmizi(reelShot) && (
