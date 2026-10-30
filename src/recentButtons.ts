@@ -15,12 +15,14 @@ import { DEVKONG_ID, DEVKONG_MODE, DEVKONG_SECONDS } from "./devKongReel";
 import { SAVAS_ID, SAVAS_MODE, SAVAS_SECONDS } from "./savasReel";
 import { KIRMIZI_ID, KIRMIZI_MODE, KIRMIZI_SECONDS } from "./kirmiziReel";
 import { BASKA_ID, BASKA_MODE, BASKA_SECONDS } from "./baskaReel";
+import { ARAGORN_ID, ARAGORN_MODE, ARAGORN_SECONDS } from "./aragornTestReel";
 import { DRAGON_ID, DRAGON_MODE, DRAGON_SECONDS } from "./dragonReel";
 import { ELF_ID, ELF_MODE, ELF_SECONDS } from "./elfReel";
 export const RECENT_BUTTON_LIMIT = 20;
 
 /** Yeniden eskiye. Bir buton güncellenirse en üste alınır, en alttaki 20'nin dışına düşer. */
 export const RECENT_BUTTONS = [
+  { id: ARAGORN_ID, label: `${ARAGORN_MODE.label} — ${ARAGORN_SECONDS}s`, seconds: ARAGORN_SECONDS },
   { id: BASKA_ID, label: `${BASKA_MODE.label} — ${BASKA_SECONDS}s`, seconds: BASKA_SECONDS },
   { id: KIRMIZI_ID, label: `${KIRMIZI_MODE.label} — ${KIRMIZI_SECONDS}s`, seconds: KIRMIZI_SECONDS },
   { id: DEV15_ID, label: `${DEV15_MODE.label} — ${DEV15_SECONDS}s`, seconds: DEV15_SECONDS },
