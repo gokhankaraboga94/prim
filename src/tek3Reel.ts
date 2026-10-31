@@ -1,7 +1,7 @@
 export const TEK3_ID = "tek3" as const;
 export type Tek3Id = typeof TEK3_ID;
 export const TEK3_MODE = { id: TEK3_ID, label: "tek3" } as const;
-export const TEK3_SECONDS = 26;
+export const TEK3_SECONDS = 12;
 export const TEK3_HERO = "/models/savaci.glb";
 export const TEK3_RED = "/models/red.glb";
 export const TEK3_ARENA = "/models/arena.glb";
@@ -16,13 +16,15 @@ export const TEK3_PLATE = 0.95;
 /** Left-sword peak that points the same way the chest faces. Reach is about 0.87. */
 const STRIKE = { t: 0.8, ang: -0.31, reach: 0.87 };
 const WIND = 0.62;
-const STEP = 1.8;
-const HERO_R = 3.15;
+const STEP = 0.9;
+const HERO_R = 3.55;
 /** Outward slots, nearest first. Close enough that the 0.87 tip is inside the body. */
 const SLOTS = [
-  { spread: 0, dist: 1.0 },
-  { spread: -0.62, dist: 1.02 },
-  { spread: 0.62, dist: 1.04 },
+  { spread: 0, dist: 0.96 },
+  { spread: -0.7, dist: 1.0 },
+  { spread: 0.7, dist: 1.0 },
+  { spread: -1.25, dist: 1.04 },
+  { spread: 1.25, dist: 1.04 },
 ];
 
 export type Tek3Hero = { x: number; z: number; ang: number };
@@ -38,7 +40,7 @@ export function tek3Hero(i: number): Tek3Hero {
 }
 
 function needsFor(i: number) {
-  return i % 2 === 0 ? [5, 4, 5] : [4, 5, 4];
+  return i % 2 === 0 ? [3, 2, 2, 3, 2] : [2, 3, 2, 2, 3];
 }
 
 function phase(i: number) {
@@ -130,7 +132,7 @@ export type Tek3Cam = { x: number; y: number; z: number; lx: number; ly: number;
 export function tek3Cam(_t: number): Tek3Cam {
   return {
     x: 0.15,
-    y: 8.8,
+    y: 11.6,
     z: -8.4,
     lx: 0,
     ly: 0.55,
