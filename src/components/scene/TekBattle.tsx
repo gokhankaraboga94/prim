@@ -78,7 +78,21 @@ function attackClip(clips: THREE.AnimationClip[]) {
   );
 }
 
-export function TekBattle() {
+export function TekBattle({
+  arena = TEK_ARENA,
+  scale = ARENA_SCALE,
+  floor = ARENA_FLOOR_Y,
+  reset = tekReset,
+  markReady = tekMarkReady,
+  t = tekT,
+}: {
+  arena?: string;
+  scale?: number;
+  floor?: number;
+  reset?: () => void;
+  markReady?: () => void;
+  t?: () => number;
+} = {}) {
   const host = useRef<THREE.Group>(null);
   const hero = useRef<{ mix: THREE.AnimationMixer; dur: number; hold: THREE.Group } | null>(null);
   const reds = useRef<RedFight[]>([]);
@@ -86,23 +100,23 @@ export function TekBattle() {
 
   useEffect(() => {
     let drop = false;
-    tekReset();
+    reset();
     const loader = new GLTFLoader();
     void (async () => {
       try {
         const [heroFile, redFile, arenaFile] = await Promise.all([
           loadGlb(loader, TEK_HERO),
           loadGlb(loader, TEK_RED),
-          loadGlb(loader, TEK_ARENA),
+          loadGlb(loader, arena),
         ]);
         if (drop || !host.current) return;
         const root = host.current;
 
-        const arena = arenaFile.scene;
-        arena.scale.setScalar(ARENA_SCALE);
-        arena.position.set(0, -ARENA_FLOOR_Y * ARENA_SCALE, 0);
-        toLambert(arena);
-        root.add(arena);
+        const ground = arenaFile.scene;
+        ground.scale.setScalar(scale);
+        ground.position.set(0, -floor * scale, 0);
+        toLambert(ground);
+        root.add(ground);
 
         toLambert(heroFile.scene);
         fit(heroFile.scene);
@@ -147,7 +161,7 @@ export function TekBattle() {
           });
         });
         reds.current = fights;
-        if (!drop) tekMarkReady();
+        if (!drop) markReady();
       } catch (err) {
         console.warn("tek", err);
       }
@@ -159,41 +173,41 @@ export function TekBattle() {
       hero.current = null;
       reds.current = [];
       host.current?.clear();
-      tekReset();
+      reset();
     };
-  }, []);
+  }, [arena, scale, floor, reset, markReady]);
 
   useFrame(() => {
-    const t = tekT();
+    const now = t();
     const man = hero.current;
     if (man) {
-      const spot = tekSpot(t < 0.55 ? TEK_FOES[0] : tekTarget(t), t);
+      const spot = tekSpot(now < 0.55 ? TEK_FOES[0] : tekTarget(now), now);
       const aim = Math.atan2(spot.z, -spot.x);
       const turn = Math.atan2(Math.sin(aim - yaw.current), Math.cos(aim - yaw.current));
       yaw.current += turn * 0.2;
       man.hold.rotation.y = yaw.current;
-      man.mix.setTime((t * 1.15 + 0.55) % man.dur);
+      man.mix.setTime((now * 1.15 + 0.55) % man.dur);
     }
     for (const red of reds.current) {
       const foe = TEK_FOES[red.i];
-      const spot = tekSpot(foe, t);
+      const spot = tekSpot(foe, now);
       red.hold.position.set(spot.x, 0, spot.z);
       red.hold.rotation.y = spot.yaw;
-      if (t < foe.die) {
+      if (now < foe.die) {
         if (red.dead) {
           red.death.stop();
           red.sword.reset().play();
           red.dead = false;
         }
-        const moving = foe.die > 0 && t < foe.die - (foe.hits === 2 ? 2.05 : 1.05);
-        red.mix.setTime(moving ? 0.04 : (t * 0.9 + red.i * 0.17) % red.swordDur);
+        const moving = foe.die > 0 && now < foe.die - (foe.hits === 2 ? 2.05 : 1.05);
+        red.mix.setTime(moving ? 0.04 : (now * 0.9 + red.i * 0.17) % red.swordDur);
       } else {
         if (!red.dead) {
           red.sword.stop();
           red.death.reset().play();
           red.dead = true;
         }
-        red.mix.setTime(Math.min(red.deathDur - 0.001, t - foe.die));
+        red.mix.setTime(Math.min(red.deathDur - 0.001, now - foe.die));
       }
     }
   });
@@ -207,10 +221,10 @@ export function TekBattle() {
   );
 }
 
-export function TekCam() {
+export function TekCam({ t = tekT }: { t?: () => number } = {}) {
   const camera = useThree((s) => s.camera) as THREE.PerspectiveCamera;
   useFrame(() => {
-    const shot = tekCam(tekT());
+    const shot = tekCam(t());
     camera.position.set(shot.x, shot.y, shot.z);
     camera.lookAt(shot.lx, shot.ly, shot.lz);
     if (camera.fov !== shot.fov) {
