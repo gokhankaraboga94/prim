@@ -7,23 +7,25 @@ import { preloadedGlb } from "../../arenaPreload";
 import { simplifySkinned } from "../../knightSoldier";
 import { buildNameAtlas } from "../../nameAtlas";
 import {
-  TEK3_BLUE,
-  TEK3_FOES,
+  TEK3_ARENA,
+  TEK3_HERO,
   TEK3_OURS,
   TEK3_PLATE,
   TEK3_RED,
-  tek3Blue,
+  TEK3_REDS,
   tek3Cam,
+  tek3ClipTime,
+  tek3Hero,
   tek3MarkReady,
-  tek3Red,
   tek3Reset,
   tek3Roster,
   tek3T,
+  tek3Yaw,
 } from "../../tek3Reel";
 
 type Gltf = Parameters<Parameters<GLTFLoader["load"]>[1]>[0];
 
-type Blue = {
+type Hero = {
   i: number;
   hold: THREE.Group;
   mix: THREE.AnimationMixer;
@@ -42,6 +44,8 @@ type Red = {
 };
 
 const HEIGHT = 1.82;
+const ARENA_SCALE = 17;
+const ARENA_FLOOR_Y = 0.025;
 const dummy = new THREE.Object3D();
 
 function loadGlb(loader: GLTFLoader, url: string) {
@@ -57,27 +61,21 @@ function toLambert(root: THREE.Object3D) {
     const mesh = obj as THREE.Mesh;
     if (!mesh.isMesh) return;
     const src = (Array.isArray(mesh.material) ? mesh.material[0] : mesh.material) as THREE.MeshStandardMaterial;
-    const next = new THREE.MeshLambertMaterial({
+    mesh.material = new THREE.MeshLambertMaterial({
       map: src.map ?? null,
       color: src.color ? src.color.clone() : "#ffffff",
     });
-    src.map = null;
-    src.normalMap?.dispose();
-    src.roughnessMap?.dispose();
-    src.metalnessMap?.dispose();
-    src.dispose();
-    mesh.material = next;
     mesh.castShadow = false;
     mesh.receiveShadow = false;
     mesh.frustumCulled = false;
   });
 }
 
-function thin(root: THREE.Object3D, cell: number) {
+function thin(root: THREE.Object3D) {
   root.traverse((obj) => {
     const mesh = obj as THREE.SkinnedMesh;
     if (!mesh.isSkinnedMesh) return;
-    const next = simplifySkinned(mesh.geometry, cell);
+    const next = simplifySkinned(mesh.geometry, 0.015);
     mesh.geometry.dispose();
     mesh.geometry = next;
   });
@@ -96,9 +94,17 @@ function fit(root: THREE.Object3D) {
   );
 }
 
+function attackClip(clips: THREE.AnimationClip[]) {
+  return (
+    clips.find((clip) => clip.name.startsWith("The warrior aggressively")) ??
+    clips.find((clip) => clip.name.startsWith("The warrior performs")) ??
+    clips[0]
+  );
+}
+
 export function Tek3Battle({ names }: { names: string[] }) {
   const host = useRef<THREE.Group>(null);
-  const blues = useRef<Blue[]>([]);
+  const heroes = useRef<Hero[]>([]);
   const reds = useRef<Red[]>([]);
   const roster = useMemo(() => tek3Roster(names), [names]);
   const named = useMemo(() => roster.map((name, i) => ({ name, i })).filter((row) => row.name), [roster]);
@@ -123,43 +129,49 @@ export function Tek3Battle({ names }: { names: string[] }) {
     const loader = new GLTFLoader();
     void (async () => {
       try {
-        const [blueFile, redFile] = await Promise.all([loadGlb(loader, TEK3_BLUE), loadGlb(loader, TEK3_RED)]);
-        if (drop) return;
+        const [heroFile, redFile, arenaFile] = await Promise.all([
+          loadGlb(loader, TEK3_HERO),
+          loadGlb(loader, TEK3_RED),
+          loadGlb(loader, TEK3_ARENA),
+        ]);
+        if (drop || !host.current) return;
         const root = host.current;
-        if (!root) return;
-        const blueSrc = blueFile.scene;
-        thin(blueSrc, 0.02);
-        toLambert(blueSrc);
-        fit(blueSrc);
-        const pound = blueFile.animations.find((item) => item.name === "Attack_Ground_Pound") ?? blueFile.animations[0];
-        const ours: Blue[] = [];
+
+        const ground = arenaFile.scene;
+        ground.scale.setScalar(ARENA_SCALE);
+        ground.position.set(0, -ARENA_FLOOR_Y * ARENA_SCALE, 0);
+        toLambert(ground);
+        root.add(ground);
+
+        toLambert(heroFile.scene);
+        fit(heroFile.scene);
+        const clip = attackClip(heroFile.animations);
+        if (!clip) return;
+        const ours: Hero[] = [];
         for (let i = 0; i < TEK3_OURS; i++) {
-          const body = i === 0 ? blueSrc : cloneSkinned(blueSrc);
+          const body = i === 0 ? heroFile.scene : cloneSkinned(heroFile.scene);
           const hold = new THREE.Group();
           hold.add(body);
           root.add(hold);
           const mix = new THREE.AnimationMixer(body);
-          if (pound) {
-            const action = mix.clipAction(pound);
-            action.loop = THREE.LoopRepeat;
-            action.play();
-          }
-          ours.push({ i, hold, mix, dur: pound?.duration ?? 1 });
+          const action = mix.clipAction(clip);
+          action.play();
+          ours.push({ i, hold, mix, dur: clip.duration });
         }
-        const redSrc = redFile.scene;
-        thin(redSrc, 0.015);
-        toLambert(redSrc);
-        fit(redSrc);
+
+        toLambert(redFile.scene);
+        thin(redFile.scene);
         const swordClip = redFile.animations.find((item) => item.name === "Sword_Attack");
         const deathClip = redFile.animations.find((item) => item.name === "Death_B");
         if (!swordClip || !deathClip) return;
         const foes: Red[] = [];
-        for (let i = 0; i < TEK3_FOES; i++) {
-          const body = cloneSkinned(redSrc);
+        TEK3_REDS.forEach((_, i) => {
+          const model = cloneSkinned(redFile.scene) as THREE.Group;
+          fit(model);
           const hold = new THREE.Group();
-          hold.add(body);
+          hold.add(model);
           root.add(hold);
-          const mix = new THREE.AnimationMixer(body);
+          const mix = new THREE.AnimationMixer(model);
           const sword = mix.clipAction(swordClip);
           sword.loop = THREE.LoopRepeat;
           sword.play();
@@ -176,9 +188,9 @@ export function Tek3Battle({ names }: { names: string[] }) {
             deathDur: deathClip.duration,
             dead: false,
           });
-        }
+        });
         if (drop) return;
-        blues.current = ours;
+        heroes.current = ours;
         reds.current = foes;
         tek3MarkReady();
       } catch (err) {
@@ -187,9 +199,9 @@ export function Tek3Battle({ names }: { names: string[] }) {
     })();
     return () => {
       drop = true;
-      for (const man of blues.current) man.mix.stopAllAction();
+      for (const man of heroes.current) man.mix.stopAllAction();
       for (const man of reds.current) man.mix.stopAllAction();
-      blues.current = [];
+      heroes.current = [];
       reds.current = [];
       host.current?.clear();
       tek3Reset();
@@ -198,14 +210,14 @@ export function Tek3Battle({ names }: { names: string[] }) {
 
   useFrame(({ camera }) => {
     const now = tek3T();
-    for (const man of blues.current) {
-      const spot = tek3Blue(man.i);
+    for (const man of heroes.current) {
+      const spot = tek3Hero(man.i);
       man.hold.position.set(spot.x, 0, spot.z);
-      man.hold.rotation.y = spot.yaw;
-      man.mix.setTime((now * 0.85 + man.i * 0.21) % man.dur);
+      man.hold.rotation.y = tek3Yaw(man.i, now);
+      man.mix.setTime(tek3ClipTime(now) % man.dur);
     }
     for (const man of reds.current) {
-      const spot = tek3Red(man.i);
+      const spot = TEK3_REDS[man.i];
       man.hold.position.set(spot.x, 0, spot.z);
       man.hold.rotation.y = spot.yaw;
       if (now < spot.die) {
@@ -230,10 +242,10 @@ export function Tek3Battle({ names }: { names: string[] }) {
       for (let n = 0; n < named.length; n++) {
         const cell = atlas.cells[n];
         if (!cell || cell.sheet !== atlas.sheets.indexOf(sheet)) continue;
-        const spot = tek3Blue(named[n].i);
+        const spot = tek3Hero(named[n].i);
         const w = TEK3_PLATE;
         const h = (cell.sy * w) / Math.max(cell.sx, 0.01);
-        dummy.position.set(spot.x, 2.42, spot.z);
+        dummy.position.set(spot.x, 2.35, spot.z);
         dummy.quaternion.copy(camera.quaternion);
         dummy.scale.set(w, h, 1);
         dummy.updateMatrix();
@@ -245,12 +257,8 @@ export function Tek3Battle({ names }: { names: string[] }) {
 
   return (
     <group>
-      <hemisphereLight args={["#d7e6f4", "#6a5848", 1.4]} />
-      <directionalLight position={[8, 16, -6]} intensity={1.75} color="#fff4e0" />
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 1]}>
-        <planeGeometry args={[48, 48]} />
-        <meshLambertMaterial color="#6a734c" />
-      </mesh>
+      <hemisphereLight args={["#f0e2cc", "#6a5844", 1.45]} />
+      <directionalLight position={[4, 14, -6]} intensity={1.85} color="#fff2dc" />
       <group ref={host} />
       {atlas.sheets.map((sheet, s) => (
         <instancedMesh

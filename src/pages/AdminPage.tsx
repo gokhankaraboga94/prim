@@ -1753,7 +1753,7 @@ export function AdminPage() {
           )}
           {isTek3(reelShot) && (
             <p className="muted">
-              11 saniye. Ekranda kanca yazısı yok. Son katılan 10 mavi, üstlerinde isimler. İki sıra, sıra arası yarım adım kayık, plakalar birbirine binmez. Karşıda 50 kırmızı, her ismin hizasında bir sıra. İlk karede ön sıra düşüyor. Kamera tek çekiminden daha geride ve daha tepeden. Kayıt modeller inmeden başlamaz.
+              5 saniye. Ekranda kanca yazısı yok. Tek arenasında savacı modelinden on kişi, üstlerinde son katılanların isimleri. Otuz kırmızı çemberi kuşatmış, sayıca fazla. Her savacı en yakın kırmızıya vurur, kılıç ucu o gövdede. İlk karede on kılıç da temasta. İkinci ve üçüncü vuruş da boşluğa değil, kalan en yakına iner. Kayıt modeller inmeden başlamaz.
             </p>
           )}
           {isTek2(reelShot) && (
