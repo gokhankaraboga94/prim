@@ -1773,7 +1773,7 @@ export function AdminPage() {
           )}
           {isTek3(reelShot) && (
             <p className="muted">
-              18 saniye. Ekranda kanca yazısı yok. Ada arenasında on savacı, çemberin içinde, göğüsleri dışarı dönük, üstlerinde büyük isimler. Her biri tek videodaki kılıç kombosunu kullanır. Kılıcın uzandığı yerde kırmızı durur. Otuz kırmızı ilk saniyeden itibaren tek tek düşer, aynı anda yığılmaz. Kamera sabit ve yukarıdan. Kayıt modeller inmeden başlamaz.
+              32 saniye. Ekranda kanca yazısı yok. Ada arenasında on savacı, çemberin içinde, üstlerinde isimler. Her biri tek videodaki kılıç kombosunu kullanır. Bir savacı kendi üç kırmızısını sırayla düşürür: önce önündeki, sonra yanındaki, sonra içerideki. Sıradaki savacı ondan sonra başlar. Kamera yer yer geniş, yer yer omuz üstü, yer yer göz hizası. Kayıt modeller inmeden başlamaz.
             </p>
           )}
           {isTek2(reelShot) && (
