@@ -1,7 +1,7 @@
 export const TEK3_ID = "tek3" as const;
 export type Tek3Id = typeof TEK3_ID;
 export const TEK3_MODE = { id: TEK3_ID, label: "tek3" } as const;
-export const TEK3_SECONDS = 5;
+export const TEK3_SECONDS = 26;
 export const TEK3_HERO = "/models/savaci.glb";
 export const TEK3_RED = "/models/red.glb";
 export const TEK3_ARENA = "/models/arena.glb";
@@ -13,12 +13,10 @@ export const TEK3_PLATE = 0.42;
  * Sword-tip peaks of the aggressive clip, fitted model, holder yaw 0.
  * ang = atan2(tipX, tipZ). reach is how far the tip is from the body.
  */
-const STRIKES = [
-  { t: 0.5, ang: -2.89, reach: 1.29 },
-  { t: 1.05, ang: -1.41, reach: 1.24 },
-  { t: 1.24, ang: 2.05, reach: 1.55 },
-];
-const OPEN = STRIKES[0].t;
+/** One peak, repeated. Reach 1.29 covers every slot. */
+const STRIKE = { t: 0.5, ang: -2.89, reach: 1.29 };
+const WIND = 0.22;
+const STEP = 1.8;
 const HERO_R = 3.15;
 /** Outward slots, nearest first. Each stays inside that strike's tip and this hero's sector. */
 const SLOTS = [
@@ -39,7 +37,13 @@ export function tek3Hero(i: number): Tek3Hero {
   return { x: Math.sin(ang) * HERO_R, z: Math.cos(ang) * HERO_R, ang };
 }
 
-const FILMS = STRIKES.map((strike) => strike.t - OPEN);
+function needsFor(i: number) {
+  return i % 2 === 0 ? [5, 4, 5] : [4, 5, 4];
+}
+
+function phase(i: number) {
+  return (i * STEP) / TEK3_OURS;
+}
 
 function build() {
   const heroes = Array.from({ length: TEK3_OURS }, (_, i) => tek3Hero(i));
@@ -47,18 +51,21 @@ function build() {
   const yaws: number[][] = [];
   heroes.forEach((hero, i) => {
     const aim: number[] = [];
+    const needs = needsFor(i);
+    let hit = 0;
     SLOTS.forEach((slot, k) => {
       const ang = hero.ang + slot.spread;
       const x = hero.x + Math.sin(ang) * slot.dist;
       const z = hero.z + Math.cos(ang) * slot.dist;
       const dx = x - hero.x;
       const dz = z - hero.z;
-      aim.push(Math.atan2(dx, dz) - STRIKES[k].ang);
+      aim.push(Math.atan2(dx, dz) - STRIKE.ang);
+      hit += needs[k];
       reds.push({
         x,
         z,
         yaw: Math.atan2(-dx, -dz),
-        die: FILMS[k],
+        die: (hit - 1) * STEP - phase(i),
         hero: i,
       });
     });
@@ -74,32 +81,39 @@ function wrap(a: number) {
   return Math.atan2(Math.sin(a), Math.cos(a));
 }
 
-/** Holder yaw so this strike's tip lands in that hero's current nearest red. */
+const HOLD = 0.72 * STEP;
+
+/** Holder yaw so the repeated peak stays in this hero's nearest living red. */
 export function tek3Yaw(i: number, t: number) {
-  const aim = BUILT.yaws[i];
-  let prev = 0;
-  let next = aim.length - 1;
-  for (let k = 0; k < FILMS.length; k++) {
-    if (FILMS[k] <= t) prev = k;
-    if (FILMS[k] >= t) {
-      next = k;
+  const mine = TEK3_REDS.filter((red) => red.hero === i);
+  let slot = mine.length - 1;
+  for (let s = 0; s < mine.length; s++) {
+    if (t < mine[s].die + HOLD) {
+      slot = s;
       break;
     }
   }
-  if (t >= FILMS[FILMS.length - 1]) return aim[aim.length - 1];
-  if (FILMS[next] <= FILMS[prev]) return aim[prev];
-  const u = (t - FILMS[prev]) / (FILMS[next] - FILMS[prev]);
-  if (u < 0.18) return aim[prev];
-  if (u > 0.82) return aim[next];
-  const e = (u - 0.18) / 0.64;
+  const aim = BUILT.yaws[i][slot];
+  if (slot >= mine.length - 1) return aim;
+  const into = t - mine[slot].die;
+  if (into <= HOLD) return aim;
+  const e = Math.max(0, Math.min(1, (into - HOLD) / (STEP - HOLD)));
   const s = e * e * (3 - 2 * e);
-  return aim[prev] + wrap(aim[next] - aim[prev]) * s;
+  return aim + wrap(BUILT.yaws[i][slot + 1] - aim) * s;
 }
 
-/** Film 0 is the first tip already in a body. After the third hit the pose holds there. */
-export function tek3ClipTime(t: number) {
-  if (t >= FILMS[FILMS.length - 1]) return STRIKES[STRIKES.length - 1].t;
-  return OPEN + Math.max(0, t);
+/** Film 0 is the tip already in a body. The same peak repeats; after the last hit it stays there. */
+export function tek3ClipTime(i: number, t: number) {
+  const needs = needsFor(i);
+  const total = needs.reduce((sum, n) => sum + n, 0);
+  const local = Math.max(0, t + phase(i));
+  if (local >= (total - 1) * STEP) return STRIKE.t;
+  const u = local / STEP - Math.floor(local / STEP);
+  if (u > 0.72) {
+    const e = (u - 0.72) / 0.28;
+    return WIND + e * (STRIKE.t - WIND);
+  }
+  return STRIKE.t;
 }
 
 export function tek3Roster(names: readonly string[]) {
@@ -112,17 +126,18 @@ export function tek3Roster(names: readonly string[]) {
 
 export type Tek3Cam = { x: number; y: number; z: number; lx: number; ly: number; lz: number; fov: number };
 
-/** Further back and higher than the tek close shot, so the ring and the names fit. */
+/** Inside the arena, one full circle, same height the whole way. */
 export function tek3Cam(t: number): Tek3Cam {
-  const u = Math.max(0, Math.min(1, t / 3));
+  const ang = Math.PI + (t / TEK3_SECONDS) * Math.PI * 2;
+  const radius = 6.2;
   return {
-    x: 0,
-    y: 9.4 + u * 0.6,
-    z: -18.8 - u * 0.7,
+    x: Math.sin(ang) * radius,
+    y: 2.15,
+    z: Math.cos(ang) * radius,
     lx: 0,
-    ly: 0.8,
-    lz: 0.15,
-    fov: 48,
+    ly: 1.05,
+    lz: 0,
+    fov: 40,
   };
 }
 

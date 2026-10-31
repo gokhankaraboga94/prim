@@ -214,7 +214,7 @@ export function Tek3Battle({ names }: { names: string[] }) {
       const spot = tek3Hero(man.i);
       man.hold.position.set(spot.x, 0, spot.z);
       man.hold.rotation.y = tek3Yaw(man.i, now);
-      man.mix.setTime(tek3ClipTime(now) % man.dur);
+      man.mix.setTime(tek3ClipTime(man.i, now) % man.dur);
     }
     for (const man of reds.current) {
       const spot = TEK3_REDS[man.i];
