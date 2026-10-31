@@ -7,22 +7,22 @@ export const TEK3_RED = "/models/red.glb";
 export const TEK3_ARENA = "/models/arena.glb";
 export const TEK3_URLS = [TEK3_HERO, TEK3_RED, TEK3_ARENA] as const;
 export const TEK3_OURS = 10;
-export const TEK3_PLATE = 0.42;
+export const TEK3_PLATE = 0.95;
 
 /**
  * Sword-tip peaks of the aggressive clip, fitted model, holder yaw 0.
  * ang = atan2(tipX, tipZ). reach is how far the tip is from the body.
  */
-/** One peak, repeated. Reach 1.29 covers every slot. */
-const STRIKE = { t: 0.5, ang: -2.89, reach: 1.29 };
-const WIND = 0.22;
+/** Left-sword peak that points the same way the chest faces. Reach is about 0.87. */
+const STRIKE = { t: 0.8, ang: -0.31, reach: 0.87 };
+const WIND = 0.62;
 const STEP = 1.8;
 const HERO_R = 3.15;
-/** Outward slots, nearest first. Each stays inside that strike's tip and this hero's sector. */
+/** Outward slots, nearest first. Close enough that the 0.87 tip is inside the body. */
 const SLOTS = [
-  { spread: 0, dist: 1.08 },
-  { spread: -0.66, dist: 1.14 },
-  { spread: 0.66, dist: 1.2 },
+  { spread: 0, dist: 1.0 },
+  { spread: -0.62, dist: 1.02 },
+  { spread: 0.62, dist: 1.04 },
 ];
 
 export type Tek3Hero = { x: number; z: number; ang: number };
@@ -126,18 +126,16 @@ export function tek3Roster(names: readonly string[]) {
 
 export type Tek3Cam = { x: number; y: number; z: number; lx: number; ly: number; lz: number; fov: number };
 
-/** Inside the arena, one full circle, same height the whole way. */
-export function tek3Cam(t: number): Tek3Cam {
-  const ang = Math.PI + (t / TEK3_SECONDS) * Math.PI * 2;
-  const radius = 6.2;
+/** Fixed, higher view. The ring fills the frame; the camera does not travel. */
+export function tek3Cam(_t: number): Tek3Cam {
   return {
-    x: Math.sin(ang) * radius,
-    y: 2.15,
-    z: Math.cos(ang) * radius,
+    x: 0.15,
+    y: 8.8,
+    z: -8.4,
     lx: 0,
-    ly: 1.05,
-    lz: 0,
-    fov: 40,
+    ly: 0.55,
+    lz: 0.15,
+    fov: 42,
   };
 }
 

@@ -1753,7 +1753,7 @@ export function AdminPage() {
           )}
           {isTek3(reelShot) && (
             <p className="muted">
-              26 saniye. Ekranda kanca yazısı yok. Tek arenasında on savacı, üstlerinde son katılanların isimleri. Otuz kırmızı çemberi kuşatmış. Her savacı en yakın kırmızıya vurur, kılıç o gövdede kalır. Kırmızı 4 veya 5 isabette düşer. Kamera arenanın içinde, aynı yükseklikte bir tur döner; boş dışarısı görünmez. Kayıt modeller inmeden başlamaz.
+              26 saniye. Ekranda kanca yazısı yok. Tek arenasında on savacı, üstlerinde son katılanların isimleri, plakalar büyük. Savacılar dışarı, kırmızıya bakar. Otuz kırmızı çemberi kuşatmış. Her savacı en yakın kırmızıya vurur, kılıç o gövdede. Kırmızı 4 veya 5 isabette düşer. Kamera sabit ve daha yukarıdan. Kayıt modeller inmeden başlamaz.
             </p>
           )}
           {isTek2(reelShot) && (
