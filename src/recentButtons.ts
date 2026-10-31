@@ -21,12 +21,14 @@ import { KUYULAR_ID, KUYULAR_MODE, KUYULAR_SECONDS } from "./kuyularReel";
 import { TEK_ID, TEK_MODE, TEK_SECONDS } from "./tekReel";
 import { TEK2_ID, TEK2_MODE, TEK2_SECONDS } from "./tek2Reel";
 import { TEK3_ID, TEK3_MODE, TEK3_SECONDS } from "./tek3Reel";
+import { KALE_ID, KALE_MODE, KALE_SECONDS } from "./kaleReel";
 import { DRAGON_ID, DRAGON_MODE, DRAGON_SECONDS } from "./dragonReel";
 import { ELF_ID, ELF_MODE, ELF_SECONDS } from "./elfReel";
 export const RECENT_BUTTON_LIMIT = 20;
 
 /** Yeniden eskiye. Bir buton güncellenirse en üste alınır, en alttaki 20'nin dışına düşer. */
 export const RECENT_BUTTONS = [
+  { id: KALE_ID, label: `${KALE_MODE.label} — ${KALE_SECONDS}s`, seconds: KALE_SECONDS },
   { id: TEK3_ID, label: `${TEK3_MODE.label} — ${TEK3_SECONDS}s`, seconds: TEK3_SECONDS },
   { id: TEK2_ID, label: `${TEK2_MODE.label} — ${TEK2_SECONDS}s`, seconds: TEK2_SECONDS },
   { id: TEK_ID, label: `${TEK_MODE.label} — ${TEK_SECONDS}s`, seconds: TEK_SECONDS },
