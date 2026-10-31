@@ -44,8 +44,8 @@ type Red = {
 };
 
 const HEIGHT = 1.82;
-const ARENA_SCALE = 17;
-const ARENA_FLOOR_Y = 0.025;
+const ARENA_SCALE = 36;
+const ARENA_FLOOR_Y = 0.165;
 const dummy = new THREE.Object3D();
 
 function loadGlb(loader: GLTFLoader, url: string) {
@@ -257,8 +257,8 @@ export function Tek3Battle({ names }: { names: string[] }) {
 
   return (
     <group>
-      <hemisphereLight args={["#f0e2cc", "#6a5844", 1.45]} />
-      <directionalLight position={[4, 14, -6]} intensity={1.85} color="#fff2dc" />
+      <hemisphereLight args={["#d7e6f5", "#8a7a62", 1.4]} />
+      <directionalLight position={[6, 16, -8]} intensity={1.7} color="#fff6ea" />
       <group ref={host} />
       {atlas.sheets.map((sheet, s) => (
         <instancedMesh

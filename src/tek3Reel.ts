@@ -1,10 +1,10 @@
 export const TEK3_ID = "tek3" as const;
 export type Tek3Id = typeof TEK3_ID;
 export const TEK3_MODE = { id: TEK3_ID, label: "tek3" } as const;
-export const TEK3_SECONDS = 26;
+export const TEK3_SECONDS = 18;
 export const TEK3_HERO = "/models/savaci.glb";
 export const TEK3_RED = "/models/red.glb";
-export const TEK3_ARENA = "/models/arena.glb";
+export const TEK3_ARENA = "/models/island-arena.glb";
 export const TEK3_URLS = [TEK3_HERO, TEK3_RED, TEK3_ARENA] as const;
 export const TEK3_OURS = 10;
 export const TEK3_PLATE = 0.95;
@@ -37,12 +37,18 @@ export function tek3Hero(i: number): Tek3Hero {
   return { x: Math.sin(ang) * HERO_R, z: Math.cos(ang) * HERO_R, ang };
 }
 
-function needsFor(i: number) {
-  return i % 2 === 0 ? [14, 16, 12] : [15, 13, 16];
+/** One global blow index. No two reds share it, so nobody falls on the same frame. */
+function killIndex(hero: number, slot: number) {
+  for (let lap = 0; lap < 3; lap++) {
+    const n = lap * TEK3_OURS + hero;
+    if (n % STRIKES.length === slot) return n;
+  }
+  return hero;
 }
 
-function filmOf(hit: number, strike: number) {
-  return hit * COMBO + (STRIKES[strike].t - OPEN);
+function filmOf(n: number) {
+  const strike = STRIKES[n % STRIKES.length];
+  return Math.floor(n / STRIKES.length) * COMBO + (strike.t - OPEN);
 }
 
 type Hold = { film: number; clip: number; yaw: number };
@@ -55,13 +61,12 @@ function build() {
     const yaw = hero.ang - FACE0;
     const c = Math.cos(yaw);
     const s = Math.sin(yaw);
-    const needs = needsFor(i);
     let lastFilm = -1;
     let lastClip = STRIKES[0].t;
     STRIKES.forEach((strike, k) => {
       const x = hero.x + strike.x * c + strike.z * s;
       const z = hero.z - strike.x * s + strike.z * c;
-      const die = filmOf(needs[k] - 1, k);
+      const die = filmOf(killIndex(i, k));
       reds.push({
         x,
         z,

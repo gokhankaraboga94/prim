@@ -28,8 +28,8 @@ export const RECENT_BUTTON_LIMIT = 20;
 
 /** Yeniden eskiye. Bir buton güncellenirse en üste alınır, en alttaki 20'nin dışına düşer. */
 export const RECENT_BUTTONS = [
-  { id: KALE_ID, label: `${KALE_MODE.label} — ${KALE_SECONDS}s`, seconds: KALE_SECONDS },
   { id: TEK3_ID, label: `${TEK3_MODE.label} — ${TEK3_SECONDS}s`, seconds: TEK3_SECONDS },
+  { id: KALE_ID, label: `${KALE_MODE.label} — ${KALE_SECONDS}s`, seconds: KALE_SECONDS },
   { id: TEK2_ID, label: `${TEK2_MODE.label} — ${TEK2_SECONDS}s`, seconds: TEK2_SECONDS },
   { id: TEK_ID, label: `${TEK_MODE.label} — ${TEK_SECONDS}s`, seconds: TEK_SECONDS },
   { id: KUYULAR_ID, label: `${KUYULAR_MODE.label} — ${KUYULAR_SECONDS}s`, seconds: KUYULAR_SECONDS },
