@@ -233,7 +233,7 @@ export function Tek3Battle({ names }: { names: string[] }) {
           man.death.reset().play();
           man.dead = true;
         }
-        man.mix.setTime(Math.min(man.deathDur - 0.001, (now - spot.die) * 2));
+        man.mix.setTime(Math.min(man.deathDur - 0.001, now - spot.die));
       }
     }
     for (const sheet of atlas.sheets) {

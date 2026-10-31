@@ -1753,7 +1753,7 @@ export function AdminPage() {
           )}
           {isTek3(reelShot) && (
             <p className="muted">
-              8 saniye. Ekranda kanca yazısı yok. Tek arenasında on savacı, çemberin içinde, üstlerinde büyük isimler. Her biri tek videodaki kılıç kombosunu kullanır. Elli kırmızı onları kuşatmış. Vuruş en yakın kırmızının gövdesine iner. Kırmızı 2 veya 3 isabette düşer, düşüş iki kat hızlı. Kamera sabit ve yukarıdan. Kayıt modeller inmeden başlamaz.
+              26 saniye. Ekranda kanca yazısı yok. Tek arenasında on savacı, çemberin içinde, göğüsleri dışarı dönük, üstlerinde büyük isimler. Her biri tek videodaki kılıç kombosunu kullanır. Kılıcın uzandığı yerde kırmızı durur. Otuz kırmızı uzun dayanır, düşüş normal hızda, sonda sıra sıra yere iner. Kamera sabit ve yukarıdan. Kayıt modeller inmeden başlamaz.
             </p>
           )}
           {isTek2(reelShot) && (
