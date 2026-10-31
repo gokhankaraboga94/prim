@@ -1738,12 +1738,12 @@ export function AdminPage() {
           )}
           {isTek2(reelShot) && (
             <p className="muted">
-              18 saniye. Ekranda yazı yok. Aynı savaşçı, ada arenasının taşında. On kırmızı ona saldırıyor. Kimi bir vuruşta, kimi iki vuruşta düşüyor. İlk karede bir kırmızı çoktan düşüyor. Kayıt modeller inmeden başlamaz.
+              10 saniye. Ekranda yazı yok. Aynı savaşçı, ada arenasının taşında. On kırmızı aralıklı çemberle kuşatmış. Kılıç sallandığı yerde bir kırmızı var. Kimi bir vuruşta, kimi iki vuruşta düşüyor. İlk karede kılıç birinin gövdesinde. Kamera bir adım geride. Kayıt modeller inmeden başlamaz.
             </p>
           )}
           {isTek(reelShot) && (
             <p className="muted">
-              18 saniye. Ekranda yazı yok. Savaşçı arenada tek. On kırmızı ona saldırıyor. Kimi bir vuruşta, kimi iki vuruşta düşüyor. İlk karede bir kırmızı çoktan düşüyor. 1. saniyede ikincisi de gidiyor. Sonda savaşçı ayakta, on kırmızı yerde. Kayıt modeller inmeden başlamaz.
+              10 saniye. Ekranda yazı yok. Savaşçı arenada tek. On kırmızı aralıklı çemberle kuşatmış. Kılıç sallandığı yerde bir kırmızı var. Kimi bir vuruşta, kimi iki vuruşta düşüyor. İlk karede kılıç birinin gövdesinde. Kamera bir adım geride. Sonda savaşçı ayakta. Kayıt modeller inmeden başlamaz.
             </p>
           )}
           {isKuyular(reelShot) && (

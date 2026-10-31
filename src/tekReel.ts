@@ -1,60 +1,127 @@
 export const TEK_ID = "tek" as const;
 export type TekId = typeof TEK_ID;
 export const TEK_MODE = { id: TEK_ID, label: "tek" } as const;
-export const TEK_SECONDS = 18;
+export const TEK_SECONDS = 10;
 export const TEK_HERO = "/models/savaci.glb";
 export const TEK_RED = "/models/red.glb";
 export const TEK_ARENA = "/models/arena.glb";
 export const TEK_URLS = [TEK_HERO, TEK_RED, TEK_ARENA] as const;
 
-export type TekFoe = { ang: number; die: number; hits: 1 | 2 };
+export type TekFoe = { ang: number; hits: 1 | 2; die: number };
 
-/** Ten reds. A negative death means the first body is already falling at frame 0. */
-export const TEK_FOES: TekFoe[] = [
-  { ang: 0.22, die: -0.18, hits: 1 },
-  { ang: -0.62, die: 1.45, hits: 2 },
-  { ang: 0.78, die: 3.15, hits: 1 },
-  { ang: -0.28, die: 4.9, hits: 2 },
-  { ang: 1.05, die: 6.55, hits: 1 },
-  { ang: -1.05, die: 8.15, hits: 1 },
-  { ang: 0.4, die: 9.9, hits: 2 },
-  { ang: -0.82, die: 11.55, hits: 1 },
-  { ang: 0.95, die: 13.2, hits: 2 },
-  { ang: -0.4, die: 14.9, hits: 1 },
+/**
+ * Sword-tip peaks of the aggressive clip, in the fitted model (holder yaw 0).
+ * ang = atan2(tipX, tipZ). The blade reaches about 1.24–1.55m.
+ */
+const STRIKES = [
+  { t: 0.5, ang: -2.89 },
+  { t: 1.05, ang: -1.41 },
+  { t: 1.24, ang: 2.05 },
 ];
+const COMBO = 1.48;
+const OPEN = STRIKES[0].t;
+const RING = 1.15;
 
-const FIGHT_R = 1.16;
+const NEED: Array<1 | 2> = [1, 2, 1, 2, 1, 2, 1, 2, 1, 2];
 
-export function tekSpot(foe: TekFoe, t: number) {
-  const lead = foe.hits === 2 ? 2.05 : 1.05;
-  const arrive = foe.die - lead;
-  const travel = 0.72;
-  let u = 1;
-  if (foe.die > 0 && t < arrive) u = Math.max(0, Math.min(1, (t - (arrive - travel)) / travel));
-  const e = u * u * (3 - 2 * u);
-  const fightX = Math.sin(foe.ang) * FIGHT_R;
-  const fightZ = -Math.cos(foe.ang) * FIGHT_R;
-  const side = foe.ang >= 0 ? 1 : -1;
-  const waitX = side * (2.45 + Math.abs(foe.ang) * 0.35);
-  const waitZ = -0.35;
-  const x = waitX + (fightX - waitX) * e;
-  const z = waitZ + (fightZ - waitZ) * e;
+function buildFoes(): TekFoe[] {
+  const got = Array(NEED.length).fill(0);
+  const plan: number[] = [];
+  let cursor = 0;
+  const total = NEED.reduce((sum, n) => sum + n, 0);
+  while (plan.length < total) {
+    let guard = 0;
+    while (got[cursor] >= NEED[cursor] && guard < NEED.length) {
+      cursor = (cursor + 1) % NEED.length;
+      guard += 1;
+    }
+    plan.push(cursor);
+    got[cursor] += 1;
+    cursor = (cursor + 1) % NEED.length;
+  }
+  const dieAt = Array(NEED.length).fill(0);
+  const seen = Array(NEED.length).fill(0);
+  plan.forEach((foe, i) => {
+    const strike = STRIKES[i % STRIKES.length];
+    const film = Math.floor(i / STRIKES.length) * COMBO + (strike.t - OPEN);
+    seen[foe] += 1;
+    if (seen[foe] === NEED[foe]) dieAt[foe] = film;
+  });
+  return NEED.map((hits, i) => ({
+    ang: -Math.PI + (i + 0.5) * ((Math.PI * 2) / NEED.length),
+    hits,
+    die: dieAt[i],
+  }));
+}
+
+export const TEK_FOES: TekFoe[] = buildFoes();
+
+export function tekSpot(i: number) {
+  const ang = TEK_FOES[i].ang;
+  const x = Math.sin(ang) * RING;
+  const z = Math.cos(ang) * RING;
   return { x, z, yaw: Math.atan2(-x, -z) };
 }
 
-export function tekTarget(t: number) {
-  for (const foe of TEK_FOES) if (t < foe.die + 0.05) return foe;
-  return TEK_FOES[TEK_FOES.length - 1];
+/** Clip time so film 0 is the first blade already in a body. */
+export function tekClipTime(t: number) {
+  const u = OPEN + Math.max(0, t);
+  return u - Math.floor(u / COMBO) * COMBO;
+}
+
+function contactYaw(index: number) {
+  const got = Array(NEED.length).fill(0);
+  const plan: number[] = [];
+  let cursor = 0;
+  const total = NEED.reduce((sum, n) => sum + n, 0);
+  while (plan.length < total) {
+    let guard = 0;
+    while (got[cursor] >= NEED[cursor] && guard < NEED.length) {
+      cursor = (cursor + 1) % NEED.length;
+      guard += 1;
+    }
+    plan.push(cursor);
+    got[cursor] += 1;
+    cursor = (cursor + 1) % NEED.length;
+  }
+  const strike = STRIKES[index % STRIKES.length];
+  return TEK_FOES[plan[index]].ang - strike.ang;
+}
+
+const CONTACTS = Array.from({ length: NEED.reduce((s, n) => s + n, 0) }, (_, i) => {
+  const strike = STRIKES[i % STRIKES.length];
+  return {
+    film: Math.floor(i / STRIKES.length) * COMBO + (strike.t - OPEN),
+    yaw: contactYaw(i),
+  };
+});
+
+export function tekHeroYaw(t: number) {
+  let prev = CONTACTS[0];
+  let next = CONTACTS[CONTACTS.length - 1];
+  for (let i = 0; i < CONTACTS.length; i++) {
+    if (CONTACTS[i].film <= t) prev = CONTACTS[i];
+    if (CONTACTS[i].film >= t) {
+      next = CONTACTS[i];
+      break;
+    }
+  }
+  if (next.film <= prev.film) return prev.yaw;
+  const u = (t - prev.film) / (next.film - prev.film);
+  if (u < 0.18) return prev.yaw;
+  if (u > 0.82) return next.yaw;
+  const e = (u - 0.18) / 0.64;
+  const s = e * e * (3 - 2 * e);
+  const d = Math.atan2(Math.sin(next.yaw - prev.yaw), Math.cos(next.yaw - prev.yaw));
+  return prev.yaw + d * s;
 }
 
 export type TekCam = { x: number; y: number; z: number; lx: number; ly: number; lz: number; fov: number };
 
 export function tekCam(t: number): TekCam {
-  if (t < 1.05) return { x: 0.15, y: 1.48, z: -4.55, lx: 0.02, ly: 1.05, lz: -0.55, fov: 36 };
-  if (t < 3.2) return { x: -0.15, y: 1.78, z: -5.7, lx: 0, ly: 0.98, lz: -0.35, fov: 42 };
-  if (t > 16.1) return { x: 0.1, y: 1.62, z: -4.9, lx: 0, ly: 1.02, lz: 0.05, fov: 38 };
-  const spot = tekSpot(tekTarget(t), t);
-  return { x: spot.x * 0.22, y: 1.7, z: spot.z - 3.8, lx: spot.x * 0.35, ly: 1.0, lz: spot.z * 0.45, fov: 40 };
+  if (t < 0.9) return { x: 0.2, y: 2.2, z: -6.2, lx: 0, ly: 0.95, lz: -0.15, fov: 44 };
+  if (t > 8.2) return { x: 0.05, y: 2.55, z: -6.7, lx: 0, ly: 0.85, lz: 0, fov: 46 };
+  return { x: 0.1, y: 2.7, z: -7.15, lx: 0, ly: 0.75, lz: 0, fov: 48 };
 }
 
 let playAt = 0;

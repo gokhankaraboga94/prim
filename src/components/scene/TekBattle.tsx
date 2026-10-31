@@ -12,9 +12,10 @@ import {
   tekCam,
   tekMarkReady,
   tekReset,
+  tekClipTime,
+  tekHeroYaw,
   tekSpot,
   tekT,
-  tekTarget,
 } from "../../tekReel";
 
 type Gltf = Parameters<Parameters<GLTFLoader["load"]>[1]>[0];
@@ -96,8 +97,6 @@ export function TekBattle({
   const host = useRef<THREE.Group>(null);
   const hero = useRef<{ mix: THREE.AnimationMixer; dur: number; hold: THREE.Group } | null>(null);
   const reds = useRef<RedFight[]>([]);
-  const yaw = useRef(Math.PI);
-
   useEffect(() => {
     let drop = false;
     reset();
@@ -181,16 +180,12 @@ export function TekBattle({
     const now = t();
     const man = hero.current;
     if (man) {
-      const spot = tekSpot(now < 0.55 ? TEK_FOES[0] : tekTarget(now), now);
-      const aim = Math.atan2(spot.z, -spot.x);
-      const turn = Math.atan2(Math.sin(aim - yaw.current), Math.cos(aim - yaw.current));
-      yaw.current += turn * 0.2;
-      man.hold.rotation.y = yaw.current;
-      man.mix.setTime((now * 1.15 + 0.55) % man.dur);
+      man.hold.rotation.y = tekHeroYaw(now);
+      man.mix.setTime(tekClipTime(now) % man.dur);
     }
     for (const red of reds.current) {
       const foe = TEK_FOES[red.i];
-      const spot = tekSpot(foe, now);
+      const spot = tekSpot(red.i);
       red.hold.position.set(spot.x, 0, spot.z);
       red.hold.rotation.y = spot.yaw;
       if (now < foe.die) {
@@ -199,8 +194,7 @@ export function TekBattle({
           red.sword.reset().play();
           red.dead = false;
         }
-        const moving = foe.die > 0 && now < foe.die - (foe.hits === 2 ? 2.05 : 1.05);
-        red.mix.setTime(moving ? 0.04 : (now * 0.9 + red.i * 0.17) % red.swordDur);
+        red.mix.setTime((now * 0.9 + red.i * 0.17) % red.swordDur);
       } else {
         if (!red.dead) {
           red.sword.stop();

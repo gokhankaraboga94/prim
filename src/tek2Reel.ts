@@ -3,7 +3,7 @@ import { TEK_HERO, TEK_RED } from "./tekReel";
 export const TEK2_ID = "tek2" as const;
 export type Tek2Id = typeof TEK2_ID;
 export const TEK2_MODE = { id: TEK2_ID, label: "tek2" } as const;
-export const TEK2_SECONDS = 18;
+export const TEK2_SECONDS = 10;
 export const TEK2_ARENA = "/models/island-arena.glb";
 /** Local deck height of the island, so the fight stands on the stone. */
 export const TEK2_FLOOR = 0.165;
