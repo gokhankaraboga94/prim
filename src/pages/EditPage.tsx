@@ -305,9 +305,9 @@ export function EditPage() {
                     <input
                       type="number"
                       min={1}
-                      max={40}
+                      max={200}
                       value={counts[def.id] ?? 1}
-                      onChange={(event) => setCounts((prev) => ({ ...prev, [def.id]: Math.max(1, Math.min(40, Number(event.target.value) || 1)) }))}
+                      onChange={(event) => setCounts((prev) => ({ ...prev, [def.id]: Math.max(1, Math.min(200, Number(event.target.value) || 1)) }))}
                     />
                   </label>
                   <button

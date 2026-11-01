@@ -5,7 +5,7 @@ import * as THREE from "three";
 import { TEAMS } from "../../edit/catalog";
 import { moveSelected, selectNearby, stepUnits, teamLabel, type EditStore, type Unit } from "../../edit/battle";
 import type { CharacterAsset } from "../../edit/loadModel";
-import { MAX_PER_MODEL, MAX_UNITS } from "../../edit/catalog";
+import { MAX_PER_MODEL } from "../../edit/catalog";
 import { reelWindow } from "../../recordCanvas";
 
 const teamColor = new Map<number, THREE.Color>(TEAMS.map((team) => [team.id, new THREE.Color(team.color)]));
@@ -569,7 +569,7 @@ function EditRig({ store, assets }: { store: EditStore; assets: Record<string, C
 
     const ring = rings.current;
     if (ring) {
-      const shown = store.units.filter((unit) => unit.alive);
+      const shown = store.units.filter((unit) => unit.alive).slice(0, 8192);
       ring.count = shown.length;
       shown.forEach((unit, index) => {
         const scale = Math.max(0.45, unit.radius);
@@ -587,7 +587,7 @@ function EditRig({ store, assets }: { store: EditStore; assets: Record<string, C
 
     const bar = bars.current;
     if (bar) {
-      const shown = store.battle ? store.units.filter((unit) => unit.alive && unit.team > 0) : [];
+      const shown = store.battle ? store.units.filter((unit) => unit.alive && unit.team > 0).slice(0, 8192) : [];
       bar.count = shown.length;
       shown.forEach((unit, index) => {
         aim.set(unit.x, unit.height + 0.28, unit.z);
@@ -649,8 +649,8 @@ function EditRig({ store, assets }: { store: EditStore; assets: Record<string, C
   return (
     <group>
       <group ref={bodies} />
-      <instancedMesh ref={rings} args={[ringGeo, ringMat, MAX_UNITS]} frustumCulled={false} />
-      <instancedMesh ref={bars} args={[barGeo, barMat, MAX_UNITS]} frustumCulled={false} renderOrder={2} />
+      <instancedMesh ref={rings} args={[ringGeo, ringMat, 8192]} frustumCulled={false} />
+      <instancedMesh ref={bars} args={[barGeo, barMat, 8192]} frustumCulled={false} renderOrder={2} />
       <group ref={names} />
     </group>
   );

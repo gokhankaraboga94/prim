@@ -44,8 +44,8 @@ export const TEAMS = [
   { id: 4, label: "Yeşil", color: "#2f9e44" },
 ] as const;
 
-export const MAX_PER_MODEL = 48;
-export const MAX_UNITS = 180;
+export const MAX_PER_MODEL = 200;
+export const MAX_UNITS = 1_000_000;
 
 export function characterById(id: string) {
   return CHARACTERS.find((item) => item.id === id) ?? null;

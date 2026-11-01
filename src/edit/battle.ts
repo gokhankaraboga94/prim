@@ -90,7 +90,7 @@ export function spawnUnits(store: EditStore, def: CharacterDef, radius: number, 
     return 0;
   }
   const have = store.units.filter((unit) => unit.model === def.id).length;
-  const room = Math.min(MAX_PER_MODEL - have, MAX_UNITS - store.units.length, 40);
+  const room = Math.min(MAX_PER_MODEL - have, MAX_UNITS - store.units.length);
   const n = Math.max(0, Math.min(Math.floor(count) || 1, room));
   if (!n) {
     store.note = "Bu modelden daha fazla sığmıyor.";
