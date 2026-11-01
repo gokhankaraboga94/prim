@@ -167,6 +167,7 @@ type BattleSceneProps = {
   mix?: MixId | null;
   xxx?: XxxId | null;
   rosterIds?: number[] | null;
+  home?: boolean;
   onReady?: (canvas: HTMLCanvasElement) => void;
 };
 
@@ -977,6 +978,7 @@ function SceneContent({
   mix = null,
   xxx = null,
   rosterIds = null,
+  home = false,
 }: BattleSceneProps) {
   const ordu = orduIn ?? (karsi ? ORDU_ID : null);
   const chiefs = effectiveCommanders(commanders, names);
@@ -1049,7 +1051,7 @@ function SceneContent({
       {film && <FilmFoes />}
       {dragon && <Dragon soldiers={Math.max(1, soldiers)} />}
       {giant && <Giant soldiers={isDevAll(giant) ? Math.max(1, soldiers) : Math.min(giant === DEV2_ID ? DEV2_N : DEV_N, Math.max(1, soldiers))} big={isDevBig(giant)} sword={isDevSword(giant)} dread={isDevDread(giant)} flesh={isDev7(giant)} ape={isDev8(giant)} demon={isDev9(giant)} orc={isDev10(giant)} hulk={isKicker(giant)} kickModel={kickModel(giant)} fast={isDevFast(giant)} small={isDevSmall(giant)} snake={isSnake(giant)} devs={isDevs(giant)} crown={devLive} />}
-      {!wars && !ordu && !ok && !elf && !kalkan && !hero && !loop && !kurtar && !gecme && !kuyu && !kapi && !magdur && !kare && !devKong && !savas && !kirmizi && !baska && !aragorn && !dovus && !kuyular && !tek && !tek2 && !tek3 && !kale && !run && !pit && !bout && <Army count={friendN} names={names} commanders={commanders} cinematic={cinematic} duration={duration} skipCommander={hideCmd} roster={roster} discover={discover} countdown={Boolean(countdown)} defend={Boolean(defend)} defend2={sortie} defend3={isDefend3(defend)} loose={isDefend5(defend)} blue={isDefend4(defend) || isDefend5(defend)} vs={field} vs2={climb} new1={Boolean(new1)} new2={duel} blade={blades || Boolean(maze)} bridge={chase} cross={cross} wide={wide} relief={relief} maze={Boolean(maze)} film={Boolean(film)} dragon={Boolean(dragon)} giant={Boolean(giant)} giantBig={isDevBig(giant)} giantAll={isDevAll(giant)} giantSword={isDevSword(giant)} giantSnake={isSnake(giant)} giantDevs={isDevs(giant)} giantKnight={isDev7(giant) || isDev8(giant) || isDev9(giant) || isDev10(giant) || isKicker(giant)} giantKick={isKicker(giant)} giantFast={isDevFast(giant)} giantSmall={isDevSmall(giant)} knight={!cinematic} nameGold={isDevDread(giant) || isSnake(giant) || isDevs(giant)} nameAlert={devLive || isDefend5(defend)} namePlate={Boolean(kayit)} mix={split} mixSlow={isMix9(mix)} nameHunt={Boolean(xxx)} quiet={Boolean(xxx && xxxQuiet(xxx)) || slaughter || Boolean(maze) || Boolean(film) || Boolean(dragon) || Boolean(giant) || Boolean(kayit)} square={Boolean(kayit) || Boolean(xxx && xxxSquare(xxx))} readNames={Boolean(xxx && xxxCloseNames(xxx))} scanHunt={Boolean(xxx && xxxScanHunt(xxx))} level={level} rosterIds={rosterIds} />}
+      {!wars && !ordu && !ok && !elf && !kalkan && !hero && !loop && !kurtar && !gecme && !kuyu && !kapi && !magdur && !kare && !devKong && !savas && !kirmizi && !baska && !aragorn && !dovus && !kuyular && !tek && !tek2 && !tek3 && !kale && !run && !pit && !bout && <Army count={friendN} names={names} commanders={commanders} cinematic={cinematic} duration={duration} skipCommander={hideCmd} roster={roster} discover={discover} countdown={Boolean(countdown)} defend={Boolean(defend)} defend2={sortie} defend3={isDefend3(defend)} loose={isDefend5(defend)} blue={isDefend4(defend) || isDefend5(defend)} vs={field} vs2={climb} new1={Boolean(new1)} new2={duel} blade={blades || Boolean(maze)} bridge={chase} cross={cross} wide={wide} relief={relief} maze={Boolean(maze)} film={Boolean(film)} dragon={Boolean(dragon)} giant={Boolean(giant)} giantBig={isDevBig(giant)} giantAll={isDevAll(giant)} giantSword={isDevSword(giant)} giantSnake={isSnake(giant)} giantDevs={isDevs(giant)} giantKnight={isDev7(giant) || isDev8(giant) || isDev9(giant) || isDev10(giant) || isKicker(giant)} giantKick={isKicker(giant)} giantFast={isDevFast(giant)} giantSmall={isDevSmall(giant)} knight={!cinematic} nameGold={isDevDread(giant) || isSnake(giant) || isDevs(giant)} nameAlert={devLive || isDefend5(defend)} namePlate={Boolean(kayit)} mix={split} mixSlow={isMix9(mix)} nameHunt={Boolean(xxx)} quiet={Boolean(xxx && xxxQuiet(xxx)) || slaughter || Boolean(maze) || Boolean(film) || Boolean(dragon) || Boolean(giant) || Boolean(kayit)} square={Boolean(kayit) || Boolean(xxx && xxxSquare(xxx))} readNames={Boolean(xxx && xxxCloseNames(xxx))} scanHunt={Boolean(xxx && xxxScanHunt(xxx))} level={level} rosterIds={rosterIds} home={home} />}
       {wars && <WarsBattle names={names} soldiers={soldiers} />}
       {ordu && (karsi ? <KarsiBattle names={names} soldiers={soldiers} rival={karsi} /> : <OrduBattle names={names} soldiers={soldiers} />)}
       {ok && <OkBattle names={names} />}
@@ -1302,6 +1304,7 @@ function BattleSceneInner({
   mix = null,
   xxx = null,
   rosterIds = null,
+  home = false,
   onReady,
 }: BattleSceneProps) {
   const [active, setActive] = useState(() => typeof document === "undefined" || !document.hidden);
@@ -1455,6 +1458,7 @@ function BattleSceneInner({
         mix={mix}
         xxx={xxx}
         rosterIds={rosterIds}
+        home={home}
       />
     </Canvas>
   );

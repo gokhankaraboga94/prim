@@ -101,6 +101,7 @@ type ArmyProps = {
   nameGold?: boolean;
   nameAlert?: boolean;
   namePlate?: boolean;
+  home?: boolean;
   mix?: boolean;
   mixSlow?: boolean;
   nameHunt?: boolean;
@@ -971,7 +972,7 @@ function NameLayers({
 }
 
 
-export function Army({ count, names = [], commanders = [], cinematic, duration = 8, skipCommander = false, roster = null, discover = null, countdown = false, defend = false, defend2 = false, defend3 = false, loose = false, blue = false, vs = false, vs2 = false, new1 = false, new2 = false, blade = false, bridge = false, cross = false, wide = false, relief = false, maze = false, film = false, dragon = false, giant = false, giantBig = false, giantAll = false, giantSword = false, giantSnake = false, giantDevs = false, giantKnight = false, giantKick = false, giantFast = false, giantSmall = false, knight = false, nameGold = false, nameAlert = false, namePlate = false, mix = false, mixSlow = false, nameHunt = false, quiet = false, square = false, readNames = false, scanHunt = false, level = 1, rosterIds = null }: ArmyProps) {
+export function Army({ count, names = [], commanders = [], cinematic, duration = 8, skipCommander = false, roster = null, discover = null, countdown = false, defend = false, defend2 = false, defend3 = false, loose = false, blue = false, vs = false, vs2 = false, new1 = false, new2 = false, blade = false, bridge = false, cross = false, wide = false, relief = false, maze = false, film = false, dragon = false, giant = false, giantBig = false, giantAll = false, giantSword = false, giantSnake = false, giantDevs = false, giantKnight = false, giantKick = false, giantFast = false, giantSmall = false, knight = false, nameGold = false, nameAlert = false, namePlate = false, home = false, mix = false, mixSlow = false, nameHunt = false, quiet = false, square = false, readNames = false, scanHunt = false, level = 1, rosterIds = null }: ArmyProps) {
   const bodies = useRef<THREE.InstancedMesh>(null);
   const knightHelms = useRef<THREE.InstancedMesh>(null);
   const [knightGeo, setKnightGeo] = useState<{ body: THREE.BufferGeometry; helm: THREE.BufferGeometry } | null>(null);
@@ -1175,15 +1176,16 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
       buildNameAtlas(
         labeled.map((i) => ({
           text: i < 0 ? DEFAULT_COMMANDER : names[i],
-          commander: !defend && !vs && !vs2 && !openField && (i < 0 || isCommander(names[i], chiefsList)),
+          commander: home ? false : !defend && !vs && !vs2 && !openField && (i < 0 || isCommander(names[i], chiefsList)),
           plain: Boolean(countdown || defend || vs || vs2 || openField || roster || square || film || namePlate),
-          fill: namePlate || nameAlert || nameGold ? "#ffe14a" : undefined,
-          frame: namePlate || undefined,
+          fill: home ? "#111111" : namePlate || nameAlert || nameGold ? "#ffe14a" : undefined,
+          frame: home || namePlate || undefined,
+          plate: home ? "rgba(255,255,255,0.58)" : undefined,
         })),
-        Boolean(giant || dragon || namePlate),
+        Boolean(giant || dragon || namePlate || home),
         Boolean(namePlate)
       ),
-    [labeled, names, chiefsList, countdown, defend, vs, vs2, openField, roster, square, film, nameGold, nameAlert, namePlate, giant, dragon]
+    [labeled, names, chiefsList, countdown, defend, vs, vs2, openField, roster, square, film, nameGold, nameAlert, namePlate, home, giant, dragon]
   );
   useEffect(() => () => nameAtlas.dispose(), [nameAtlas]);
 
@@ -1915,6 +1917,34 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
       }
       if (bridge && !relief && idx >= 0 && !new5OnScreen(idx, recT, layout.rest.length)) {
         hideName(k, cell);
+        continue;
+      }
+      if (home) {
+        const w = 1.15;
+        const h = (cell.sy * w) / Math.max(cell.sx, 0.01);
+        const y = pos.y + 2.2 + h * 0.5;
+        if (cam) dummy.quaternion.copy(cam.quaternion);
+        else dummy.quaternion.identity();
+        dummy.position.set(pos.x, y, pos.z);
+        dummy.scale.set(w, h, 1);
+        dummy.updateMatrix();
+        nameMeshRefs.current[cell.sheet]?.setMatrixAt(cell.local, dummy.matrix);
+        mixSlots[k] = {
+          sheet: cell.sheet,
+          local: cell.local,
+          want: true,
+          bottomShow: false,
+          x: pos.x,
+          y,
+          z: pos.z,
+          sx: w,
+          sy: h,
+          botX: 0,
+          botY: 0,
+          botZ: 0,
+          botSx: 0,
+          botSy: 0,
+        };
         continue;
       }
       let nameScale = crowd;

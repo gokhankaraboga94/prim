@@ -21,6 +21,7 @@ export function HomePage() {
             commanders={game.commanders}
             level={level}
             pressure={Math.round(pressure * 20) / 20}
+            home
           />
         </SceneErrorBoundary>
       </div>
