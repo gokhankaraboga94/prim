@@ -7,6 +7,8 @@ export type CharacterDef = {
   yaw: number;
   /** Already simplified offline (models/arena3); skip the runtime vertex merge. */
   packed?: boolean;
+  /** Full-size file. On a phone it waits until the roster is opened. */
+  heavy?: boolean;
 };
 
 /**
@@ -16,11 +18,12 @@ export type CharacterDef = {
  */
 export const CHARACTERS: CharacterDef[] = [
   { id: "knight", label: "Şövalye", url: "/models/knight.glb", height: 1.72, yaw: 0 },
+  { id: "savaci", label: "Savaşçı", url: "/models/savaci.glb", height: 1.82, yaw: 0 },
   { id: "mavi-knight", label: "Mavi püsküllü", url: "/models/arena3/mavi.glb", height: 1.8, yaw: 0, packed: true },
   { id: "hero-1", label: "Kahraman 1", url: "/models/arena3/1.glb", height: 1.8, yaw: 0, packed: true },
   { id: "hero-2", label: "Kahraman 2", url: "/models/arena3/2.glb", height: 1.8, yaw: 0, packed: true },
   { id: "hero-3", label: "Kahraman 3", url: "/models/arena3/3.glb", height: 1.8, yaw: 0, packed: true },
-  { id: "hulk", label: "Hulk", url: "/models/hulk+3d+model.glb", height: 15.6, yaw: 0 },
+  { id: "hulk", label: "Hulk", url: "/models/hulk+3d+model.glb", height: 15.6, yaw: 0, heavy: true },
   { id: "roman", label: "Roman", url: "/models/roman.glb", height: 1.66, yaw: -Math.PI / 2 },
   { id: "armored", label: "Zırhlı", url: "/models/arena3/armored.glb", height: 1.8, yaw: 0, packed: true },
   { id: "fantasy-a", label: "Fantazi A", url: "/models/arena3/fantasy-a.glb", height: 1.8, yaw: 0, packed: true },
@@ -28,10 +31,10 @@ export const CHARACTERS: CharacterDef[] = [
   { id: "fantasy", label: "Fantazi", url: "/models/arena3/fantasy.glb", height: 1.8, yaw: 0, packed: true },
   { id: "medieval", label: "Ortaçağ", url: "/models/arena3/medieval.glb", height: 1.8, yaw: 0, packed: true },
   { id: "tripo", label: "Tripo", url: "/models/tripo.glb", height: 2.4, yaw: 0 },
-  { id: "orc", label: "Ork", url: "/models/orc.glb", height: 15.6 * 0.7, yaw: 0 },
-  { id: "demon", label: "İblis", url: "/models/demon.glb", height: 15.6 * 0.85, yaw: 0 },
-  { id: "kong", label: "Kong", url: "/models/bigfoot.glb", height: 15.6, yaw: 0 },
-  { id: "colossus", label: "Colossus", url: "/models/colossus.glb", height: 15.6, yaw: 0 },
+  { id: "orc", label: "Ork", url: "/models/orc.glb", height: 15.6 * 0.7, yaw: 0, heavy: true },
+  { id: "demon", label: "İblis", url: "/models/demon.glb", height: 15.6 * 0.85, yaw: 0, heavy: true },
+  { id: "kong", label: "Kong", url: "/models/bigfoot.glb", height: 15.6, yaw: 0, heavy: true },
+  { id: "colossus", label: "Colossus", url: "/models/colossus.glb", height: 15.6, yaw: 0, heavy: true },
 ];
 
 export const TEAMS = [

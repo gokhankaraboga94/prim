@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
+import { clone as cloneSkinned } from "three/examples/jsm/utils/SkeletonUtils.js";
 import * as THREE from "three";
 import { TEAMS } from "../../edit/catalog";
 import { moveSelected, selectNearby, stepUnits, teamLabel, type EditStore, type Unit } from "../../edit/battle";
@@ -66,16 +67,19 @@ function nameTexture(text: string, anisotropy: number) {
 
 function grassTexture() {
   const canvas = document.createElement("canvas");
-  canvas.width = 2048;
-  canvas.height = 2048;
+  const phone = typeof window !== "undefined" && Math.min(window.innerWidth, window.innerHeight) < 860;
+  const size = phone ? 512 : 1024;
+  const specks = phone ? 2200 : 8000;
+  canvas.width = size;
+  canvas.height = size;
   const ctx = canvas.getContext("2d");
   if (!ctx) return null;
   ctx.fillStyle = "#4e9a38";
-  ctx.fillRect(0, 0, 2048, 2048);
-  for (let i = 0; i < 18000; i++) {
+  ctx.fillRect(0, 0, size, size);
+  for (let i = 0; i < specks; i++) {
     const n = i % 7;
     ctx.fillStyle = n === 0 ? "#7ec85a" : n === 1 ? "#3d8228" : n === 2 ? "#68b448" : n === 3 ? "#357820" : n === 4 ? "#96d868" : n === 5 ? "#5aa838" : "#2c681c";
-    ctx.fillRect(Math.random() * 2048, Math.random() * 2048, 2 + Math.random() * 7, 2 + Math.random() * 6);
+    ctx.fillRect(Math.random() * size, Math.random() * size, 2 + Math.random() * 7, 2 + Math.random() * 6);
   }
   const tex = new THREE.CanvasTexture(canvas);
   tex.wrapS = THREE.RepeatWrapping;
@@ -102,6 +106,46 @@ function placeUnit(unit: Unit) {
   dummy.updateMatrix();
 }
 
+function clipBy(clips: THREE.AnimationClip[], keys: string[]) {
+  for (const key of keys) {
+    const hit = clips.find((clip) => clip.name.toLowerCase().includes(key));
+    if (hit) return hit;
+  }
+  return null;
+}
+
+type Actor = {
+  id: number;
+  holder: THREE.Group;
+  mixer: THREE.AnimationMixer;
+  idle: THREE.AnimationAction | null;
+  move: THREE.AnimationAction | null;
+  attack: THREE.AnimationAction | null;
+  current: THREE.AnimationAction | null;
+  mode: string;
+  px: number;
+  pz: number;
+};
+
+function makeActor(asset: CharacterAsset): Omit<Actor, "id"> {
+  const holder = new THREE.Group();
+  const model = cloneSkinned(asset.template!) as THREE.Object3D;
+  holder.add(model);
+  const mixer = new THREE.AnimationMixer(model);
+  const clips = asset.clips ?? [];
+  const play = (clip: THREE.AnimationClip | null) => {
+    if (!clip) return null;
+    const action = mixer.clipAction(clip);
+    action.setLoop(THREE.LoopRepeat, Infinity);
+    return action;
+  };
+  const idle = play(clipBy(clips, ["idle", "defensive", "stance"])) ?? play(clips[0] ?? null);
+  const move = play(clipBy(clips, ["run", "walk", "sprint"]));
+  const attack = play(clipBy(clips, ["aggress", "sword", "attack", "combo"]));
+  idle?.play();
+  return { holder, mixer, idle, move, attack, current: idle, mode: "idle", px: 0, pz: 0 };
+}
+
 function EditRig({ store, assets }: { store: EditStore; assets: Record<string, CharacterAsset> }) {
   const { camera, gl } = useThree();
   const bodies = useRef<THREE.Group>(null);
@@ -110,6 +154,7 @@ function EditRig({ store, assets }: { store: EditStore; assets: Record<string, C
   const names = useRef<THREE.Group>(null);
   const maxAniso = useMemo(() => gl.capabilities.getMaxAnisotropy(), [gl]);
   const meshes = useRef(new Map<string, THREE.InstancedMesh>());
+  const actors = useRef(new Map<number, Actor>());
   const keys = useRef(new Set<string>());
   const look = useRef({ yaw: 0.45, pitch: 0.78, dist: 38 });
   const drag = useRef<{ x: number; y: number; button: number; moved: boolean; sx: number; sy: number; touch: boolean } | null>(null);
@@ -122,7 +167,7 @@ function EditRig({ store, assets }: { store: EditStore; assets: Record<string, C
     const host = bodies.current;
     if (!host) return;
     for (const [id, asset] of Object.entries(assets)) {
-      if (meshes.current.has(id)) continue;
+      if (asset.template || meshes.current.has(id)) continue;
       const mesh = new THREE.InstancedMesh(asset.geometry, asset.material, MAX_PER_MODEL);
       mesh.count = 0;
       mesh.frustumCulled = false;
@@ -134,10 +179,16 @@ function EditRig({ store, assets }: { store: EditStore; assets: Record<string, C
 
   useEffect(() => {
     const pool = meshes.current;
+    const cast = actors.current;
     return () => {
       // Geometry and material belong to the asset; only the instance buffers go here.
       for (const mesh of pool.values()) mesh.dispose();
       pool.clear();
+      for (const actor of cast.values()) {
+        actor.holder.removeFromParent();
+        actor.mixer.stopAllAction();
+      }
+      cast.clear();
     };
   }, []);
 
@@ -469,6 +520,51 @@ function EditRig({ store, assets }: { store: EditStore; assets: Record<string, C
       });
       mesh.instanceMatrix.needsUpdate = true;
       if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+    }
+
+    const host = bodies.current;
+    const seen = new Set<number>();
+    if (host) {
+      for (const unit of store.units) {
+        const asset = assets[unit.model];
+        if (!asset?.template) continue;
+        seen.add(unit.id);
+        let actor = actors.current.get(unit.id);
+        if (!actor) {
+          actor = { ...makeActor(asset), id: unit.id, px: unit.x, pz: unit.z };
+          host.add(actor.holder);
+          actors.current.set(unit.id, actor);
+        }
+        if (unit.alive) {
+          actor.holder.position.set(unit.x, unit.y, unit.z);
+          actor.holder.rotation.set(0, unit.yaw, 0);
+          actor.holder.scale.setScalar(1);
+          actor.holder.visible = true;
+        } else {
+          placeUnit(unit);
+          actor.holder.position.copy(dummy.position);
+          actor.holder.quaternion.copy(dummy.quaternion);
+          actor.holder.scale.copy(dummy.scale);
+        }
+        const moved = Math.hypot(unit.x - actor.px, unit.z - actor.pz) > 0.02;
+        actor.px = unit.x;
+        actor.pz = unit.z;
+        const mode = !unit.alive ? "dead" : unit.swing > 0.08 ? "attack" : moved ? "move" : "idle";
+        if (mode !== actor.mode) {
+          const next = mode === "attack" ? actor.attack ?? actor.idle : mode === "move" ? actor.move ?? actor.idle : actor.idle;
+          if (actor.current && actor.current !== next) actor.current.fadeOut(0.15);
+          if (next && next !== actor.current) next.reset().fadeIn(0.15).play();
+          actor.current = next;
+          actor.mode = mode;
+        }
+        actor.mixer.update(Math.min(0.05, Math.max(0, dt)));
+      }
+    }
+    for (const [id, actor] of actors.current) {
+      if (seen.has(id)) continue;
+      actor.holder.removeFromParent();
+      actor.mixer.stopAllAction();
+      actors.current.delete(id);
     }
 
     const ring = rings.current;

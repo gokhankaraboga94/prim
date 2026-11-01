@@ -10,6 +10,9 @@ export type CharacterAsset = {
   geometry: THREE.BufferGeometry;
   material: THREE.Material;
   radius: number;
+  /** Skinned source. Clones play clips; the baked pose stays for the thumbnail. */
+  template?: THREE.Object3D;
+  clips?: THREE.AnimationClip[];
 };
 
 const METAL = new THREE.Color("#a7b0b8");
@@ -18,9 +21,42 @@ const STEEL = new THREE.Color("#d7dee6");
 const WRAP = new THREE.Color("#3a3e46");
 
 function loaderParse(url: string) {
-  return new Promise<THREE.Group>((resolve, reject) => {
-    new GLTFLoader().load(url, (gltf) => resolve(gltf.scene), undefined, reject);
+  return new Promise<{ scene: THREE.Group; animations: THREE.AnimationClip[] }>((resolve, reject) => {
+    new GLTFLoader().load(url, (gltf) => resolve({ scene: gltf.scene, animations: gltf.animations }), undefined, reject);
   });
+}
+
+function toLambert(root: THREE.Object3D) {
+  root.traverse((obj) => {
+    const mesh = obj as THREE.Mesh;
+    if (!mesh.isMesh) return;
+    const src = (Array.isArray(mesh.material) ? mesh.material[0] : mesh.material) as THREE.MeshStandardMaterial;
+    mesh.material = new THREE.MeshLambertMaterial({
+      map: src.map ?? null,
+      color: src.color ? src.color.clone() : new THREE.Color("#ffffff"),
+    });
+    mesh.castShadow = false;
+    mesh.receiveShadow = false;
+    mesh.frustumCulled = false;
+  });
+}
+
+function fitRig(root: THREE.Object3D, height: number) {
+  root.updateMatrixWorld(true);
+  const box = new THREE.Box3().setFromObject(root);
+  const span = Math.max(0.001, box.max.y - box.min.y);
+  const scale = height / span;
+  root.scale.setScalar(scale);
+  root.position.set(-((box.min.x + box.max.x) / 2) * scale, -box.min.y * scale, -((box.min.z + box.max.z) / 2) * scale);
+  root.updateMatrixWorld(true);
+  const fitted = new THREE.Box3().setFromObject(root);
+  return Math.max(0.35, fitted.max.x, -fitted.min.x, fitted.max.z, -fitted.min.z);
+}
+
+function inPlace(clip: THREE.AnimationClip) {
+  const next = clip.clone();
+  next.tracks = clip.tracks.filter((track) => !track.name.endsWith("Hips.position"));
+  return next;
 }
 
 function materialColor(src: THREE.Material) {
@@ -150,8 +186,22 @@ function lighten(geo: THREE.BufferGeometry) {
 }
 
 export async function loadCharacter(def: CharacterDef): Promise<CharacterAsset> {
-  const scene = await loaderParse(def.url);
+  const file = await loaderParse(def.url);
+  const scene = file.scene;
   scene.updateMatrixWorld(true);
+  const skinned = scene.getObjectByProperty("isSkinnedMesh", true) as THREE.SkinnedMesh | undefined;
+  if (skinned && file.animations.length) {
+    toLambert(scene);
+    const radius = fitRig(scene, def.height);
+    return {
+      id: def.id,
+      geometry: new THREE.BufferGeometry(),
+      material: new THREE.MeshBasicMaterial(),
+      radius,
+      template: scene,
+      clips: file.animations.map(inPlace),
+    };
+  }
   const meshes: THREE.Mesh[] = [];
   scene.traverse((obj) => {
     const mesh = obj as THREE.Mesh;
@@ -233,6 +283,35 @@ export function snapshotCharacter(asset: CharacterAsset) {
   const url = thumbRenderer.domElement.toDataURL("image/jpeg", 0.72);
   scene.clear();
   return url;
+}
+
+export function letterThumb(label: string) {
+  const canvas = document.createElement("canvas");
+  canvas.width = 160;
+  canvas.height = 160;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return "";
+  ctx.fillStyle = "#2a241c";
+  ctx.fillRect(0, 0, 160, 160);
+  ctx.fillStyle = "#f6e7b2";
+  ctx.font = "700 28px Outfit, Segoe UI, sans-serif";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  const lines = label.split(" ");
+  lines.forEach((line, index) => ctx.fillText(line, 80, 80 + (index - (lines.length - 1) / 2) * 32, 148));
+  return canvas.toDataURL("image/jpeg", 0.72);
+}
+
+export function disposeAsset(asset: CharacterAsset) {
+  asset.geometry.dispose();
+  asset.material.dispose();
+  asset.template?.traverse((obj) => {
+    const mesh = obj as THREE.Mesh;
+    if (!mesh.isMesh) return;
+    mesh.geometry?.dispose();
+    const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+    for (const mat of mats) mat.dispose();
+  });
 }
 
 export function disposeThumbRenderer() {

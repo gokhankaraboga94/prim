@@ -5,7 +5,7 @@ import { EditField } from "../components/scene/EditField";
 import { useGame } from "../hooks/useGame";
 import { CHARACTERS, TEAMS, characterById } from "../edit/catalog";
 import { assignNames, assignTeam, clearField, clearNames, createStore, removeSelected, selectAll, selectTeam, spawnUnits, startBattle, unassignTeam } from "../edit/battle";
-import { disposeThumbRenderer, loadCharacter, snapshotCharacter, type CharacterAsset } from "../edit/loadModel";
+import { disposeAsset, disposeThumbRenderer, letterThumb, loadCharacter, snapshotCharacter, type CharacterAsset } from "../edit/loadModel";
 import { REEL_HEIGHT, REEL_WIDTH, reelWindow } from "../recordCanvas";
 
 export function EditPage() {
@@ -47,45 +47,61 @@ export function EditPage() {
     };
   }, []);
 
+  const started = useRef(new Set<string>());
+
   useEffect(() => {
     let stop = false;
-    const queue = [...CHARACTERS];
-    const dispose = (asset: CharacterAsset) => {
-      asset.geometry.dispose();
-      asset.material.dispose();
-    };
-    // Three downloads at a time: the light packed heroes land while the big ones stream.
-    const worker = async () => {
+    const queue = CHARACTERS.filter((def) => !(phone && def.heavy)).sort((a, b) => Number(Boolean(b.packed)) - Number(Boolean(a.packed)));
+    const take = async () => {
       while (queue.length && !stop) {
         const def = queue.shift()!;
+        if (started.current.has(def.id)) continue;
+        started.current.add(def.id);
         try {
           const asset = await loadCharacter(def);
           if (stop) {
-            dispose(asset);
+            disposeAsset(asset);
+            started.current.delete(def.id);
             return;
           }
           loaded.current.push(asset);
           let thumb = "";
           try {
-            thumb = snapshotCharacter(asset);
+            thumb = phone || asset.template ? letterThumb(def.label) : snapshotCharacter(asset);
           } catch {
-            thumb = "";
+            thumb = letterThumb(def.label);
           }
           setAssets((prev) => ({ ...prev, [def.id]: asset }));
           if (thumb) setThumbs((prev) => ({ ...prev, [def.id]: thumb }));
         } catch {
           if (!stop) setFailed((prev) => ({ ...prev, [def.id]: true }));
         }
+        if (phone) await new Promise((resolve) => window.setTimeout(resolve, 40));
       }
     };
-    void Promise.all([worker(), worker(), worker()]);
+    const lanes = phone ? 1 : 2;
+    void Promise.all(Array.from({ length: lanes }, () => take()));
     return () => {
       stop = true;
       disposeThumbRenderer();
-      for (const asset of loaded.current) dispose(asset);
+      for (const asset of loaded.current) disposeAsset(asset);
       loaded.current = [];
+      started.current.clear();
     };
-  }, []);
+  }, [phone]);
+
+  function loadOne(id: string) {
+    const def = characterById(id);
+    if (!def || started.current.has(id)) return;
+    started.current.add(id);
+    void loadCharacter(def)
+      .then((asset) => {
+        loaded.current.push(asset);
+        setAssets((prev) => ({ ...prev, [def.id]: asset }));
+        setThumbs((prev) => ({ ...prev, [def.id]: letterThumb(def.label) }));
+      })
+      .catch(() => setFailed((prev) => ({ ...prev, [def.id]: true })));
+  }
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -294,8 +310,12 @@ export function EditPage() {
                       onChange={(event) => setCounts((prev) => ({ ...prev, [def.id]: Math.max(1, Math.min(40, Number(event.target.value) || 1)) }))}
                     />
                   </label>
-                  <button type="button" disabled={!ready || store.battle} onClick={() => add(def.id)}>
-                    {ready ? "Ekle" : failed[def.id] ? "Yok" : "Yükleniyor"}
+                  <button
+                    type="button"
+                    disabled={store.battle || (!ready && !failed[def.id] && !(phone && def.heavy))}
+                    onClick={() => (ready ? add(def.id) : loadOne(def.id))}
+                  >
+                    {ready ? "Ekle" : failed[def.id] ? "Yok" : phone && def.heavy ? "Getir" : "Yükleniyor"}
                   </button>
                 </article>
               );
