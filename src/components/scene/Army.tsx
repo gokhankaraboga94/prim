@@ -1182,7 +1182,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
           frame: home || namePlate || undefined,
           plate: home ? "rgba(255,255,255,0.58)" : undefined,
         })),
-        Boolean(giant || dragon || namePlate || home),
+        Boolean(giant || dragon || namePlate),
         Boolean(namePlate)
       ),
     [labeled, names, chiefsList, countdown, defend, vs, vs2, openField, roster, square, film, nameGold, nameAlert, namePlate, home, giant, dragon]
@@ -1920,7 +1920,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
         continue;
       }
       if (home) {
-        const w = 1.15;
+        const w = 1.45;
         const h = (cell.sy * w) / Math.max(cell.sx, 0.01);
         const y = pos.y + 2.2 + h * 0.5;
         if (cam) dummy.quaternion.copy(cam.quaternion);

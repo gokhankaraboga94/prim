@@ -1357,17 +1357,24 @@ function BattleSceneInner({
     return () => document.removeEventListener("visibilitychange", onVis);
   }, []);
 
+  const phone = useMemo(() => {
+    if (typeof window === "undefined") return false;
+    const narrow = Math.min(window.innerWidth, window.innerHeight) < 860;
+    const coarse = window.matchMedia?.("(pointer: coarse)")?.matches ?? false;
+    return narrow || coarse;
+  }, []);
+
   return (
     <Canvas
-      shadows={!cinematic}
-      dpr={cinematic ? (xxx && xxxHiRes(xxx) ? 2 : 1) : [1, 1.5]}
+      shadows={!cinematic && !phone}
+      dpr={cinematic ? (xxx && xxxHiRes(xxx) ? 2 : 1) : phone ? 1 : [1, 1.5]}
       gl={{
-        antialias: !pit && !elf && (Boolean(new1 || new2 || new3 || new4 || new5 || new6 || new62 || new7 || maze) || (!(xxx && xxxQuiet(xxx)) && (!defend || isDefend3(defend)))),
+        antialias: !phone && !pit && !elf && (Boolean(new1 || new2 || new3 || new4 || new5 || new6 || new62 || new7 || maze) || (!(xxx && xxxQuiet(xxx)) && (!defend || isDefend3(defend)))),
         alpha: false,
-        powerPreference: "high-performance",
+        powerPreference: phone ? "default" : "high-performance",
         stencil: false,
         depth: true,
-        logarithmicDepthBuffer: !cinematic,
+        logarithmicDepthBuffer: !cinematic && !phone,
         preserveDrawingBuffer: Boolean(cinematic),
         failIfMajorPerformanceCaveat: false,
       }}
@@ -1378,7 +1385,7 @@ function BattleSceneInner({
         gl.toneMapping = THREE.ACESFilmicToneMapping;
         gl.toneMappingExposure = cinematic ? (maze ? 1.28 : new1 || new2 || new3 || new4 || new5 || new6 || new62 || new7 ? 1.06 : 1.16) : 1.22;
         gl.outputColorSpace = THREE.SRGBColorSpace;
-        gl.shadowMap.enabled = !cinematic;
+        gl.shadowMap.enabled = !cinematic && !phone;
         gl.shadowMap.type = THREE.PCFSoftShadowMap;
         gl.setClearColor(kuyu ? "#1a1614" : gecme ? "#6a5848" : kurtar ? "#3a322a" : loop ? "#2ea2ff" : pit ? "#8ec6f4" : hero ? "#7eb6ee" : kalkan ? "#07080d" : elf ? "#4a3728" : xxx && xxxSpin(xxx) ? "#000000" : maze ? "#9eb0c4" : new1 || new2 || new3 || new4 || new5 || new6 || new62 || new7 ? "#8f9aa0" : "#7eb6ee", 1);
         if (cinematic) {
