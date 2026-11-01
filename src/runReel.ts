@@ -58,8 +58,8 @@ function addPair() {
   push(f1 + TAIL - cursor, CRAWL);
   const d0 = STRIKES[0].reach - INSET;
   const d1 = STRIKES[1].reach - INSET;
-  const a0 = 0.34;
-  const a1 = -0.34;
+  const a0 = 0.52;
+  const a1 = -0.52;
   foes.push({
     x: Math.sin(a0) * d0,
     z: z0 + Math.cos(a0) * d0,
@@ -82,14 +82,12 @@ while (cursor < 52) {
   if (step === "1") addSolo(1);
   else if (step === "2") addSolo(2);
   else if (step === "p") addPair();
-  else if (step === "c") push(0.78, SPEED);
+  else if (step === "c") push(2.15, SPEED);
   else push(3, SPEED);
 }
-push(0.7, SPEED);
+push(2.15, SPEED);
 addSolo(2);
-push(0.62, SPEED);
-addPair();
-push(0.55, SPEED);
+push(2.15, SPEED);
 addSolo(1);
 if (cursor < RUN_SECONDS) push(RUN_SECONDS - cursor, SPEED);
 
@@ -162,7 +160,7 @@ export function runCam(time: number): RunCam {
       break;
     }
   }
-  return { x: 0.52, y: 1.88, z: z - 2.7, lx, ly: 1.12, lz, fov: 36 };
+  return { x: 0.65, y: 2.06, z: z - 3.375, lx, ly: 1.12, lz, fov: 36 };
 }
 
 let playAt = 0;

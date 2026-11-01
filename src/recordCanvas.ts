@@ -62,7 +62,7 @@ export function wait(ms: number) {
   return new Promise((resolve) => window.setTimeout(resolve, ms));
 }
 
-export async function recordCanvas(canvas: HTMLCanvasElement, seconds: number, audio?: MediaStream | null, bitsPerSecond = 8_000_000, steady = false, onStart?: () => void) {
+export async function recordCanvas(canvas: HTMLCanvasElement, seconds: number, audio?: MediaStream | null, bitsPerSecond = 8_000_000, steady = false, onStart?: () => void, fps?: number) {
   const mime = pickMime(Boolean(audio));
   if (!mime) throw new Error("Bu tarayıcı video kaydını desteklemiyor. Safari veya Chrome dene.");
   const reel = document.createElement("canvas");
@@ -87,7 +87,7 @@ export async function recordCanvas(canvas: HTMLCanvasElement, seconds: number, a
     requestAnimationFrame(copyFrame);
   };
   copyFrame();
-  const video = reel.captureStream(steady ? 20 : 30);
+  const video = reel.captureStream(fps ?? (steady ? 20 : 30));
   const tracks: MediaStreamTrack[] = [...video.getVideoTracks()];
   if (audio) {
     for (const track of audio.getAudioTracks()) tracks.push(track.clone());

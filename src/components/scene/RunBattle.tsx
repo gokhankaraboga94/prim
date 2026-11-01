@@ -88,9 +88,21 @@ function Bridge() {
   const length = RUN_SPAN + 14;
   const z = (RUN_SPAN - 14) / 2;
   const posts = useMemo(() => {
-    const list: number[] = [];
-    for (let pz = -8; pz < RUN_SPAN; pz += 4.6) list.push(pz);
-    return list;
+    const geo = new THREE.BoxGeometry(0.18, 2.1, 0.18);
+    const mat = new THREE.MeshLambertMaterial({ color: "#2a2622" });
+    const spots: number[] = [];
+    for (let pz = -8; pz < RUN_SPAN; pz += 8) spots.push(pz);
+    const mesh = new THREE.InstancedMesh(geo, mat, spots.length * 2);
+    const matrix = new THREE.Matrix4();
+    spots.forEach((pz, i) => {
+      matrix.makeTranslation(-1.22, -1.15, pz);
+      mesh.setMatrixAt(i * 2, matrix);
+      matrix.makeTranslation(1.22, -1.15, pz);
+      mesh.setMatrixAt(i * 2 + 1, matrix);
+    });
+    mesh.instanceMatrix.needsUpdate = true;
+    mesh.frustumCulled = false;
+    return mesh;
   }, []);
   return (
     <group>
@@ -110,18 +122,7 @@ function Bridge() {
         <boxGeometry args={[0.1, 0.84, length]} />
         <meshLambertMaterial color="#3a332c" />
       </mesh>
-      {posts.map((pz) => (
-        <group key={pz}>
-          <mesh position={[-1.22, -1.15, pz]}>
-            <boxGeometry args={[0.18, 2.1, 0.18]} />
-            <meshLambertMaterial color="#2a2622" />
-          </mesh>
-          <mesh position={[1.22, -1.15, pz]}>
-            <boxGeometry args={[0.18, 2.1, 0.18]} />
-            <meshLambertMaterial color="#2a2622" />
-          </mesh>
-        </group>
-      ))}
+      <primitive object={posts} />
     </group>
   );
 }
@@ -178,6 +179,7 @@ export function RunBattle() {
           fit(model);
           const hold = new THREE.Group();
           hold.position.set(foe.x, 0, foe.z);
+          hold.visible = false;
           hold.add(model);
           root.add(hold);
           const mix = new THREE.AnimationMixer(model);
@@ -242,6 +244,12 @@ export function RunBattle() {
     const hz = runHeroZ(now);
     for (const red of reds.current) {
       const foe = RUN_FOES[red.i];
+      const dz = foe.z - hz;
+      if (dz > 16 || dz < -8) {
+        if (red.hold.visible) red.hold.visible = false;
+        continue;
+      }
+      if (!red.hold.visible) red.hold.visible = true;
       if (now < foe.die) {
         if (red.dead) {
           red.death.stop();

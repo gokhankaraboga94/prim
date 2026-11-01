@@ -318,7 +318,7 @@ export function ReelCapture({ soldiers, names, commanders = [], level, pressure,
         if (stop) return;
         const heavy = isMix9(mix);
         const bits = heavy ? 2_500_000 : xxx && xxxHiRes(xxx) ? 24_000_000 : 8_000_000;
-        const recorded = await recordCanvas(canvas, clip, reelSfxStream(), bits, heavy, isDevSmall(giant) ? zillaStart : kurtar ? kurtarStart : gecme ? gecmeStart : kuyu ? kuyuStart : devKong ? devKongStart : savas ? savasStart : kirmizi ? kirmiziStart : baska ? baskaStart : aragorn ? aragornStart : dovus ? dovusStart : kuyular ? kuyularStart : tek ? tekStart : tek2 ? tek2Start : tek3 ? tek3Start : kale ? kaleStart : run ? runStart : kare ? kareStart : magdur ? magdurStart : kapi ? kapiStart : elf ? elfStartPlay : undefined);
+        const recorded = await recordCanvas(canvas, clip, reelSfxStream(), bits, heavy, isDevSmall(giant) ? zillaStart : kurtar ? kurtarStart : gecme ? gecmeStart : kuyu ? kuyuStart : devKong ? devKongStart : savas ? savasStart : kirmizi ? kirmiziStart : baska ? baskaStart : aragorn ? aragornStart : dovus ? dovusStart : kuyular ? kuyularStart : tek ? tekStart : tek2 ? tek2Start : tek3 ? tek3Start : kale ? kaleStart : run ? runStart : kare ? kareStart : magdur ? magdurStart : kapi ? kapiStart : elf ? elfStartPlay : undefined, run ? 60 : undefined);
         if (stop) return;
         setBlob(recorded);
         setPreview(URL.createObjectURL(recorded));
