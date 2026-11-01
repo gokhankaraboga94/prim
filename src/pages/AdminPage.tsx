@@ -1783,7 +1783,7 @@ export function AdminPage() {
           )}
           {isRun(reelShot) && (
             <p className="muted">
-              60 saniye. Ekranda kanca yazısı yok. Dar taş köprü, omuz arkası kamera. Savaşçı koşu animasyonuyla ilerler. Önüne bazen bir, bazen iki kırmızı çıkar; dönük dururlar. Kılıç her vuruşta gövdeye girer. Kimi bir vuruşta, kimi iki vuruşta düşer. Arada üç saniye boş koşu vardır, sonra engel, sonra peş peşe engel. Kayıt modeller inmeden başlamaz.
+              60 saniye. Ekranda kanca yazısı yok. Dar taş köprü, omuz arkası kamera. Savaşçı koşar. İki kılıç animasyonunun her savurması tek bir kırmızıyı indirir; vuruş gövdede biter. Savurmalar art arda gelir, arada koşu vardır. Kırmızılar ona dönüktür. Kayıt modeller inmeden başlamaz.
             </p>
           )}
           {isKale(reelShot) && (

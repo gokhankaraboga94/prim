@@ -6,20 +6,27 @@ export const RUN_HERO = "/models/savaci.glb";
 export const RUN_RED = "/models/red.glb";
 export const RUN_URLS = [RUN_HERO, RUN_RED] as const;
 
-/** Aggressive clip, frames where the blade points with the chest. */
-const STRIKES = [
-  { t: 0.87, ang: 0.57, reach: 1.01 },
-  { t: 1.54, ang: -0.27, reach: 0.87 },
+/** Both sword clips. Each entry is one real swing; one swing drops one man. */
+const CLIPS = [
+  [
+    { t: 0.5, ang: -2.9, reach: 1.29 },
+    { t: 1.05, ang: -1.42, reach: 1.24 },
+    { t: 1.24, ang: 2.05, reach: 1.55 },
+  ],
+  [
+    { t: 1.22, ang: 0.59, reach: 1.29 },
+    { t: 1.44, ang: 1.09, reach: 2.16 },
+    { t: 1.88, ang: 0.86, reach: 1.87 },
+  ],
 ] as const;
 
 const SPEED = 4.15;
-const CRAWL = 0.06;
-const INSET = 0.22;
-const WIND = 0.16;
-const TAIL = 0.2;
-const COMBO = 0.67;
+const BURST = 2.65;
+const RATE = 1.32;
+const WIND = 0.1;
+const TAIL = 0.14;
 
-export type RunHit = { film: number; strike: 0 | 1 };
+export type RunHit = { film: number; clip: 0 | 1; t: number; ang: number };
 export type RunFoe = { x: number; z: number; die: number; hits: RunHit[] };
 export type RunCam = { x: number; y: number; z: number; lx: number; ly: number; lz: number; fov: number };
 
@@ -36,59 +43,43 @@ function push(dur: number, v: number) {
   cursor += dur;
 }
 
-function addSolo(hits: 1 | 2) {
-  const films = [cursor + WIND];
-  if (hits === 2) films.push(films[0] + COMBO);
-  const zHit = travel + CRAWL * WIND;
-  const dist = STRIKES[0].reach - INSET;
-  push(films[films.length - 1] + TAIL - cursor, CRAWL);
-  foes.push({
-    x: 0,
-    z: zHit + dist,
-    die: films[films.length - 1],
-    hits: films.map((film, i) => ({ film, strike: (i === 0 ? 0 : 1) as 0 | 1 })),
+function addBurst(clip: 0 | 1) {
+  const moves = CLIPS[clip];
+  const t0 = cursor;
+  const z0 = travel;
+  const films = moves.map((swing) => t0 + WIND + (swing.t - moves[0].t) / RATE);
+  push(films[films.length - 1] + TAIL - t0, BURST);
+  moves.forEach((swing, i) => {
+    const film = films[i];
+    const hz = z0 + BURST * (film - t0);
+    const prevGap = i > 0 ? film - films[i - 1] : 1;
+    const dist = Math.min(1.05, Math.max(0.86, swing.reach - 0.22));
+    const x = prevGap < 0.28 ? (swing.ang >= 0 ? 0.5 : -0.5) : i % 2 === 0 ? -0.24 : 0.24;
+    if (prevGap < 0.28) {
+      const prev = foes[foes.length - 1];
+      const prevSwing = moves[i - 1];
+      const prevDist = Math.min(1.05, Math.max(0.86, prevSwing.reach - 0.22));
+      prev.x = -x;
+      const prevHz = z0 + BURST * (films[i - 1] - t0);
+      prev.z = prevHz + Math.sqrt(Math.max(0.36, prevDist * prevDist - prev.x * prev.x));
+    }
+    const forward = Math.sqrt(Math.max(0.36, dist * dist - x * x));
+    foes.push({
+      x,
+      z: hz + forward,
+      die: film,
+      hits: [{ film, clip, t: swing.t, ang: swing.ang }],
+    });
   });
 }
 
-function addPair() {
-  const f0 = cursor + WIND;
-  const f1 = f0 + COMBO;
-  const z0 = travel + CRAWL * WIND;
-  const z1 = travel + CRAWL * (WIND + COMBO);
-  push(f1 + TAIL - cursor, CRAWL);
-  const d0 = STRIKES[0].reach - INSET;
-  const d1 = STRIKES[1].reach - INSET;
-  const a0 = 0.52;
-  const a1 = -0.52;
-  foes.push({
-    x: Math.sin(a0) * d0,
-    z: z0 + Math.cos(a0) * d0,
-    die: f0,
-    hits: [{ film: f0, strike: 0 }],
-  });
-  foes.push({
-    x: Math.sin(a1) * d1,
-    z: z1 + Math.cos(a1) * d1,
-    die: f1,
-    hits: [{ film: f1, strike: 1 }],
-  });
+let round = 0;
+while (cursor < 56.5) {
+  addBurst((round % 2) as 0 | 1);
+  round += 1;
+  if (cursor >= 56.5) break;
+  push(round % 2 === 0 ? 3 : 1.7, SPEED);
 }
-
-const BEATS = ["1", "c", "1", "g", "2", "c", "p", "c", "1", "g", "2", "c", "1", "c", "p", "g", "1", "c", "2", "c", "p", "c", "1", "g"] as const;
-let beat = 0;
-while (cursor < 52) {
-  const step = BEATS[beat % BEATS.length];
-  beat += 1;
-  if (step === "1") addSolo(1);
-  else if (step === "2") addSolo(2);
-  else if (step === "p") addPair();
-  else if (step === "c") push(2.15, SPEED);
-  else push(3, SPEED);
-}
-push(2.15, SPEED);
-addSolo(2);
-push(2.15, SPEED);
-addSolo(1);
 if (cursor < RUN_SECONDS) push(RUN_SECONDS - cursor, SPEED);
 
 export const RUN_FOES: readonly RunFoe[] = foes;
@@ -103,13 +94,15 @@ export function runHeroZ(time: number) {
   return last.z0 + last.v * (last.t1 - last.t0);
 }
 
-function neighbor(hit: RunHit) {
+function hitLimit(hit: RunHit) {
+  let near = Infinity;
   for (const foe of foes) {
     for (const other of foe.hits) {
-      if (other !== hit && Math.abs(other.film - hit.film) < 0.75) return true;
+      if (other !== hit) near = Math.min(near, Math.abs(other.film - hit.film));
     }
   }
-  return false;
+  if (near < 0.6) return Math.min(0.32, near * 0.5 + 0.02);
+  return 0.18;
 }
 
 function closestHit(time: number) {
@@ -117,7 +110,7 @@ function closestHit(time: number) {
   let bestD = Infinity;
   for (const foe of foes) {
     for (const hit of foe.hits) {
-      const limit = neighbor(hit) ? 0.36 : 0.2;
+      const limit = hitLimit(hit);
       const d = Math.abs(time - hit.film);
       if (d <= limit && d < bestD) {
         best = { foe, hit, limit };
@@ -132,19 +125,21 @@ export function runYaw(time: number) {
   const near = closestHit(time);
   if (!near) return 0;
   const hz = runHeroZ(time);
-  const aim = Math.atan2(near.foe.x, near.foe.z - hz) - STRIKES[near.hit.strike].ang;
+  const aim = Math.atan2(near.foe.x, near.foe.z - hz) - near.hit.ang;
   const ad = Math.abs(time - near.hit.film);
-  if (ad < 0.07) return aim;
-  const u = Math.max(0, (near.limit - ad) / (near.limit - 0.07));
+  if (ad < 0.05) return aim;
+  const u = Math.max(0, (near.limit - ad) / Math.max(0.04, near.limit - 0.05));
   const k = u * u * (3 - 2 * u);
   return aim * k;
 }
 
-export function runClip(time: number): { kind: "run" | "atk"; time: number } {
+export function runClip(time: number): { kind: "run" | "agg" | "dual"; time: number } {
   const near = closestHit(time);
   if (!near) return { kind: "run", time: (Math.max(0, time) * 1.35) % 1.25 };
-  const strike = STRIKES[near.hit.strike];
-  return { kind: "atk", time: Math.max(0, strike.t + (time - near.hit.film)) };
+  return {
+    kind: near.hit.clip === 0 ? "agg" : "dual",
+    time: Math.max(0, near.hit.t + (time - near.hit.film) * RATE),
+  };
 }
 
 export function runCam(time: number): RunCam {

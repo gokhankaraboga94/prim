@@ -76,12 +76,8 @@ function inPlace(clip: THREE.AnimationClip) {
   return next;
 }
 
-function attackClip(clips: THREE.AnimationClip[]) {
-  return (
-    clips.find((clip) => clip.name.startsWith("The warrior aggressively")) ??
-    clips.find((clip) => clip.name.startsWith("The warrior performs")) ??
-    clips[0]
-  );
+function heroSword(clips: THREE.AnimationClip[], prefix: string) {
+  return clips.find((clip) => clip.name.startsWith(prefix)) ?? clips[0];
 }
 
 function Bridge() {
@@ -132,10 +128,11 @@ export function RunBattle() {
   const hero = useRef<{
     mix: THREE.AnimationMixer;
     run: THREE.AnimationAction;
-    atk: THREE.AnimationAction;
+    agg: THREE.AnimationAction;
+    dual: THREE.AnimationAction;
     runDur: number;
     hold: THREE.Group;
-    mode: "run" | "atk";
+    mode: "run" | "agg" | "dual";
   } | null>(null);
   const reds = useRef<RedFight[]>([]);
 
@@ -155,15 +152,18 @@ export function RunBattle() {
         heroHold.add(heroFile.scene);
         root.add(heroHold);
         const runSrc = heroFile.animations.find((clip) => clip.name === "run");
-        const atkSrc = attackClip(heroFile.animations);
+        const aggSrc = heroSword(heroFile.animations, "The warrior aggressively");
+        const dualSrc = heroSword(heroFile.animations, "The warrior performs");
         const heroMix = new THREE.AnimationMixer(heroFile.scene);
-        const runAction = heroMix.clipAction(inPlace(runSrc ?? atkSrc));
+        const runAction = heroMix.clipAction(inPlace(runSrc ?? aggSrc));
         runAction.play();
-        const atkAction = heroMix.clipAction(inPlace(atkSrc));
+        const aggAction = heroMix.clipAction(inPlace(aggSrc));
+        const dualAction = heroMix.clipAction(inPlace(dualSrc));
         hero.current = {
           mix: heroMix,
           run: runAction,
-          atk: atkAction,
+          agg: aggAction,
+          dual: dualAction,
           runDur: Math.max(0.2, runSrc?.duration ?? 1.25),
           hold: heroHold,
           mode: "run",
@@ -225,21 +225,15 @@ export function RunBattle() {
       const clip = runClip(now);
       man.hold.position.set(0, 0, runHeroZ(now));
       man.hold.rotation.y = runYaw(now);
-      if (clip.kind === "run") {
-        if (man.mode !== "run") {
-          man.atk.stop();
-          man.run.reset().play();
-          man.mode = "run";
-        }
-        man.mix.setTime(clip.time % man.runDur);
-      } else {
-        if (man.mode !== "atk") {
-          man.run.stop();
-          man.atk.reset().play();
-          man.mode = "atk";
-        }
-        man.mix.setTime(clip.time);
+      const play = clip.kind === "agg" ? man.agg : clip.kind === "dual" ? man.dual : man.run;
+      if (man.mode !== clip.kind) {
+        man.run.stop();
+        man.agg.stop();
+        man.dual.stop();
+        play.reset().play();
+        man.mode = clip.kind;
       }
+      man.mix.setTime(clip.kind === "run" ? clip.time % man.runDur : clip.time);
     }
     const hz = runHeroZ(now);
     for (const red of reds.current) {
