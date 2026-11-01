@@ -1024,6 +1024,8 @@ select:focus {
   background: #1b2420;
   color: var(--ink);
   z-index: 20;
+  height: 100dvh;
+  overscroll-behavior: none;
 }
 
 body.edit-route {
@@ -1204,6 +1206,80 @@ body.edit-route .seo-doc {
   width: 100% !important;
   height: 100% !important;
   touch-action: none;
+}
+
+.edit-float-note {
+  display: none;
+}
+
+@media (max-width: 860px) {
+  .edit-bar {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    flex-shrink: 0;
+    touch-action: pan-x;
+    padding: 8px;
+    gap: 6px;
+  }
+
+  .edit-bar button,
+  .edit-teams,
+  .edit-name,
+  .edit-note {
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+
+  .edit-bar button {
+    min-height: 40px;
+    touch-action: manipulation;
+  }
+
+  .edit-teams {
+    flex-wrap: nowrap;
+  }
+
+  .edit-vs {
+    position: sticky;
+    right: 0;
+    z-index: 2;
+  }
+
+  .edit-note,
+  .edit-help {
+    display: none;
+  }
+
+  .edit-float-note {
+    display: block;
+    position: absolute;
+    left: 8px;
+    right: 8px;
+    bottom: 8px;
+    z-index: 3;
+    margin: 0;
+    padding: 8px 10px;
+    border-radius: 8px;
+    background: rgba(8, 10, 12, 0.88);
+    color: #f6e7b2;
+    font-size: 13px;
+    pointer-events: none;
+  }
+
+  .edit-stage {
+    min-height: 0;
+    flex: 1 1 auto;
+  }
+
+  .edit-thumb {
+    width: 72px;
+    height: 72px;
+  }
+
+  .edit-roster article {
+    min-width: 104px;
+  }
 }
 
 .edit-marquee {

@@ -11,6 +11,12 @@ import { REEL_HEIGHT, REEL_WIDTH, reelWindow } from "../recordCanvas";
 export function EditPage() {
   const { game } = useGame();
   const store = useMemo(() => createStore(), []);
+  const phone = useMemo(() => {
+    if (typeof window === "undefined") return false;
+    const narrow = Math.min(window.innerWidth, window.innerHeight) < 860;
+    const coarse = window.matchMedia?.("(pointer: coarse)")?.matches ?? false;
+    return narrow || coarse;
+  }, []);
   const [rev, setRev] = useState(0);
   const [open, setOpen] = useState(false);
   const [team, setTeam] = useState(1);
@@ -298,14 +304,15 @@ export function EditPage() {
         )}
         <SceneErrorBoundary>
           <Canvas
-            dpr={[1, 1.25]}
-            gl={{ antialias: true, alpha: false, powerPreference: "high-performance", preserveDrawingBuffer: true, stencil: false }}
+            dpr={phone ? 1 : [1, 1.25]}
+            gl={{ antialias: !phone, alpha: false, powerPreference: phone ? "default" : "high-performance", preserveDrawingBuffer: true, stencil: false }}
             camera={{ fov: 42, near: 0.2, far: 900, position: [16, 24, 30] }}
           >
             <EditField store={store} assets={assets} />
           </Canvas>
         </SceneErrorBoundary>
         <div id="edit-marquee" className="edit-marquee" />
+        {store.note ? <p className="edit-float-note">{store.note}</p> : null}
       </div>
     </div>
   );

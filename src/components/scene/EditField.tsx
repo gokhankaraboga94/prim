@@ -112,7 +112,7 @@ function EditRig({ store, assets }: { store: EditStore; assets: Record<string, C
   const meshes = useRef(new Map<string, THREE.InstancedMesh>());
   const keys = useRef(new Set<string>());
   const look = useRef({ yaw: 0.45, pitch: 0.78, dist: 38 });
-  const drag = useRef<{ x: number; y: number; button: number; moved: boolean; sx: number; sy: number } | null>(null);
+  const drag = useRef<{ x: number; y: number; button: number; moved: boolean; sx: number; sy: number; touch: boolean } | null>(null);
   const ringGeo = useMemo(() => new THREE.RingGeometry(0.78, 1, 28), []);
   const barGeo = useMemo(() => new THREE.PlaneGeometry(1, 1), []);
   const ringMat = useMemo(() => new THREE.MeshBasicMaterial({ color: "#ffffff", transparent: true, opacity: 0.9, side: THREE.DoubleSide, depthWrite: false }), []);
@@ -215,9 +215,11 @@ function EditRig({ store, assets }: { store: EditStore; assets: Record<string, C
           pinched = true;
           return;
         }
+        drag.current = { x: event.clientX, y: event.clientY, button: 2, moved: false, sx: event.clientX, sy: event.clientY, touch: true };
+        return;
       }
       if (event.button === 0 || event.button === 1 || event.button === 2) {
-        drag.current = { x: event.clientX, y: event.clientY, button: event.button, moved: false, sx: event.clientX, sy: event.clientY };
+        drag.current = { x: event.clientX, y: event.clientY, button: event.button, moved: false, sx: event.clientX, sy: event.clientY, touch: false };
         canvas.setPointerCapture(event.pointerId);
       }
     };
@@ -283,12 +285,17 @@ function EditRig({ store, assets }: { store: EditStore; assets: Record<string, C
       if (liftFinger(event)) return;
       const box = drag.current;
       if (!box) return;
-      if (box.button === 0 && box.moved) {
+      if (box.touch) {
+        drag.current = null;
+        if (box.moved) return;
+      } else if (box.button === 0 && box.moved) {
         finishBox(event);
+        return;
+      } else if (box.button !== 0 || box.moved) {
+        drag.current = null;
         return;
       }
       drag.current = null;
-      if (box.button !== 0 || box.moved) return;
       const rect = canvas.getBoundingClientRect();
       ndc.set(((event.clientX - rect.left) / rect.width) * 2 - 1, -((event.clientY - rect.top) / rect.height) * 2 + 1);
       raycaster.setFromCamera(ndc, camera);
