@@ -528,7 +528,7 @@ export function devGiantPose(t: number, still = false, soldiers = 0) {
 /** The crowd closes in as it thins, so the outer rings come within reach of the foot. */
 function stillClose(t: number) {
   const p = Math.max(0, Math.min(1, (t - FIGHT) / (ZILLA_LAST - FIGHT)));
-  return 1 - p * 0.6;
+  return 1 - p * 0.4;
 }
 function zillaTailNow(t: number): [number, number, number][] {
   const play = zillaPlayback(t);
@@ -788,7 +788,7 @@ function ringAt(i: number, n: number, t: number, big = false, snake = false, sma
   const meleeN = Math.ceil(n / 2);
   const local = archer ? i - meleeN : i;
   const count = Math.max(1, archer ? n - meleeN : meleeN);
-  const per = archer ? (big ? 44 : 42) : big ? 28 : 26;
+  const per = small ? (archer ? 36 : 22) : archer ? (big ? 44 : 42) : big ? 28 : 26;
   const ring = Math.floor(local / per);
   const idx = local % per;
   const seats = Math.max(1, Math.min(per, count - ring * per));
@@ -810,7 +810,7 @@ function ringAt(i: number, n: number, t: number, big = false, snake = false, sma
     return { x, z, ry: Math.atan2(ax - x, az - z), ang, g, archer };
   }
   const rad = small
-    ? archer ? 9.6 + (10.6 + ring * 2.05) * stillClose(t) : 9.6 + ring * 1.9 * stillClose(t)
+    ? archer ? 11.2 + (11.4 + ring * 2.6) * stillClose(t) : 11.2 + ring * 2.45 * stillClose(t)
     : archer ? (big ? 30 + ring * 2.05 : 20 + ring * 1.7) : big ? 13.8 + ring * 1.9 : 8.2 + ring * 1.45;
   const x = g.x + Math.sin(ang) * rad;
   const z = g.z + Math.cos(ang) * rad;
@@ -1366,6 +1366,16 @@ function zillaSoldier(i: number, n: number, t: number, out: New1Pose) {
   const g = live.g;
   const fx = Math.sin(g.yaw);
   const fz = Math.cos(g.yaw);
+  if (t >= dieAt + 2) {
+    out.x = 0;
+    out.y = -40;
+    out.z = 0;
+    out.rx = 0;
+    out.ry = 0;
+    out.rz = 0;
+    out.s = 0;
+    return;
+  }
   if (t >= dieAt && fate.fling[i]) {
     const sx = Math.cos(g.yaw);
     const sz = -Math.sin(g.yaw);
