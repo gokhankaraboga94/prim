@@ -354,11 +354,7 @@ const TURN_AFTER = 0.15;
 const TURN_BEFORE = 0.3;
 const kickTimes = new Map<number, number[]>();
 
-const Z_ATTACK = 1.0667;
-const Z_TAIL = 2.7333;
-const Z_WALK = 1.15;
-const Z_HIT = 0.55;
-const Z_TAIL_HIT = 0.95;
+const KING_SLAM = "King Kong raises both arms high above his head and violently sl";
 /** Last swing still lands, and the fling finishes, inside DEV15_SECONDS. */
 const ZILLA_LAST = 42;
 const TAIL_REACH = 2.2 * ZILLA_GROW;
@@ -416,33 +412,40 @@ export function zillaT() {
   return Math.max(0, (performance.now() - zillaPlayAt) / 1000);
 }
 
-type ZClip = "Attack" | "Tail Attack" | "Walk";
-type ZBeat = { start: number; dur: number; clip: ZClip; contact: number | null; kind: "hit" | "tail" | "walk" };
+type ZClip = "slash.001" | "walk.001" | "front_kick_01.001" | "dig.001" | "front_kick_02.001" | "run.001" | typeof KING_SLAM | "flip.001" | "box_03.001";
+type ZBeat = { start: number; dur: number; from: number; clip: ZClip; contact: number | null; kind: "hit" | "walk" };
 
-/** DEV15 only. Attack, Attack, Tail Attack, a short Walk, then again. */
+/** DEV15 only. Every king clip: the strike window, then a step. The first frame is already the slash. */
 function zillaBeats(): ZBeat[] {
   const hit = kickTimes.get(-1) as unknown as ZBeat[] | undefined;
   if (hit) return hit;
-  const pattern: { clip: ZClip; dur: number; kind: ZBeat["kind"]; at: number | null }[] = [
-    { clip: "Attack", dur: Z_ATTACK, kind: "hit", at: Z_HIT },
-    { clip: "Attack", dur: Z_ATTACK, kind: "hit", at: Z_HIT },
-    { clip: "Tail Attack", dur: Z_TAIL, kind: "tail", at: Z_TAIL_HIT },
-    { clip: "Walk", dur: Z_WALK, kind: "walk", at: null },
+  const pattern: { clip: ZClip; from: number; to: number; kind: ZBeat["kind"]; at: number | null }[] = [
+    { clip: "slash.001", from: 1.15, to: 2.4, kind: "hit", at: 1.66 },
+    { clip: "front_kick_01.001", from: 0.55, to: 1.85, kind: "hit", at: 1.27 },
+    { clip: "box_03.001", from: 0.3, to: 1.7, kind: "hit", at: 0.86 },
+    { clip: "walk.001", from: 0, to: 2.375, kind: "walk", at: null },
+    { clip: "front_kick_02.001", from: 0.3, to: 1.25, kind: "hit", at: 0.83 },
+    { clip: KING_SLAM, from: 0.5, to: 2.7, kind: "hit", at: 2.08 },
+    { clip: "run.001", from: 0, to: 1.291666, kind: "walk", at: null },
+    { clip: "flip.001", from: 1.1, to: 3.1, kind: "hit", at: 1.88 },
+    { clip: "dig.001", from: 10.2, to: 12.5, kind: "hit", at: 10.94 },
   ];
   const out: ZBeat[] = [];
-  let t = FIGHT;
+  let t = 0;
   let i = 0;
   while (t < ZILLA_LAST - 0.2) {
     const step = pattern[i % pattern.length];
+    const dur = step.to - step.from;
     if (step.kind !== "walk" && t + 0.4 > ZILLA_LAST) break;
     out.push({
       start: t,
-      dur: step.dur,
+      dur,
+      from: step.from,
       clip: step.clip,
-      contact: step.at == null ? null : t + step.at,
+      contact: step.at == null ? null : t + (step.at - step.from),
       kind: step.kind,
     });
-    t += step.dur + 0.06;
+    t += dur + 0.06;
     i += 1;
   }
   kickTimes.set(-1, out as unknown as number[]);
@@ -450,13 +453,12 @@ function zillaBeats(): ZBeat[] {
 }
 
 export function zillaPlayback(t: number): { name: ZClip; time: number } {
-  if (t < FIGHT) return { name: "Walk", time: t % 3.1 };
   const beats = zillaBeats();
   for (const beat of beats) {
-    if (t < beat.start + beat.dur) return { name: beat.clip, time: Math.max(0, t - beat.start) };
+    if (t < beat.start + beat.dur) return { name: beat.clip, time: beat.from + Math.max(0, t - beat.start) };
   }
   const last = beats[beats.length - 1];
-  return last ? { name: last.clip, time: Math.min(last.dur, Math.max(0, t - last.start)) } : { name: "Walk", time: 0 };
+  return last ? { name: last.clip, time: Math.min(last.from + last.dur, last.from + Math.max(0, t - last.start)) } : { name: "slash.001", time: 1.66 };
 }
 
 type ZillaFate = { wound: Float64Array; die: Float64Array; fling: Uint8Array };
@@ -473,36 +475,6 @@ function zillaFate(n: number): ZillaFate {
   for (const beat of zillaBeats()) {
     if (beat.contact == null || beat.kind === "walk") continue;
     const g = devGiantPose(beat.contact, true, n);
-    if (beat.kind === "tail") {
-      const cy = Math.cos(g.yaw);
-      const sy = Math.sin(g.yaw);
-      const reach = TAIL_REACH * TAIL_REACH;
-      for (let i = 0; i < n; i++) {
-        if (die[i] < 1e8) continue;
-        const live = ringAt(i, n, beat.contact, true, false, true);
-        let best = 1e9;
-        let when = beat.contact;
-        for (const sample of TAIL_SWEEP) {
-          for (let u = 0; u <= 1; u += 0.5) {
-            const lx = (sample.mid[0] + (sample.tip[0] - sample.mid[0]) * u) * ZILLA_GROW;
-            const lz = (sample.mid[2] + (sample.tip[2] - sample.mid[2]) * u) * ZILLA_GROW;
-            if (lz < 2.4) continue;
-            const wx = g.x + lx * cy + lz * sy;
-            const wz = g.z - lx * sy + lz * cy;
-            const d = (live.x - wx) * (live.x - wx) + (live.z - wz) * (live.z - wz);
-            if (d < best) {
-              best = d;
-              when = beat.start + sample.t;
-            }
-          }
-        }
-        if (best <= reach) {
-          die[i] = when + zillaJitter(i + 40) * 0.62;
-          fling[i] = 1;
-        }
-      }
-      continue;
-    }
     const fx = Math.sin(g.yaw);
     const fz = Math.cos(g.yaw);
     const scored: { i: number; s: number }[] = [];
@@ -564,7 +536,7 @@ function stillClose(t: number) {
 }
 function zillaTailNow(t: number): [number, number, number][] {
   const play = zillaPlayback(t);
-  if (play.name !== "Tail Attack") return TAIL_REST;
+  if (play.name !== "flip.001") return TAIL_REST;
   let i = 0;
   while (i < TAIL_SWEEP.length - 1 && TAIL_SWEEP[i + 1].t < play.time) i++;
   const a = TAIL_SWEEP[Math.max(0, i)];

@@ -187,7 +187,7 @@ export function ReelCapture({ soldiers, names, commanders = [], level, pressure,
   useEffect(() => {
     if (!arena3 && !kurtar && !gecme && !kuyu && !kapi && !magdur && !kare && !devKong && !savas && !kirmizi && !baska && !aragorn && !dovus && !kuyular && !tek && !tek2 && !tek3 && !kale && !run && !isDevSmall(giant)) return;
     let stop = false;
-    const urls = arena3 ? [...ARENA3_HERO_URLS, ARENA3_ARENA_URL] : kurtar ? KURTAR_URLS : gecme ? GECME_URLS : kuyu ? KUYU_URLS : devKong ? DEVKONG_URLS : savas ? SAVAS_URLS : kirmizi ? KIRMIZI_URLS : baska ? [BASKA_URL] : aragorn ? ARAGORN_URLS : dovus ? DOVUS_URLS : kuyular ? KUYULAR_URLS : tek ? TEK_URLS : tek2 ? TEK2_URLS : tek3 ? TEK3_URLS : kale ? KALE_URLS : run ? RUN_URLS : kare ? KARE_URLS : magdur ? MAGDUR_URLS : isDevSmall(giant) ? ["/models/godzilla.glb"] : KAPI_URLS;
+    const urls = arena3 ? [...ARENA3_HERO_URLS, ARENA3_ARENA_URL] : kurtar ? KURTAR_URLS : gecme ? GECME_URLS : kuyu ? KUYU_URLS : devKong ? DEVKONG_URLS : savas ? SAVAS_URLS : kirmizi ? KIRMIZI_URLS : baska ? [BASKA_URL] : aragorn ? ARAGORN_URLS : dovus ? DOVUS_URLS : kuyular ? KUYULAR_URLS : tek ? TEK_URLS : tek2 ? TEK2_URLS : tek3 ? TEK3_URLS : kale ? KALE_URLS : run ? RUN_URLS : kare ? KARE_URLS : magdur ? MAGDUR_URLS : isDevSmall(giant) ? ["/models/king.glb"] : KAPI_URLS;
     void preloadGlbs(urls, (done, total) => {
       if (!stop) setAssets({ ready: false, done, total });
     }).then(() => {

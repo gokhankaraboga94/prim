@@ -238,17 +238,17 @@ function toLambert(root: THREE.Object3D) {
   });
 }
 
-/** Godzilla keeps its skeleton. DEV15 plays Attack, Tail Attack and Walk. Death stays unused. */
+/** King keeps its skeleton. DEV15 plays every clip on the body; hip travel stays parked in the ring. */
 export function GodzillaRig() {
   const host = useRef<THREE.Group>(null);
   const mixer = useRef<THREE.AnimationMixer | null>(null);
-  const actions = useRef<Partial<Record<"Attack" | "Tail Attack" | "Walk", THREE.AnimationAction>>>({});
+  const actions = useRef<Record<string, THREE.AnimationAction>>({});
   const shown = useRef("");
   useEffect(() => {
     const loader = new GLTFLoader();
     let drop = false;
     zillaReset();
-    loader.load("/models/godzilla.glb", (gltf) => {
+    loader.load("/models/king.glb", (gltf) => {
       const root = host.current;
       if (drop || !root) return;
       const model = gltf.scene;
@@ -264,23 +264,23 @@ export function GodzillaRig() {
         -((box.min.z + box.max.z) / 2) * fit,
       );
       const mix = new THREE.AnimationMixer(model);
-      const next: Partial<Record<"Attack" | "Tail Attack" | "Walk", THREE.AnimationAction>> = {};
-      for (const clip of gltf.animations) {
-        if (clip.name !== "Attack" && clip.name !== "Tail Attack" && clip.name !== "Walk") continue;
+      const next: Record<string, THREE.AnimationAction> = {};
+      for (const src of gltf.animations) {
+        const clip = src.clone();
+        clip.tracks = src.tracks.filter((track) => !track.name.endsWith("Hips.position"));
         const action = mix.clipAction(clip);
         action.loop = THREE.LoopOnce;
         action.clampWhenFinished = true;
-        next[clip.name] = action;
+        next[src.name] = action;
       }
-      next.Walk?.play();
       mixer.current = mix;
       actions.current = next;
-      shown.current = "Walk";
+      shown.current = "";
       root.add(model);
       zillaMarkReady();
     }, undefined, () => {
       if (drop) return;
-      console.warn("godzilla yuklenemedi");
+      console.warn("king yuklenemedi");
       zillaMarkReady();
     });
     return () => {
@@ -308,7 +308,7 @@ export function GodzillaRig() {
     const action = bag[play.name];
     if (!action) return;
     if (shown.current !== play.name) {
-      bag[shown.current as "Attack" | "Tail Attack" | "Walk"]?.stop();
+      if (shown.current) bag[shown.current]?.stop();
       action.reset().play();
       shown.current = play.name;
     }
