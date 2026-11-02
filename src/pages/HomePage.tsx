@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { BattleScene } from "../components/scene/BattleScene";
 import { HUD } from "../components/HUD";
+import { CamDock } from "../components/CamDock";
 import { JoinArmy } from "../components/JoinArmy";
 import { ReelsMode } from "../components/ReelsMode";
 import { SceneErrorBoundary } from "../components/SceneErrorBoundary";
@@ -33,6 +34,7 @@ export function HomePage() {
         power={power}
         maxHp={maxHp}
       />
+      <CamDock />
 
       <div className="home-body">
         <JoinArmy handle={handle} />

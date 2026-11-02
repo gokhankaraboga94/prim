@@ -376,6 +376,59 @@ select:focus {
   font-size: 13px;
 }
 
+.cam-dock {
+  position: fixed;
+  left: 18px;
+  bottom: 18px;
+  z-index: 6;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: flex-end;
+  max-width: min(420px, calc(100vw - 36px));
+}
+
+.cam-dock button {
+  appearance: none;
+  border: 1px solid var(--line);
+  background: var(--glass);
+  color: var(--ink);
+  border-radius: 999px;
+  padding: 10px 14px;
+  cursor: pointer;
+  backdrop-filter: blur(12px);
+}
+
+.cam-dock button.on {
+  border-color: var(--gold);
+  color: var(--gold);
+}
+
+.cam-panel {
+  flex: 1 1 220px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: var(--glass);
+  backdrop-filter: blur(16px);
+  color: var(--ink);
+}
+
+.cam-panel label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+}
+
+.cam-panel input[type="range"] {
+  width: 140px;
+}
+
 .mode-toggle {
   position: fixed;
   right: 18px;

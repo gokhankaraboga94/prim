@@ -3,6 +3,7 @@ import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
 import * as THREE from "three";
 import { Army, armyFrame, liveCamera } from "./Army";
+import { LiveDrive } from "./LiveDrive";
 import { Castle } from "./Castle";
 import { SallyRaid } from "./SallyRaid";
 import { CaptureHpHud, CountdownFlash, HuntSightHud, LabHealthBar, New2RatioBar, ReelFade, ReelTitles, ReelVignette, SpinNameHud, XxxHookHud } from "./CaptureHpHud";
@@ -1194,6 +1195,7 @@ function SceneContent({
             zoomSpeed={1.85}
           />
           <LiveOpening shot={opening} />
+          <LiveDrive />
         </>
       )}
       {cinematic && !wars && !ordu && !ok && !elf && !kalkan && !hero && !loop && !kurtar && !gecme && !kuyu && !kapi && !magdur && !kare && !devKong && !savas && !kirmizi && !baska && !aragorn && !dovus && !kuyular && !tek && !tek2 && !tek3 && !kale && !run && !pit && !bout && !kayit && !split && !countdown && !defend && !vs && !slaughter && !xxx && maxHp != null && hp != null && (
