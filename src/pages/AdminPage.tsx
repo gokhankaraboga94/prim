@@ -1739,7 +1739,7 @@ export function AdminPage() {
             <p className="muted">DEV13 gibi telefona uygun; dev eklenen kırmızı canavar (1,5 MB). Video 20 saniye: askerler 15. saniyeye kadar ölür, her tekme daha çok asker götürür. Tekmelenen askerler 3 kat yükseğe fırlar, dönerek düşer.</p>
           )}
           {isDev15(reelShot) && (
-            <p className="muted">52 saniye. Ekranda yazı yok. King Kong yerinde, bir önceki boydan yüzde 20 küçük. Savurma, tekme, yumruk, ikinci tekme, kolları indiriş, takla ve kazma sırayla gelir. Yürüyüş ve koşu yok. Vuruş önündekini düşürür. Kamera daire çizer. Oklar model gelene kadar bekler.</p>
+            <p className="muted">52 saniye. Ekranda yazı yok. King Kong yerinde, bir önceki boydan yüzde 20 küçük. Savurma, tekme, yumruk, ikinci tekme, kolları indiriş, takla ve kazma sırayla gelir. Yürüyüş ve koşu yok. Her vuruş önceki halinin iki katı askeri tek darbede öldürür. Kamera daire çizer. Oklar model gelene kadar bekler.</p>
           )}
           {isBout(reelShot) && (
             <p className="muted">52 saniye. DEV9’daki çim. King Kong sadece ekrandan uzak olan sol eliyle yumruk atar, ork baltalarıyla karşılık verir. Vuruşlar seri. İkisinin de üstünde kırmızı can barı var. Kıyasıya dövüşürler, ork düşer.</p>

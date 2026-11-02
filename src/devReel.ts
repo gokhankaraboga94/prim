@@ -486,12 +486,10 @@ function zillaFate(n: number): ZillaFate {
       scored.push({ i, s: fresh * 800 + side * side * 0.12 - forward });
     }
     scored.sort((a, b) => a.s - b.s || a.i - b.i);
-    const batch = Math.min(16, scored.length);
+    const batch = Math.min(32, scored.length);
     for (let j = 0; j < batch; j++) {
       const i = scored[j].i;
-      const at = beat.contact + zillaJitter(i) * 0.9;
-      if (wound[i] < 1e8) die[i] = at;
-      else wound[i] = at;
+      die[i] = beat.contact + zillaJitter(i) * 0.9;
     }
   }
   const fate = { wound, die, fling };
