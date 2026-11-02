@@ -131,11 +131,11 @@ export function isDevSmall(id: string | null | undefined) {
 }
 
 export function devSize(small: boolean) {
-  return small ? 0.72 : 1;
+  return small ? 0.576 : 1;
 }
 
-/** Tail samples and the name box were measured at half size. */
-const ZILLA_GROW = 0.72 / 0.5;
+/** Name box follows the planted giant. Measured against the half-size rig, then scaled. */
+const ZILLA_GROW = 0.576 / 0.5;
 
 export type KickModel = "hulk" | "alien" | "alien-lite" | "red-monster" | "godzilla";
 
@@ -412,10 +412,10 @@ export function zillaT() {
   return Math.max(0, (performance.now() - zillaPlayAt) / 1000);
 }
 
-type ZClip = "slash.001" | "walk.001" | "front_kick_01.001" | "dig.001" | "front_kick_02.001" | "run.001" | typeof KING_SLAM | "flip.001" | "box_03.001";
+type ZClip = "slash.001" | "front_kick_01.001" | "dig.001" | "front_kick_02.001" | typeof KING_SLAM | "flip.001" | "box_03.001";
 type ZBeat = { start: number; dur: number; from: number; clip: ZClip; contact: number | null; kind: "hit" | "walk" };
 
-/** DEV15 only. Every king clip: the strike window, then a step. The first frame is already the slash. */
+/** DEV15 only. Strike windows of the king clips, without walk or run. The first frame is already the slash. */
 function zillaBeats(): ZBeat[] {
   const hit = kickTimes.get(-1) as unknown as ZBeat[] | undefined;
   if (hit) return hit;
@@ -423,10 +423,8 @@ function zillaBeats(): ZBeat[] {
     { clip: "slash.001", from: 1.15, to: 2.4, kind: "hit", at: 1.66 },
     { clip: "front_kick_01.001", from: 0.55, to: 1.85, kind: "hit", at: 1.27 },
     { clip: "box_03.001", from: 0.3, to: 1.7, kind: "hit", at: 0.86 },
-    { clip: "walk.001", from: 0, to: 2.375, kind: "walk", at: null },
     { clip: "front_kick_02.001", from: 0.3, to: 1.25, kind: "hit", at: 0.83 },
     { clip: KING_SLAM, from: 0.5, to: 2.7, kind: "hit", at: 2.08 },
-    { clip: "run.001", from: 0, to: 1.291666, kind: "walk", at: null },
     { clip: "flip.001", from: 1.1, to: 3.1, kind: "hit", at: 1.88 },
     { clip: "dig.001", from: 10.2, to: 12.5, kind: "hit", at: 10.94 },
   ];
