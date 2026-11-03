@@ -1770,10 +1770,10 @@ export function AdminPage() {
             <p className="muted">20 saniye. Ekranda yazı yok. King Kong ve hulk_v2 eşit boyda, siyah zeminde karşı karşıya. Koşu ve yürüyüş yok. Yumruk, tekme, savurma, kafa, takla ve kazma sırayla gelir. Her hamle diğerinin gövdesinde biter. Kayıt modeller inmeden başlamaz.</p>
           )}
           {isDev16(reelShot) && (
-            <p className="muted">52 saniye. DEV15 ile aynı kuşatma. Model hulk_v2. Yumruk, tekme, kafa vuruşu ve ikinci yumruklar sırayla gelir. Koşu klibi yok. İlk kare yumruğun içinde. Her vuruş önündeki askerleri tek darbede indirir. Ölü iki saniyede kaybolur. Oklar model gelene kadar bekler.</p>
+            <p className="muted">52 saniye. DEV15 ile aynı kuşatma. Model hulk_v2. Yumruk, tekme, kafa vuruşu ve ikinci yumruklar sırayla gelir. Koşu klibi yok. Zemin siyah. İlk kare yumruğun içinde. Her vuruş önündeki askerleri tek darbede indirir. Ölü iki saniyede kaybolur. Oklar model gelene kadar bekler.</p>
           )}
           {isDev15(reelShot) && (
-            <p className="muted">52 saniye. Ekranda yazı yok. King Kong yerinde, bir önceki boydan yüzde 20 küçük. Savurma, tekme, yumruk, ikinci tekme, kolları indiriş, takla ve kazma sırayla gelir. Yürüyüş ve koşu yok. Her vuruş önceki halinin iki katı askeri tek darbede öldürür. Kamera daire çizer. Oklar model gelene kadar bekler.</p>
+            <p className="muted">52 saniye. Ekranda yazı yok. King Kong yerinde, bir önceki boydan yüzde 20 küçük. Savurma, tekme, yumruk, ikinci tekme, kolları indiriş, takla ve kazma sırayla gelir. Yürüyüş ve koşu yok. Zemin siyah. Her vuruş önceki halinin iki katı askeri tek darbede öldürür. Kamera daire çizer. Oklar model gelene kadar bekler.</p>
           )}
           {isBout(reelShot) && (
             <p className="muted">52 saniye. DEV9’daki çim. King Kong sadece ekrandan uzak olan sol eliyle yumruk atar, ork baltalarıyla karşılık verir. Vuruşlar seri. İkisinin de üstünde kırmızı can barı var. Kıyasıya dövüşürler, ork düşer.</p>

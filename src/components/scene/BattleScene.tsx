@@ -80,7 +80,7 @@ import { DuelBattle, DuelCam, HulkKongBattle } from "./DuelBattle";
 import { isBout2, type Bout2Id, type BoutId } from "../../boutReel";
 import { KAYIT_FIELD, sampleKayitCam, type KayitId } from "../../kayitReel";
 import { Dragon } from "./Dragon";
-import { DEV2_ID, DEV2_N, DEV_N, isDev6, isDev7, isDev8, isDev9, isDev10, isKicker, kickModel, isDevFast, isDevSmall, isDev16, isDevAll, isDevBig, isDevDread, isDevSword, isDevs, isSnake, sampleDevCam, zillaT, type GiantId } from "../../devReel";
+import { DEV2_ID, DEV2_N, DEV_N, isDev6, isDev7, isDev8, isDev9, isDev10, isKicker, kickModel, isDevFast, isDevSmall, isDevAll, isDevBig, isDevDread, isDevSword, isDevs, isSnake, sampleDevCam, zillaT, type GiantId } from "../../devReel";
 import { Maze } from "./Maze";
 import { FilmFoes } from "./FilmFoes";
 import { DevHealthBar, Giant } from "./Giant";
@@ -1002,7 +1002,7 @@ function SceneContent({
   const split = Boolean(mix);
   const sortie = isDefendSortie(defend);
   const devLive = isDev6(giant) || isDev7(giant) || isDev8(giant) || isDev9(giant) || isDev10(giant) || isKicker(giant);
-  const grass = devLive || isDefend5(defend) || Boolean(bout);
+  const grass = (devLive && !isDevSmall(giant)) || isDefend5(defend) || Boolean(bout);
   const friendN = defend ? defendShownFriends(defend, soldiers) : soldiers;
   const warsScale = wars ? warsView(soldiers) : 1;
   const orduFog = karsi ? karsiHaze(makeKarsiLayout(soldiers, karsi.foes, Boolean(karsi.invite))) : ordu ? orduHaze(soldiers) : null;
@@ -1045,7 +1045,7 @@ function SceneContent({
       {!maze && !kalkan && !hero && !loop && !kurtar && !gecme && !kuyu && !magdur && !kare && !devKong && !savas && !kirmizi && !baska && !aragorn && !dovus && !vsss && !kuyular && !tek && !tek2 && !tek3 && !run && !pit && !elf && <SteelSky />}
       {!maze && !kalkan && !hero && !loop && !kurtar && !gecme && !kuyu && !magdur && !kare && !devKong && !savas && !kirmizi && !baska && !aragorn && !dovus && !vsss && !kuyular && !tek && !tek2 && !tek3 && !run && !pit && !elf && <DayLights cinematic={cinematic} slim={Boolean(defend) && !isDefend3(defend)} warm={slaughter || Boolean(dragon)} />}
       {orduField && <GrassField span={Math.max(2400, orduField.width * 8 + orduField.depth * 8)} />}
-      {kayit ? <GrassField span={KAYIT_FIELD} y={-0.04} depthWrite={false} /> : !wars && !ordu && !ok && !elf && !kalkan && !hero && !loop && !kurtar && !gecme && !kuyu && !magdur && !kare && !devKong && !savas && !kirmizi && !baska && !aragorn && !dovus && !vsss && !kuyular && !tek && !tek2 && !tek3 && !run && !pit && (grass ? <GrassField /> : isDev16(giant) ? <BlackGround /> : film || dragon || giant ? <New1Terrain /> : maze ? <Maze soldiers={soldiers} /> : cross ? <New6Cross /> : chase ? <New5Bridge /> : new4 ? <New4Peak /> : slaughter || isDefend4(defend) ? <New1Terrain /> : <Terrain road={!defend && !field} cheap={Boolean(defend)} />)}
+      {kayit ? <GrassField span={KAYIT_FIELD} y={-0.04} depthWrite={false} /> : !wars && !ordu && !ok && !elf && !kalkan && !hero && !loop && !kurtar && !gecme && !kuyu && !magdur && !kare && !devKong && !savas && !kirmizi && !baska && !aragorn && !dovus && !vsss && !kuyular && !tek && !tek2 && !tek3 && !run && !pit && (grass ? <GrassField /> : isDevSmall(giant) ? <BlackGround /> : film || dragon || giant ? <New1Terrain /> : maze ? <Maze soldiers={soldiers} /> : cross ? <New6Cross /> : chase ? <New5Bridge /> : new4 ? <New4Peak /> : slaughter || isDefend4(defend) ? <New1Terrain /> : <Terrain road={!defend && !field} cheap={Boolean(defend)} />)}
       {!wars && !ordu && !ok && !elf && !kalkan && !hero && !loop && !kurtar && !gecme && !kuyu && !kapi && !magdur && !kare && !devKong && !savas && !kirmizi && !baska && !aragorn && !dovus && !vsss && !kuyular && !tek && !tek2 && !tek3 && !kale && !run && !pit && !defend && !field && !slaughter && !maze && !film && !dragon && !giant && !bout && <Castle level={level} pressure={pressure} gateClosed={Boolean(countdown) || split || climb || Boolean(xxx)} wallFight={climb} />}
       {sortie && (
         <TimedVisible until={DEFEND2_SORTIE + 0.85}>
