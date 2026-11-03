@@ -40,6 +40,7 @@ export function VsssBattle() {
   const host = useRef<THREE.Group>(null);
   const mixers = useRef<{ king: THREE.AnimationMixer; hulk: THREE.AnimationMixer } | null>(null);
   const bags = useRef<{ king: Record<string, THREE.AnimationAction>; hulk: Record<string, THREE.AnimationAction> } | null>(null);
+  const holders = useRef<{ king: THREE.Group; hulk: THREE.Group } | null>(null);
   const shown = useRef<{ king: string; hulk: string }>({ king: "", hulk: "" });
 
   useEffect(() => {
@@ -72,12 +73,13 @@ export function VsssBattle() {
             action.clampWhenFinished = true;
             bag[src.name] = action;
           }
-          return { mixer, bag };
+          return { mixer, bag, holder };
         };
         const king = make(kingFile, -GAP, 0);
         const hulk = make(hulkFile, GAP, Math.PI);
         mixers.current = { king: king.mixer, hulk: hulk.mixer };
         bags.current = { king: king.bag, hulk: hulk.bag };
+        holders.current = { king: king.holder, hulk: hulk.holder };
         vsssMarkReady();
       })
       .catch(() => {
@@ -103,12 +105,15 @@ export function VsssBattle() {
   useFrame(() => {
     const mix = mixers.current;
     const bag = bags.current;
-    if (!mix || !bag) return;
+    const held = holders.current;
+    if (!mix || !bag || !held) return;
     const t = vsssT();
     for (const who of ["king", "hulk"] as const) {
       const play = vsssPose(who, t);
       const action = bag[who][play.name];
       if (!action) continue;
+      const base = who === "king" ? 0 : Math.PI;
+      held[who].rotation.y = play.name.includes("kick") ? base - Math.PI / 2 : base;
       if (shown.current[who] !== play.name) {
         if (shown.current[who]) bag[who][shown.current[who]]?.stop();
         action.reset().play();
