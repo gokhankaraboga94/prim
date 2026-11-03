@@ -908,10 +908,10 @@ function ringAt(i: number, n: number, t: number, big = false, snake = false, sma
     const az = g.z + localZ * cy * sc;
     return { x, z, ry: Math.atan2(ax - x, az - z), ang, g, archer };
   }
-  // Cuce is short — keep the first ring near punch range; king/hulk stay wide.
-  const inner = small && planted === "cuce" ? 5.6 : 11.2;
-  const step = small && planted === "cuce" ? 1.85 : 2.45;
-  const archExtra = small && planted === "cuce" ? 3.4 : 11.4;
+  // Cuce: first ring near punch range, a bit of air between ranks and the body.
+  const inner = small && planted === "cuce" ? 6.7 : 11.2;
+  const step = small && planted === "cuce" ? 2.2 : 2.45;
+  const archExtra = small && planted === "cuce" ? 4.0 : 11.4;
   const base = small
     ? archer
       ? inner + (archExtra + ring * (step + 0.15)) * stillClose(t)
