@@ -1925,9 +1925,10 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
         continue;
       }
       if (home) {
-        const w = 1.45;
+        // Homepage style; DEV17 (troopScale>1) a bit larger than the live site labels.
+        const w = troopScale > 1 ? 1.92 : 1.45;
         const h = (cell.sy * w) / Math.max(cell.sx, 0.01);
-        const y = pos.y + 2.2 + h * 0.5;
+        const y = pos.y + 2.2 * Math.max(1, troopScale * 0.7) + h * 0.5;
         if (cam) dummy.quaternion.copy(cam.quaternion);
         else dummy.quaternion.identity();
         dummy.position.set(pos.x, y, pos.z);
@@ -1961,7 +1962,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
         nameScale =
           (giantDevs ? 2.02 : giantBig ? 1.58 : 0.96) *
           (nameAlert ? 1.25 : 1) *
-          (troopScale > 1 ? 0.38 : giantSmall ? 0.8 : 1);
+          (troopScale > 1 ? 0.92 : giantSmall ? 0.8 : 1);
       else if (maze) nameScale = 1.05;
       else if (dragon) nameScale = 1.22;
       else if (namePlate) nameScale = 1.7;
@@ -2053,7 +2054,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
       if (giant)
         sx = Math.min(
           sx,
-          (giantDevs ? 3.46 : giantBig ? 2.7 : 1.72) * (nameAlert ? 1.25 : 1) * (troopScale > 1 ? 0.55 : 1)
+          (giantDevs ? 3.46 : giantBig ? 2.7 : 1.72) * (nameAlert ? 1.25 : 1) * (troopScale > 1 ? 0.92 : 1)
         );
       else if (dragon) sx = Math.min(sx, 1.65);
       else if (film) sx = Math.min(sx, 1.7);

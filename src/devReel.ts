@@ -630,9 +630,21 @@ function rayHitsBox(ax: number, ay: number, az: number, bx: number, by: number, 
   return t0 < 0.97 && t1 > 0.03;
 }
 
-/** Hide a name when the body or the moving tail sits between the camera and that soldier. */
+/** Hide a name only when the giant body truly sits between the camera and that soldier. */
 function zillaNameHidden(sx: number, sz: number, cx: number, cz: number, cy: number, t: number) {
   const g = devGiantPose(t, true);
+  // Cuce is much smaller than king/hulk — Godzilla-sized occlusion was wiping side names.
+  if (planted === "cuce") {
+    const vx = sx - cx;
+    const vz = sz - cz;
+    const len2 = vx * vx + vz * vz;
+    if (len2 < 1) return false;
+    const hit = ((g.x - cx) * vx + (g.z - cz) * vz) / len2;
+    if (hit <= 0.1 || hit >= 0.95) return false;
+    const px = cx + vx * hit;
+    const pz = cz + vz * hit;
+    return Math.hypot(g.x - px, g.z - pz) < 2.35;
+  }
   const c = Math.cos(g.yaw);
   const s = Math.sin(g.yaw);
   const local = (x: number, z: number) => {
