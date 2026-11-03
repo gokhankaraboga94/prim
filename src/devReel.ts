@@ -35,11 +35,13 @@ export const DEV15_ID = "dev15" as const;
 export type Dev15Id = typeof DEV15_ID;
 export const DEV16_ID = "dev16" as const;
 export type Dev16Id = typeof DEV16_ID;
+export const DEV17_ID = "dev17" as const;
+export type Dev17Id = typeof DEV17_ID;
 export const SNAKE_ID = "yilan1" as const;
 export type SnakeId = typeof SNAKE_ID;
 export const DEVS_ID = "devler" as const;
 export type DevsId = typeof DEVS_ID;
-export type GiantId = DevId | Dev2Id | Dev3Id | Dev4Id | Dev5Id | Dev6Id | Dev7Id | Dev8Id | Dev9Id | Dev10Id | Dev11Id | Dev12Id | Dev13Id | Dev14Id | Dev15Id | Dev16Id | SnakeId | DevsId;
+export type GiantId = DevId | Dev2Id | Dev3Id | Dev4Id | Dev5Id | Dev6Id | Dev7Id | Dev8Id | Dev9Id | Dev10Id | Dev11Id | Dev12Id | Dev13Id | Dev14Id | Dev15Id | Dev16Id | Dev17Id | SnakeId | DevsId;
 export const DEV2_MODE = { id: DEV2_ID, label: "DEV2" } as const;
 export const DEV3_MODE = { id: DEV3_ID, label: "DEV3" } as const;
 export const DEV4_MODE = { id: DEV4_ID, label: "DEV4" } as const;
@@ -55,6 +57,7 @@ export const DEV13_MODE = { id: DEV13_ID, label: "DEV13" } as const;
 export const DEV14_MODE = { id: DEV14_ID, label: "DEV14" } as const;
 export const DEV15_MODE = { id: DEV15_ID, label: "DEV15" } as const;
 export const DEV16_MODE = { id: DEV16_ID, label: "DEV16" } as const;
+export const DEV17_MODE = { id: DEV17_ID, label: "DEV17" } as const;
 export const SNAKE_MODE = { id: SNAKE_ID, label: "yılan1" } as const;
 export const DEVS_MODE = { id: DEVS_ID, label: "devler" } as const;
 
@@ -122,19 +125,23 @@ export function isDev16(id: string | null | undefined): id is Dev16Id {
   return id === DEV16_ID;
 }
 
+export function isDev17(id: string | null | undefined): id is Dev17Id {
+  return id === DEV17_ID;
+}
+
 /** DEV11 and its copies: one giant that kicks instead of swinging. Only the model differs. */
 export function isKicker(id: string | null | undefined) {
-  return id === DEV11_ID || id === DEV12_ID || id === DEV13_ID || id === DEV14_ID || id === DEV15_ID || id === DEV16_ID;
+  return id === DEV11_ID || id === DEV12_ID || id === DEV13_ID || id === DEV14_ID || id === DEV15_ID || id === DEV16_ID || id === DEV17_ID;
 }
 
 /** Short 20 s timeline with heavier kicks and high flings. */
 export function isDevFast(id: string | null | undefined) {
-  return id === DEV14_ID || id === DEV15_ID || id === DEV16_ID;
+  return id === DEV14_ID || id === DEV15_ID || id === DEV16_ID || id === DEV17_ID;
 }
 
 /** DEV15: Godzilla planted, a bit under full size. The crowd still closes in. */
 export function isDevSmall(id: string | null | undefined) {
-  return id === DEV15_ID || id === DEV16_ID;
+  return id === DEV15_ID || id === DEV16_ID || id === DEV17_ID;
 }
 
 export function devSize(small: boolean) {
@@ -144,10 +151,10 @@ export function devSize(small: boolean) {
 /** Name box follows the planted giant. Measured against the half-size rig, then scaled. */
 const ZILLA_GROW = 0.576 / 0.5;
 
-export type KickModel = "hulk" | "alien" | "alien-lite" | "red-monster" | "godzilla" | "hulk-v2";
+export type KickModel = "hulk" | "alien" | "alien-lite" | "red-monster" | "godzilla" | "hulk-v2" | "cuce";
 
 export function kickModel(id: string | null | undefined): KickModel {
-  return id === DEV16_ID ? "hulk-v2" : id === DEV15_ID ? "godzilla" : id === DEV14_ID ? "red-monster" : id === DEV13_ID ? "alien-lite" : id === DEV12_ID ? "alien" : "hulk";
+  return id === DEV17_ID ? "cuce" : id === DEV16_ID ? "hulk-v2" : id === DEV15_ID ? "godzilla" : id === DEV14_ID ? "red-monster" : id === DEV13_ID ? "alien-lite" : id === DEV12_ID ? "alien" : "hulk";
 }
 
 export function isDevDread(id: string | null | undefined) {
@@ -163,19 +170,19 @@ export function isDevs(id: string | null | undefined): id is DevsId {
 }
 
 export function isDevBig(id: string | null | undefined) {
-  return id === DEV2_ID || id === DEV3_ID || id === DEV4_ID || id === DEV5_ID || id === DEV6_ID || id === DEV7_ID || id === DEV8_ID || id === DEV9_ID || id === DEV10_ID || id === DEV11_ID || id === DEV12_ID || id === DEV13_ID || id === DEV14_ID || id === DEV15_ID || id === DEV16_ID || id === SNAKE_ID || id === DEVS_ID;
+  return id === DEV2_ID || id === DEV3_ID || id === DEV4_ID || id === DEV5_ID || id === DEV6_ID || id === DEV7_ID || id === DEV8_ID || id === DEV9_ID || id === DEV10_ID || id === DEV11_ID || id === DEV12_ID || id === DEV13_ID || id === DEV14_ID || id === DEV15_ID || id === DEV16_ID || id === DEV17_ID || id === SNAKE_ID || id === DEVS_ID;
 }
 
 export function isDevAll(id: string | null | undefined) {
-  return id === DEV3_ID || id === DEV4_ID || id === DEV5_ID || id === DEV6_ID || id === DEV7_ID || id === DEV8_ID || id === DEV9_ID || id === DEV10_ID || id === DEV11_ID || id === DEV12_ID || id === DEV13_ID || id === DEV14_ID || id === DEV15_ID || id === DEV16_ID || id === SNAKE_ID || id === DEVS_ID;
+  return id === DEV3_ID || id === DEV4_ID || id === DEV5_ID || id === DEV6_ID || id === DEV7_ID || id === DEV8_ID || id === DEV9_ID || id === DEV10_ID || id === DEV11_ID || id === DEV12_ID || id === DEV13_ID || id === DEV14_ID || id === DEV15_ID || id === DEV16_ID || id === DEV17_ID || id === SNAKE_ID || id === DEVS_ID;
 }
 
 export function isDevSword(id: string | null | undefined) {
-  return id === DEV4_ID || id === DEV5_ID || id === DEV6_ID || id === DEV7_ID || id === DEV8_ID || id === DEV9_ID || id === DEV10_ID || id === DEV11_ID || id === DEV12_ID || id === DEV13_ID || id === DEV14_ID || id === DEV15_ID || id === DEV16_ID || id === SNAKE_ID || id === DEVS_ID;
+  return id === DEV4_ID || id === DEV5_ID || id === DEV6_ID || id === DEV7_ID || id === DEV8_ID || id === DEV9_ID || id === DEV10_ID || id === DEV11_ID || id === DEV12_ID || id === DEV13_ID || id === DEV14_ID || id === DEV15_ID || id === DEV16_ID || id === DEV17_ID || id === SNAKE_ID || id === DEVS_ID;
 }
 
 export function isGiantShot(id: string | null | undefined): id is GiantId {
-  return id === DEV_ID || id === DEV2_ID || id === DEV3_ID || id === DEV4_ID || id === DEV5_ID || id === DEV6_ID || id === DEV7_ID || id === DEV8_ID || id === DEV9_ID || id === DEV10_ID || id === DEV11_ID || id === DEV12_ID || id === DEV13_ID || id === DEV14_ID || id === DEV15_ID || id === DEV16_ID || id === SNAKE_ID || id === DEVS_ID;
+  return id === DEV_ID || id === DEV2_ID || id === DEV3_ID || id === DEV4_ID || id === DEV5_ID || id === DEV6_ID || id === DEV7_ID || id === DEV8_ID || id === DEV9_ID || id === DEV10_ID || id === DEV11_ID || id === DEV12_ID || id === DEV13_ID || id === DEV14_ID || id === DEV15_ID || id === DEV16_ID || id === DEV17_ID || id === SNAKE_ID || id === DEVS_ID;
 }
 
 export const DEV_SECONDS = 58;
@@ -194,6 +201,7 @@ export const DEV13_SECONDS = DEV_SECONDS;
 export const DEV14_SECONDS = 20;
 export const DEV15_SECONDS = 52;
 export const DEV16_SECONDS = 52;
+export const DEV17_SECONDS = 52;
 export const SNAKE_SECONDS = DEV_SECONDS;
 export const DEVS_SECONDS = DEV_SECONDS;
 export const DEV_N = 300;
@@ -422,39 +430,53 @@ export function zillaT() {
 
 type ZBeat = { start: number; dur: number; from: number; clip: string; contact: number | null; kind: "hit" | "walk" };
 
-let planted: "king" | "hulk" = "king";
+let planted: "king" | "hulk" | "cuce" = "king";
 
 /** DEV16 shares the planted fight. Switching the rig drops the cached strike list. */
-export function zillaSetRig(kind: "king" | "hulk") {
+export function zillaSetRig(kind: "king" | "hulk" | "cuce") {
   if (planted === kind) return;
   planted = kind;
   kickTimes.delete(-1);
   zillaFates.clear();
 }
 
-/** DEV15 king clips, or DEV16 hulk clips. Run is never used. The first frame is already a strike. */
+/** DEV15 king, DEV16 hulk, DEV17 cuce. Walk/run/climb never used. Cuce chains punches fast. */
 function zillaBeats(): ZBeat[] {
   const hit = kickTimes.get(-1) as unknown as ZBeat[] | undefined;
   if (hit) return hit;
   const pattern: { clip: string; from: number; to: number; kind: ZBeat["kind"]; at: number | null }[] =
-    planted === "hulk"
+    planted === "cuce"
       ? [
-          { clip: "box_02.001", from: 2.05, to: 2.83, kind: "hit", at: 2.48 },
-          { clip: "front_kick_01.001", from: 0.7, to: 1.75, kind: "hit", at: 1.27 },
-          { clip: "hit_to_head.001", from: 0.15, to: 1.15, kind: "hit", at: 0.47 },
-          { clip: "box_03.001", from: 0.45, to: 1.7, kind: "hit", at: 0.97 },
-          { clip: "front_kick_02.001", from: 0.4, to: 1.2, kind: "hit", at: 0.89 },
-          { clip: "box_01.001", from: 0.4, to: 1.6, kind: "hit", at: 0.84 },
+          { clip: "box_01", from: 0.35, to: 1.05, kind: "hit", at: 0.72 },
+          { clip: "box_03", from: 0.4, to: 1.15, kind: "hit", at: 0.82 },
+          { clip: "hit_to_side", from: 0.12, to: 0.9, kind: "hit", at: 0.48 },
+          { clip: "box_02", from: 1.95, to: 2.65, kind: "hit", at: 2.32 },
+          { clip: "box_01", from: 0.55, to: 1.25, kind: "hit", at: 0.9 },
+          { clip: "box_03", from: 0.55, to: 1.35, kind: "hit", at: 0.95 },
+          { clip: "front_kick_02", from: 0.28, to: 1.05, kind: "hit", at: 0.68 },
+          { clip: "box_02", from: 2.05, to: 2.7, kind: "hit", at: 2.4 },
+          { clip: "hit_to_side", from: 0.18, to: 0.95, kind: "hit", at: 0.52 },
+          { clip: "front_kick_01", from: 0.55, to: 1.45, kind: "hit", at: 1.05 },
         ]
-      : [
-          { clip: "slash.001", from: 1.15, to: 2.4, kind: "hit", at: 1.66 },
-          { clip: "front_kick_01.001", from: 0.55, to: 1.85, kind: "hit", at: 1.27 },
-          { clip: "box_03.001", from: 0.3, to: 1.7, kind: "hit", at: 0.86 },
-          { clip: "front_kick_02.001", from: 0.3, to: 1.25, kind: "hit", at: 0.83 },
-          { clip: KING_SLAM, from: 0.5, to: 2.7, kind: "hit", at: 2.08 },
-          { clip: "flip.001", from: 1.1, to: 3.1, kind: "hit", at: 1.88 },
-          { clip: "dig.001", from: 10.2, to: 12.5, kind: "hit", at: 10.94 },
-        ];
+      : planted === "hulk"
+        ? [
+            { clip: "box_02.001", from: 2.05, to: 2.83, kind: "hit", at: 2.48 },
+            { clip: "front_kick_01.001", from: 0.7, to: 1.75, kind: "hit", at: 1.27 },
+            { clip: "hit_to_head.001", from: 0.15, to: 1.15, kind: "hit", at: 0.47 },
+            { clip: "box_03.001", from: 0.45, to: 1.7, kind: "hit", at: 0.97 },
+            { clip: "front_kick_02.001", from: 0.4, to: 1.2, kind: "hit", at: 0.89 },
+            { clip: "box_01.001", from: 0.4, to: 1.6, kind: "hit", at: 0.84 },
+          ]
+        : [
+            { clip: "slash.001", from: 1.15, to: 2.4, kind: "hit", at: 1.66 },
+            { clip: "front_kick_01.001", from: 0.55, to: 1.85, kind: "hit", at: 1.27 },
+            { clip: "box_03.001", from: 0.3, to: 1.7, kind: "hit", at: 0.86 },
+            { clip: "front_kick_02.001", from: 0.3, to: 1.25, kind: "hit", at: 0.83 },
+            { clip: KING_SLAM, from: 0.5, to: 2.7, kind: "hit", at: 2.08 },
+            { clip: "flip.001", from: 1.1, to: 3.1, kind: "hit", at: 1.88 },
+            { clip: "dig.001", from: 10.2, to: 12.5, kind: "hit", at: 10.94 },
+          ];
+  const gap = planted === "cuce" ? 0.02 : 0.06;
   const out: ZBeat[] = [];
   let t = 0;
   let i = 0;
@@ -470,7 +492,7 @@ function zillaBeats(): ZBeat[] {
       contact: step.at == null ? null : t + (step.at - step.from),
       kind: step.kind,
     });
-    t += dur + 0.06;
+    t += dur + gap;
     i += 1;
   }
   kickTimes.set(-1, out as unknown as number[]);
@@ -483,8 +505,9 @@ export function zillaPlayback(t: number): { name: string; time: number } {
     if (t < beat.start + beat.dur) return { name: beat.clip, time: beat.from + Math.max(0, t - beat.start) };
   }
   const last = beats[beats.length - 1];
-  const idle = planted === "hulk" ? "box_02.001" : "slash.001";
-  return last ? { name: last.clip, time: Math.min(last.from + last.dur, last.from + Math.max(0, t - last.start)) } : { name: idle, time: planted === "hulk" ? 2.48 : 1.66 };
+  const idle = planted === "cuce" ? "box_01" : planted === "hulk" ? "box_02.001" : "slash.001";
+  const idleAt = planted === "cuce" ? 0.72 : planted === "hulk" ? 2.48 : 1.66;
+  return last ? { name: last.clip, time: Math.min(last.from + last.dur, last.from + Math.max(0, t - last.start)) } : { name: idle, time: idleAt };
 }
 
 type ZillaFate = { wound: Float64Array; die: Float64Array; fling: Uint8Array };

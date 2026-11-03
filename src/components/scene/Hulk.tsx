@@ -110,7 +110,7 @@ const GODZILLA_RIG: KickRig = {
   },
 };
 
-const RIGS: Record<Exclude<KickModel, "hulk-v2">, KickRig> = { hulk: HULK_RIG, alien: ALIEN_RIG, "alien-lite": ALIEN_LITE_RIG, "red-monster": MONSTER_RIG, godzilla: GODZILLA_RIG };
+const RIGS: Record<Exclude<KickModel, "hulk-v2" | "cuce">, KickRig> = { hulk: HULK_RIG, alien: ALIEN_RIG, "alien-lite": ALIEN_LITE_RIG, "red-monster": MONSTER_RIG, godzilla: GODZILLA_RIG };
 const qHip = new THREE.Quaternion();
 const qKnee = new THREE.Quaternion();
 const qAnkle = new THREE.Quaternion();
@@ -238,8 +238,8 @@ function toLambert(root: THREE.Object3D) {
   });
 }
 
-/** Planted skeleton. DEV15 is king, DEV16 is hulk_v2. Hip travel stays parked in the ring. Run is not played. */
-export function GodzillaRig({ url, kind }: { url: string; kind: "king" | "hulk" }) {
+/** Planted skeleton. DEV15 king, DEV16 hulk_v2, DEV17 cuce. Walk/run/climb not played. */
+export function GodzillaRig({ url, kind }: { url: string; kind: "king" | "hulk" | "cuce" }) {
   const host = useRef<THREE.Group>(null);
   const mixer = useRef<THREE.AnimationMixer | null>(null);
   const actions = useRef<Record<string, THREE.AnimationAction>>({});
@@ -268,7 +268,8 @@ export function GodzillaRig({ url, kind }: { url: string; kind: "king" | "hulk" 
       const mix = new THREE.AnimationMixer(model);
       const next: Record<string, THREE.AnimationAction> = {};
       for (const src of gltf.animations) {
-        if (src.name.startsWith("run")) continue;
+        const low = src.name.toLowerCase();
+        if (low.startsWith("run") || low.startsWith("walk") || low.startsWith("climb")) continue;
         const clip = src.clone();
         clip.tracks = src.tracks.filter((track) => !track.name.endsWith("Hips.position"));
         const action = mix.clipAction(clip);
@@ -320,7 +321,7 @@ export function GodzillaRig({ url, kind }: { url: string; kind: "king" | "hulk" 
   return <group ref={host} />;
 }
 
-export function HulkModel({ soldiers, model: kind = "hulk", fast = false }: { soldiers: number; model?: Exclude<KickModel, "godzilla" | "hulk-v2">; fast?: boolean }) {
+export function HulkModel({ soldiers, model: kind = "hulk", fast = false }: { soldiers: number; model?: Exclude<KickModel, "godzilla" | "hulk-v2" | "cuce">; fast?: boolean }) {
   const rig = useRef<THREE.Group>(null);
   const spec = RIGS[kind];
   const swing = useMemo(() => ({ leg: null as Leg | null }), []);
