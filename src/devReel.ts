@@ -833,13 +833,31 @@ export function devIsSpear(i: number, n: number) {
   return !devIsArcher(i, n) && i % 2 === 1;
 }
 
+/** DEV17: bigger troops need wider rings and fewer seats per ring. */
+let ringSpread = 1;
+
+export function setDevRingSpread(spread: number) {
+  ringSpread = Math.max(1, spread);
+}
+
 function ringAt(i: number, n: number, t: number, big = false, snake = false, small = false) {
   const g = small ? devGiantPose(t, true, n) : devGiantAt(t);
   const archer = devIsArcher(i, n);
   const meleeN = Math.ceil(n / 2);
   const local = archer ? i - meleeN : i;
   const count = Math.max(1, archer ? n - meleeN : meleeN);
-  const per = small ? (archer ? 36 : 22) : archer ? (big ? 44 : 42) : big ? 28 : 26;
+  const pad = small ? ringSpread : 1;
+  const per = small
+    ? archer
+      ? Math.max(14, Math.round(36 / pad))
+      : Math.max(10, Math.round(22 / pad))
+    : archer
+      ? big
+        ? 44
+        : 42
+      : big
+        ? 28
+        : 26;
   const ring = Math.floor(local / per);
   const idx = local % per;
   const seats = Math.max(1, Math.min(per, count - ring * per));
@@ -860,9 +878,18 @@ function ringAt(i: number, n: number, t: number, big = false, snake = false, sma
     const az = g.z + localZ * cy * sc;
     return { x, z, ry: Math.atan2(ax - x, az - z), ang, g, archer };
   }
-  const rad = small
-    ? archer ? 11.2 + (11.4 + ring * 2.6) * stillClose(t) : 11.2 + ring * 2.45 * stillClose(t)
-    : archer ? (big ? 30 + ring * 2.05 : 20 + ring * 1.7) : big ? 13.8 + ring * 1.9 : 8.2 + ring * 1.45;
+  const base = small
+    ? archer
+      ? 11.2 + (11.4 + ring * 2.6) * stillClose(t)
+      : 11.2 + ring * 2.45 * stillClose(t)
+    : archer
+      ? big
+        ? 30 + ring * 2.05
+        : 20 + ring * 1.7
+      : big
+        ? 13.8 + ring * 1.9
+        : 8.2 + ring * 1.45;
+  const rad = base * pad;
   const x = g.x + Math.sin(ang) * rad;
   const z = g.z + Math.cos(ang) * rad;
   return { x, z, ry: Math.atan2(g.x - x, g.z - z), ang, g, archer };

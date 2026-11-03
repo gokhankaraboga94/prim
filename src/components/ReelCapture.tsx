@@ -16,7 +16,7 @@ import { type New1Id, type New2Id, type New3Id, type New4Id, type New5Id, type N
 import type { LabId } from "../mazeReel";
 import type { FilmId } from "../filmReel";
 import type { DragonId } from "../dragonReel";
-import { isDev16, isDev17, isDevSmall, zillaHold, zillaIsReady, zillaSetRig, zillaStart, type GiantId } from "../devReel";
+import { isDev16, isDev17, isDevSmall, setDevRingSpread, zillaHold, zillaIsReady, zillaSetRig, zillaStart, type GiantId } from "../devReel";
 import type { WarsId } from "../warsReel";
 import type { OrduId } from "../orduReel";
 import type { Rival } from "../karsiReel";
@@ -189,8 +189,18 @@ export function ReelCapture({ soldiers, names, commanders = [], level, pressure,
   );
 
   useEffect(() => {
-    if (isDev16(giant)) zillaSetRig("hulk");
-    else if (isDevSmall(giant)) zillaSetRig("king");
+    if (isDev17(giant)) {
+      zillaSetRig("cuce");
+      setDevRingSpread(1.85);
+    } else if (isDev16(giant)) {
+      zillaSetRig("hulk");
+      setDevRingSpread(1);
+    } else if (isDevSmall(giant)) {
+      zillaSetRig("king");
+      setDevRingSpread(1);
+    } else {
+      setDevRingSpread(1);
+    }
     if (!arena3 && !kurtar && !gecme && !kuyu && !kapi && !magdur && !kare && !devKong && !savas && !kirmizi && !baska && !aragorn && !dovus && !vsss && !kuyular && !tek && !tek2 && !tek3 && !kale && !run && !isDevSmall(giant)) return;
     let stop = false;
     const urls = arena3 ? [...ARENA3_HERO_URLS, ARENA3_ARENA_URL] : kurtar ? KURTAR_URLS : gecme ? GECME_URLS : kuyu ? KUYU_URLS : devKong ? DEVKONG_URLS : savas ? SAVAS_URLS : kirmizi ? KIRMIZI_URLS : baska ? [BASKA_URL] : aragorn ? ARAGORN_URLS : vsss ? VSSS_URLS : dovus ? DOVUS_URLS : kuyular ? KUYULAR_URLS : tek ? TEK_URLS : tek2 ? TEK2_URLS : tek3 ? TEK3_URLS : kale ? KALE_URLS : run ? RUN_URLS : kare ? KARE_URLS : magdur ? MAGDUR_URLS : isDev17(giant) ? ["/models/cuce.glb"] : isDev16(giant) ? ["/models/hulk_v2.glb"] : isDevSmall(giant) ? ["/models/king.glb"] : KAPI_URLS;
