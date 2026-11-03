@@ -259,10 +259,12 @@ export function GodzillaRig({ url, kind }: { url: string; kind: "king" | "hulk" 
       const box = new THREE.Box3().setFromObject(model);
       const span = Math.max(0.001, box.max.y - box.min.y);
       const fit = HEIGHT / span;
-      model.scale.setScalar(fit);
+      // DEV17 cuce: stretch taller without widening the stance.
+      const tall = kind === "cuce" ? 1.5 : 1;
+      model.scale.set(fit, fit * tall, fit);
       model.position.set(
         -((box.min.x + box.max.x) / 2) * fit,
-        -box.min.y * fit,
+        -box.min.y * fit * tall,
         -((box.min.z + box.max.z) / 2) * fit,
       );
       const mix = new THREE.AnimationMixer(model);
