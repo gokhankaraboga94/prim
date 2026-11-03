@@ -1,0 +1,24 @@
+---
+description: Her kod değişikliğinden sonra otomatik commit + push zorunlu
+alwaysApply: true
+---
+
+# Her değişiklik → commit + push
+
+Bu kural, “commit/push sadece kullanıcı isterse” varsayılanını **geçersiz kılar**.
+
+## Zorunlu akış
+
+1. Kod veya proje dosyasında anlamlı bir değişiklik bitince **hemen** commit at.
+2. Commit’ten hemen sonra **`git push`** yap (`origin`, aktif branch).
+3. Kullanıcının “pushla” demesini **bekleme**. Push atlanmaz, sonraya bırakılmaz, “istersen pushlarım” denmez.
+
+## Kapsam
+
+- Feature, bugfix, model, reel, admin, config, rule dosyaları dahil.
+- Küçük düzeltmeler de dahil; “önemli değil” diye push atlama.
+- Secrets (`.env`, credential) commit/push etme; onu uyar, geri kalanı pushla.
+
+## Commit mesajı
+
+Repodaki kısa üsluba uy (`dev17: ...` gibi). PowerShell’de heredoc kullanma; düz `-m` yeterli.
