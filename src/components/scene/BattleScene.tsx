@@ -78,7 +78,7 @@ import { DuelBattle, DuelCam, HulkKongBattle } from "./DuelBattle";
 import { isBout2, type Bout2Id, type BoutId } from "../../boutReel";
 import { KAYIT_FIELD, sampleKayitCam, type KayitId } from "../../kayitReel";
 import { Dragon } from "./Dragon";
-import { DEV2_ID, DEV2_N, DEV_N, isDev6, isDev7, isDev8, isDev9, isDev10, isKicker, kickModel, isDevFast, isDevSmall, isDevAll, isDevBig, isDevDread, isDevSword, isDevs, isSnake, sampleDevCam, zillaT, type GiantId } from "../../devReel";
+import { DEV2_ID, DEV2_N, DEV_N, isDev6, isDev7, isDev8, isDev9, isDev10, isKicker, kickModel, isDevFast, isDevSmall, isDev16, isDevAll, isDevBig, isDevDread, isDevSword, isDevs, isSnake, sampleDevCam, zillaT, type GiantId } from "../../devReel";
 import { Maze } from "./Maze";
 import { FilmFoes } from "./FilmFoes";
 import { DevHealthBar, Giant } from "./Giant";
@@ -834,6 +834,15 @@ function GrassField({ span = 2400, y = 0, depthWrite = true }: { span?: number; 
   );
 }
 
+function BlackGround() {
+  return (
+    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
+      <planeGeometry args={[1200, 1200]} />
+      <meshBasicMaterial color="#000000" />
+    </mesh>
+  );
+}
+
 function New1Terrain() {
   const ground = useNew1GroundTexture();
   return (
@@ -1032,7 +1041,7 @@ function SceneContent({
       {!maze && !kalkan && !hero && !loop && !kurtar && !gecme && !kuyu && !magdur && !kare && !devKong && !savas && !kirmizi && !baska && !aragorn && !dovus && !kuyular && !tek && !tek2 && !tek3 && !run && !pit && !elf && <SteelSky />}
       {!maze && !kalkan && !hero && !loop && !kurtar && !gecme && !kuyu && !magdur && !kare && !devKong && !savas && !kirmizi && !baska && !aragorn && !dovus && !kuyular && !tek && !tek2 && !tek3 && !run && !pit && !elf && <DayLights cinematic={cinematic} slim={Boolean(defend) && !isDefend3(defend)} warm={slaughter || Boolean(dragon)} />}
       {orduField && <GrassField span={Math.max(2400, orduField.width * 8 + orduField.depth * 8)} />}
-      {kayit ? <GrassField span={KAYIT_FIELD} y={-0.04} depthWrite={false} /> : !wars && !ordu && !ok && !elf && !kalkan && !hero && !loop && !kurtar && !gecme && !kuyu && !magdur && !kare && !devKong && !savas && !kirmizi && !baska && !aragorn && !dovus && !kuyular && !tek && !tek2 && !tek3 && !run && !pit && (grass ? <GrassField /> : film || dragon || giant ? <New1Terrain /> : maze ? <Maze soldiers={soldiers} /> : cross ? <New6Cross /> : chase ? <New5Bridge /> : new4 ? <New4Peak /> : slaughter || isDefend4(defend) ? <New1Terrain /> : <Terrain road={!defend && !field} cheap={Boolean(defend)} />)}
+      {kayit ? <GrassField span={KAYIT_FIELD} y={-0.04} depthWrite={false} /> : !wars && !ordu && !ok && !elf && !kalkan && !hero && !loop && !kurtar && !gecme && !kuyu && !magdur && !kare && !devKong && !savas && !kirmizi && !baska && !aragorn && !dovus && !kuyular && !tek && !tek2 && !tek3 && !run && !pit && (grass ? <GrassField /> : isDev16(giant) ? <BlackGround /> : film || dragon || giant ? <New1Terrain /> : maze ? <Maze soldiers={soldiers} /> : cross ? <New6Cross /> : chase ? <New5Bridge /> : new4 ? <New4Peak /> : slaughter || isDefend4(defend) ? <New1Terrain /> : <Terrain road={!defend && !field} cheap={Boolean(defend)} />)}
       {!wars && !ordu && !ok && !elf && !kalkan && !hero && !loop && !kurtar && !gecme && !kuyu && !kapi && !magdur && !kare && !devKong && !savas && !kirmizi && !baska && !aragorn && !dovus && !kuyular && !tek && !tek2 && !tek3 && !kale && !run && !pit && !defend && !field && !slaughter && !maze && !film && !dragon && !giant && !bout && <Castle level={level} pressure={pressure} gateClosed={Boolean(countdown) || split || climb || Boolean(xxx)} wallFight={climb} />}
       {sortie && (
         <TimedVisible until={DEFEND2_SORTIE + 0.85}>
