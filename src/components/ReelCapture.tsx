@@ -191,7 +191,7 @@ export function ReelCapture({ soldiers, names, commanders = [], level, pressure,
   useEffect(() => {
     if (isDev17(giant)) {
       zillaSetRig("cuce");
-      setDevRingSpread(1.85);
+      setDevRingSpread(1.12);
     } else if (isDev16(giant)) {
       zillaSetRig("hulk");
       setDevRingSpread(1);

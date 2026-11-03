@@ -1925,10 +1925,10 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
         continue;
       }
       if (home) {
-        // Homepage style; DEV17 (troopScale>1) a bit larger than the live site labels.
-        const w = troopScale > 1 ? 1.92 : 1.45;
+        // Homepage style; DEV17 (troopScale>1) sits just above the scaled head.
+        const w = troopScale > 1 ? 2.55 : 1.45;
         const h = (cell.sy * w) / Math.max(cell.sx, 0.01);
-        const y = pos.y + 2.2 * Math.max(1, troopScale * 0.7) + h * 0.5;
+        const y = pos.y + (troopScale > 1 ? 2.12 * troopScale : 2.2) + h * 0.5;
         if (cam) dummy.quaternion.copy(cam.quaternion);
         else dummy.quaternion.identity();
         dummy.position.set(pos.x, y, pos.z);

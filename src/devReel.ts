@@ -529,7 +529,9 @@ function zillaFate(n: number): ZillaFate {
     const scored: { i: number; s: number }[] = [];
     for (let i = 0; i < n; i++) {
       if (die[i] < 1e8) continue;
-      const live = ringAt(i, n, beat.contact, true, false, true);
+      // Score the packed front seats so rear ranks step in as the inner ring falls.
+      const pack = packSeat(i, n, die, beat.contact);
+      const live = ringAt(pack.seat, pack.alive, beat.contact, true, false, true);
       const forward = (live.x - g.x) * fx + (live.z - g.z) * fz;
       if (forward < 1.2) continue;
       const side = (live.x - g.x) * Math.cos(g.yaw) - (live.z - g.z) * Math.sin(g.yaw);
@@ -849,7 +851,23 @@ export function devIsSpear(i: number, n: number) {
 let ringSpread = 1;
 
 export function setDevRingSpread(spread: number) {
-  ringSpread = Math.max(1, spread);
+  const next = Math.max(1, spread);
+  if (next === ringSpread) return;
+  ringSpread = next;
+  zillaFates.clear();
+}
+
+/** Among soldiers still alive at t, map index i → packed front-first seat. */
+function packSeat(i: number, n: number, die: Float64Array, t: number) {
+  let seat = 0;
+  let alive = 0;
+  for (let j = 0; j < n; j++) {
+    if (die[j] > t) {
+      if (j < i) seat += 1;
+      alive += 1;
+    }
+  }
+  return { seat, alive: Math.max(1, alive) };
 }
 
 function ringAt(i: number, n: number, t: number, big = false, snake = false, small = false) {
@@ -890,10 +908,14 @@ function ringAt(i: number, n: number, t: number, big = false, snake = false, sma
     const az = g.z + localZ * cy * sc;
     return { x, z, ry: Math.atan2(ax - x, az - z), ang, g, archer };
   }
+  // Cuce is short — keep the first ring near punch range; king/hulk stay wide.
+  const inner = small && planted === "cuce" ? 5.6 : 11.2;
+  const step = small && planted === "cuce" ? 1.85 : 2.45;
+  const archExtra = small && planted === "cuce" ? 3.4 : 11.4;
   const base = small
     ? archer
-      ? 11.2 + (11.4 + ring * 2.6) * stillClose(t)
-      : 11.2 + ring * 2.45 * stillClose(t)
+      ? inner + (archExtra + ring * (step + 0.15)) * stillClose(t)
+      : inner + ring * step * stillClose(t)
     : archer
       ? big
         ? 30 + ring * 2.05
@@ -1452,7 +1474,10 @@ function zillaSoldier(i: number, n: number, t: number, out: New1Pose) {
   const dieAt = fate.die[i];
   const woundAt = fate.wound[i];
   const liveAt = dieAt < 1e8 ? dieAt : t;
-  const live = ringAt(i, n, liveAt, true, false, true);
+  // While alive, pack into the emptied front seats; freeze the death seat for fling/fall.
+  const packT = t < dieAt ? t : Math.max(0, dieAt - 1e-4);
+  const pack = packSeat(i, n, fate.die, packT);
+  const live = ringAt(pack.seat, pack.alive, liveAt, true, false, true);
   const g = live.g;
   const fx = Math.sin(g.yaw);
   const fz = Math.cos(g.yaw);
