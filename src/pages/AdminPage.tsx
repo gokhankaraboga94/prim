@@ -1785,7 +1785,7 @@ export function AdminPage() {
             <p className="muted">52 saniye. DEV15 ile aynı kuşatma. Model hulk_v2. Yumruk, tekme, kafa vuruşu ve ikinci yumruklar sırayla gelir. Koşu klibi yok. Zemin siyah. İlk kare yumruğun içinde. Her vuruş önündeki askerleri tek darbede indirir. Ölü iki saniyede kaybolur. Oklar model gelene kadar bekler.</p>
           )}
           {isDev17(reelShot) && (
-            <p className="muted">52 saniye. DEV16 ile aynı kuşatma. Model cüce (cuce.glb). Kendi animasyonları: yumruklar seri (box_01/02/03, hit_to_side), arada tekme. Yürüme/koşu/tırmanma yok. Zemin siyah.</p>
+            <p className="muted">52 saniye. DEV16 ile aynı kuşatma. Model cüce (cuce.glb). Kendi animasyonları: yumruklar seri (box_01/02/03, hit_to_side), arada tekme. Yürüme/koşu/tırmanma yok. Zemin yeşil çim.</p>
           )}
           {isDev15(reelShot) && (
             <p className="muted">52 saniye. Ekranda yazı yok. King Kong yerinde, bir önceki boydan yüzde 20 küçük. Savurma, tekme, yumruk, ikinci tekme, kolları indiriş, takla ve kazma sırayla gelir. Yürüyüş ve koşu yok. Zemin siyah. Her vuruş önceki halinin iki katı askeri tek darbede öldürür. Kamera daire çizer. Oklar model gelene kadar bekler.</p>

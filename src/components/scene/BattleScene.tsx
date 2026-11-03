@@ -80,7 +80,7 @@ import { DuelBattle, DuelCam, HulkKongBattle } from "./DuelBattle";
 import { isBout2, type Bout2Id, type BoutId } from "../../boutReel";
 import { KAYIT_FIELD, sampleKayitCam, type KayitId } from "../../kayitReel";
 import { Dragon } from "./Dragon";
-import { DEV2_ID, DEV2_N, DEV_N, isDev6, isDev7, isDev8, isDev9, isDev10, isKicker, kickModel, isDevFast, isDevSmall, isDevAll, isDevBig, isDevDread, isDevSword, isDevs, isSnake, sampleDevCam, zillaT, type GiantId } from "../../devReel";
+import { DEV2_ID, DEV2_N, DEV_N, isDev6, isDev7, isDev8, isDev9, isDev10, isDev17, isKicker, kickModel, isDevFast, isDevSmall, isDevAll, isDevBig, isDevDread, isDevSword, isDevs, isSnake, sampleDevCam, zillaT, type GiantId } from "../../devReel";
 import { Maze } from "./Maze";
 import { FilmFoes } from "./FilmFoes";
 import { DevHealthBar, Giant } from "./Giant";
@@ -1002,7 +1002,7 @@ function SceneContent({
   const split = Boolean(mix);
   const sortie = isDefendSortie(defend);
   const devLive = isDev6(giant) || isDev7(giant) || isDev8(giant) || isDev9(giant) || isDev10(giant) || isKicker(giant);
-  const grass = (devLive && !isDevSmall(giant)) || isDefend5(defend) || Boolean(bout);
+  const grass = (devLive && !isDevSmall(giant)) || isDev17(giant) || isDefend5(defend) || Boolean(bout);
   const friendN = defend ? defendShownFriends(defend, soldiers) : soldiers;
   const warsScale = wars ? warsView(soldiers) : 1;
   const orduFog = karsi ? karsiHaze(makeKarsiLayout(soldiers, karsi.foes, Boolean(karsi.invite))) : ordu ? orduHaze(soldiers) : null;
