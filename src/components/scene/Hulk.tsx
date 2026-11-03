@@ -3,7 +3,7 @@ import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { REEL_HOLD } from "../../recordCanvas";
-import { devKick, zillaMarkReady, zillaPlayback, zillaReset, zillaT, type KickModel } from "../../devReel";
+import { devKick, zillaMarkReady, zillaPlayback, zillaReset, zillaSetRig, zillaT, type KickModel } from "../../devReel";
 import { simplifySkinned } from "../../knightSoldier";
 import { dropGroundSlab } from "../../groundSlab";
 
@@ -110,7 +110,7 @@ const GODZILLA_RIG: KickRig = {
   },
 };
 
-const RIGS: Record<KickModel, KickRig> = { hulk: HULK_RIG, alien: ALIEN_RIG, "alien-lite": ALIEN_LITE_RIG, "red-monster": MONSTER_RIG, godzilla: GODZILLA_RIG };
+const RIGS: Record<Exclude<KickModel, "hulk-v2">, KickRig> = { hulk: HULK_RIG, alien: ALIEN_RIG, "alien-lite": ALIEN_LITE_RIG, "red-monster": MONSTER_RIG, godzilla: GODZILLA_RIG };
 const qHip = new THREE.Quaternion();
 const qKnee = new THREE.Quaternion();
 const qAnkle = new THREE.Quaternion();
@@ -238,17 +238,19 @@ function toLambert(root: THREE.Object3D) {
   });
 }
 
-/** King keeps its skeleton. DEV15 plays every clip on the body; hip travel stays parked in the ring. */
-export function GodzillaRig() {
+/** Planted skeleton. DEV15 is king, DEV16 is hulk_v2. Hip travel stays parked in the ring. Run is not played. */
+export function GodzillaRig({ url, kind }: { url: string; kind: "king" | "hulk" }) {
   const host = useRef<THREE.Group>(null);
   const mixer = useRef<THREE.AnimationMixer | null>(null);
   const actions = useRef<Record<string, THREE.AnimationAction>>({});
   const shown = useRef("");
+  zillaSetRig(kind);
   useEffect(() => {
     const loader = new GLTFLoader();
     let drop = false;
     zillaReset();
-    loader.load("/models/king.glb", (gltf) => {
+    zillaSetRig(kind);
+    loader.load(url, (gltf) => {
       const root = host.current;
       if (drop || !root) return;
       const model = gltf.scene;
@@ -266,6 +268,7 @@ export function GodzillaRig() {
       const mix = new THREE.AnimationMixer(model);
       const next: Record<string, THREE.AnimationAction> = {};
       for (const src of gltf.animations) {
+        if (src.name.startsWith("run")) continue;
         const clip = src.clone();
         clip.tracks = src.tracks.filter((track) => !track.name.endsWith("Hips.position"));
         const action = mix.clipAction(clip);
@@ -280,7 +283,7 @@ export function GodzillaRig() {
       zillaMarkReady();
     }, undefined, () => {
       if (drop) return;
-      console.warn("king yuklenemedi");
+      console.warn(kind + " yuklenemedi");
       zillaMarkReady();
     });
     return () => {
@@ -299,7 +302,7 @@ export function GodzillaRig() {
       });
       root.clear();
     };
-  }, []);
+  }, [url, kind]);
   useFrame(() => {
     const mix = mixer.current;
     const bag = actions.current;
@@ -317,7 +320,7 @@ export function GodzillaRig() {
   return <group ref={host} />;
 }
 
-export function HulkModel({ soldiers, model: kind = "hulk", fast = false }: { soldiers: number; model?: KickModel; fast?: boolean }) {
+export function HulkModel({ soldiers, model: kind = "hulk", fast = false }: { soldiers: number; model?: Exclude<KickModel, "godzilla" | "hulk-v2">; fast?: boolean }) {
   const rig = useRef<THREE.Group>(null);
   const spec = RIGS[kind];
   const swing = useMemo(() => ({ leg: null as Leg | null }), []);

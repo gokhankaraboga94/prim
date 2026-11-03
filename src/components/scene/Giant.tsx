@@ -681,7 +681,7 @@ function GiantBody({ soldiers, big, sword, dread, flesh = false, ape = false, de
     const t = small ? zillaT() : Math.max(0, clock.elapsedTime - REEL_HOLD);
     const g = devGiantPose(t, small, soldiers);
     if (hulk) {
-      const kick = kickModel === "godzilla" ? { lunge: 0 } : devKick(t, soldiers, fast);
+      const kick = kickModel === "godzilla" || kickModel === "hulk-v2" ? { lunge: 0 } : devKick(t, soldiers, fast);
       const fx = Math.sin(g.yaw);
       const fz = Math.cos(g.yaw);
       if (root.current) {
@@ -740,7 +740,11 @@ function GiantBody({ soldiers, big, sword, dread, flesh = false, ape = false, de
   return (
     <group ref={root} scale={(big ? 1.52 : 1) * devSize(small)}>
       {hulk ? (
-        kickModel === "godzilla" ? <GodzillaRig /> : <HulkModel soldiers={soldiers} model={kickModel} fast={fast} />
+        kickModel === "godzilla" || kickModel === "hulk-v2" ? (
+          <GodzillaRig url={kickModel === "hulk-v2" ? "/models/hulk_v2.glb" : "/models/king.glb"} kind={kickModel === "hulk-v2" ? "hulk" : "king"} />
+        ) : (
+          <HulkModel soldiers={soldiers} model={kickModel} fast={fast} />
+        )
       ) : orc ? (
         <OrcModel soldiers={soldiers} />
       ) : demon ? (
