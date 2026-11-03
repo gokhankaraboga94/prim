@@ -97,6 +97,8 @@ type ArmyProps = {
   giantKick?: boolean;
   giantFast?: boolean;
   giantSmall?: boolean;
+  /** Extra body size for giant reels (1 = default). DEV17 uses ~half-giant troops. */
+  troopScale?: number;
   knight?: boolean;
   nameGold?: boolean;
   nameAlert?: boolean;
@@ -972,7 +974,7 @@ function NameLayers({
 }
 
 
-export function Army({ count, names = [], commanders = [], cinematic, duration = 8, skipCommander = false, roster = null, discover = null, countdown = false, defend = false, defend2 = false, defend3 = false, loose = false, blue = false, vs = false, vs2 = false, new1 = false, new2 = false, blade = false, bridge = false, cross = false, wide = false, relief = false, maze = false, film = false, dragon = false, giant = false, giantBig = false, giantAll = false, giantSword = false, giantSnake = false, giantDevs = false, giantKnight = false, giantKick = false, giantFast = false, giantSmall = false, knight = false, nameGold = false, nameAlert = false, namePlate = false, home = false, mix = false, mixSlow = false, nameHunt = false, quiet = false, square = false, readNames = false, scanHunt = false, level = 1, rosterIds = null }: ArmyProps) {
+export function Army({ count, names = [], commanders = [], cinematic, duration = 8, skipCommander = false, roster = null, discover = null, countdown = false, defend = false, defend2 = false, defend3 = false, loose = false, blue = false, vs = false, vs2 = false, new1 = false, new2 = false, blade = false, bridge = false, cross = false, wide = false, relief = false, maze = false, film = false, dragon = false, giant = false, giantBig = false, giantAll = false, giantSword = false, giantSnake = false, giantDevs = false, giantKnight = false, giantKick = false, giantFast = false, giantSmall = false, troopScale = 1, knight = false, nameGold = false, nameAlert = false, namePlate = false, home = false, mix = false, mixSlow = false, nameHunt = false, quiet = false, square = false, readNames = false, scanHunt = false, level = 1, rosterIds = null }: ArmyProps) {
   const bodies = useRef<THREE.InstancedMesh>(null);
   const knightHelms = useRef<THREE.InstancedMesh>(null);
   const [knightGeo, setKnightGeo] = useState<{ body: THREE.BufferGeometry; helm: THREE.BufferGeometry } | null>(null);
@@ -1092,7 +1094,10 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
     return built;
   }, [names, chiefsList, visible, defend, vs, vs2, openField, square, maze, mazeCast, film, filmCast, cinematic]);
   const phantom = !skipCommander && layout.cmd.length === 0 && chiefsList.length > 0;
-  const form = useMemo(() => ({ sizes: layout.sizes, scale: 1.28, square }), [layout.sizes, square]);
+  const form = useMemo(
+    () => ({ sizes: layout.sizes, scale: 1.28 * Math.max(0.2, troopScale), square }),
+    [layout.sizes, square, troopScale]
+  );
   const steelRough = useMemo(() => {
     if (cinematic) return null;
     const c = document.createElement("canvas");
@@ -1952,7 +1957,7 @@ export function Army({ count, names = [], commanders = [], cinematic, duration =
       const staggered = Boolean(countdown || defend || vs || vs2 || openField);
       if (countdown) nameScale = 1.12 * crowd;
       else if (defend) nameScale = 1.22 * crowd;
-      else if (giant) nameScale = (giantDevs ? 2.02 : giantBig ? 1.58 : 0.96) * (nameAlert ? 1.25 : 1) * (giantSmall ? 0.8 : 1);
+      else if (giant) nameScale = (giantDevs ? 2.02 : giantBig ? 1.58 : 0.96) * (nameAlert ? 1.25 : 1) * (giantSmall ? 0.8 : 1) * Math.max(1, troopScale * 0.85);
       else if (maze) nameScale = 1.05;
       else if (dragon) nameScale = 1.22;
       else if (namePlate) nameScale = 1.7;
