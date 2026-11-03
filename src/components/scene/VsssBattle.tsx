@@ -123,8 +123,8 @@ export function VsssBattle() {
       <hemisphereLight args={["#d5d8de", "#1a1a1a", 1.15]} />
       <directionalLight position={[3, 8, 4]} intensity={1.8} color="#fff4e4" />
       <mesh rotation={[-Math.PI / 2, 0, 0]}>
-        <planeGeometry args={[40, 40]} />
-        <meshBasicMaterial color="#000000" />
+        <planeGeometry args={[80, 80]} />
+        <meshLambertMaterial color="#68b44a" />
       </mesh>
       <group ref={host} />
     </group>

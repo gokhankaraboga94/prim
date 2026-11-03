@@ -1767,7 +1767,7 @@ export function AdminPage() {
             <p className="muted">DEV13 gibi telefona uygun; dev eklenen kırmızı canavar (1,5 MB). Video 20 saniye: askerler 15. saniyeye kadar ölür, her tekme daha çok asker götürür. Tekmelenen askerler 3 kat yükseğe fırlar, dönerek düşer.</p>
           )}
           {isVsss(reelShot) && (
-            <p className="muted">20 saniye. Ekranda yazı yok. King Kong ve hulk_v2 eşit boyda, siyah zeminde karşı karşıya. Koşu ve yürüyüş yok. Yumruk, tekme, savurma, kafa, takla ve kazma sırayla gelir. Her hamle diğerinin gövdesinde biter. Kayıt modeller inmeden başlamaz.</p>
+            <p className="muted">20 saniye. Ekranda yazı yok. King Kong ve hulk_v2 eşit boyda, yeşil çimde karşı karşıya. Kamera ikisini birden görür. Koşu ve yürüyüş yok. Yumruk, tekme, savurma, kafa, takla ve kazma sırayla gelir. Her hamle diğerinin gövdesinde biter. Kayıt modeller inmeden başlamaz.</p>
           )}
           {isDev16(reelShot) && (
             <p className="muted">52 saniye. DEV15 ile aynı kuşatma. Model hulk_v2. Yumruk, tekme, kafa vuruşu ve ikinci yumruklar sırayla gelir. Koşu klibi yok. Zemin siyah. İlk kare yumruğun içinde. Her vuruş önündeki askerleri tek darbede indirir. Ölü iki saniyede kaybolur. Oklar model gelene kadar bekler.</p>

@@ -62,10 +62,10 @@ export function vsssPose(who: "king" | "hulk", t: number) {
 export type VsssCam = { x: number; y: number; z: number; lx: number; ly: number; lz: number; fov: number };
 
 export function vsssCam(t: number): VsssCam {
-  if (t < 1.1) return { x: 1.15, y: 1.35, z: 0.15, lx: 0, ly: 1.15, lz: 0, fov: 34 };
-  if (t < 3.2) return { x: 2.15, y: 1.55, z: 0.35, lx: 0, ly: 1.1, lz: 0, fov: 36 };
-  if (t < 12) return { x: 2.6, y: 1.7, z: -0.2, lx: 0, ly: 1.05, lz: 0, fov: 38 };
-  return { x: 1.7, y: 1.42, z: 0.55, lx: 0, ly: 1.12, lz: 0, fov: 34 };
+  if (t < 1.1) return { x: 11, y: 2.35, z: 2.4, lx: 0, ly: 1.05, lz: 0, fov: 32 };
+  if (t < 3.2) return { x: 10.2, y: 2.2, z: 2.1, lx: 0, ly: 1.05, lz: 0, fov: 32 };
+  if (t < 12) return { x: 9.6, y: 2.15, z: 1.8, lx: 0, ly: 1.05, lz: 0, fov: 34 };
+  return { x: 10.4, y: 2.25, z: 2.2, lx: 0, ly: 1.05, lz: 0, fov: 32 };
 }
 
 let playAt = 0;
