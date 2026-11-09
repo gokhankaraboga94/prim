@@ -35,19 +35,28 @@ const DURATION = 10;
 const FPS = 30;
 const W = 720;
 const H = 1280;
-const R = 1.55;
-const TUBE = 0.16;
-const SEG = 96;
-const START_GAP = 0.72;
-const NEAR_GAP = 0.028;
+/** Fits inside 9:16 with margin — previous R=1.55 was wider than the frustum. */
+const R = 0.82;
+const TUBE = 0.095;
+const SEG = 128;
+/** ~18% of frame width at start; clearly closing in first seconds. */
+const START_GAP = 1.05;
+const NEAR_GAP = 0.03;
 
 function gapAt(t: number) {
   const x = ((t % DURATION) + DURATION) % DURATION;
-  if (x <= 8) {
-    const u = x / 8;
-    const e = 1 - Math.pow(1 - u, 2.35);
-    return START_GAP + (NEAR_GAP - START_GAP) * e;
+  // 0–3s: most of the close — obvious motion in first 0.5–3s
+  if (x <= 3) {
+    const u = x / 3;
+    const e = 1 - Math.pow(1 - u, 1.45);
+    return START_GAP + (NEAR_GAP * 1.8 - START_GAP) * e;
   }
+  // 3–8s: crawl to almost-touch
+  if (x <= 8) {
+    const u = (x - 3) / 5;
+    return NEAR_GAP * 1.8 + (NEAR_GAP - NEAR_GAP * 1.8) * u;
+  }
+  // 8–10s: reopen for seamless loop
   const u = (x - 8) / 2;
   const e = u * u * (3 - 2 * u);
   return NEAR_GAP + (START_GAP - NEAR_GAP) * e;
@@ -61,21 +70,25 @@ function pickMime() {
   return "";
 }
 
+type Engine = {
+  renderer: THREE.WebGLRenderer;
+  scene: THREE.Scene;
+  camera: THREE.PerspectiveCamera;
+  ringGroup: THREE.Group;
+  metal: THREE.MeshStandardMaterial;
+  ringMesh: THREE.Mesh | null;
+  capA: THREE.Mesh | null;
+  capB: THREE.Mesh | null;
+  previewRaf: number;
+  previewT0: number;
+  busy: boolean;
+  rebuildRing: (gap: number) => void;
+  renderAt: (t: number) => void;
+};
+
 export function UretPage() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const engine = useRef<{
-    renderer: THREE.WebGLRenderer;
-    scene: THREE.Scene;
-    camera: THREE.PerspectiveCamera;
-    ringGroup: THREE.Group;
-    metal: THREE.MeshStandardMaterial;
-    ringMesh: THREE.Mesh | null;
-    capA: THREE.Mesh | null;
-    capB: THREE.Mesh | null;
-    previewRaf: number;
-    previewT0: number;
-    busy: boolean;
-  } | null>(null);
+  const engine = useRef<Engine | null>(null);
   const [hud, setHud] = useState("Hazır");
   const [busy, setBusy] = useState(false);
   const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
@@ -90,53 +103,63 @@ export function UretPage() {
       alpha: false,
       preserveDrawingBuffer: true,
     });
-    renderer.setPixelRatio(1);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     renderer.setSize(W, H, false);
     renderer.setClearColor(0x000000, 1);
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.15;
+    renderer.toneMappingExposure = 1.2;
 
     const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(32, W / H, 0.1, 100);
-    camera.position.set(0, 0, 6.2);
-    camera.lookAt(0, 0, 0);
+    // Vertical FOV sized so the full ring (R+TUBE) fits with ~12% side margin.
+    const camera = new THREE.PerspectiveCamera(38, W / H, 0.1, 100);
+    camera.position.set(0, 0.05, 4.35);
+    camera.lookAt(0, 0.05, 0);
 
-    const key = new THREE.DirectionalLight(0xffffff, 2.4);
-    key.position.set(3.2, 4.5, 5.5);
+    const key = new THREE.DirectionalLight(0xffffff, 2.6);
+    key.position.set(2.8, 3.6, 4.2);
     scene.add(key);
-    const fill = new THREE.DirectionalLight(0xb8c4ff, 0.55);
-    fill.position.set(-4, -1, 2);
+    const fill = new THREE.DirectionalLight(0xb8c4ff, 0.65);
+    fill.position.set(-3.5, -0.5, 2.2);
     scene.add(fill);
-    const rim = new THREE.DirectionalLight(0xffffff, 1.1);
-    rim.position.set(-2, 3, -4);
+    const rim = new THREE.DirectionalLight(0xffffff, 1.25);
+    rim.position.set(-1.8, 2.4, -3.5);
     scene.add(rim);
-    scene.add(new THREE.AmbientLight(0xffffff, 0.18));
+    scene.add(new THREE.AmbientLight(0xffffff, 0.22));
 
     const metal = new THREE.MeshStandardMaterial({
-      color: 0xc9ccd3,
+      color: 0xd0d3da,
       metalness: 1,
-      roughness: 0.22,
+      roughness: 0.18,
     });
     const ringGroup = new THREE.Group();
     scene.add(ringGroup);
 
-    const state = {
+    const state: Engine = {
       renderer,
       scene,
       camera,
       ringGroup,
       metal,
-      ringMesh: null as THREE.Mesh | null,
-      capA: null as THREE.Mesh | null,
-      capB: null as THREE.Mesh | null,
+      ringMesh: null,
+      capA: null,
+      capB: null,
       previewRaf: 0,
       previewT0: performance.now(),
       busy: false,
+      rebuildRing: () => undefined,
+      renderAt: () => undefined,
     };
-    engine.current = state;
 
-    const rebuildRing = (gap: number) => {
-      const arc = Math.max(0.05, Math.PI * 2 - gap);
+    state.rebuildRing = (gap: number) => {
+      const arc = Math.max(0.08, Math.PI * 2 - gap);
+      // Gap centered at top of ring (screen center-upper) — ends approach left/right.
+      const start = Math.PI / 2 + gap / 2;
+      const pts: THREE.Vector3[] = [];
+      for (let i = 0; i <= SEG; i++) {
+        const a = start + (i / SEG) * arc;
+        pts.push(new THREE.Vector3(Math.cos(a) * R, Math.sin(a) * R, 0));
+      }
+      const curve = new THREE.CatmullRomCurve3(pts);
       if (state.ringMesh) {
         state.ringGroup.remove(state.ringMesh);
         state.ringMesh.geometry.dispose();
@@ -149,35 +172,37 @@ export function UretPage() {
         state.ringGroup.remove(state.capB);
         state.capB.geometry.dispose();
       }
-      const geo = new THREE.TorusGeometry(R, TUBE, 28, SEG, arc);
+      const geo = new THREE.TubeGeometry(curve, SEG, TUBE, 20, false);
       state.ringMesh = new THREE.Mesh(geo, metal);
-      state.ringMesh.rotation.z = -arc / 2;
       state.ringGroup.add(state.ringMesh);
-      const capGeo = new THREE.SphereGeometry(TUBE * 0.98, 20, 16);
+
+      const capGeo = new THREE.SphereGeometry(TUBE * 1.02, 20, 16);
       state.capA = new THREE.Mesh(capGeo, metal);
       state.capB = new THREE.Mesh(capGeo, metal);
-      const a0 = -arc / 2;
-      const a1 = arc / 2;
+      const a0 = start;
+      const a1 = start + arc;
       state.capA.position.set(Math.cos(a0) * R, Math.sin(a0) * R, 0);
       state.capB.position.set(Math.cos(a1) * R, Math.sin(a1) * R, 0);
       state.ringGroup.add(state.capA, state.capB);
     };
 
-    const renderAt = (t: number) => {
-      rebuildRing(gapAt(t));
-      state.ringGroup.rotation.y = Math.sin(t * 0.15) * 0.04;
+    state.renderAt = (t: number) => {
+      state.rebuildRing(gapAt(t));
+      // Tiny idle rock so motion is never “dead flat” even near contact
+      state.ringGroup.rotation.z = Math.sin(t * 0.7) * 0.012;
       renderer.render(scene, camera);
     };
 
     const previewLoop = (now: number) => {
-      if (state.busy) return;
+      if (!engine.current || engine.current !== state || state.busy) return;
       const t = ((now - state.previewT0) / 1000) % DURATION;
-      renderAt(t);
-      setHud(`Önizleme · ${t.toFixed(1)}s`);
+      state.renderAt(t);
+      setHud(`Önizleme · ${t.toFixed(1)}s · boşluk ${(gapAt(t) * 57.3).toFixed(0)}°`);
       state.previewRaf = requestAnimationFrame(previewLoop);
     };
 
-    rebuildRing(START_GAP);
+    engine.current = state;
+    state.rebuildRing(START_GAP);
     state.previewRaf = requestAnimationFrame(previewLoop);
 
     return () => {
@@ -187,7 +212,7 @@ export function UretPage() {
       state.capA?.geometry.dispose();
       state.capB?.geometry.dispose();
       renderer.dispose();
-      engine.current = null;
+      if (engine.current === state) engine.current = null;
     };
   }, []);
 
@@ -207,40 +232,6 @@ export function UretPage() {
     if (downloadUrl) URL.revokeObjectURL(downloadUrl);
     setDownloadUrl(null);
 
-    const rebuildRing = (gap: number) => {
-      const arc = Math.max(0.05, Math.PI * 2 - gap);
-      if (state.ringMesh) {
-        state.ringGroup.remove(state.ringMesh);
-        state.ringMesh.geometry.dispose();
-      }
-      if (state.capA) {
-        state.ringGroup.remove(state.capA);
-        state.capA.geometry.dispose();
-      }
-      if (state.capB) {
-        state.ringGroup.remove(state.capB);
-        state.capB.geometry.dispose();
-      }
-      const geo = new THREE.TorusGeometry(R, TUBE, 28, SEG, arc);
-      state.ringMesh = new THREE.Mesh(geo, state.metal);
-      state.ringMesh.rotation.z = -arc / 2;
-      state.ringGroup.add(state.ringMesh);
-      const capGeo = new THREE.SphereGeometry(TUBE * 0.98, 20, 16);
-      state.capA = new THREE.Mesh(capGeo, state.metal);
-      state.capB = new THREE.Mesh(capGeo, state.metal);
-      const a0 = -arc / 2;
-      const a1 = arc / 2;
-      state.capA.position.set(Math.cos(a0) * R, Math.sin(a0) * R, 0);
-      state.capB.position.set(Math.cos(a1) * R, Math.sin(a1) * R, 0);
-      state.ringGroup.add(state.capA, state.capB);
-    };
-
-    const renderAt = (t: number) => {
-      rebuildRing(gapAt(t));
-      state.ringGroup.rotation.y = Math.sin(t * 0.15) * 0.04;
-      state.renderer.render(state.scene, state.camera);
-    };
-
     try {
       const chunks: BlobPart[] = [];
       const stream = canvas.captureStream(FPS);
@@ -258,7 +249,7 @@ export function UretPage() {
       const wall0 = performance.now();
       for (let i = 0; i <= totalFrames; i++) {
         const t = (i / totalFrames) * DURATION;
-        renderAt(t);
+        state.renderAt(t);
         setHud(`Üretiliyor · ${t.toFixed(1)} / ${DURATION}s`);
         const target = wall0 + i * frameMs;
         for (;;) {
@@ -283,12 +274,10 @@ export function UretPage() {
       setBusy(false);
       state.previewT0 = performance.now();
       const previewLoop = (now: number) => {
-        if (state.busy || engine.current !== state) return;
+        if (!engine.current || engine.current !== state || state.busy) return;
         const t = ((now - state.previewT0) / 1000) % DURATION;
-        rebuildRing(gapAt(t));
-        state.ringGroup.rotation.y = Math.sin(t * 0.15) * 0.04;
-        state.renderer.render(state.scene, state.camera);
-        setHud(`Önizleme · ${t.toFixed(1)}s`);
+        state.renderAt(t);
+        setHud(`Önizleme · ${t.toFixed(1)}s · boşluk ${(gapAt(t) * 57.3).toFixed(0)}°`);
         state.previewRaf = requestAnimationFrame(previewLoop);
       };
       state.previewRaf = requestAnimationFrame(previewLoop);
@@ -305,7 +294,7 @@ export function UretPage() {
         padding: "20px 16px 40px",
       }}
     >
-      <div style={{ maxWidth: 520, margin: "0 auto" }}>
+      <div style={{ maxWidth: 420, margin: "0 auto" }}>
         <Link to="/" style={{ color: "#9a9aa2", textDecoration: "none", fontSize: 13 }}>
           ← Ana sayfa
         </Link>
@@ -319,8 +308,8 @@ export function UretPage() {
             border: "1px solid #2a2a2e",
             borderRadius: 16,
             overflow: "hidden",
+            width: "100%",
             aspectRatio: "9 / 16",
-            maxHeight: "min(68vh, 720px)",
             margin: "16px auto 0",
           }}
         >
@@ -328,7 +317,13 @@ export function UretPage() {
             ref={canvasRef}
             width={W}
             height={H}
-            style={{ display: "block", width: "100%", height: "100%", objectFit: "contain", background: "#000" }}
+            style={{
+              display: "block",
+              width: "100%",
+              height: "100%",
+              objectFit: "contain",
+              background: "#000",
+            }}
           />
           <div
             style={{
