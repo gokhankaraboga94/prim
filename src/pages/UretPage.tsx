@@ -3,33 +3,30 @@ import { Link } from "react-router-dom";
 import * as THREE from "three";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
 
-const PROMPT = `Two polished metal ends start close. Camera dollies into the gap
-at the exact same rate the world-gap shrinks (1:1) — screen gap stays open.
-Fixed ring radius makes the push-in obvious (wide curve → macro tips).
-Loop cuts back to the wide shot on purpose.`;
+const PROMPT = `Two metal ends start close and keep closing. Camera dollies in
+on the same timeline. Gap shrinks slightly faster than the dolly so on screen
+the ends clearly approach (never touch). Loop cuts back to the wide start.`;
 
 const DURATION = 10;
 const FPS = 30;
 const W = 1080;
 const H = 1920;
 
-/** Dramatic push-in; loop jump wide←macro is readable. */
-const ZOOM_END = 5.5;
-/** Fixed ring — not scaled — so zoom changes what you see (approach is visible). */
-const RING_R = 2.55;
-/** World gap at s=1 (arc length). Small = ends start close. Scales 1:1 with camera. */
-const BASE_GAP_WORLD = 0.26;
-const BASE_TUBE = 0.09;
-/** Camera distance at s=1. Angular gap ≈ BASE_GAP_WORLD/BASE_DIST stays constant. */
-const BASE_DIST = 1.05;
+const RING_R = 2.4;
+/** Arc-length gap: start close, end still a hair open. */
+const GAP_START = 0.3;
+const GAP_END = 0.055;
+/** Camera distance = gap * K. K eases down a bit so ends visibly close on screen while we dolly in. */
+const K_START = 4.0;
+const K_END = 3.15;
+const TUBE_RATIO = 0.3; // tube radius vs gap — keeps caps from bridging
 const SEG = 256;
 const FOV = 40;
 
-function scaleAt(t: number) {
+function closeAt(t: number) {
   const u = (((t % DURATION) + DURATION) % DURATION) / DURATION;
-  // Slight ease-in so first second already shows clear dolly motion
-  const e = 1 - Math.pow(1 - u, 1.35);
-  return 1 + (ZOOM_END - 1) * e;
+  // Clear motion from frame 0; strong push through the middle
+  return 1 - Math.pow(1 - u, 1.25);
 }
 
 function pickMime() {
@@ -89,7 +86,7 @@ type Engine = {
   previewRaf: number;
   previewT0: number;
   busy: boolean;
-  rebuild: (s: number) => void;
+  rebuild: (close: number) => void;
   renderAt: (t: number) => void;
 };
 
@@ -173,19 +170,21 @@ export function UretPage() {
       renderAt: () => undefined,
     };
 
-    state.rebuild = (s: number) => {
-      // Fixed ring radius → dolly changes framing (viewer sees the approach).
-      // gapWorld and cameraDist both /s → 1:1, screen gap never closes.
+    state.rebuild = (close: number) => {
       const rad = RING_R;
-      const gapWorld = BASE_GAP_WORLD / s;
-      const tube = BASE_TUBE / s;
-      const gap = Math.max(0.04, gapWorld / rad);
+      // Ends close in world…
+      const gapWorld = GAP_START + (GAP_END - GAP_START) * close;
+      // …camera dollies in on the same clock (gap * K). K eases down → on-screen approach.
+      const k = K_START + (K_END - K_START) * close;
+      const dist = gapWorld * k;
+      const tube = Math.min(gapWorld * TUBE_RATIO, gapWorld * 0.45);
+      const gap = Math.max(0.035, gapWorld / rad);
       const arc = Math.PI * 2 - gap;
-      const start = Math.PI / 2 + gap / 2;
+      const startAng = Math.PI / 2 + gap / 2;
 
       const pts: THREE.Vector3[] = [];
       for (let i = 0; i <= SEG; i++) {
-        const a = start + (i / SEG) * arc;
+        const a = startAng + (i / SEG) * arc;
         pts.push(new THREE.Vector3(Math.cos(a) * rad, Math.sin(a) * rad, 0));
       }
       const curve = new THREE.CatmullRomCurve3(pts);
@@ -206,17 +205,16 @@ export function UretPage() {
       state.ringMesh = new THREE.Mesh(new THREE.TubeGeometry(curve, SEG, tube, 48, false), metal);
       state.ringGroup.add(state.ringMesh);
 
-      const capGeo = new THREE.SphereGeometry(tube * 0.9, 48, 32);
+      const capGeo = new THREE.SphereGeometry(tube * 0.88, 48, 32);
       state.capA = new THREE.Mesh(capGeo, metal);
       state.capB = new THREE.Mesh(capGeo, metal);
-      const a0 = start;
-      const a1 = start + arc;
+      const a0 = startAng;
+      const a1 = startAng + arc;
       state.capA.position.set(Math.cos(a0) * rad, Math.sin(a0) * rad, 0);
       state.capB.position.set(Math.cos(a1) * rad, Math.sin(a1) * rad, 0);
       state.ringGroup.add(state.capA, state.capB);
 
       const gapY = rad;
-      const dist = BASE_DIST / s;
       camera.near = Math.max(0.00015, dist * 0.02);
       camera.far = Math.max(80, dist * 80 + rad * 4);
       camera.fov = FOV;
@@ -224,15 +222,15 @@ export function UretPage() {
       camera.position.set(0, gapY, dist);
       camera.lookAt(0, gapY, 0);
 
-      // Strong surface flow = readable “we're zooming in”
-      scratch.repeat.set(2.4, 3.2);
-      scratch.offset.y = (s - 1) * 0.55;
-      scratch.offset.x = (s - 1) * 0.08;
+      // Texture rushes toward camera = zoom-in read (not zoom-out)
+      scratch.repeat.set(2.2, 3.0);
+      scratch.offset.y = -close * 1.4;
+      scratch.offset.x = close * 0.12;
       scratch.needsUpdate = true;
     };
 
     state.renderAt = (t: number) => {
-      state.rebuild(scaleAt(t));
+      state.rebuild(closeAt(t));
       renderer.render(scene, camera);
     };
 
@@ -240,18 +238,18 @@ export function UretPage() {
       if (!engine.current || engine.current !== state || state.busy) return;
       const t = ((now - state.previewT0) / 1000) % DURATION;
       state.renderAt(t);
-      const s = scaleAt(t);
+      const c = closeAt(t);
       const loopSoon = t > DURATION - 0.35;
       setHud(
         loopSoon
           ? `Önizleme · ${t.toFixed(1)}s · LOOP (genişe dönüş)`
-          : `Önizleme · ${t.toFixed(1)}s · kamera ×${s.toFixed(2)} (boşluk açık)`
+          : `Önizleme · ${t.toFixed(1)}s · yakınlaşma %${Math.round(c * 100)}`
       );
       state.previewRaf = requestAnimationFrame(previewLoop);
     };
 
     engine.current = state;
-    state.rebuild(1);
+    state.rebuild(0);
     state.previewRaf = requestAnimationFrame(previewLoop);
 
     return () => {
@@ -302,7 +300,7 @@ export function UretPage() {
         // End on tight macro (s≈ZOOM_END). Loop back to wide is a clear cut — intentional.
         const t = (i / totalFrames) * DURATION;
         state.renderAt(t);
-        setHud(`Üretiliyor · ${t.toFixed(1)} / ${DURATION}s · ×${scaleAt(t).toFixed(2)}`);
+        setHud(`Üretiliyor · ${t.toFixed(1)} / ${DURATION}s · %${Math.round(closeAt(t) * 100)}`);
         const target = wall0 + i * frameMs;
         for (;;) {
           await new Promise<void>((r) => requestAnimationFrame(() => r()));
@@ -329,11 +327,11 @@ export function UretPage() {
         if (!engine.current || engine.current !== state || state.busy) return;
         const t = ((now - state.previewT0) / 1000) % DURATION;
         state.renderAt(t);
-        const s = scaleAt(t);
+        const c = closeAt(t);
         setHud(
           t > DURATION - 0.35
             ? `Önizleme · ${t.toFixed(1)}s · LOOP (genişe dönüş)`
-            : `Önizleme · ${t.toFixed(1)}s · kamera ×${s.toFixed(2)} (boşluk açık)`
+            : `Önizleme · ${t.toFixed(1)}s · yakınlaşma %${Math.round(c * 100)}`
         );
         state.previewRaf = requestAnimationFrame(previewLoop);
       };
@@ -362,7 +360,7 @@ export function UretPage() {
         </div>
         <h1 style={{ margin: "8px 0 4px", fontSize: 28, letterSpacing: "-0.03em" }}>Sonsuz yaklaşma</h1>
         <p style={{ margin: 0, color: "#9a9aa2", fontSize: 13 }}>
-          Uçlar yakından başlar. Kamera 1:1 boşluğa girer — yakınlaşma net, değmezler. Loop’ta genişe döner.
+          Uçlar birbirine yaklaşır, kamera aynı anda boşluğa girer — ikisi birlikte, değmezler.
         </p>
 
         <div
