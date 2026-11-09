@@ -1,29 +1,33 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import * as THREE from "three";
+import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
 
-const PROMPT = `Infinite near-miss loop: two metal ring ends approach forever.
-As the physical gap shrinks, the camera dollies into the gap at the same rate,
-so the visible gap on screen stays constant — they never touch.
-Self-similar scale (doubles each loop) makes the 10s clip seamless.
-Viewer keeps waiting for contact even after the video restarts.`;
+const PROMPT = `Two polished metal ring ends approach forever.
+Camera dollies hard into the gap at the same rate the gap shrinks —
+on screen the gap stays open, so they never touch.
+Zoom is dramatic (wide → macro) so the approach is obvious.
+When the clip loops, the cut back to the wide shot is intentional and readable.
+Viewer restarts waiting for contact.`;
 
 const DURATION = 10;
 const FPS = 30;
-const W = 720;
-const H = 1280;
+const W = 1080;
+const H = 1920;
 
-/** World units at scale s=1 (loop start = loop end visually). */
-const BASE_R = 1.15;
-const BASE_TUBE = 0.11;
-const BASE_GAP = 0.42; // ~18% of frame when camera is tuned
-const BASE_DIST = 1.15; // distance from gap center along +Z
-const SEG = 160;
+/** Scale s=1 = wide readable ring; s=ZOOM_END = tight macro on the gap. */
+const ZOOM_END = 4.2;
+const BASE_R = 1.2;
+const BASE_TUBE = 0.125;
+const BASE_GAP = 0.48;
+const BASE_DIST = 1.35;
+const SEG = 256;
 
 function scaleAt(t: number) {
   const u = (((t % DURATION) + DURATION) % DURATION) / DURATION;
-  // s: 1 → 2 over one loop. Geometry/camera all /s → identical end/start frame.
-  return Math.pow(2, u);
+  // Ease-in-out so first 0.5s already moves, middle pushes hard, end is deep macro
+  const e = u * u * (3 - 2 * u);
+  return 1 + (ZOOM_END - 1) * e;
 }
 
 function pickMime() {
@@ -36,32 +40,37 @@ function pickMime() {
 
 function makeScratchTexture() {
   const c = document.createElement("canvas");
-  c.width = 512;
-  c.height = 512;
+  c.width = 1024;
+  c.height = 1024;
   const g = c.getContext("2d")!;
-  g.fillStyle = "#c8ccd4";
-  g.fillRect(0, 0, 512, 512);
-  for (let i = 0; i < 120; i++) {
-    const y = Math.random() * 512;
-    g.strokeStyle = `rgba(255,255,255,${0.04 + Math.random() * 0.08})`;
-    g.lineWidth = 1 + Math.random() * 1.5;
+  const grd = g.createLinearGradient(0, 0, 1024, 0);
+  grd.addColorStop(0, "#b8bcc6");
+  grd.addColorStop(0.5, "#e8eaef");
+  grd.addColorStop(1, "#aeb2bc");
+  g.fillStyle = grd;
+  g.fillRect(0, 0, 1024, 1024);
+  for (let i = 0; i < 220; i++) {
+    const y = Math.random() * 1024;
+    g.strokeStyle = `rgba(255,255,255,${0.05 + Math.random() * 0.12})`;
+    g.lineWidth = 0.8 + Math.random() * 2;
     g.beginPath();
     g.moveTo(0, y);
-    g.lineTo(512, y + (Math.random() - 0.5) * 6);
+    g.lineTo(1024, y + (Math.random() - 0.5) * 8);
     g.stroke();
   }
-  for (let i = 0; i < 40; i++) {
-    const y = Math.random() * 512;
-    g.strokeStyle = `rgba(0,0,0,${0.05 + Math.random() * 0.1})`;
-    g.lineWidth = 1;
+  for (let i = 0; i < 90; i++) {
+    const y = Math.random() * 1024;
+    g.strokeStyle = `rgba(20,22,28,${0.06 + Math.random() * 0.12})`;
+    g.lineWidth = 0.7 + Math.random();
     g.beginPath();
     g.moveTo(0, y);
-    g.lineTo(512, y);
+    g.lineTo(1024, y);
     g.stroke();
   }
   const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
   tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
-  tex.anisotropy = 8;
+  tex.anisotropy = 16;
   return tex;
 }
 
@@ -70,7 +79,7 @@ type Engine = {
   scene: THREE.Scene;
   camera: THREE.PerspectiveCamera;
   ringGroup: THREE.Group;
-  metal: THREE.MeshStandardMaterial;
+  metal: THREE.MeshPhysicalMaterial;
   scratch: THREE.CanvasTexture;
   ringMesh: THREE.Mesh | null;
   capA: THREE.Mesh | null;
@@ -98,34 +107,48 @@ export function UretPage() {
       antialias: true,
       alpha: false,
       preserveDrawingBuffer: true,
+      powerPreference: "high-performance",
     });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     renderer.setSize(W, H, false);
     renderer.setClearColor(0x000000, 1);
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.15;
+    renderer.toneMappingExposure = 1.05;
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
 
     const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(40, W / H, 0.001, 50);
+    const camera = new THREE.PerspectiveCamera(42, W / H, 0.0005, 80);
 
-    const key = new THREE.DirectionalLight(0xffffff, 2.5);
-    key.position.set(2.2, 3.2, 3.5);
+    const pmrem = new THREE.PMREMGenerator(renderer);
+    const envTex = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+    scene.environment = envTex;
+    pmrem.dispose();
+
+    const key = new THREE.DirectionalLight(0xffffff, 3.2);
+    key.position.set(2.4, 3.8, 4.2);
     scene.add(key);
-    const fill = new THREE.DirectionalLight(0xa8b4ff, 0.55);
-    fill.position.set(-3, -1, 2);
+    const kick = new THREE.DirectionalLight(0xfff2e0, 1.4);
+    kick.position.set(-1.2, 1.5, 3.2);
+    scene.add(kick);
+    const fill = new THREE.DirectionalLight(0x9eb0ff, 0.7);
+    fill.position.set(-3.5, -0.8, 1.8);
     scene.add(fill);
-    const rim = new THREE.DirectionalLight(0xffffff, 1.3);
-    rim.position.set(-2, 2, -3);
+    const rim = new THREE.DirectionalLight(0xffffff, 1.8);
+    rim.position.set(-2.2, 2.6, -3.8);
     scene.add(rim);
-    scene.add(new THREE.AmbientLight(0xffffff, 0.2));
+    scene.add(new THREE.AmbientLight(0xffffff, 0.15));
 
     const scratch = makeScratchTexture();
-    const metal = new THREE.MeshStandardMaterial({
-      color: 0xd4d7de,
+    const metal = new THREE.MeshPhysicalMaterial({
+      color: 0xd8dbe3,
       metalness: 1,
-      roughness: 0.28,
+      roughness: 0.18,
       map: scratch,
       roughnessMap: scratch,
+      envMapIntensity: 1.35,
+      clearcoat: 0.55,
+      clearcoatRoughness: 0.12,
+      reflectivity: 1,
     });
 
     const ringGroup = new THREE.Group();
@@ -175,10 +198,10 @@ export function UretPage() {
         state.capB.geometry.dispose();
       }
 
-      state.ringMesh = new THREE.Mesh(new THREE.TubeGeometry(curve, SEG, tube, 24, false), metal);
+      state.ringMesh = new THREE.Mesh(new THREE.TubeGeometry(curve, SEG, tube, 48, false), metal);
       state.ringGroup.add(state.ringMesh);
 
-      const capGeo = new THREE.SphereGeometry(tube * 1.02, 24, 18);
+      const capGeo = new THREE.SphereGeometry(tube * 1.03, 48, 32);
       state.capA = new THREE.Mesh(capGeo, metal);
       state.capB = new THREE.Mesh(capGeo, metal);
       const a0 = start;
@@ -187,23 +210,25 @@ export function UretPage() {
       state.capB.position.set(Math.cos(a1) * rad, Math.sin(a1) * rad, 0);
       state.ringGroup.add(state.capA, state.capB);
 
-      // Camera locked on the gap — dolly in as gap shrinks (same rate → constant screen gap).
+      // Dolly into the gap — same rate as shrink → screen gap stays open, never touches.
+      // Wider start / deeper end (ZOOM_END) so approach + loop cut are both obvious.
       const gapY = rad;
       const dist = BASE_DIST / s;
-      camera.near = Math.max(0.0002, dist * 0.02);
-      camera.far = Math.max(20, dist * 40);
+      camera.near = Math.max(0.00015, dist * 0.015);
+      camera.far = Math.max(40, dist * 60);
+      camera.fov = 42 - Math.min(8, (s - 1) * 1.6); // slight FOV tighten sells the push-in
       camera.updateProjectionMatrix();
       camera.position.set(0, gapY, dist);
       camera.lookAt(0, gapY, 0);
 
-      // Scratches flow outward with zoom → brain reads “approaching”
-      scratch.offset.y = Math.log2(s) * 0.35;
+      // Scratches race past → clear “we're moving into the gap” cue
+      scratch.repeat.set(1, 2.2);
+      scratch.offset.y = Math.log2(s) * 0.85;
       scratch.needsUpdate = true;
     };
 
     state.renderAt = (t: number) => {
-      const s = scaleAt(t);
-      state.rebuild(s);
+      state.rebuild(scaleAt(t));
       renderer.render(scene, camera);
     };
 
@@ -212,7 +237,12 @@ export function UretPage() {
       const t = ((now - state.previewT0) / 1000) % DURATION;
       state.renderAt(t);
       const s = scaleAt(t);
-      setHud(`Önizleme · ${t.toFixed(1)}s · zoom ×${s.toFixed(2)} (boşluk sabit)`);
+      const loopSoon = t > DURATION - 0.35;
+      setHud(
+        loopSoon
+          ? `Önizleme · ${t.toFixed(1)}s · LOOP (genişe dönüş)`
+          : `Önizleme · ${t.toFixed(1)}s · kamera ×${s.toFixed(2)} (boşluk açık)`
+      );
       state.previewRaf = requestAnimationFrame(previewLoop);
     };
 
@@ -224,6 +254,7 @@ export function UretPage() {
       cancelAnimationFrame(state.previewRaf);
       metal.dispose();
       scratch.dispose();
+      envTex.dispose();
       state.ringMesh?.geometry.dispose();
       state.capA?.geometry.dispose();
       state.capB?.geometry.dispose();
@@ -251,7 +282,7 @@ export function UretPage() {
     try {
       const chunks: BlobPart[] = [];
       const stream = canvas.captureStream(FPS);
-      const recorder = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 8_000_000 });
+      const recorder = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 14_000_000 });
       recorder.ondataavailable = (e) => {
         if (e.data && e.data.size) chunks.push(e.data);
       };
@@ -263,11 +294,11 @@ export function UretPage() {
       const totalFrames = DURATION * FPS;
       const frameMs = 1000 / FPS;
       const wall0 = performance.now();
-      for (let i = 0; i <= totalFrames; i++) {
-        // Last frame = first frame (s=2 ≡ s=1 visually) for seamless loop
-        const t = i === totalFrames ? 0 : (i / totalFrames) * DURATION;
+      for (let i = 0; i < totalFrames; i++) {
+        // End on tight macro (s≈ZOOM_END). Loop back to wide is a clear cut — intentional.
+        const t = (i / totalFrames) * DURATION;
         state.renderAt(t);
-        setHud(`Üretiliyor · ${((i / totalFrames) * DURATION).toFixed(1)} / ${DURATION}s`);
+        setHud(`Üretiliyor · ${t.toFixed(1)} / ${DURATION}s · ×${scaleAt(t).toFixed(2)}`);
         const target = wall0 + i * frameMs;
         for (;;) {
           await new Promise<void>((r) => requestAnimationFrame(() => r()));
@@ -282,7 +313,7 @@ export function UretPage() {
       const blob = new Blob(chunks, { type: mime });
       const url = URL.createObjectURL(blob);
       setDownloadUrl(url);
-      setHud(`Hazır · ${(blob.size / 1024 / 1024).toFixed(1)} MB · sonsuz loop`);
+      setHud(`Hazır · ${(blob.size / 1024 / 1024).toFixed(1)} MB · loop'ta genişe sıçrar`);
     } catch (err) {
       console.error(err);
       alert("Üretim hatası: " + (err instanceof Error ? err.message : String(err)));
@@ -294,7 +325,12 @@ export function UretPage() {
         if (!engine.current || engine.current !== state || state.busy) return;
         const t = ((now - state.previewT0) / 1000) % DURATION;
         state.renderAt(t);
-        setHud(`Önizleme · ${t.toFixed(1)}s · zoom ×${scaleAt(t).toFixed(2)} (boşluk sabit)`);
+        const s = scaleAt(t);
+        setHud(
+          t > DURATION - 0.35
+            ? `Önizleme · ${t.toFixed(1)}s · LOOP (genişe dönüş)`
+            : `Önizleme · ${t.toFixed(1)}s · kamera ×${s.toFixed(2)} (boşluk açık)`
+        );
         state.previewRaf = requestAnimationFrame(previewLoop);
       };
       state.previewRaf = requestAnimationFrame(previewLoop);
@@ -317,7 +353,7 @@ export function UretPage() {
         </Link>
         <h1 style={{ margin: "8px 0 4px", fontSize: 28, letterSpacing: "-0.03em" }}>Sonsuz yaklaşma</h1>
         <p style={{ margin: 0, color: "#9a9aa2", fontSize: 13 }}>
-          Uçlar yakınlaşır, kamera boşluğa aynı hızda girer — ekranda boşluk hep aynı, değmezler.
+          Kamera boşluğa net girer; boşluk açık kalır. Başa sarınca geniş plana düşer — loop okunur.
         </p>
 
         <div
