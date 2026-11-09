@@ -351,9 +351,14 @@ export function UretPage() {
       }}
     >
       <div style={{ maxWidth: 420, margin: "0 auto" }}>
-        <Link to="/" style={{ color: "#9a9aa2", textDecoration: "none", fontSize: 13 }}>
-          ← Ana sayfa
-        </Link>
+        <div style={{ display: "flex", gap: 14, fontSize: 13 }}>
+          <Link to="/admin" style={{ color: "#9a9aa2", textDecoration: "none" }}>
+            ← Admin
+          </Link>
+          <Link to="/" style={{ color: "#9a9aa2", textDecoration: "none" }}>
+            Ana sayfa
+          </Link>
+        </div>
         <h1 style={{ margin: "8px 0 4px", fontSize: 28, letterSpacing: "-0.03em" }}>Sonsuz yaklaşma</h1>
         <p style={{ margin: 0, color: "#9a9aa2", fontSize: 13 }}>
           Kamera boşluğa net girer; boşluk açık kalır. Başa sarınca geniş plana düşer — loop okunur.

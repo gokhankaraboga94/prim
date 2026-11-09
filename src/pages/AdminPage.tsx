@@ -1,4 +1,5 @@
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import { signOut } from "firebase/auth";
 import { ref, set } from "firebase/database";
 import { auth, db } from "../firebase";
@@ -435,9 +436,14 @@ export function AdminPage() {
           <h1>Kuşatma yönetimi</h1>
           <p className="join-kicker">sürüm 110 — model analizi</p>
         </div>
-        <button type="button" className="btn-ghost" onClick={() => signOut(auth)}>
-          Çıkış
-        </button>
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <Link to="/uret" className="btn-gold" style={{ textDecoration: "none", display: "inline-block" }}>
+            Üret
+          </Link>
+          <button type="button" className="btn-ghost" onClick={() => signOut(auth)}>
+            Çıkış
+          </button>
+        </div>
       </header>
 
       <section className="admin-metrics">
@@ -470,6 +476,15 @@ export function AdminPage() {
       {msg && !capturing && <p className="admin-msg">{msg}</p>}
 
       {!capturing && <div className="admin-grid">
+        <section className="admin-card">
+          <h2>Sonsuz yaklaşma</h2>
+          <p className="muted">
+            10 sn hipnoz videosu: uçlar yaklaşır, kamera boşluğa aynı hızda girer, değmezler. Üret → indir.
+          </p>
+          <Link to="/uret" className="btn-gold" style={{ textDecoration: "none", display: "inline-block", textAlign: "center" }}>
+            Üret sayfasını aç
+          </Link>
+        </section>
         <GlbInspectCard />
         <section className="admin-card">
           <h2>Asker sayısı</h2>
