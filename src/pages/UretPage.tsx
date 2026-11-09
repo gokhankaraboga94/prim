@@ -4,28 +4,31 @@ import * as THREE from "three";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
 
 const PROMPT = `Two polished metal ring ends approach forever.
-Camera dollies hard into the gap at the same rate the gap shrinks —
-on screen the gap stays open, so they never touch.
-Zoom is dramatic (wide → macro) so the approach is obvious.
-When the clip loops, the cut back to the wide shot is intentional and readable.
-Viewer restarts waiting for contact.`;
+Camera dolly speed = gap shrink speed (exact 1:1). Gap angle fixed so
+screen gap never closes — they never touch.
+Wide → macro zoom is obvious; loop cut back to wide is intentional.`;
 
 const DURATION = 10;
 const FPS = 30;
 const W = 1080;
 const H = 1920;
 
-/** Scale s=1 = wide readable ring; s=ZOOM_END = tight macro on the gap. */
+/**
+ * Self-similar dolly: every length scales by 1/s, gap ANGLE stays fixed.
+ * That keeps screen gap exactly constant (1:1 with camera). Old bug scaled
+ * gap angle by 1/s too → arc length ~1/s² → ends appeared to touch ~6s.
+ */
 const ZOOM_END = 4.2;
 const BASE_R = 1.2;
-const BASE_TUBE = 0.125;
-const BASE_GAP = 0.48;
-const BASE_DIST = 1.35;
+const BASE_TUBE = 0.11;
+/** Fixed angular gap (radians). Must keep BASE_R*sin(GAP_ANGLE/2) > BASE_TUBE. */
+const GAP_ANGLE = 0.62;
+const BASE_DIST = 1.4;
 const SEG = 256;
+const FOV = 42;
 
 function scaleAt(t: number) {
   const u = (((t % DURATION) + DURATION) % DURATION) / DURATION;
-  // Ease-in-out so first 0.5s already moves, middle pushes hard, end is deep macro
   const e = u * u * (3 - 2 * u);
   return 1 + (ZOOM_END - 1) * e;
 }
@@ -172,10 +175,11 @@ export function UretPage() {
     };
 
     state.rebuild = (s: number) => {
+      // 1:1 lock — radius, tube, camera distance all /s; gap ANGLE fixed.
       const rad = BASE_R / s;
       const tube = BASE_TUBE / s;
-      const gap = BASE_GAP / s;
-      const arc = Math.max(0.05, Math.PI * 2 - gap);
+      const gap = GAP_ANGLE;
+      const arc = Math.PI * 2 - gap;
       const start = Math.PI / 2 + gap / 2;
 
       const pts: THREE.Vector3[] = [];
@@ -201,7 +205,8 @@ export function UretPage() {
       state.ringMesh = new THREE.Mesh(new THREE.TubeGeometry(curve, SEG, tube, 48, false), metal);
       state.ringGroup.add(state.ringMesh);
 
-      const capGeo = new THREE.SphereGeometry(tube * 1.03, 48, 32);
+      // Caps slightly smaller than tube so they never bridge the gap.
+      const capGeo = new THREE.SphereGeometry(tube * 0.92, 48, 32);
       state.capA = new THREE.Mesh(capGeo, metal);
       state.capB = new THREE.Mesh(capGeo, metal);
       const a0 = start;
@@ -210,20 +215,18 @@ export function UretPage() {
       state.capB.position.set(Math.cos(a1) * rad, Math.sin(a1) * rad, 0);
       state.ringGroup.add(state.capA, state.capB);
 
-      // Dolly into the gap — same rate as shrink → screen gap stays open, never touches.
-      // Wider start / deeper end (ZOOM_END) so approach + loop cut are both obvious.
       const gapY = rad;
       const dist = BASE_DIST / s;
       camera.near = Math.max(0.00015, dist * 0.015);
       camera.far = Math.max(40, dist * 60);
-      camera.fov = 42 - Math.min(8, (s - 1) * 1.6); // slight FOV tighten sells the push-in
+      camera.fov = FOV; // fixed — FOV change was closing the gap on screen
       camera.updateProjectionMatrix();
       camera.position.set(0, gapY, dist);
       camera.lookAt(0, gapY, 0);
 
-      // Scratches race past → clear “we're moving into the gap” cue
-      scratch.repeat.set(1, 2.2);
-      scratch.offset.y = Math.log2(s) * 0.85;
+      // Motion read from surface flow (geometry gap stays locked)
+      scratch.repeat.set(1, 2.4);
+      scratch.offset.y = Math.log2(s) * 1.1;
       scratch.needsUpdate = true;
     };
 
