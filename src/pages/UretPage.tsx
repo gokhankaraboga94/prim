@@ -3,33 +3,32 @@ import { Link } from "react-router-dom";
 import * as THREE from "three";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
 
-const PROMPT = `Two polished metal ring ends approach forever.
-Camera dolly speed = gap shrink speed (exact 1:1). Gap angle fixed so
-screen gap never closes — they never touch.
-Wide → macro zoom is obvious; loop cut back to wide is intentional.`;
+const PROMPT = `Two polished metal ends start close. Camera dollies into the gap
+at the exact same rate the world-gap shrinks (1:1) — screen gap stays open.
+Fixed ring radius makes the push-in obvious (wide curve → macro tips).
+Loop cuts back to the wide shot on purpose.`;
 
 const DURATION = 10;
 const FPS = 30;
 const W = 1080;
 const H = 1920;
 
-/**
- * Self-similar dolly: every length scales by 1/s, gap ANGLE stays fixed.
- * That keeps screen gap exactly constant (1:1 with camera). Old bug scaled
- * gap angle by 1/s too → arc length ~1/s² → ends appeared to touch ~6s.
- */
-const ZOOM_END = 4.2;
-const BASE_R = 1.2;
-const BASE_TUBE = 0.11;
-/** Fixed angular gap (radians). Must keep BASE_R*sin(GAP_ANGLE/2) > BASE_TUBE. */
-const GAP_ANGLE = 0.62;
-const BASE_DIST = 1.4;
+/** Dramatic push-in; loop jump wide←macro is readable. */
+const ZOOM_END = 5.5;
+/** Fixed ring — not scaled — so zoom changes what you see (approach is visible). */
+const RING_R = 2.55;
+/** World gap at s=1 (arc length). Small = ends start close. Scales 1:1 with camera. */
+const BASE_GAP_WORLD = 0.26;
+const BASE_TUBE = 0.09;
+/** Camera distance at s=1. Angular gap ≈ BASE_GAP_WORLD/BASE_DIST stays constant. */
+const BASE_DIST = 1.05;
 const SEG = 256;
-const FOV = 42;
+const FOV = 40;
 
 function scaleAt(t: number) {
   const u = (((t % DURATION) + DURATION) % DURATION) / DURATION;
-  const e = u * u * (3 - 2 * u);
+  // Slight ease-in so first second already shows clear dolly motion
+  const e = 1 - Math.pow(1 - u, 1.35);
   return 1 + (ZOOM_END - 1) * e;
 }
 
@@ -175,10 +174,12 @@ export function UretPage() {
     };
 
     state.rebuild = (s: number) => {
-      // 1:1 lock — radius, tube, camera distance all /s; gap ANGLE fixed.
-      const rad = BASE_R / s;
+      // Fixed ring radius → dolly changes framing (viewer sees the approach).
+      // gapWorld and cameraDist both /s → 1:1, screen gap never closes.
+      const rad = RING_R;
+      const gapWorld = BASE_GAP_WORLD / s;
       const tube = BASE_TUBE / s;
-      const gap = GAP_ANGLE;
+      const gap = Math.max(0.04, gapWorld / rad);
       const arc = Math.PI * 2 - gap;
       const start = Math.PI / 2 + gap / 2;
 
@@ -205,8 +206,7 @@ export function UretPage() {
       state.ringMesh = new THREE.Mesh(new THREE.TubeGeometry(curve, SEG, tube, 48, false), metal);
       state.ringGroup.add(state.ringMesh);
 
-      // Caps slightly smaller than tube so they never bridge the gap.
-      const capGeo = new THREE.SphereGeometry(tube * 0.92, 48, 32);
+      const capGeo = new THREE.SphereGeometry(tube * 0.9, 48, 32);
       state.capA = new THREE.Mesh(capGeo, metal);
       state.capB = new THREE.Mesh(capGeo, metal);
       const a0 = start;
@@ -217,16 +217,17 @@ export function UretPage() {
 
       const gapY = rad;
       const dist = BASE_DIST / s;
-      camera.near = Math.max(0.00015, dist * 0.015);
-      camera.far = Math.max(40, dist * 60);
-      camera.fov = FOV; // fixed — FOV change was closing the gap on screen
+      camera.near = Math.max(0.00015, dist * 0.02);
+      camera.far = Math.max(80, dist * 80 + rad * 4);
+      camera.fov = FOV;
       camera.updateProjectionMatrix();
       camera.position.set(0, gapY, dist);
       camera.lookAt(0, gapY, 0);
 
-      // Motion read from surface flow (geometry gap stays locked)
-      scratch.repeat.set(1, 2.4);
-      scratch.offset.y = Math.log2(s) * 1.1;
+      // Strong surface flow = readable “we're zooming in”
+      scratch.repeat.set(2.4, 3.2);
+      scratch.offset.y = (s - 1) * 0.55;
+      scratch.offset.x = (s - 1) * 0.08;
       scratch.needsUpdate = true;
     };
 
@@ -361,7 +362,7 @@ export function UretPage() {
         </div>
         <h1 style={{ margin: "8px 0 4px", fontSize: 28, letterSpacing: "-0.03em" }}>Sonsuz yaklaşma</h1>
         <p style={{ margin: 0, color: "#9a9aa2", fontSize: 13 }}>
-          Kamera boşluğa net girer; boşluk açık kalır. Başa sarınca geniş plana düşer — loop okunur.
+          Uçlar yakından başlar. Kamera 1:1 boşluğa girer — yakınlaşma net, değmezler. Loop’ta genişe döner.
         </p>
 
         <div
