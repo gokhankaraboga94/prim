@@ -78,7 +78,7 @@ function stats(def: CharacterDef, radius: number) {
     radius,
     height: def.height,
     speed: giant ? 4.4 : 3.3,
-    damage: giant ? 26 : 8,
+    damage: def.id === "savaci" ? 24 : giant ? 26 : 8,
     maxHp: giant ? 480 : 86,
   };
 }
