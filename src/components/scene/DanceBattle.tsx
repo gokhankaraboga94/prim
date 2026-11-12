@@ -18,13 +18,14 @@ import {
 
 type Gltf = Parameters<Parameters<GLTFLoader["load"]>[1]>[0];
 
+type FinishedEv = { action?: THREE.AnimationAction };
 type Dancer = {
   i: number;
   host: THREE.Group;
   mix: THREE.AnimationMixer;
   clips: THREE.AnimationClip[];
   index: number;
-  offFinished: (() => void) | null;
+  offFinished: ((ev: FinishedEv) => void) | null;
 };
 
 const HEIGHT = 1.78;
@@ -94,14 +95,14 @@ function playClip(man: Dancer, at: number) {
   action.setLoop(THREE.LoopOnce, 1);
   action.clampWhenFinished = true;
   action.play();
-  const onDone = (ev: { action?: THREE.AnimationAction }) => {
+  const onDone = (ev: FinishedEv) => {
     if (ev.action !== action) return;
-    man.mix.removeEventListener("finished", onDone);
+    man.mix.removeEventListener("finished", onDone as unknown as (e: object) => void);
     man.offFinished = null;
     playClip(man, man.index + 1);
   };
   man.offFinished = onDone;
-  man.mix.addEventListener("finished", onDone);
+  man.mix.addEventListener("finished", onDone as unknown as (e: object) => void);
 }
 
 export function DanceBattle({ names }: { names: string[] }) {
@@ -186,7 +187,9 @@ export function DanceBattle({ names }: { names: string[] }) {
     return () => {
       drop = true;
       for (const man of pack.current) {
-        if (man.offFinished) man.mix.removeEventListener("finished", man.offFinished);
+        if (man.offFinished) {
+          man.mix.removeEventListener("finished", man.offFinished as unknown as (e: object) => void);
+        }
         man.mix.stopAllAction();
       }
       pack.current = [];
