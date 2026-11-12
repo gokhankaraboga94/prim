@@ -52,25 +52,25 @@ export function danceSpot(i: number) {
 
 /**
  * Baked open-plaza feet for mekan.glb after fitMekan(DANCE_MEKAN_SPAN).
- * Flat cleared deck (no props), same Y, ~1.5×1.55 spacing so names don’t stack.
+ * Centered in the venue (not the map edge) so orbit stays inside the model.
  */
 export const DANCE_MEKAN_SPAN = 34;
 export const DANCE_STREET_FEET: ReadonlyArray<{ x: number; y: number; z: number }> = [
-  { x: 0.5, y: 2.5, z: 11.5 },
-  { x: 2.25, y: 2.5, z: 11.5 },
-  { x: 4.0, y: 2.5, z: 11.5 },
-  { x: 5.75, y: 2.5, z: 11.5 },
-  { x: 7.5, y: 2.5, z: 11.5 },
-  { x: 0.72, y: 2.5, z: 9.7 },
-  { x: 2.47, y: 2.5, z: 9.7 },
-  { x: 4.22, y: 2.5, z: 9.7 },
-  { x: 5.97, y: 2.5, z: 9.7 },
-  { x: 7.72, y: 2.5, z: 9.7 },
-  { x: 0.5, y: 2.5, z: 7.9 },
-  { x: 2.25, y: 2.5, z: 7.9 },
-  { x: 4.0, y: 2.5, z: 7.9 },
-  { x: 5.75, y: 2.5, z: 7.9 },
-  { x: 7.5, y: 2.5, z: 7.9 },
+  { x: -3.1, y: 2.5, z: -1.6 },
+  { x: -1.55, y: 2.5, z: -1.6 },
+  { x: 0, y: 2.5, z: -1.6 },
+  { x: 1.55, y: 2.5, z: -1.6 },
+  { x: 3.1, y: 2.5, z: -1.6 },
+  { x: -2.9, y: 2.5, z: -3.2 },
+  { x: -1.35, y: 2.5, z: -3.2 },
+  { x: 0.2, y: 2.5, z: -3.2 },
+  { x: 1.75, y: 2.5, z: -3.2 },
+  { x: 3.3, y: 2.5, z: -3.2 },
+  { x: -3.1, y: 2.5, z: -4.8 },
+  { x: -1.55, y: 2.5, z: -4.8 },
+  { x: 0, y: 2.5, z: -4.8 },
+  { x: 1.55, y: 2.5, z: -4.8 },
+  { x: 3.1, y: 2.5, z: -4.8 },
 ];
 
 export type DanceCam = { x: number; y: number; z: number; lx: number; ly: number; lz: number; fov: number };
@@ -78,35 +78,42 @@ export type DanceCam = { x: number; y: number; z: number; lx: number; ly: number
 /** Orbit target — DanceBattle updates these after street placement. */
 let camCx = 0;
 let camCz = -1.6;
-const CAM_R = 9.8;
-const CAM_Y = 3.35;
-const CAM_LOOK_Y = 1.25;
+/** street = tight inside mekan; club = wider neon stage. */
+let camMode: "street" | "club" = "club";
+const CAM = {
+  street: { r: 6.8, y: 2.85, lookY: 1.15, fov: 36 },
+  club: { r: 9.8, y: 3.35, lookY: 1.25, fov: 40 },
+} as const;
 
-export function danceSetCamTarget(x: number, z: number) {
+export function danceSetCamTarget(x: number, z: number, mode: "street" | "club" = "club") {
   camCx = x;
   camCz = z;
+  camMode = mode;
 }
 
 export function danceResetCamTarget() {
   camCx = 0;
   camCz = -1.6;
+  camMode = "club";
 }
 
 /**
  * Same distance the whole time — full 360° orbit so every dancer enters frame.
- * First frame already shows the front row dancing.
+ * Street mode keeps the lens inside mekan so the void outside never reads.
  */
 export function danceCam(t: number): DanceCam {
-  const u = Math.min(1, Math.max(0, t) / DANCE_SECONDS);
+  const seconds = camMode === "street" ? DANCE_SECONDS : DANCE2_SECONDS;
+  const u = Math.min(1, Math.max(0, t) / seconds);
   const ang = u * Math.PI * 2;
+  const shot = CAM[camMode];
   return {
-    x: camCx + Math.sin(ang) * CAM_R,
-    y: CAM_Y,
-    z: camCz + Math.cos(ang) * CAM_R,
+    x: camCx + Math.sin(ang) * shot.r,
+    y: shot.y,
+    z: camCz + Math.cos(ang) * shot.r,
     lx: camCx,
-    ly: CAM_LOOK_Y,
+    ly: shot.lookY,
     lz: camCz,
-    fov: 40,
+    fov: shot.fov,
   };
 }
 

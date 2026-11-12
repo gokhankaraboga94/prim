@@ -202,9 +202,9 @@ export function DanceBattle({ names, mekan = true }: { names: string[]; mekan?: 
             const deckY = DANCE_STREET_FEET[0].y;
             const cx = DANCE_STREET_FEET.reduce((s, f) => s + f.x, 0) / DANCE_N;
             const cz = DANCE_STREET_FEET.reduce((s, f) => s + f.z, 0) / DANCE_N;
-            // Asphalt dance pad — flat open plaza so every foot plants at the same height.
+            // Compact asphalt pad under the centered pack.
             const pad = new THREE.Mesh(
-              new THREE.BoxGeometry(11.2, 0.06, 7.4),
+              new THREE.BoxGeometry(9.2, 0.06, 5.6),
               new THREE.MeshLambertMaterial({ color: "#3f3f42" }),
             );
             pad.position.set(cx, deckY - 0.03, cz);
@@ -246,7 +246,7 @@ export function DanceBattle({ names, mekan = true }: { names: string[]; mekan?: 
         streetLift = men.reduce((s, m) => s + m.host.position.y, 0) / Math.max(1, men.length);
         const cx = men.reduce((s, m) => s + m.host.position.x, 0) / men.length;
         const cz = men.reduce((s, m) => s + m.host.position.z, 0) / men.length;
-        danceSetCamTarget(cx, cz);
+        danceSetCamTarget(cx, cz, mekan ? "street" : "club");
         await new Promise<void>((ok) => requestAnimationFrame(() => ok()));
         if (drop) return;
         danceMarkReady();
