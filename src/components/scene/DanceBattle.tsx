@@ -102,10 +102,10 @@ function fitMekan(root: THREE.Object3D, targetSpan = 22) {
 }
 
 /**
- * Street height under (x,z). Casts down through the venue and picks the
- * lowest upward-facing hit (road), skipping roofs/awnings above.
+ * Street height under (x,z). Only accepts upward faces in the bottom band
+ * of the venue (real road), so rooftops / ledges are ignored.
  */
-function sampleStreetY(root: THREE.Object3D, x: number, z: number, fallback = 0) {
+function sampleStreetY(root: THREE.Object3D, x: number, z: number, maxFloorY: number, fallback = 0) {
   root.updateMatrixWorld(true);
   const meshes: THREE.Object3D[] = [];
   root.traverse((obj) => {
@@ -120,13 +120,38 @@ function sampleStreetY(root: THREE.Object3D, x: number, z: number, fallback = 0)
   if (!hits.length) return fallback;
   let best: THREE.Intersection | null = null;
   for (const hit of hits) {
+    if (hit.point.y > maxFloorY) continue;
     if (hit.face) {
       const n = hit.face.normal.clone().transformDirection(hit.object.matrixWorld).normalize();
-      if (n.y < 0.55) continue;
+      if (n.y < 0.65) continue;
     }
     if (!best || hit.point.y < best.point.y) best = hit;
   }
-  return best?.point.y ?? hits[hits.length - 1].point.y;
+  return best?.point.y ?? fallback;
+}
+
+/** One shared street height for the whole pack — nobody climbs a roof alone. */
+function sharedStreetY(root: THREE.Object3D) {
+  root.updateMatrixWorld(true);
+  const box = new THREE.Box3().setFromObject(root);
+  const h = Math.max(0.001, box.max.y - box.min.y);
+  const maxFloorY = box.min.y + h * 0.18;
+  const probes: Array<[number, number]> = [];
+  for (let i = 0; i < DANCE_N; i++) {
+    const s = danceSpot(i);
+    probes.push([s.x, s.z]);
+  }
+  probes.push([0, -1.05], [0, 0], [0, -2.1]);
+  const ys: number[] = [];
+  for (const [x, z] of probes) {
+    const y = sampleStreetY(root, x, z, maxFloorY, Number.NaN);
+    if (Number.isFinite(y)) ys.push(y);
+  }
+  if (!ys.length) return Math.max(0, box.min.y);
+  ys.sort((a, b) => a - b);
+  // Median of the lower half → stable road plane
+  const low = ys.slice(0, Math.max(1, Math.ceil(ys.length / 2)));
+  return low[Math.floor(low.length / 2)];
 }
 
 /** Prefer dance-named clips; otherwise keep all clips in file order (1–3 dances). */
@@ -211,7 +236,7 @@ export function DanceBattle({ names, mekan = true }: { names: string[]; mekan?: 
           fit(gltf.scene);
         }
 
-        let venueRoot: THREE.Object3D | null = null;
+        let streetY = 0;
         if (mekan) {
           const venue = await loadGlb(loader, DANCE_MEKAN);
           if (drop) return;
@@ -220,7 +245,7 @@ export function DanceBattle({ names, mekan = true }: { names: string[]; mekan?: 
           floor.current?.clear();
           floor.current?.add(venue.scene);
           floor.current?.updateMatrixWorld(true);
-          venueRoot = venue.scene;
+          streetY = sharedStreetY(venue.scene);
         } else {
           floor.current?.clear();
         }
@@ -234,7 +259,6 @@ export function DanceBattle({ names, mekan = true }: { names: string[]; mekan?: 
           const holder = new THREE.Group();
           holder.add(body);
           const spot = danceSpot(i);
-          const streetY = venueRoot ? sampleStreetY(venueRoot, spot.x, spot.z, 0) : 0;
           holder.position.set(spot.x, streetY, spot.z);
           holder.rotation.y = spot.yaw;
           const mix = new THREE.AnimationMixer(body);

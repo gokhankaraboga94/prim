@@ -1844,7 +1844,7 @@ export function AdminPage() {
             <p className="muted">18 saniye. Beyaz zemin (mekan yok). Ekranda kanca yazısı yok. Son katılan 15 takipçi dans eder (dans1/2/3). İsimler kafanın üstünde siyah, beyaz plakada. Kamera 360°. Kayıt modeller inmeden başlamaz.</p>
           )}
           {isDance(reelShot) && (
-            <p className="muted">18 saniye. Zemin mekan.glb. Ekranda kanca yazısı yok. Son katılan 15 takipçi dans eder (dans1/2/3). İsimler kafanın üstünde siyah, beyaz plakada. Kamera 360°. Kayıt modeller inmeden başlamaz.</p>
+            <p className="muted">30 saniye. Zemin mekan.glb. Ekranda kanca yazısı yok. Son katılan 15 takipçi dans eder (dans1/2/3), aynı sokak kotunda ve daha sıkı. İsimler kafanın üstünde siyah, beyaz plakada. Kamera 360°. Kayıt modeller inmeden başlamaz.</p>
           )}
           {isEpik(reelShot) && (
             <p className="muted">20 saniye. Ekranda yazı yok. Premium kuşatma: ilk karede kale ve ışık hüzmesi. Orduya dalış, üç isimli savaşçı yakın planı, yaya hücum, kapı, siyah fade. Standart malzeme, env map, sis, toz ve ok. Kayıt 2x çözünürlük. Atlı yok.</p>

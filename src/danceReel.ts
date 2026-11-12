@@ -5,7 +5,7 @@ export type Dance2Id = typeof DANCE2_ID;
 export type DanceAnyId = DanceId | Dance2Id;
 export const DANCE_MODE = { id: DANCE_ID, label: "dance" } as const;
 export const DANCE2_MODE = { id: DANCE2_ID, label: "dance2" } as const;
-export const DANCE_SECONDS = 18;
+export const DANCE_SECONDS = 30;
 export const DANCE2_SECONDS = 18;
 export const DANCE_N = 15;
 
@@ -41,12 +41,12 @@ export function danceRoster(names: readonly string[]) {
   return out;
 }
 
-/** 3 rows × 5 — front row closest to camera. */
+/** 3 rows × 5 — tighter pack so everyone reads in the orbit. */
 export function danceSpot(i: number) {
   const row = Math.floor(i / 5);
   const col = i % 5;
-  const x = (col - 2) * 1.55 + (row % 2) * 0.35;
-  const z = -row * 1.85;
+  const x = (col - 2) * 0.95 + (row % 2) * 0.2;
+  const z = -row * 1.05;
   return { x, z, yaw: Math.PI };
 }
 
