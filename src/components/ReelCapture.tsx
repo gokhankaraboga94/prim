@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { BattleScene } from "./scene/BattleScene";
 import { SceneErrorBoundary } from "./SceneErrorBoundary";
-import { recordCanvas, saveReelBlob, wait, REEL_HOLD } from "../recordCanvas";
+import { recordCanvas, saveReelBlob, wait, REEL_HOLD, REEL_PHONE_HEIGHT, REEL_PHONE_WIDTH, REEL_HEIGHT, REEL_WIDTH } from "../recordCanvas";
 import { xxxHideCmd, xxxHiRes, type XxxId } from "../xxxReel";
 import { reelSfxStream, unlockReelSfx } from "../reelSfx";
 import type { ShotId } from "../shotModes";
@@ -49,7 +49,7 @@ import { ARAGORN_URLS, aragornHold, aragornIsReady, aragornStart, aragornWhenRea
 import { DOVUS_URLS, dovusHold, dovusIsReady, dovusStart, dovusWhenReady, type DovusId } from "../dovusReel";
 import { VSSS_URLS, vsssHold, vsssIsReady, vsssStart, vsssWhenReady, type VsssId } from "../vsssReel";
 import { EPIK_URLS, epikHold, epikIsReady, epikStart, epikWhenReady, type EpikId } from "../epikReel";
-import { DANCE_URLS, DANCE2_URLS, danceHold, danceIsReady, danceStart, danceWhenReady, type DanceId, type Dance2Id } from "../danceReel";
+import { DANCE_URLS, DANCE2_URLS, danceHold, danceIsPhone, danceIsReady, danceStart, danceWhenReady, type DanceId, type Dance2Id } from "../danceReel";
 import { KUYULAR_URLS, kuyularHold, kuyularIsReady, kuyularStart, kuyularWhenReady, type KuyularId } from "../kuyularReel";
 import { TEK_URLS, tekHold, tekIsReady, tekStart, tekWhenReady, type TekId } from "../tekReel";
 import { TEK2_URLS, tek2Hold, tek2IsReady, tek2Start, tek2WhenReady, type Tek2Id } from "../tek2Reel";
@@ -261,12 +261,13 @@ export function ReelCapture({ soldiers, names, commanders = [], level, pressure,
       if (kurtar || gecme || kuyu || kapi || magdur || kare || devKong || savas || kirmizi || baska || aragorn || dovus || vsss || epik || dance || dance2 || kuyular || tek || tek2 || tek3 || kale || run) {
         const loadStart = performance.now();
         const sceneReady = kurtar ? kurtarIsReady : gecme ? gecmeIsReady : kuyu ? kuyuIsReady : devKong ? devKongIsReady : savas ? savasIsReady : kirmizi ? kirmiziIsReady : baska ? baskaIsReady : aragorn ? aragornIsReady : dance || dance2 ? danceIsReady : epik ? epikIsReady : vsss ? vsssIsReady : dovus ? dovusIsReady : kuyular ? kuyularIsReady : tek ? tekIsReady : tek2 ? tek2IsReady : tek3 ? tek3IsReady : kale ? kaleIsReady : run ? runIsReady : kare ? kareIsReady : magdur ? magdurIsReady : kapiIsReady;
-        while (!sceneReady() && performance.now() - loadStart < (dance || dance2 ? 90000 : savas || kirmizi || baska || kuyular || tek || tek2 || tek3 || kale || run ? 50000 : 25000)) {
+        const danceWait = dance || dance2 ? (danceIsPhone() ? 150000 : 90000) : 0;
+        while (!sceneReady() && performance.now() - loadStart < (danceWait || (savas || kirmizi || baska || kuyular || tek || tek2 || tek3 || kale || run ? 50000 : 25000))) {
           await wait(80);
           if (stop) return;
         }
         if (!sceneReady()) {
-          setErr(dance || dance2 ? "Dans modelleri yüklenemedi. İptal deyip tekrar dene." : "Sahne hazırlanamadı. İptal deyip tekrar dene.");
+          setErr(dance || dance2 ? "Dans modelleri yüklenemedi. Mobilde Wi‑Fi ile tekrar dene; sayfayı yenile." : "Sahne hazırlanamadı. İptal deyip tekrar dene.");
           setPhase("err");
           return;
         }
@@ -350,8 +351,12 @@ export function ReelCapture({ soldiers, names, commanders = [], level, pressure,
         await Promise.race([unlockReelSfx(), wait(1200)]);
         if (stop) return;
         const heavy = isMix9(mix);
-        const bits = heavy ? 2_500_000 : epik || (xxx && xxxHiRes(xxx)) ? 24_000_000 : 8_000_000;
-        const recorded = await recordCanvas(canvas, clip, reelSfxStream(), bits, heavy, isDevSmall(giant) ? zillaStart : kurtar ? kurtarStart : gecme ? gecmeStart : kuyu ? kuyuStart : devKong ? devKongStart : savas ? savasStart : kirmizi ? kirmiziStart : baska ? baskaStart : aragorn ? aragornStart : dance || dance2 ? danceStart : epik ? epikStart : vsss ? vsssStart : dovus ? dovusStart : kuyular ? kuyularStart : tek ? tekStart : tek2 ? tek2Start : tek3 ? tek3Start : kale ? kaleStart : run ? runStart : kare ? kareStart : magdur ? magdurStart : kapi ? kapiStart : elf ? elfStartPlay : undefined, run ? 60 : undefined);
+        const phoneDance = Boolean((dance || dance2) && danceIsPhone());
+        const bits = heavy ? 2_500_000 : phoneDance ? 3_200_000 : epik || (xxx && xxxHiRes(xxx)) ? 24_000_000 : 8_000_000;
+        const fps = run ? 60 : phoneDance ? 24 : undefined;
+        const outW = phoneDance ? REEL_PHONE_WIDTH : REEL_WIDTH;
+        const outH = phoneDance ? REEL_PHONE_HEIGHT : REEL_HEIGHT;
+        const recorded = await recordCanvas(canvas, clip, reelSfxStream(), bits, heavy, isDevSmall(giant) ? zillaStart : kurtar ? kurtarStart : gecme ? gecmeStart : kuyu ? kuyuStart : devKong ? devKongStart : savas ? savasStart : kirmizi ? kirmiziStart : baska ? baskaStart : aragorn ? aragornStart : dance || dance2 ? danceStart : epik ? epikStart : vsss ? vsssStart : dovus ? dovusStart : kuyular ? kuyularStart : tek ? tekStart : tek2 ? tek2Start : tek3 ? tek3Start : kale ? kaleStart : run ? runStart : kare ? kareStart : magdur ? magdurStart : kapi ? kapiStart : elf ? elfStartPlay : undefined, fps, outW, outH);
         if (stop) return;
         setBlob(recorded);
         setPreview(URL.createObjectURL(recorded));

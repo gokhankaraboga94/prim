@@ -889,6 +889,7 @@ select:focus {
 .shot-pills button {
   font-size: 13px;
   padding: 7px 10px;
+  touch-action: manipulation;
 }
 
 .recent-buttons {
@@ -1266,6 +1267,26 @@ body.edit-route .seo-doc {
 }
 
 @media (max-width: 860px) {
+  .shot-pills {
+    gap: 10px;
+  }
+
+  .shot-pills button {
+    min-height: 44px;
+    padding: 10px 14px;
+    font-size: 14px;
+  }
+
+  .reel-capture-hud,
+  .reel-capture-actions {
+    bottom: calc(16px + env(safe-area-inset-bottom));
+  }
+
+  .reel-capture-close {
+    top: calc(12px + env(safe-area-inset-top));
+    right: calc(12px + env(safe-area-inset-right));
+  }
+
   .edit-bar {
     flex-wrap: nowrap;
     overflow-x: auto;

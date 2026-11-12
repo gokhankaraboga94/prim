@@ -3,7 +3,7 @@ import { useFrame, useThree } from "@react-three/fiber";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { clone as cloneSkinned } from "three/examples/jsm/utils/SkeletonUtils.js";
 import * as THREE from "three";
-import { preloadedGlb } from "../../arenaPreload";
+import { preloadedGlb, releasePreloadedGlbs } from "../../arenaPreload";
 import { buildNameAtlas } from "../../nameAtlas";
 import {
   DANCE_MEKAN,
@@ -12,6 +12,7 @@ import {
   DANCE_N,
   DANCE_STREET_FEET,
   danceCam,
+  danceIsPhone,
   danceMarkReady,
   danceReset,
   danceResetCamTarget,
@@ -114,6 +115,37 @@ function danceClips(clips: THREE.AnimationClip[]) {
   return list.filter((c) => c.duration > 0.05);
 }
 
+/** Phone fallback when mekan.glb OOMs — dark plaza so dance1 still records. */
+function buildStreetFallback(parent: THREE.Group, deckY: number) {
+  const under = new THREE.Mesh(
+    new THREE.CircleGeometry(80, 48),
+    new THREE.MeshLambertMaterial({ color: "#12141a" }),
+  );
+  under.rotation.x = -Math.PI / 2;
+  under.position.y = -0.08;
+  parent.add(under);
+  const pad = new THREE.Mesh(
+    new THREE.BoxGeometry(16, 0.06, 11),
+    new THREE.MeshLambertMaterial({ color: "#3a3a3e" }),
+  );
+  pad.position.set(0, deckY - 0.03, 0);
+  parent.add(pad);
+  const curb = new THREE.Mesh(
+    new THREE.BoxGeometry(18, 0.35, 0.4),
+    new THREE.MeshLambertMaterial({ color: "#2a2c32" }),
+  );
+  curb.position.set(0, deckY + 0.1, -5.2);
+  parent.add(curb);
+  for (const side of [-1, 1] as const) {
+    const block = new THREE.Mesh(
+      new THREE.BoxGeometry(4.5, 6.5, 3.2),
+      new THREE.MeshLambertMaterial({ color: "#1c1e24" }),
+    );
+    block.position.set(side * 9.5, deckY + 3.2, -8);
+    parent.add(block);
+  }
+}
+
 function playClip(man: Dancer, at: number) {
   if (!man.clips.length) return;
   if (man.offFinished) {
@@ -143,6 +175,7 @@ export function DanceBattle({ names, mekan = true }: { names: string[]; mekan?: 
   const floor = useRef<THREE.Group>(null);
   const pack = useRef<Dancer[]>([]);
   const camera = useThree((s) => s.camera);
+  const phone = useMemo(() => danceIsPhone(), []);
   const roster = useMemo(() => danceRoster(names), [names]);
   const named = useMemo(() => roster.map((name, i) => ({ name, i })).filter((row) => row.name), [roster]);
   const atlas = useMemo(
@@ -189,6 +222,8 @@ export function DanceBattle({ names, mekan = true }: { names: string[]; mekan?: 
           toLambert(gltf.scene);
           fit(gltf.scene);
         }
+        // Free dancer GLB buffers after parse — phones need headroom before skins + venue.
+        releasePreloadedGlbs(DANCE_MODELS);
 
         const useStreet = mekan && DANCE_STREET_FEET.length === DANCE_N;
         const packCx = useStreet ? DANCE_STREET_FEET.reduce((s, f) => s + f.x, 0) / DANCE_N : 0;
@@ -196,36 +231,48 @@ export function DanceBattle({ names, mekan = true }: { names: string[]; mekan?: 
         // Nudge pack into the street (−Z) so the map rim stays behind the camera.
         const intoCity = useStreet ? 2.4 : 0;
         if (mekan) {
-          const venue = await loadGlb(loader, DANCE_MEKAN);
-          if (drop) return;
-          toLambert(venue.scene);
-          fitMekan(venue.scene, DANCE_MEKAN_SPAN);
-          // Slide venue so the open plaza sits near world origin — frame center.
-          if (useStreet) {
-            venue.scene.position.x -= packCx;
-            venue.scene.position.z -= packCz;
-            venue.scene.updateMatrixWorld(true);
-          }
           floor.current?.clear();
-          floor.current?.add(venue.scene);
-          if (useStreet) {
-            const deckY = DANCE_STREET_FEET[0].y;
-            const pad = new THREE.Mesh(
-              new THREE.BoxGeometry(14, 0.06, 9),
-              new THREE.MeshLambertMaterial({ color: "#3f3f42" }),
-            );
-            pad.position.set(0, deckY - 0.03, 0);
-            pad.receiveShadow = false;
-            floor.current?.add(pad);
-            // Dark underlay past the GLB rim (same tone as street night) — no bright void.
-            const under = new THREE.Mesh(
-              new THREE.CircleGeometry(80, 64),
-              new THREE.MeshLambertMaterial({ color: "#12141a" }),
-            );
-            under.rotation.x = -Math.PI / 2;
-            under.position.y = -0.08;
-            floor.current?.add(under);
+          let venueOk = false;
+          try {
+            const venue = await loadGlb(loader, DANCE_MEKAN);
+            if (drop) return;
+            toLambert(venue.scene);
+            fitMekan(venue.scene, DANCE_MEKAN_SPAN);
+            // Slide venue so the open plaza sits near world origin — frame center.
+            if (useStreet) {
+              venue.scene.position.x -= packCx;
+              venue.scene.position.z -= packCz;
+              venue.scene.updateMatrixWorld(true);
+            }
+            floor.current?.add(venue.scene);
+            if (useStreet) {
+              const deckY = DANCE_STREET_FEET[0].y;
+              const pad = new THREE.Mesh(
+                new THREE.BoxGeometry(14, 0.06, 9),
+                new THREE.MeshLambertMaterial({ color: "#3f3f42" }),
+              );
+              pad.position.set(0, deckY - 0.03, 0);
+              pad.receiveShadow = false;
+              floor.current?.add(pad);
+              // Dark underlay past the GLB rim (same tone as street night) — no bright void.
+              const under = new THREE.Mesh(
+                new THREE.CircleGeometry(phone ? 48 : 80, phone ? 40 : 64),
+                new THREE.MeshLambertMaterial({ color: "#12141a" }),
+              );
+              under.rotation.x = -Math.PI / 2;
+              under.position.y = -0.08;
+              floor.current?.add(under);
+            }
+            venueOk = true;
+          } catch (err) {
+            console.warn("dance mekan", err);
+            if (phone && floor.current) {
+              buildStreetFallback(floor.current, useStreet ? DANCE_STREET_FEET[0].y : 0);
+              venueOk = true;
+            }
           }
+          releasePreloadedGlbs([DANCE_MEKAN]);
+          if (!venueOk) throw new Error("mekan yüklenemedi");
           floor.current?.updateMatrixWorld(true);
         } else {
           floor.current?.clear();
@@ -284,7 +331,7 @@ export function DanceBattle({ names, mekan = true }: { names: string[]; mekan?: 
       floor.current?.clear();
       danceReset();
     };
-  }, [mekan]);
+  }, [mekan, phone]);
 
   useFrame((_, dt) => {
     const t = danceT();
@@ -328,11 +375,11 @@ export function DanceBattle({ names, mekan = true }: { names: string[]; mekan?: 
     <group>
       {mekan ? (
         <>
-          <hemisphereLight args={["#ffffff", "#d0d0d0", 1.35]} />
-          <directionalLight position={[4, 12, 6]} intensity={1.55} color="#ffffff" />
+          <hemisphereLight args={["#ffffff", "#d0d0d0", phone ? 1.2 : 1.35]} />
+          <directionalLight position={[4, 12, 6]} intensity={phone ? 1.35 : 1.55} color="#ffffff" />
         </>
       ) : (
-        <Dance2Club />
+        <Dance2Club lite={phone} />
       )}
       <group ref={floor} />
       <group ref={host} />

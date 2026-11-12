@@ -9,7 +9,7 @@ const MAGENTA = "#ff4fd8";
 const LIME = "#7cff6b";
 
 /** Neon club built for first-frame stop-scroll — dense stage, not empty void. */
-export function Dance2Club() {
+export function Dance2Club({ lite = false }: { lite?: boolean }) {
   const ring = useRef<THREE.Mesh>(null);
   const ring2 = useRef<THREE.Mesh>(null);
   const ring3 = useRef<THREE.Mesh>(null);
@@ -58,9 +58,10 @@ export function Dance2Club() {
   }, []);
 
   const pillars = useMemo(() => {
+    const n = lite ? 6 : 12;
     const out: Array<{ x: number; z: number; h: number; tone: "cyan" | "amber" | "magenta" | "lime" }> = [];
-    for (let i = 0; i < 12; i++) {
-      const a = (i / 12) * Math.PI * 2;
+    for (let i = 0; i < n; i++) {
+      const a = (i / n) * Math.PI * 2;
       const r = 7.4;
       const tones = ["cyan", "amber", "magenta", "lime"] as const;
       out.push({
@@ -71,7 +72,11 @@ export function Dance2Club() {
       });
     }
     return out;
-  }, []);
+  }, [lite]);
+
+  const segs = lite ? 32 : 64;
+  const beamN = lite ? 4 : 8;
+  const spotN = lite ? 1 : 4;
 
   useFrame(() => {
     const t = danceT();
@@ -107,7 +112,7 @@ export function Dance2Club() {
       });
     }
     if (pulse.current) {
-      pulse.current.intensity = 10 + beat * 16 + u * 5;
+      pulse.current.intensity = (lite ? 8 : 10) + beat * (lite ? 10 : 16) + u * 5;
       pulse.current.position.y = 3.8 + Math.sin(t * 2.6) * 0.4;
     }
     if (spots.current) {
@@ -117,7 +122,7 @@ export function Dance2Club() {
         const ang = swirl * (i % 2 === 0 ? 1.25 : -1.05) + i * 1.4;
         light.target.position.set(Math.sin(ang) * 2.8, 0.15, Math.cos(ang) * 2.2 - 1.35);
         light.target.updateMatrixWorld();
-        light.intensity = 28 + beat * 22;
+        light.intensity = (lite ? 18 : 28) + beat * (lite ? 12 : 22);
       });
     }
   });
@@ -125,40 +130,39 @@ export function Dance2Club() {
   return (
     <group>
       <color attach="background" args={["#05070c"]} />
-      <fog attach="fog" args={["#05070c", 14, 42]} />
-      <hemisphereLight args={["#7ad4ff", "#1a0e22", 0.7]} />
-      <ambientLight intensity={0.28} />
-      <directionalLight position={[5, 12, 3]} intensity={1.05} color="#f2f6ff" />
+      <fog attach="fog" args={["#05070c", lite ? 12 : 14, lite ? 36 : 42]} />
+      <hemisphereLight args={["#7ad4ff", "#1a0e22", lite ? 0.85 : 0.7]} />
+      <ambientLight intensity={lite ? 0.4 : 0.28} />
+      <directionalLight position={[5, 12, 3]} intensity={lite ? 1.2 : 1.05} color="#f2f6ff" />
       <pointLight ref={pulse} position={[0, 3.8, -1.35]} color={CYAN} intensity={14} distance={26} />
-      <pointLight position={[-4.5, 3.2, 1.5]} color={AMBER} intensity={9} distance={18} />
-      <pointLight position={[4.8, 3.4, -3.5]} color={MAGENTA} intensity={8} distance={18} />
-      <pointLight position={[0, 5.5, -8]} color={LIME} intensity={6} distance={20} />
+      {!lite && <pointLight position={[-4.5, 3.2, 1.5]} color={AMBER} intensity={9} distance={18} />}
+      {!lite && <pointLight position={[4.8, 3.4, -3.5]} color={MAGENTA} intensity={8} distance={18} />}
+      {!lite && <pointLight position={[0, 5.5, -8]} color={LIME} intensity={6} distance={20} />}
+      {lite && <pointLight position={[-3.5, 3.2, 1.2]} color={AMBER} intensity={7} distance={16} />}
+      {lite && <pointLight position={[3.8, 3.4, -3]} color={MAGENTA} intensity={6} distance={16} />}
 
-      {/* Floor disk + stage */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.04, -1.35]} material={mats.floor}>
-        <circleGeometry args={[20, 72]} />
+        <circleGeometry args={[20, lite ? 40 : 72]} />
       </mesh>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.0, -1.35]} material={mats.stage}>
-        <circleGeometry args={[6.6, 56]} />
+        <circleGeometry args={[6.6, lite ? 32 : 56]} />
       </mesh>
-      {/* Outer ring tiles */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.008, -1.35]} material={mats.tile}>
-        <ringGeometry args={[7.5, 9.8, 64]} />
+        <ringGeometry args={[7.5, 9.8, segs]} />
       </mesh>
       <mesh ref={ring3} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.03, -1.35]} material={mats.magenta}>
-        <ringGeometry args={[1.85, 2.1, 56]} />
+        <ringGeometry args={[1.85, 2.1, lite ? 32 : 56]} />
       </mesh>
       <mesh ref={ring} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.035, -1.35]} material={mats.cyan}>
-        <ringGeometry args={[3.7, 4.05, 64]} />
+        <ringGeometry args={[3.7, 4.05, segs]} />
       </mesh>
       <mesh ref={ring2} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.04, -1.35]} material={mats.amber}>
-        <ringGeometry args={[5.15, 5.5, 64]} />
+        <ringGeometry args={[5.15, 5.5, segs]} />
       </mesh>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.045, -1.35]} material={mats.lime}>
-        <ringGeometry args={[6.2, 6.45, 64]} />
+        <ringGeometry args={[6.2, 6.45, segs]} />
       </mesh>
 
-      {/* Neon pillars + crown */}
       {pillars.map((p, i) => (
         <group key={i} position={[p.x, 0, p.z]}>
           <mesh position={[0, p.h / 2, 0]} material={mats[p.tone]}>
@@ -167,16 +171,17 @@ export function Dance2Club() {
           <mesh position={[0, p.h + 0.08, 0]} material={mats[p.tone]}>
             <boxGeometry args={[0.7, 0.14, 0.7]} />
           </mesh>
-          <pointLight
-            position={[0, p.h * 0.65, 0]}
-            color={p.tone === "amber" ? AMBER : p.tone === "magenta" ? MAGENTA : p.tone === "lime" ? LIME : CYAN}
-            intensity={5.5}
-            distance={8}
-          />
+          {!lite && (
+            <pointLight
+              position={[0, p.h * 0.65, 0]}
+              color={p.tone === "amber" ? AMBER : p.tone === "magenta" ? MAGENTA : p.tone === "lime" ? LIME : CYAN}
+              intensity={5.5}
+              distance={8}
+            />
+          )}
         </group>
       ))}
 
-      {/* Entry arches — readable “club” silhouette */}
       {[-1, 1].map((side) => (
         <group key={side} position={[side * 5.2, 0, 4.2]}>
           <mesh position={[0, 2.4, 0]} material={mats.cyan}>
@@ -191,12 +196,11 @@ export function Dance2Club() {
         </group>
       ))}
 
-      {/* Back LED wall */}
       <mesh position={[0, 3.6, -10.2]} material={mats.wall}>
         <boxGeometry args={[22, 9, 0.5]} />
       </mesh>
       <group ref={screens} position={[0, 3.8, -9.9]}>
-        {[-6, -3, 0, 3, 6].map((x, i) => (
+        {(lite ? [-4.5, 0, 4.5] : [-6, -3, 0, 3, 6]).map((x, i) => (
           <mesh key={i} position={[x, (i % 2) * 0.4, 0]} material={mats.screen.clone()}>
             <boxGeometry args={[2.4, 3.2, 0.08]} />
           </mesh>
@@ -212,7 +216,6 @@ export function Dance2Club() {
         <boxGeometry args={[0.14, 7.2, 0.14]} />
       </mesh>
 
-      {/* Side walls — outside camera orbit radius so they don’t eclipse the pack */}
       <mesh position={[-14.5, 3.4, -2]} material={mats.wall} rotation={[0, Math.PI / 2, 0]}>
         <boxGeometry args={[20, 8.5, 0.45]} />
       </mesh>
@@ -220,13 +223,18 @@ export function Dance2Club() {
         <boxGeometry args={[20, 8.5, 0.45]} />
       </mesh>
 
-      {/* Speakers / stacks */}
-      {[
-        [-6.4, -5.2],
-        [6.4, -5.2],
-        [-6.8, 1.6],
-        [6.8, 1.6],
-      ].map(([x, z], i) => (
+      {(lite
+        ? [
+            [-6.4, -5.2],
+            [6.4, -5.2],
+          ]
+        : [
+            [-6.4, -5.2],
+            [6.4, -5.2],
+            [-6.8, 1.6],
+            [6.8, 1.6],
+          ]
+      ).map(([x, z], i) => (
         <group key={i} position={[x, 0, z]}>
           <mesh position={[0, 1.1, 0]} material={mats.metal}>
             <boxGeometry args={[1.1, 2.2, 0.9]} />
@@ -235,15 +243,14 @@ export function Dance2Club() {
             <boxGeometry args={[0.85, 0.12, 0.12]} />
           </mesh>
           <mesh position={[0, 0.55, 0.48]} material={mats.metal}>
-            <cylinderGeometry args={[0.32, 0.32, 0.12, 20]} />
+            <cylinderGeometry args={[0.32, 0.32, 0.12, lite ? 12 : 20]} />
           </mesh>
           <mesh position={[0, 1.35, 0.48]} material={mats.metal}>
-            <cylinderGeometry args={[0.28, 0.28, 0.12, 20]} />
+            <cylinderGeometry args={[0.28, 0.28, 0.12, lite ? 12 : 20]} />
           </mesh>
         </group>
       ))}
 
-      {/* DJ booth silhouette */}
       <group position={[0, 0, -7.4]}>
         <mesh position={[0, 0.7, 0]} material={mats.metal}>
           <boxGeometry args={[4.2, 1.4, 1.3]} />
@@ -259,26 +266,24 @@ export function Dance2Club() {
         </mesh>
       </group>
 
-      {/* Overhead truss + disco ball */}
       <mesh position={[0, 7.1, -1.35]} material={mats.metal}>
         <boxGeometry args={[13, 0.2, 9]} />
       </mesh>
-      {[-4.5, -1.5, 1.5, 4.5].map((x, i) => (
+      {(lite ? [-3, 3] : [-4.5, -1.5, 1.5, 4.5]).map((x, i) => (
         <mesh key={i} position={[x, 6.9, -1.35]} material={i % 2 ? mats.cyan : mats.amber}>
           <boxGeometry args={[0.1, 0.1, 8]} />
         </mesh>
       ))}
       <mesh ref={ball} position={[0, 6.35, -1.35]} material={mats.ball}>
-        <icosahedronGeometry args={[0.55, 1]} />
+        <icosahedronGeometry args={[0.55, lite ? 0 : 1]} />
       </mesh>
       <mesh position={[0, 6.85, -1.35]} material={mats.metal}>
         <cylinderGeometry args={[0.04, 0.04, 0.7, 8]} />
       </mesh>
 
-      {/* Rotating beams */}
       <group ref={beams} position={[0, 6.85, -1.35]}>
-        {Array.from({ length: 8 }, (_, i) => {
-          const a = (i / 8) * Math.PI * 2;
+        {Array.from({ length: beamN }, (_, i) => {
+          const a = (i / beamN) * Math.PI * 2;
           const mat = i % 3 === 0 ? mats.beam : i % 3 === 1 ? mats.beamWarm : mats.beamHot;
           return (
             <mesh
@@ -293,15 +298,14 @@ export function Dance2Club() {
         })}
       </group>
 
-      {/* Sweeping spots */}
       <group ref={spots}>
-        {[0, 1, 2, 3].map((i) => (
+        {Array.from({ length: spotN }, (_, i) => (
           <spotLight
             key={i}
             position={[Math.cos(i * 1.6) * 5.2, 6.5, Math.sin(i * 1.6) * 5.2 - 1.35]}
             angle={0.28}
             penumbra={0.5}
-            intensity={34}
+            intensity={lite ? 22 : 34}
             color={i % 2 === 0 ? CYAN : i === 1 ? AMBER : MAGENTA}
             distance={28}
           >

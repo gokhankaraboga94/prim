@@ -45,3 +45,8 @@ export async function preloadGlbs(urls: readonly string[], onProgress?: (done: n
 export function preloadedGlb(url: string) {
   return store.get(url);
 }
+
+/** Drop buffers after parse so phones can free ~tens of MB before recording. */
+export function releasePreloadedGlbs(urls: readonly string[]) {
+  for (const url of urls) store.delete(url);
+}

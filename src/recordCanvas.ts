@@ -6,6 +6,9 @@ export const REEL_HOLD = 2.25;
 /** Capture buffer — Instagram Reels native. CSS scales the preview down. */
 export const REEL_WIDTH = 1080;
 export const REEL_HEIGHT = 1920;
+/** Phone dance / heavy scenes — lower GPU + MediaRecorder pressure. */
+export const REEL_PHONE_WIDTH = 720;
+export const REEL_PHONE_HEIGHT = 1280;
 
 export function reelWindow(width: number, height: number, u: number, v: number) {
   const frameW = Math.min(width, (height * 9) / 16);
@@ -62,12 +65,22 @@ export function wait(ms: number) {
   return new Promise((resolve) => window.setTimeout(resolve, ms));
 }
 
-export async function recordCanvas(canvas: HTMLCanvasElement, seconds: number, audio?: MediaStream | null, bitsPerSecond = 8_000_000, steady = false, onStart?: () => void, fps?: number) {
+export async function recordCanvas(
+  canvas: HTMLCanvasElement,
+  seconds: number,
+  audio?: MediaStream | null,
+  bitsPerSecond = 8_000_000,
+  steady = false,
+  onStart?: () => void,
+  fps?: number,
+  outW = REEL_WIDTH,
+  outH = REEL_HEIGHT,
+) {
   const mime = pickMime(Boolean(audio));
   if (!mime) throw new Error("Bu tarayıcı video kaydını desteklemiyor. Safari veya Chrome dene.");
   const reel = document.createElement("canvas");
-  reel.width = REEL_WIDTH;
-  reel.height = REEL_HEIGHT;
+  reel.width = outW;
+  reel.height = outH;
   const flat = reel.getContext("2d", { alpha: false });
   if (!flat) throw new Error("Bu tarayıcı video kaydını desteklemiyor. Safari veya Chrome dene.");
   let copying = true;
@@ -78,7 +91,7 @@ export async function recordCanvas(canvas: HTMLCanvasElement, seconds: number, a
     const sw = canvas.width;
     const sh = canvas.height;
     if (sw > 0 && sh > 0) {
-      flat.drawImage(canvas, 0, 0, sw, sh, 0, 0, REEL_WIDTH, REEL_HEIGHT);
+      flat.drawImage(canvas, 0, 0, sw, sh, 0, 0, outW, outH);
       if (armed && !started) {
         started = true;
         onStart?.();

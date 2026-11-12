@@ -9,7 +9,7 @@ import { SallyRaid } from "./SallyRaid";
 import { CaptureHpHud, CountdownFlash, HuntSightHud, LabHealthBar, New2RatioBar, ReelFade, ReelTitles, ReelVignette, SpinNameHud, XxxHookHud } from "./CaptureHpHud";
 import { effectiveCommanders } from "../../game";
 import { castleFrame } from "../../castleLayout";
-import { REEL_HEIGHT, REEL_HOLD, REEL_WIDTH, reelBeats } from "../../recordCanvas";
+import { REEL_HEIGHT, REEL_HOLD, REEL_PHONE_HEIGHT, REEL_PHONE_WIDTH, REEL_WIDTH, reelBeats } from "../../recordCanvas";
 import { CINEMA_SWORD_P, cinemaGateAt, sampleCinema, sampleShotMode, type ShotId } from "../../shotModes";
 import { rosterSoldierIds, sampleRoster, type PlanBId } from "../../rosterReel";
 import { sagaGateRecT, sampleSaga, type SagaId } from "../../sagaReel";
@@ -1250,21 +1250,21 @@ function SceneContent({
   );
 }
 
-function LockReelBuffer({ dpr = 1 }: { dpr?: number }) {
+function LockReelBuffer({ dpr = 1, width = REEL_WIDTH, height = REEL_HEIGHT }: { dpr?: number; width?: number; height?: number }) {
   const gl = useThree((s) => s.gl);
   const set = useThree((s) => s.set);
   useLayoutEffect(() => {
     gl.setPixelRatio(dpr);
-    gl.setSize(REEL_WIDTH, REEL_HEIGHT, false);
-    set({ size: { width: REEL_WIDTH, height: REEL_HEIGHT, top: 0, left: 0 } });
-  }, [gl, set, dpr]);
+    gl.setSize(width, height, false);
+    set({ size: { width, height, top: 0, left: 0 } });
+  }, [gl, set, dpr, width, height]);
   useFrame(() => {
-    const w = Math.floor(REEL_WIDTH * dpr);
-    const h = Math.floor(REEL_HEIGHT * dpr);
+    const w = Math.floor(width * dpr);
+    const h = Math.floor(height * dpr);
     if (gl.domElement.width !== w || gl.domElement.height !== h) {
       gl.setPixelRatio(dpr);
-      gl.setSize(REEL_WIDTH, REEL_HEIGHT, false);
-      set({ size: { width: REEL_WIDTH, height: REEL_HEIGHT, top: 0, left: 0 } });
+      gl.setSize(width, height, false);
+      set({ size: { width, height, top: 0, left: 0 } });
     }
   });
   return null;
@@ -1401,6 +1401,9 @@ function BattleSceneInner({
     const coarse = window.matchMedia?.("(pointer: coarse)")?.matches ?? false;
     return narrow || coarse;
   }, []);
+  const dancePhone = Boolean(cinematic && phone && (dance || dance2));
+  const reelW = dancePhone ? REEL_PHONE_WIDTH : REEL_WIDTH;
+  const reelH = dancePhone ? REEL_PHONE_HEIGHT : REEL_HEIGHT;
 
   return (
     <Canvas
@@ -1425,16 +1428,16 @@ function BattleSceneInner({
         gl.outputColorSpace = THREE.SRGBColorSpace;
         gl.shadowMap.enabled = !cinematic && !phone;
         gl.shadowMap.type = THREE.PCFSoftShadowMap;
-        gl.setClearColor(dance || dance2 ? "#ffffff" : kuyu ? "#1a1614" : gecme ? "#6a5848" : kurtar ? "#3a322a" : loop ? "#2ea2ff" : pit ? "#8ec6f4" : hero ? "#7eb6ee" : kalkan ? "#07080d" : elf ? "#4a3728" : xxx && xxxSpin(xxx) ? "#000000" : maze ? "#9eb0c4" : new1 || new2 || new3 || new4 || new5 || new6 || new62 || new7 ? "#8f9aa0" : "#7eb6ee", 1);
+        gl.setClearColor(dance2 ? "#07090f" : dance ? "#1a1c22" : kuyu ? "#1a1614" : gecme ? "#6a5848" : kurtar ? "#3a322a" : loop ? "#2ea2ff" : pit ? "#8ec6f4" : hero ? "#7eb6ee" : kalkan ? "#07080d" : elf ? "#4a3728" : xxx && xxxSpin(xxx) ? "#000000" : maze ? "#9eb0c4" : new1 || new2 || new3 || new4 || new5 || new6 || new62 || new7 ? "#8f9aa0" : "#7eb6ee", 1);
         if (cinematic) {
           const dpr = epik || (xxx && xxxHiRes(xxx)) ? 2 : 1;
           gl.setPixelRatio(dpr);
-          gl.setSize(REEL_WIDTH, REEL_HEIGHT, false);
+          gl.setSize(reelW, reelH, false);
         }
         onReady?.(gl.domElement);
       }}
     >
-      {cinematic && <LockReelBuffer dpr={epik || (xxx && xxxHiRes(xxx)) ? 2 : 1} />}
+      {cinematic && <LockReelBuffer dpr={epik || (xxx && xxxHiRes(xxx)) ? 2 : 1} width={reelW} height={reelH} />}
       <SceneContent
         soldiers={soldiers}
         names={names}

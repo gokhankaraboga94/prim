@@ -33,6 +33,14 @@ export function isDanceAny(id: string | null | undefined): id is DanceAnyId {
   return id === DANCE_ID || id === DANCE2_ID;
 }
 
+/** Phones: coarse pointer or short edge — used to lighten dance GPU/RAM. */
+export function danceIsPhone() {
+  if (typeof window === "undefined") return false;
+  const narrow = Math.min(window.innerWidth, window.innerHeight) < 860;
+  const coarse = window.matchMedia?.("(pointer: coarse)")?.matches ?? false;
+  return narrow || coarse;
+}
+
 export function danceRoster(names: readonly string[]) {
   const last = names.map((name) => name.trim()).filter(Boolean).slice(-DANCE_N);
   const out = Array.from({ length: DANCE_N }, () => "");
