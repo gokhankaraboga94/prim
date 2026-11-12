@@ -31,6 +31,8 @@ type Dancer = {
 
 const HEIGHT = 1.78;
 const dummy = new THREE.Object3D();
+/** Average street Y under the dancers — camera follows this lift. */
+let streetLift = 0;
 
 function loadGlb(loader: GLTFLoader, url: string) {
   const buf = preloadedGlb(url);
@@ -96,6 +98,35 @@ function fitMekan(root: THREE.Object3D, targetSpan = 22) {
   root.position.x -= (next.min.x + next.max.x) / 2;
   root.position.z -= (next.min.z + next.max.z) / 2;
   root.position.y -= next.min.y;
+  root.updateMatrixWorld(true);
+}
+
+/**
+ * Street height under (x,z). Casts down through the venue and picks the
+ * lowest upward-facing hit (road), skipping roofs/awnings above.
+ */
+function sampleStreetY(root: THREE.Object3D, x: number, z: number, fallback = 0) {
+  root.updateMatrixWorld(true);
+  const meshes: THREE.Object3D[] = [];
+  root.traverse((obj) => {
+    const mesh = obj as THREE.Mesh;
+    if (mesh.isMesh) meshes.push(mesh);
+  });
+  if (!meshes.length) return fallback;
+  const ray = new THREE.Raycaster();
+  ray.set(new THREE.Vector3(x, 120, z), new THREE.Vector3(0, -1, 0));
+  ray.far = 250;
+  const hits = ray.intersectObjects(meshes, false);
+  if (!hits.length) return fallback;
+  let best: THREE.Intersection | null = null;
+  for (const hit of hits) {
+    if (hit.face) {
+      const n = hit.face.normal.clone().transformDirection(hit.object.matrixWorld).normalize();
+      if (n.y < 0.55) continue;
+    }
+    if (!best || hit.point.y < best.point.y) best = hit;
+  }
+  return best?.point.y ?? hits[hits.length - 1].point.y;
 }
 
 /** Prefer dance-named clips; otherwise keep all clips in file order (1–3 dances). */
@@ -186,6 +217,7 @@ export function DanceBattle({ names }: { names: string[] }) {
         fitMekan(venue.scene, 24);
         floor.current?.clear();
         floor.current?.add(venue.scene);
+        floor.current?.updateMatrixWorld(true);
 
         const root = host.current;
         if (!root) throw new Error("dans sahne kökü yok");
@@ -196,7 +228,8 @@ export function DanceBattle({ names }: { names: string[] }) {
           const holder = new THREE.Group();
           holder.add(body);
           const spot = danceSpot(i);
-          holder.position.set(spot.x, 0, spot.z);
+          const streetY = sampleStreetY(venue.scene, spot.x, spot.z, 0);
+          holder.position.set(spot.x, streetY, spot.z);
           holder.rotation.y = spot.yaw;
           const mix = new THREE.AnimationMixer(body);
           const clips = danceClips(source.animations);
@@ -210,6 +243,7 @@ export function DanceBattle({ names }: { names: string[] }) {
           throw new Error("dans sahne eksik");
         }
         pack.current = men;
+        streetLift = men.reduce((s, m) => s + m.host.position.y, 0) / Math.max(1, men.length);
         // One frame so GPU uploads settle before record starts
         await new Promise<void>((ok) => requestAnimationFrame(() => ok()));
         if (drop) return;
@@ -221,6 +255,7 @@ export function DanceBattle({ names }: { names: string[] }) {
     })();
     return () => {
       drop = true;
+      streetLift = 0;
       for (const man of pack.current) {
         if (man.offFinished) {
           man.mix.removeEventListener("finished", man.offFinished as unknown as (e: object) => void);
@@ -247,14 +282,16 @@ export function DanceBattle({ names }: { names: string[] }) {
         const cell = atlas.cells[n];
         if (!cell || cell.sheet !== sheetIndex) continue;
         const spot = danceSpot(named[n].i);
+        const foot = pack.current.find((m) => m.i === named[n].i)?.host.position.y ?? 0;
+        const headY = foot + 2.15;
         const dx = spot.x - camera.position.x;
-        const dy = 2.15 - camera.position.y;
+        const dy = headY - camera.position.y;
         const dz = spot.z - camera.position.z;
         const dist = Math.hypot(dx, dy, dz);
         const base = Math.min(0.7, 0.32 + dist * 0.014);
         const w = base * 1.65;
         const h = (cell.sy * w) / Math.max(cell.sx, 0.01);
-        dummy.position.set(spot.x, 2.15, spot.z);
+        dummy.position.set(spot.x, headY, spot.z);
         dummy.quaternion.copy(camera.quaternion);
         dummy.scale.set(w, h, 1);
         dummy.updateMatrix();
@@ -289,8 +326,9 @@ export function DanceCam() {
   const camera = useThree((s) => s.camera) as THREE.PerspectiveCamera;
   useFrame(() => {
     const shot = danceCam(danceT());
-    camera.position.set(shot.x, shot.y, shot.z);
-    camera.lookAt(shot.lx, shot.ly, shot.lz);
+    const lift = streetLift;
+    camera.position.set(shot.x, shot.y + lift, shot.z);
+    camera.lookAt(shot.lx, shot.ly + lift, shot.lz);
     if (camera.fov !== shot.fov) {
       camera.fov = shot.fov;
       camera.updateProjectionMatrix();
