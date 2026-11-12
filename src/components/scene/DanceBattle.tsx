@@ -22,6 +22,9 @@ type Dancer = {
   i: number;
   host: THREE.Group;
   mix: THREE.AnimationMixer;
+  clips: THREE.AnimationClip[];
+  index: number;
+  offFinished: (() => void) | null;
 };
 
 const HEIGHT = 1.78;
@@ -69,10 +72,36 @@ function fit(root: THREE.Object3D) {
   );
 }
 
-function pickClip(clips: THREE.AnimationClip[]) {
-  if (!clips.length) return null;
-  const named = clips.find((c) => /dance|dans|mixamo|armature|take/i.test(c.name));
-  return named ?? clips[0];
+/** Prefer dance-named clips; otherwise keep all clips in file order (1–3 dances). */
+function danceClips(clips: THREE.AnimationClip[]) {
+  if (!clips.length) return [] as THREE.AnimationClip[];
+  const named = clips.filter((c) => /dance|dans|mixamo|hip.?hop|groove|move|take/i.test(c.name));
+  const list = named.length ? named : clips.slice();
+  return list.filter((c) => c.duration > 0.05);
+}
+
+function playClip(man: Dancer, at: number) {
+  if (!man.clips.length) return;
+  if (man.offFinished) {
+    man.mix.removeEventListener("finished", man.offFinished);
+    man.offFinished = null;
+  }
+  man.mix.stopAllAction();
+  man.index = ((at % man.clips.length) + man.clips.length) % man.clips.length;
+  const clip = man.clips[man.index];
+  const action = man.mix.clipAction(clip);
+  action.reset();
+  action.setLoop(THREE.LoopOnce, 1);
+  action.clampWhenFinished = true;
+  action.play();
+  const onDone = (ev: { action?: THREE.AnimationAction }) => {
+    if (ev.action !== action) return;
+    man.mix.removeEventListener("finished", onDone);
+    man.offFinished = null;
+    playClip(man, man.index + 1);
+  };
+  man.offFinished = onDone;
+  man.mix.addEventListener("finished", onDone);
 }
 
 export function DanceBattle({ names }: { names: string[] }) {
@@ -119,7 +148,7 @@ export function DanceBattle({ names }: { names: string[] }) {
         }
         if (drop) return;
         if (!files.length) {
-          console.warn("dance: dans1/2/4/5.glb henüz yok — public/models’e koy");
+          console.warn("dance: dans1/2/3.glb henüz yok — public/models’e koy");
           return;
         }
 
@@ -139,15 +168,12 @@ export function DanceBattle({ names }: { names: string[] }) {
           holder.position.set(spot.x, 0, spot.z);
           holder.rotation.y = spot.yaw;
           const mix = new THREE.AnimationMixer(body);
-          const clip = pickClip(source.animations);
-          if (clip) {
-            const action = mix.clipAction(clip);
-            action.setLoop(THREE.LoopRepeat, Infinity);
-            action.reset().play();
-            action.time = (i * 0.37) % Math.max(0.1, clip.duration);
-          }
+          const clips = danceClips(source.animations);
+          const man: Dancer = { i, host: holder, mix, clips, index: 0, offFinished: null };
+          // Stagger which dance they start on so the floor isn’t locked in sync
+          if (clips.length) playClip(man, i % clips.length);
           root?.add(holder);
-          men.push({ i, host: holder, mix });
+          men.push(man);
         }
         if (drop) return;
         pack.current = men;
@@ -159,7 +185,10 @@ export function DanceBattle({ names }: { names: string[] }) {
     })();
     return () => {
       drop = true;
-      for (const man of pack.current) man.mix.stopAllAction();
+      for (const man of pack.current) {
+        if (man.offFinished) man.mix.removeEventListener("finished", man.offFinished);
+        man.mix.stopAllAction();
+      }
       pack.current = [];
       host.current?.clear();
       danceReset();
