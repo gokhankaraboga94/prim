@@ -1,0 +1,235 @@
+import { useEffect, useMemo, useRef } from "react";
+import { useFrame, useThree } from "@react-three/fiber";
+import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+import { clone as cloneSkinned } from "three/examples/jsm/utils/SkeletonUtils.js";
+import * as THREE from "three";
+import { preloadedGlb } from "../../arenaPreload";
+import { buildNameAtlas } from "../../nameAtlas";
+import {
+  DANCE_MODELS,
+  DANCE_N,
+  danceCam,
+  danceMarkReady,
+  danceReset,
+  danceRoster,
+  danceSpot,
+  danceT,
+} from "../../danceReel";
+
+type Gltf = Parameters<Parameters<GLTFLoader["load"]>[1]>[0];
+
+type Dancer = {
+  i: number;
+  host: THREE.Group;
+  mix: THREE.AnimationMixer;
+};
+
+const HEIGHT = 1.78;
+const dummy = new THREE.Object3D();
+
+function loadGlb(loader: GLTFLoader, url: string) {
+  const buf = preloadedGlb(url);
+  return new Promise<Gltf>((ok, fail) => {
+    if (buf) loader.parse(buf.slice(0), "", ok, fail);
+    else loader.load(url, ok, undefined, fail);
+  });
+}
+
+function toLambert(root: THREE.Object3D) {
+  root.traverse((obj) => {
+    const mesh = obj as THREE.Mesh;
+    if (!mesh.isMesh) return;
+    const src = (Array.isArray(mesh.material) ? mesh.material[0] : mesh.material) as THREE.MeshStandardMaterial;
+    const next = new THREE.MeshLambertMaterial({
+      map: src?.map ?? null,
+      color: src?.color ? src.color.clone() : new THREE.Color("#ffffff"),
+    });
+    if (src?.map) src.map = null;
+    src?.normalMap?.dispose();
+    src?.roughnessMap?.dispose();
+    src?.metalnessMap?.dispose();
+    src?.dispose?.();
+    mesh.material = next;
+    mesh.castShadow = false;
+    mesh.receiveShadow = false;
+    mesh.frustumCulled = false;
+  });
+}
+
+function fit(root: THREE.Object3D) {
+  root.updateMatrixWorld(true);
+  const box = new THREE.Box3().setFromObject(root);
+  const span = Math.max(0.001, box.max.y - box.min.y);
+  const scale = HEIGHT / span;
+  root.scale.setScalar(scale);
+  root.position.set(
+    -((box.min.x + box.max.x) / 2) * scale,
+    -box.min.y * scale,
+    -((box.min.z + box.max.z) / 2) * scale,
+  );
+}
+
+function pickClip(clips: THREE.AnimationClip[]) {
+  if (!clips.length) return null;
+  const named = clips.find((c) => /dance|dans|mixamo|armature|take/i.test(c.name));
+  return named ?? clips[0];
+}
+
+export function DanceBattle({ names }: { names: string[] }) {
+  const host = useRef<THREE.Group>(null);
+  const pack = useRef<Dancer[]>([]);
+  const camera = useThree((s) => s.camera);
+  const roster = useMemo(() => danceRoster(names), [names]);
+  const named = useMemo(() => roster.map((name, i) => ({ name, i })).filter((row) => row.name), [roster]);
+  const atlas = useMemo(
+    () =>
+      buildNameAtlas(
+        named.map((row) => ({
+          text: row.name,
+          commander: false,
+          plain: false,
+          fill: "#111111",
+          frame: true,
+          plate: "#ffffff",
+        })),
+        true,
+        true,
+      ),
+    [named],
+  );
+
+  useEffect(() => {
+    for (const sheet of atlas.sheets) sheet.material.depthTest = false;
+    return () => atlas.dispose();
+  }, [atlas]);
+
+  useEffect(() => {
+    let drop = false;
+    danceReset();
+    const loader = new GLTFLoader();
+    void (async () => {
+      try {
+        const files: Gltf[] = [];
+        for (const url of DANCE_MODELS) {
+          try {
+            files.push(await loadGlb(loader, url));
+          } catch (err) {
+            console.warn("dance model", url, err);
+          }
+        }
+        if (drop) return;
+        if (!files.length) {
+          console.warn("dance: dans1/2/4/5.glb henüz yok — public/models’e koy");
+          return;
+        }
+
+        for (const gltf of files) {
+          toLambert(gltf.scene);
+          fit(gltf.scene);
+        }
+
+        const root = host.current;
+        const men: Dancer[] = [];
+        for (let i = 0; i < DANCE_N; i++) {
+          const source = files[i % files.length];
+          const body = cloneSkinned(source.scene) as THREE.Group;
+          const holder = new THREE.Group();
+          holder.add(body);
+          const spot = danceSpot(i);
+          holder.position.set(spot.x, 0, spot.z);
+          holder.rotation.y = spot.yaw;
+          const mix = new THREE.AnimationMixer(body);
+          const clip = pickClip(source.animations);
+          if (clip) {
+            const action = mix.clipAction(clip);
+            action.setLoop(THREE.LoopRepeat, Infinity);
+            action.reset().play();
+            action.time = (i * 0.37) % Math.max(0.1, clip.duration);
+          }
+          root?.add(holder);
+          men.push({ i, host: holder, mix });
+        }
+        if (drop) return;
+        pack.current = men;
+      } catch (err) {
+        console.warn("dance", err);
+      } finally {
+        if (!drop) danceMarkReady();
+      }
+    })();
+    return () => {
+      drop = true;
+      for (const man of pack.current) man.mix.stopAllAction();
+      pack.current = [];
+      host.current?.clear();
+      danceReset();
+    };
+  }, []);
+
+  useFrame((_, dt) => {
+    const t = danceT();
+    for (const man of pack.current) {
+      if (t > 0) man.mix.update(dt);
+    }
+    for (const sheet of atlas.sheets) {
+      const inst = sheet.geometry.userData.mesh as THREE.InstancedMesh | undefined;
+      if (!inst) continue;
+      const sheetIndex = atlas.sheets.indexOf(sheet);
+      for (let n = 0; n < named.length; n++) {
+        const cell = atlas.cells[n];
+        if (!cell || cell.sheet !== sheetIndex) continue;
+        const spot = danceSpot(named[n].i);
+        const dx = spot.x - camera.position.x;
+        const dy = 2.15 - camera.position.y;
+        const dz = spot.z - camera.position.z;
+        const dist = Math.hypot(dx, dy, dz);
+        const base = Math.min(0.7, 0.32 + dist * 0.014);
+        const w = base * 1.65;
+        const h = (cell.sy * w) / Math.max(cell.sx, 0.01);
+        dummy.position.set(spot.x, 2.15, spot.z);
+        dummy.quaternion.copy(camera.quaternion);
+        dummy.scale.set(w, h, 1);
+        dummy.updateMatrix();
+        inst.setMatrixAt(cell.local, dummy.matrix);
+      }
+      inst.instanceMatrix.needsUpdate = true;
+    }
+  });
+
+  return (
+    <group>
+      <hemisphereLight args={["#ffffff", "#d0d0d0", 1.35]} />
+      <directionalLight position={[4, 12, 6]} intensity={1.55} color="#ffffff" />
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, -1.2]} receiveShadow>
+        <planeGeometry args={[48, 48]} />
+        <meshLambertMaterial color="#ffffff" />
+      </mesh>
+      <group ref={host} />
+      {atlas.sheets.map((sheet, s) => (
+        <instancedMesh
+          key={s}
+          args={[sheet.geometry, sheet.material, Math.max(1, sheet.count)]}
+          frustumCulled={false}
+          renderOrder={20}
+          ref={(node) => {
+            sheet.geometry.userData.mesh = node;
+          }}
+        />
+      ))}
+    </group>
+  );
+}
+
+export function DanceCam() {
+  const camera = useThree((s) => s.camera) as THREE.PerspectiveCamera;
+  useFrame(() => {
+    const shot = danceCam(danceT());
+    camera.position.set(shot.x, shot.y, shot.z);
+    camera.lookAt(shot.lx, shot.ly, shot.lz);
+    if (camera.fov !== shot.fov) {
+      camera.fov = shot.fov;
+      camera.updateProjectionMatrix();
+    }
+  });
+  return null;
+}

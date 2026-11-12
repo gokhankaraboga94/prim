@@ -19,6 +19,7 @@ import { ARAGORN_ID, ARAGORN_MODE, ARAGORN_SECONDS } from "./aragornTestReel";
 import { DOVUS_ID, DOVUS_MODE, DOVUS_SECONDS } from "./dovusReel";
 import { VSSS_ID, VSSS_MODE, VSSS_SECONDS } from "./vsssReel";
 import { EPIK_ID, EPIK_MODE, EPIK_SECONDS } from "./epikReel";
+import { DANCE_ID, DANCE_MODE, DANCE_SECONDS } from "./danceReel";
 import { KUYULAR_ID, KUYULAR_MODE, KUYULAR_SECONDS } from "./kuyularReel";
 import { TEK_ID, TEK_MODE, TEK_SECONDS } from "./tekReel";
 import { TEK2_ID, TEK2_MODE, TEK2_SECONDS } from "./tek2Reel";
@@ -31,6 +32,7 @@ export const RECENT_BUTTON_LIMIT = 20;
 
 /** Yeniden eskiye. Bir buton güncellenirse en üste alınır, en alttaki 20'nin dışına düşer. */
 export const RECENT_BUTTONS = [
+  { id: DANCE_ID, label: `${DANCE_MODE.label} — ${DANCE_SECONDS}s`, seconds: DANCE_SECONDS },
   { id: EPIK_ID, label: `${EPIK_MODE.label} — ${EPIK_SECONDS}s`, seconds: EPIK_SECONDS },
   { id: DEV17_ID, label: `${DEV17_MODE.label} — ${DEV17_SECONDS}s`, seconds: DEV17_SECONDS },
   { id: VSSS_ID, label: `${VSSS_MODE.label} — ${VSSS_SECONDS}s`, seconds: VSSS_SECONDS },
