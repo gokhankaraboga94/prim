@@ -258,12 +258,12 @@ export function ReelCapture({ soldiers, names, commanders = [], level, pressure,
       if (kurtar || gecme || kuyu || kapi || magdur || kare || devKong || savas || kirmizi || baska || aragorn || dovus || vsss || epik || dance || kuyular || tek || tek2 || tek3 || kale || run) {
         const loadStart = performance.now();
         const sceneReady = kurtar ? kurtarIsReady : gecme ? gecmeIsReady : kuyu ? kuyuIsReady : devKong ? devKongIsReady : savas ? savasIsReady : kirmizi ? kirmiziIsReady : baska ? baskaIsReady : aragorn ? aragornIsReady : dance ? danceIsReady : epik ? epikIsReady : vsss ? vsssIsReady : dovus ? dovusIsReady : kuyular ? kuyularIsReady : tek ? tekIsReady : tek2 ? tek2IsReady : tek3 ? tek3IsReady : kale ? kaleIsReady : run ? runIsReady : kare ? kareIsReady : magdur ? magdurIsReady : kapiIsReady;
-        while (!sceneReady() && performance.now() - loadStart < (savas || kirmizi || baska || kuyular || tek || tek2 || tek3 || kale || run ? 50000 : 25000)) {
+        while (!sceneReady() && performance.now() - loadStart < (dance ? 90000 : savas || kirmizi || baska || kuyular || tek || tek2 || tek3 || kale || run ? 50000 : 25000)) {
           await wait(80);
           if (stop) return;
         }
         if (!sceneReady()) {
-          setErr("Sahne hazırlanamadı. İptal deyip tekrar dene.");
+          setErr(dance ? "Dans modelleri / mekan yüklenemedi. İptal deyip tekrar dene." : "Sahne hazırlanamadı. İptal deyip tekrar dene.");
           setPhase("err");
           return;
         }

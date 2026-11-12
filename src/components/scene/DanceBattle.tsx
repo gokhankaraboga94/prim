@@ -159,36 +159,28 @@ export function DanceBattle({ names }: { names: string[] }) {
       try {
         const files: Gltf[] = [];
         for (const url of DANCE_MODELS) {
-          try {
-            files.push(await loadGlb(loader, url));
-          } catch (err) {
-            console.warn("dance model", url, err);
-          }
+          const gltf = await loadGlb(loader, url);
+          if (drop) return;
+          files.push(gltf);
         }
+        if (files.length < DANCE_MODELS.length) {
+          throw new Error("dans modelleri eksik");
+        }
+
+        const venue = await loadGlb(loader, DANCE_MEKAN);
         if (drop) return;
-        if (!files.length) {
-          console.warn("dance: dans1/2/3.glb henüz yok — public/models’e koy");
-          return;
-        }
 
         for (const gltf of files) {
           toLambert(gltf.scene);
           fit(gltf.scene);
         }
-
-        try {
-          const venue = await loadGlb(loader, DANCE_MEKAN);
-          if (!drop) {
-            toLambert(venue.scene);
-            fitMekan(venue.scene, 24);
-            floor.current?.clear();
-            floor.current?.add(venue.scene);
-          }
-        } catch (err) {
-          console.warn("dance mekan", err);
-        }
+        toLambert(venue.scene);
+        fitMekan(venue.scene, 24);
+        floor.current?.clear();
+        floor.current?.add(venue.scene);
 
         const root = host.current;
+        if (!root) throw new Error("dans sahne kökü yok");
         const men: Dancer[] = [];
         for (let i = 0; i < DANCE_N; i++) {
           const source = files[i % files.length];
@@ -201,17 +193,22 @@ export function DanceBattle({ names }: { names: string[] }) {
           const mix = new THREE.AnimationMixer(body);
           const clips = danceClips(source.animations);
           const man: Dancer = { i, host: holder, mix, clips, index: 0, offFinished: null };
-          // Stagger which dance they start on so the floor isn’t locked in sync
           if (clips.length) playClip(man, i % clips.length);
-          root?.add(holder);
+          root.add(holder);
           men.push(man);
         }
         if (drop) return;
+        if (men.length < DANCE_N || !floor.current?.children.length) {
+          throw new Error("dans sahne eksik");
+        }
         pack.current = men;
+        // One frame so GPU uploads settle before record starts
+        await new Promise<void>((ok) => requestAnimationFrame(() => ok()));
+        if (drop) return;
+        danceMarkReady();
       } catch (err) {
         console.warn("dance", err);
-      } finally {
-        if (!drop) danceMarkReady();
+        // ready kalmaz → kayıt başlamaz / timeout hata verir
       }
     })();
     return () => {
