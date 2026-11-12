@@ -37,23 +37,28 @@ export function danceSpot(i: number) {
 
 export type DanceCam = { x: number; y: number; z: number; lx: number; ly: number; lz: number; fov: number };
 
+const CAM_CX = 0;
+const CAM_CZ = -1.6;
+const CAM_R = 9.4;
+const CAM_Y = 3.15;
+const CAM_LOOK_Y = 1.35;
+
 /**
- * 0s: group already dancing (motion in frame 1).
- * 1–3s: push in so names read.
- * Then slow sweep across the floor; pull back for the end.
+ * Same distance the whole time — full 360° orbit so every dancer enters frame.
+ * First frame already shows the front row dancing.
  */
 export function danceCam(t: number): DanceCam {
-  if (t < 1.1) return { x: 0.2, y: 3.4, z: 9.2, lx: 0, ly: 1.2, lz: -1.4, fov: 42 };
-  if (t < 3.2) return { x: 0.1, y: 2.55, z: 7.2, lx: 0, ly: 1.35, lz: -1.2, fov: 38 };
-  if (t < 8) {
-    const u = (t - 3.2) / 4.8;
-    return { x: -3.2 + u * 6.4, y: 2.4, z: 6.4, lx: -1.2 + u * 2.4, ly: 1.4, lz: -1.1, fov: 36 };
-  }
-  if (t < 13) {
-    const u = (t - 8) / 5;
-    return { x: 2.4 - u * 2.2, y: 2.2 + u * 0.4, z: 5.6 + u * 1.2, lx: 0.4 - u * 0.4, ly: 1.45, lz: -1.5, fov: 34 };
-  }
-  return { x: 0.15, y: 3.6, z: 10.2, lx: 0, ly: 1.25, lz: -1.6, fov: 44 };
+  const u = Math.min(1, Math.max(0, t) / DANCE_SECONDS);
+  const ang = u * Math.PI * 2;
+  return {
+    x: CAM_CX + Math.sin(ang) * CAM_R,
+    y: CAM_Y,
+    z: CAM_CZ + Math.cos(ang) * CAM_R,
+    lx: CAM_CX,
+    ly: CAM_LOOK_Y,
+    lz: CAM_CZ,
+    fov: 40,
+  };
 }
 
 let playAt = 0;
