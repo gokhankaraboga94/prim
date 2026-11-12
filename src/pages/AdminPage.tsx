@@ -1841,7 +1841,7 @@ export function AdminPage() {
             <p className="muted">20 saniye. Ekranda yazı yok. King Kong ve hulk_v2 eşit boyda, yeşil çimde karşı karşıya. Kamera ikisini birden görür. Koşu ve yürüyüş yok. Yumruk, tekme, savurma, kafa, takla ve kazma sırayla gelir. Her hamle diğerinin gövdesinde biter. Kayıt modeller inmeden başlamaz.</p>
           )}
           {isDance2(reelShot) && (
-            <p className="muted">18 saniye. Beyaz zemin (mekan yok). Ekranda kanca yazısı yok. Son katılan 15 takipçi dans eder (dans1/2/3). İsimler kafanın üstünde siyah, beyaz plakada. Kamera 360°. Kayıt modeller inmeden başlamaz.</p>
+            <p className="muted">18 saniye. Neon kulüp sahnesi (mekan.glb yok). Ekranda kanca yazısı yok. Son katılan 15 takipçi dans eder (dans1/2/3). İsimler kafanın üstünde siyah, beyaz plakada. Kamera 360°. Kayıt modeller inmeden başlamaz.</p>
           )}
           {isDance(reelShot) && (
             <p className="muted">30 saniye. Zemin mekan.glb. Ekranda kanca yazısı yok. Son katılan 15 takipçi dans eder (dans1/2/3), aynı sokak kotunda ve daha sıkı. İsimler kafanın üstünde siyah, beyaz plakada. Kamera 360°. Kayıt modeller inmeden başlamaz.</p>

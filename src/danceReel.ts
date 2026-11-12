@@ -18,7 +18,7 @@ export const DANCE_MODELS = [
 
 export const DANCE_MEKAN = "/models/mekan.glb";
 export const DANCE_URLS = [...DANCE_MODELS, DANCE_MEKAN];
-/** dance2: same dancers, no venue — white floor only. */
+/** dance2: same dancers, procedural neon club (no mekan.glb). */
 export const DANCE2_URLS = [...DANCE_MODELS];
 
 export function isDance(id: string | null | undefined): id is DanceId {
@@ -41,12 +41,12 @@ export function danceRoster(names: readonly string[]) {
   return out;
 }
 
-/** Fallback / dance2 grid — wide enough that name plates don’t stack. */
+/** dance2 pack on the club stage — spaced so name plates stay readable. */
 export function danceSpot(i: number) {
   const row = Math.floor(i / 5);
   const col = i % 5;
-  const x = (col - 2) * 1.25 + (row % 2) * 0.22;
-  const z = -row * 1.4;
+  const x = (col - 2) * 1.55 + (row % 2) * 0.28;
+  const z = -row * 1.65;
   return { x, z, yaw: Math.PI };
 }
 
@@ -78,9 +78,9 @@ export type DanceCam = { x: number; y: number; z: number; lx: number; ly: number
 /** Orbit target — DanceBattle updates these after street placement. */
 let camCx = 0;
 let camCz = -1.6;
-const CAM_R = 11.2;
-const CAM_Y = 3.55;
-const CAM_LOOK_Y = 1.45;
+const CAM_R = 9.8;
+const CAM_Y = 3.35;
+const CAM_LOOK_Y = 1.25;
 
 export function danceSetCamTarget(x: number, z: number) {
   camCx = x;

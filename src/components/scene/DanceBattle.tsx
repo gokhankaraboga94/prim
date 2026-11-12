@@ -20,6 +20,7 @@ import {
   danceSpot,
   danceT,
 } from "../../danceReel";
+import { Dance2Club } from "./Dance2Club";
 
 type Gltf = Parameters<Parameters<GLTFLoader["load"]>[1]>[0];
 
@@ -228,7 +229,7 @@ export function DanceBattle({ names, mekan = true }: { names: string[]; mekan?: 
             holder.position.set(foot.x, foot.y + 0.02, foot.z);
           } else {
             const spot = danceSpot(i);
-            holder.position.set(spot.x, 0, spot.z);
+            holder.position.set(spot.x, 0.03, spot.z);
           }
           holder.rotation.y = Math.PI;
           const mix = new THREE.AnimationMixer(body);
@@ -310,13 +311,13 @@ export function DanceBattle({ names, mekan = true }: { names: string[]; mekan?: 
 
   return (
     <group>
-      <hemisphereLight args={["#ffffff", "#d0d0d0", 1.35]} />
-      <directionalLight position={[4, 12, 6]} intensity={1.55} color="#ffffff" />
-      {!mekan && (
-        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, -1.2]} receiveShadow>
-          <planeGeometry args={[48, 48]} />
-          <meshLambertMaterial color="#ffffff" />
-        </mesh>
+      {mekan ? (
+        <>
+          <hemisphereLight args={["#ffffff", "#d0d0d0", 1.35]} />
+          <directionalLight position={[4, 12, 6]} intensity={1.55} color="#ffffff" />
+        </>
+      ) : (
+        <Dance2Club />
       )}
       <group ref={floor} />
       <group ref={host} />

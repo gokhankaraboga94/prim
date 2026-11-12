@@ -1,7 +1,7 @@
 import { Canvas } from "@react-three/fiber";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { DanceBattle, DanceCam } from "../components/scene/DanceBattle";
-import { DANCE_URLS, danceIsReady, danceStart, danceWhenReady } from "../danceReel";
+import { DANCE2_URLS, DANCE_URLS, danceIsReady, danceStart, danceWhenReady } from "../danceReel";
 import { preloadGlbs } from "../arenaPreload";
 
 const NAMES = [
@@ -11,6 +11,7 @@ const NAMES = [
 ];
 
 export function DancePreviewPage() {
+  const club = useMemo(() => new URLSearchParams(window.location.search).get("v") === "2", []);
   const [ready, setReady] = useState(false);
   const [playing, setPlaying] = useState(false);
   const [err, setErr] = useState("");
@@ -19,7 +20,7 @@ export function DancePreviewPage() {
     let drop = false;
     void (async () => {
       try {
-        await preloadGlbs([...DANCE_URLS]);
+        await preloadGlbs([...(club ? DANCE2_URLS : DANCE_URLS)]);
         if (drop) return;
         setReady(true);
         await danceWhenReady();
@@ -41,22 +42,22 @@ export function DancePreviewPage() {
       drop = true;
       window.clearInterval(poll);
     };
-  }, []);
+  }, [club]);
 
   return (
-    <div style={{ width: "100vw", height: "100vh", background: "#111", position: "relative" }}>
+    <div style={{ width: "100vw", height: "100vh", background: "#07090f", position: "relative" }}>
       <div style={{ position: "absolute", zIndex: 2, top: 8, left: 8, color: "#fff", font: "14px sans-serif" }}>
-        dans önizleme {playing ? "· oynuyor" : ready ? "· sahne yükleniyor" : "· modeller"}
+        {club ? "dance2 kulüp" : "dance mekan"} {playing ? "· oynuyor" : ready ? "· sahne yükleniyor" : "· modeller"}
         {err ? ` · hata: ${err}` : ""}
       </div>
       {ready && (
         <Canvas
-          camera={{ position: [0, 3, 10], fov: 40, near: 0.1, far: 200 }}
+          camera={{ position: [0, 3.4, 10], fov: 40, near: 0.1, far: 200 }}
           gl={{ antialias: true, alpha: false }}
           style={{ width: "100%", height: "100%" }}
         >
-          <color attach="background" args={["#c8d2dc"]} />
-          <DanceBattle names={NAMES} mekan />
+          <color attach="background" args={[club ? "#07090f" : "#c8d2dc"]} />
+          <DanceBattle names={NAMES} mekan={!club} />
           <DanceCam />
         </Canvas>
       )}
