@@ -8,8 +8,7 @@ export const DANCE_N = 15;
 export const DANCE_MODELS = [
   "/models/dans1.glb",
   "/models/dans2.glb",
-  "/models/dans4.glb",
-  "/models/dans5.glb",
+  "/models/dans3.glb",
 ] as const;
 
 export const DANCE_URLS = [...DANCE_MODELS];

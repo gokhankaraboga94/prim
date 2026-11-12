@@ -1827,7 +1827,7 @@ export function AdminPage() {
             <p className="muted">20 saniye. Ekranda yazı yok. King Kong ve hulk_v2 eşit boyda, yeşil çimde karşı karşıya. Kamera ikisini birden görür. Koşu ve yürüyüş yok. Yumruk, tekme, savurma, kafa, takla ve kazma sırayla gelir. Her hamle diğerinin gövdesinde biter. Kayıt modeller inmeden başlamaz.</p>
           )}
           {isDance(reelShot) && (
-            <p className="muted">18 saniye. Beyaz zemin, ekranda kanca yazısı yok. Son katılan 15 takipçi dans eder (dans1/2/4/5). İsimler kafanın üstünde siyah, beyaz plakada. Kayıt modeller inmeden başlamaz.</p>
+            <p className="muted">18 saniye. Beyaz zemin, ekranda kanca yazısı yok. Son katılan 15 takipçi dans eder (dans1/2/3). İsimler kafanın üstünde siyah, beyaz plakada. Kayıt modeller inmeden başlamaz.</p>
           )}
           {isEpik(reelShot) && (
             <p className="muted">20 saniye. Ekranda yazı yok. Premium kuşatma: ilk karede kale ve ışık hüzmesi. Orduya dalış, üç isimli savaşçı yakın planı, yaya hücum, kapı, siyah fade. Standart malzeme, env map, sis, toz ve ok. Kayıt 2x çözünürlük. Atlı yok.</p>
