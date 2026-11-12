@@ -56,7 +56,7 @@ export function DancePreviewPage() {
           gl={{ antialias: true, alpha: false }}
           style={{ width: "100%", height: "100%" }}
         >
-          <color attach="background" args={[club ? "#07090f" : "#c8d2dc"]} />
+          <color attach="background" args={[club ? "#07090f" : "#1a1c22"]} />
           <DanceBattle names={NAMES} mekan={!club} />
           <DanceCam />
         </Canvas>

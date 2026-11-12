@@ -202,18 +202,27 @@ export function DanceBattle({ names, mekan = true }: { names: string[]; mekan?: 
           if (useStreet) {
             venue.scene.position.x -= packCx;
             venue.scene.position.z -= packCz;
+            venue.scene.updateMatrixWorld(true);
           }
           floor.current?.clear();
           floor.current?.add(venue.scene);
           if (useStreet) {
             const deckY = DANCE_STREET_FEET[0].y;
             const pad = new THREE.Mesh(
-              new THREE.BoxGeometry(11.2, 0.06, 7.4),
+              new THREE.BoxGeometry(14, 0.06, 9),
               new THREE.MeshLambertMaterial({ color: "#3f3f42" }),
             );
             pad.position.set(0, deckY - 0.03, 0);
             pad.receiveShadow = false;
             floor.current?.add(pad);
+            // Catch-all underlay so the void outside the GLB never reads as empty sky.
+            const under = new THREE.Mesh(
+              new THREE.CircleGeometry(60, 48),
+              new THREE.MeshLambertMaterial({ color: "#15171c" }),
+            );
+            under.rotation.x = -Math.PI / 2;
+            under.position.y = -0.05;
+            floor.current?.add(under);
           }
           floor.current?.updateMatrixWorld(true);
         } else {
