@@ -18,6 +18,7 @@ import { BASKA_ID, BASKA_MODE, BASKA_SECONDS } from "./baskaReel";
 import { ARAGORN_ID, ARAGORN_MODE, ARAGORN_SECONDS } from "./aragornTestReel";
 import { DOVUS_ID, DOVUS_MODE, DOVUS_SECONDS } from "./dovusReel";
 import { VSSS_ID, VSSS_MODE, VSSS_SECONDS } from "./vsssReel";
+import { EPIK_ID, EPIK_MODE, EPIK_SECONDS } from "./epikReel";
 import { KUYULAR_ID, KUYULAR_MODE, KUYULAR_SECONDS } from "./kuyularReel";
 import { TEK_ID, TEK_MODE, TEK_SECONDS } from "./tekReel";
 import { TEK2_ID, TEK2_MODE, TEK2_SECONDS } from "./tek2Reel";
@@ -30,6 +31,7 @@ export const RECENT_BUTTON_LIMIT = 20;
 
 /** Yeniden eskiye. Bir buton güncellenirse en üste alınır, en alttaki 20'nin dışına düşer. */
 export const RECENT_BUTTONS = [
+  { id: EPIK_ID, label: `${EPIK_MODE.label} — ${EPIK_SECONDS}s`, seconds: EPIK_SECONDS },
   { id: DEV17_ID, label: `${DEV17_MODE.label} — ${DEV17_SECONDS}s`, seconds: DEV17_SECONDS },
   { id: VSSS_ID, label: `${VSSS_MODE.label} — ${VSSS_SECONDS}s`, seconds: VSSS_SECONDS },
   { id: DEV16_ID, label: `${DEV16_MODE.label} — ${DEV16_SECONDS}s`, seconds: DEV16_SECONDS },
