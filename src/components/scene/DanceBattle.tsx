@@ -7,12 +7,16 @@ import { preloadedGlb } from "../../arenaPreload";
 import { buildNameAtlas } from "../../nameAtlas";
 import {
   DANCE_MEKAN,
+  DANCE_MEKAN_SPAN,
   DANCE_MODELS,
   DANCE_N,
+  DANCE_STREET_FEET,
   danceCam,
   danceMarkReady,
   danceReset,
+  danceResetCamTarget,
   danceRoster,
+  danceSetCamTarget,
   danceSpot,
   danceT,
 } from "../../danceReel";
@@ -29,7 +33,7 @@ type Dancer = {
   offFinished: ((ev: FinishedEv) => void) | null;
 };
 
-const HEIGHT = 1.78;
+const HEIGHT = 1.55;
 const dummy = new THREE.Object3D();
 /** Average street Y under the dancers — camera follows this lift. */
 let streetLift = 0;
@@ -84,8 +88,8 @@ function fit(root: THREE.Object3D) {
   );
 }
 
-/** Seat venue on y=0, center XZ, scale footprint to ~dance floor width. */
-function fitMekan(root: THREE.Object3D, targetSpan = 22) {
+/** Seat venue on y=0, center XZ — span must match DANCE_STREET_FEET bake. */
+function fitMekan(root: THREE.Object3D, targetSpan = DANCE_MEKAN_SPAN) {
   root.updateMatrixWorld(true);
   const box = new THREE.Box3().setFromObject(root);
   const sx = Math.max(0.001, box.max.x - box.min.x);
@@ -99,59 +103,6 @@ function fitMekan(root: THREE.Object3D, targetSpan = 22) {
   root.position.z -= (next.min.z + next.max.z) / 2;
   root.position.y -= next.min.y;
   root.updateMatrixWorld(true);
-}
-
-/**
- * Street height under (x,z). Only accepts upward faces in the bottom band
- * of the venue (real road), so rooftops / ledges are ignored.
- */
-function sampleStreetY(root: THREE.Object3D, x: number, z: number, maxFloorY: number, fallback = 0) {
-  root.updateMatrixWorld(true);
-  const meshes: THREE.Object3D[] = [];
-  root.traverse((obj) => {
-    const mesh = obj as THREE.Mesh;
-    if (mesh.isMesh) meshes.push(mesh);
-  });
-  if (!meshes.length) return fallback;
-  const ray = new THREE.Raycaster();
-  ray.set(new THREE.Vector3(x, 120, z), new THREE.Vector3(0, -1, 0));
-  ray.far = 250;
-  const hits = ray.intersectObjects(meshes, false);
-  if (!hits.length) return fallback;
-  let best: THREE.Intersection | null = null;
-  for (const hit of hits) {
-    if (hit.point.y > maxFloorY) continue;
-    if (hit.face) {
-      const n = hit.face.normal.clone().transformDirection(hit.object.matrixWorld).normalize();
-      if (n.y < 0.65) continue;
-    }
-    if (!best || hit.point.y < best.point.y) best = hit;
-  }
-  return best?.point.y ?? fallback;
-}
-
-/** One shared street height for the whole pack — nobody climbs a roof alone. */
-function sharedStreetY(root: THREE.Object3D) {
-  root.updateMatrixWorld(true);
-  const box = new THREE.Box3().setFromObject(root);
-  const h = Math.max(0.001, box.max.y - box.min.y);
-  const maxFloorY = box.min.y + h * 0.18;
-  const probes: Array<[number, number]> = [];
-  for (let i = 0; i < DANCE_N; i++) {
-    const s = danceSpot(i);
-    probes.push([s.x, s.z]);
-  }
-  probes.push([0, -1.05], [0, 0], [0, -2.1]);
-  const ys: number[] = [];
-  for (const [x, z] of probes) {
-    const y = sampleStreetY(root, x, z, maxFloorY, Number.NaN);
-    if (Number.isFinite(y)) ys.push(y);
-  }
-  if (!ys.length) return Math.max(0, box.min.y);
-  ys.sort((a, b) => a - b);
-  // Median of the lower half → stable road plane
-  const low = ys.slice(0, Math.max(1, Math.ceil(ys.length / 2)));
-  return low[Math.floor(low.length / 2)];
 }
 
 /** Prefer dance-named clips; otherwise keep all clips in file order (1–3 dances). */
@@ -218,6 +169,8 @@ export function DanceBattle({ names, mekan = true }: { names: string[]; mekan?: 
   useEffect(() => {
     let drop = false;
     danceReset();
+    danceResetCamTarget();
+    streetLift = 0;
     const loader = new GLTFLoader();
     void (async () => {
       try {
@@ -236,16 +189,28 @@ export function DanceBattle({ names, mekan = true }: { names: string[]; mekan?: 
           fit(gltf.scene);
         }
 
-        let streetY = 0;
+        const useStreet = mekan && DANCE_STREET_FEET.length === DANCE_N;
         if (mekan) {
           const venue = await loadGlb(loader, DANCE_MEKAN);
           if (drop) return;
           toLambert(venue.scene);
-          fitMekan(venue.scene, 24);
+          fitMekan(venue.scene, DANCE_MEKAN_SPAN);
           floor.current?.clear();
           floor.current?.add(venue.scene);
+          if (useStreet) {
+            const deckY = DANCE_STREET_FEET[0].y;
+            const cx = DANCE_STREET_FEET.reduce((s, f) => s + f.x, 0) / DANCE_N;
+            const cz = DANCE_STREET_FEET.reduce((s, f) => s + f.z, 0) / DANCE_N;
+            // Asphalt dance pad — flat open plaza so every foot plants at the same height.
+            const pad = new THREE.Mesh(
+              new THREE.BoxGeometry(11.2, 0.06, 7.4),
+              new THREE.MeshLambertMaterial({ color: "#3f3f42" }),
+            );
+            pad.position.set(cx, deckY - 0.03, cz);
+            pad.receiveShadow = false;
+            floor.current?.add(pad);
+          }
           floor.current?.updateMatrixWorld(true);
-          streetY = sharedStreetY(venue.scene);
         } else {
           floor.current?.clear();
         }
@@ -258,9 +223,14 @@ export function DanceBattle({ names, mekan = true }: { names: string[]; mekan?: 
           const body = cloneSkinned(source.scene) as THREE.Group;
           const holder = new THREE.Group();
           holder.add(body);
-          const spot = danceSpot(i);
-          holder.position.set(spot.x, streetY, spot.z);
-          holder.rotation.y = spot.yaw;
+          if (useStreet) {
+            const foot = DANCE_STREET_FEET[i];
+            holder.position.set(foot.x, foot.y + 0.02, foot.z);
+          } else {
+            const spot = danceSpot(i);
+            holder.position.set(spot.x, 0, spot.z);
+          }
+          holder.rotation.y = Math.PI;
           const mix = new THREE.AnimationMixer(body);
           const clips = danceClips(source.animations);
           const man: Dancer = { i, host: holder, mix, clips, index: 0, offFinished: null };
@@ -273,6 +243,9 @@ export function DanceBattle({ names, mekan = true }: { names: string[]; mekan?: 
         if (mekan && !floor.current?.children.length) throw new Error("mekan yüklenemedi");
         pack.current = men;
         streetLift = men.reduce((s, m) => s + m.host.position.y, 0) / Math.max(1, men.length);
+        const cx = men.reduce((s, m) => s + m.host.position.x, 0) / men.length;
+        const cz = men.reduce((s, m) => s + m.host.position.z, 0) / men.length;
+        danceSetCamTarget(cx, cz);
         await new Promise<void>((ok) => requestAnimationFrame(() => ok()));
         if (drop) return;
         danceMarkReady();
@@ -283,6 +256,7 @@ export function DanceBattle({ names, mekan = true }: { names: string[]; mekan?: 
     return () => {
       drop = true;
       streetLift = 0;
+      danceResetCamTarget();
       for (const man of pack.current) {
         if (man.offFinished) {
           man.mix.removeEventListener("finished", man.offFinished as unknown as (e: object) => void);
@@ -308,17 +282,23 @@ export function DanceBattle({ names, mekan = true }: { names: string[]; mekan?: 
       for (let n = 0; n < named.length; n++) {
         const cell = atlas.cells[n];
         if (!cell || cell.sheet !== sheetIndex) continue;
-        const spot = danceSpot(named[n].i);
-        const foot = pack.current.find((m) => m.i === named[n].i)?.host.position.y ?? 0;
-        const headY = foot + 2.15;
-        const dx = spot.x - camera.position.x;
+        const man = pack.current.find((m) => m.i === named[n].i);
+        const idx = named[n].i;
+        const px = man?.host.position.x ?? danceSpot(idx).x;
+        const pz = man?.host.position.z ?? danceSpot(idx).z;
+        const foot = man?.host.position.y ?? 0;
+        const row = Math.floor(idx / 5);
+        const col = idx % 5;
+        // Stagger plates by row + slight col offset so names stay readable in orbit
+        const headY = foot + 2.15 + row * 0.35 + (col % 2) * 0.12;
+        const dx = px - camera.position.x;
         const dy = headY - camera.position.y;
-        const dz = spot.z - camera.position.z;
+        const dz = pz - camera.position.z;
         const dist = Math.hypot(dx, dy, dz);
-        const base = Math.min(0.7, 0.32 + dist * 0.014);
-        const w = base * 1.65;
+        const base = Math.min(0.52, 0.24 + dist * 0.011);
+        const w = base * 1.45;
         const h = (cell.sy * w) / Math.max(cell.sx, 0.01);
-        dummy.position.set(spot.x, headY, spot.z);
+        dummy.position.set(px, headY, pz);
         dummy.quaternion.copy(camera.quaternion);
         dummy.scale.set(w, h, 1);
         dummy.updateMatrix();

@@ -41,22 +41,56 @@ export function danceRoster(names: readonly string[]) {
   return out;
 }
 
-/** 3 rows × 5 — tighter pack so everyone reads in the orbit. */
+/** Fallback / dance2 grid — wide enough that name plates don’t stack. */
 export function danceSpot(i: number) {
   const row = Math.floor(i / 5);
   const col = i % 5;
-  const x = (col - 2) * 0.95 + (row % 2) * 0.2;
-  const z = -row * 1.05;
+  const x = (col - 2) * 1.25 + (row % 2) * 0.22;
+  const z = -row * 1.4;
   return { x, z, yaw: Math.PI };
 }
 
+/**
+ * Baked open-plaza feet for mekan.glb after fitMekan(DANCE_MEKAN_SPAN).
+ * Flat cleared deck (no props), same Y, ~1.5×1.55 spacing so names don’t stack.
+ */
+export const DANCE_MEKAN_SPAN = 34;
+export const DANCE_STREET_FEET: ReadonlyArray<{ x: number; y: number; z: number }> = [
+  { x: 0.5, y: 2.5, z: 11.5 },
+  { x: 2.25, y: 2.5, z: 11.5 },
+  { x: 4.0, y: 2.5, z: 11.5 },
+  { x: 5.75, y: 2.5, z: 11.5 },
+  { x: 7.5, y: 2.5, z: 11.5 },
+  { x: 0.72, y: 2.5, z: 9.7 },
+  { x: 2.47, y: 2.5, z: 9.7 },
+  { x: 4.22, y: 2.5, z: 9.7 },
+  { x: 5.97, y: 2.5, z: 9.7 },
+  { x: 7.72, y: 2.5, z: 9.7 },
+  { x: 0.5, y: 2.5, z: 7.9 },
+  { x: 2.25, y: 2.5, z: 7.9 },
+  { x: 4.0, y: 2.5, z: 7.9 },
+  { x: 5.75, y: 2.5, z: 7.9 },
+  { x: 7.5, y: 2.5, z: 7.9 },
+];
+
 export type DanceCam = { x: number; y: number; z: number; lx: number; ly: number; lz: number; fov: number };
 
-const CAM_CX = 0;
-const CAM_CZ = -1.6;
-const CAM_R = 9.4;
-const CAM_Y = 3.15;
-const CAM_LOOK_Y = 1.35;
+/** Orbit target — DanceBattle updates these after street placement. */
+let camCx = 0;
+let camCz = -1.6;
+const CAM_R = 11.2;
+const CAM_Y = 3.55;
+const CAM_LOOK_Y = 1.45;
+
+export function danceSetCamTarget(x: number, z: number) {
+  camCx = x;
+  camCz = z;
+}
+
+export function danceResetCamTarget() {
+  camCx = 0;
+  camCz = -1.6;
+}
 
 /**
  * Same distance the whole time — full 360° orbit so every dancer enters frame.
@@ -66,12 +100,12 @@ export function danceCam(t: number): DanceCam {
   const u = Math.min(1, Math.max(0, t) / DANCE_SECONDS);
   const ang = u * Math.PI * 2;
   return {
-    x: CAM_CX + Math.sin(ang) * CAM_R,
+    x: camCx + Math.sin(ang) * CAM_R,
     y: CAM_Y,
-    z: CAM_CZ + Math.cos(ang) * CAM_R,
-    lx: CAM_CX,
+    z: camCz + Math.cos(ang) * CAM_R,
+    lx: camCx,
     ly: CAM_LOOK_Y,
-    lz: CAM_CZ,
+    lz: camCz,
     fov: 40,
   };
 }
