@@ -6,6 +6,7 @@ import * as THREE from "three";
 import { preloadedGlb } from "../../arenaPreload";
 import { buildNameAtlas } from "../../nameAtlas";
 import {
+  DANCE_MEKAN,
   DANCE_MODELS,
   DANCE_N,
   danceCam,
@@ -73,6 +74,22 @@ function fit(root: THREE.Object3D) {
   );
 }
 
+/** Seat venue on y=0, center XZ, scale footprint to ~dance floor width. */
+function fitMekan(root: THREE.Object3D, targetSpan = 22) {
+  root.updateMatrixWorld(true);
+  const box = new THREE.Box3().setFromObject(root);
+  const sx = Math.max(0.001, box.max.x - box.min.x);
+  const sz = Math.max(0.001, box.max.z - box.min.z);
+  const span = Math.max(sx, sz);
+  const scale = targetSpan / span;
+  root.scale.setScalar(scale);
+  root.updateMatrixWorld(true);
+  const next = new THREE.Box3().setFromObject(root);
+  root.position.x -= (next.min.x + next.max.x) / 2;
+  root.position.z -= (next.min.z + next.max.z) / 2;
+  root.position.y -= next.min.y;
+}
+
 /** Prefer dance-named clips; otherwise keep all clips in file order (1–3 dances). */
 function danceClips(clips: THREE.AnimationClip[]) {
   if (!clips.length) return [] as THREE.AnimationClip[];
@@ -107,6 +124,7 @@ function playClip(man: Dancer, at: number) {
 
 export function DanceBattle({ names }: { names: string[] }) {
   const host = useRef<THREE.Group>(null);
+  const floor = useRef<THREE.Group>(null);
   const pack = useRef<Dancer[]>([]);
   const camera = useThree((s) => s.camera);
   const roster = useMemo(() => danceRoster(names), [names]);
@@ -158,6 +176,18 @@ export function DanceBattle({ names }: { names: string[] }) {
           fit(gltf.scene);
         }
 
+        try {
+          const venue = await loadGlb(loader, DANCE_MEKAN);
+          if (!drop) {
+            toLambert(venue.scene);
+            fitMekan(venue.scene, 24);
+            floor.current?.clear();
+            floor.current?.add(venue.scene);
+          }
+        } catch (err) {
+          console.warn("dance mekan", err);
+        }
+
         const root = host.current;
         const men: Dancer[] = [];
         for (let i = 0; i < DANCE_N; i++) {
@@ -194,6 +224,7 @@ export function DanceBattle({ names }: { names: string[] }) {
       }
       pack.current = [];
       host.current?.clear();
+      floor.current?.clear();
       danceReset();
     };
   }, []);
@@ -232,10 +263,7 @@ export function DanceBattle({ names }: { names: string[] }) {
     <group>
       <hemisphereLight args={["#ffffff", "#d0d0d0", 1.35]} />
       <directionalLight position={[4, 12, 6]} intensity={1.55} color="#ffffff" />
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, -1.2]} receiveShadow>
-        <planeGeometry args={[48, 48]} />
-        <meshLambertMaterial color="#ffffff" />
-      </mesh>
+      <group ref={floor} />
       <group ref={host} />
       {atlas.sheets.map((sheet, s) => (
         <instancedMesh

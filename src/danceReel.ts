@@ -11,7 +11,8 @@ export const DANCE_MODELS = [
   "/models/dans3.glb",
 ] as const;
 
-export const DANCE_URLS = [...DANCE_MODELS];
+export const DANCE_MEKAN = "/models/mekan.glb";
+export const DANCE_URLS = [...DANCE_MODELS, DANCE_MEKAN];
 
 export function isDance(id: string | null | undefined): id is DanceId {
   return id === DANCE_ID;
