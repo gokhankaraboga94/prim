@@ -161,7 +161,7 @@ function playClip(man: Dancer, at: number) {
   man.mix.addEventListener("finished", onDone as unknown as (e: object) => void);
 }
 
-export function DanceBattle({ names }: { names: string[] }) {
+export function DanceBattle({ names, mekan = true }: { names: string[]; mekan?: boolean }) {
   const host = useRef<THREE.Group>(null);
   const floor = useRef<THREE.Group>(null);
   const pack = useRef<Dancer[]>([]);
@@ -206,18 +206,24 @@ export function DanceBattle({ names }: { names: string[] }) {
           throw new Error("dans modelleri eksik");
         }
 
-        const venue = await loadGlb(loader, DANCE_MEKAN);
-        if (drop) return;
-
         for (const gltf of files) {
           toLambert(gltf.scene);
           fit(gltf.scene);
         }
-        toLambert(venue.scene);
-        fitMekan(venue.scene, 24);
-        floor.current?.clear();
-        floor.current?.add(venue.scene);
-        floor.current?.updateMatrixWorld(true);
+
+        let venueRoot: THREE.Object3D | null = null;
+        if (mekan) {
+          const venue = await loadGlb(loader, DANCE_MEKAN);
+          if (drop) return;
+          toLambert(venue.scene);
+          fitMekan(venue.scene, 24);
+          floor.current?.clear();
+          floor.current?.add(venue.scene);
+          floor.current?.updateMatrixWorld(true);
+          venueRoot = venue.scene;
+        } else {
+          floor.current?.clear();
+        }
 
         const root = host.current;
         if (!root) throw new Error("dans sahne kökü yok");
@@ -228,7 +234,7 @@ export function DanceBattle({ names }: { names: string[] }) {
           const holder = new THREE.Group();
           holder.add(body);
           const spot = danceSpot(i);
-          const streetY = sampleStreetY(venue.scene, spot.x, spot.z, 0);
+          const streetY = venueRoot ? sampleStreetY(venueRoot, spot.x, spot.z, 0) : 0;
           holder.position.set(spot.x, streetY, spot.z);
           holder.rotation.y = spot.yaw;
           const mix = new THREE.AnimationMixer(body);
@@ -239,18 +245,15 @@ export function DanceBattle({ names }: { names: string[] }) {
           men.push(man);
         }
         if (drop) return;
-        if (men.length < DANCE_N || !floor.current?.children.length) {
-          throw new Error("dans sahne eksik");
-        }
+        if (men.length < DANCE_N) throw new Error("dans sahne eksik");
+        if (mekan && !floor.current?.children.length) throw new Error("mekan yüklenemedi");
         pack.current = men;
         streetLift = men.reduce((s, m) => s + m.host.position.y, 0) / Math.max(1, men.length);
-        // One frame so GPU uploads settle before record starts
         await new Promise<void>((ok) => requestAnimationFrame(() => ok()));
         if (drop) return;
         danceMarkReady();
       } catch (err) {
         console.warn("dance", err);
-        // ready kalmaz → kayıt başlamaz / timeout hata verir
       }
     })();
     return () => {
@@ -267,7 +270,7 @@ export function DanceBattle({ names }: { names: string[] }) {
       floor.current?.clear();
       danceReset();
     };
-  }, []);
+  }, [mekan]);
 
   useFrame((_, dt) => {
     const t = danceT();
@@ -305,6 +308,12 @@ export function DanceBattle({ names }: { names: string[] }) {
     <group>
       <hemisphereLight args={["#ffffff", "#d0d0d0", 1.35]} />
       <directionalLight position={[4, 12, 6]} intensity={1.55} color="#ffffff" />
+      {!mekan && (
+        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, -1.2]} receiveShadow>
+          <planeGeometry args={[48, 48]} />
+          <meshLambertMaterial color="#ffffff" />
+        </mesh>
+      )}
       <group ref={floor} />
       <group ref={host} />
       {atlas.sheets.map((sheet, s) => (

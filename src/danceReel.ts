@@ -1,7 +1,12 @@
 export const DANCE_ID = "dance" as const;
+export const DANCE2_ID = "dance2" as const;
 export type DanceId = typeof DANCE_ID;
+export type Dance2Id = typeof DANCE2_ID;
+export type DanceAnyId = DanceId | Dance2Id;
 export const DANCE_MODE = { id: DANCE_ID, label: "dance" } as const;
+export const DANCE2_MODE = { id: DANCE2_ID, label: "dance2" } as const;
 export const DANCE_SECONDS = 18;
+export const DANCE2_SECONDS = 18;
 export const DANCE_N = 15;
 
 /** User drops these into public/models (or repo root → copy there). */
@@ -13,9 +18,19 @@ export const DANCE_MODELS = [
 
 export const DANCE_MEKAN = "/models/mekan.glb";
 export const DANCE_URLS = [...DANCE_MODELS, DANCE_MEKAN];
+/** dance2: same dancers, no venue — white floor only. */
+export const DANCE2_URLS = [...DANCE_MODELS];
 
 export function isDance(id: string | null | undefined): id is DanceId {
   return id === DANCE_ID;
+}
+
+export function isDance2(id: string | null | undefined): id is Dance2Id {
+  return id === DANCE2_ID;
+}
+
+export function isDanceAny(id: string | null | undefined): id is DanceAnyId {
+  return id === DANCE_ID || id === DANCE2_ID;
 }
 
 export function danceRoster(names: readonly string[]) {
