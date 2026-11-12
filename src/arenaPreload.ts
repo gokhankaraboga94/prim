@@ -5,6 +5,18 @@
  */
 const store = new Map<string, ArrayBuffer>();
 
+function looksLikeHtml(buf: ArrayBuffer) {
+  if (buf.byteLength < 15) return false;
+  const head = new TextDecoder().decode(new Uint8Array(buf, 0, Math.min(64, buf.byteLength))).trimStart();
+  return head.startsWith("<!") || head.toLowerCase().startsWith("<html") || head.toLowerCase().startsWith("<!doctype");
+}
+
+function looksLikeGlb(buf: ArrayBuffer) {
+  if (buf.byteLength < 4) return false;
+  const mag = new TextDecoder("ascii").decode(new Uint8Array(buf, 0, 4));
+  return mag === "glTF";
+}
+
 export async function preloadGlbs(urls: readonly string[], onProgress?: (done: number, total: number) => void) {
   let done = 0;
   await Promise.all(
@@ -13,7 +25,13 @@ export async function preloadGlbs(urls: readonly string[], onProgress?: (done: n
         try {
           const res = await fetch(url);
           if (!res.ok) throw new Error(`${url}: ${res.status}`);
-          store.set(url, await res.arrayBuffer());
+          const type = (res.headers.get("content-type") || "").toLowerCase();
+          if (type.includes("text/html")) throw new Error(`${url}: HTML geldi (model yok)`);
+          const buf = await res.arrayBuffer();
+          if (looksLikeHtml(buf) || !looksLikeGlb(buf)) {
+            throw new Error(`${url}: GLB değil (SPA/HTML yanıtı)`);
+          }
+          store.set(url, buf);
         } catch (err) {
           console.warn("arena preload failed", url, err);
         }

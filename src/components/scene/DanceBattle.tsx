@@ -35,8 +35,16 @@ const dummy = new THREE.Object3D();
 function loadGlb(loader: GLTFLoader, url: string) {
   const buf = preloadedGlb(url);
   return new Promise<Gltf>((ok, fail) => {
-    if (buf) loader.parse(buf.slice(0), "", ok, fail);
-    else loader.load(url, ok, undefined, fail);
+    if (buf) {
+      const mag = new TextDecoder("ascii").decode(new Uint8Array(buf, 0, Math.min(4, buf.byteLength)));
+      if (mag !== "glTF") {
+        fail(new Error(`${url}: önbellekte HTML/bozuk yanıt (GLB değil)`));
+        return;
+      }
+      loader.parse(buf.slice(0), "", ok, fail);
+      return;
+    }
+    loader.load(url, ok, undefined, fail);
   });
 }
 
