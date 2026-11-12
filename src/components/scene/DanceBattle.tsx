@@ -191,23 +191,27 @@ export function DanceBattle({ names, mekan = true }: { names: string[]; mekan?: 
         }
 
         const useStreet = mekan && DANCE_STREET_FEET.length === DANCE_N;
+        const packCx = useStreet ? DANCE_STREET_FEET.reduce((s, f) => s + f.x, 0) / DANCE_N : 0;
+        const packCz = useStreet ? DANCE_STREET_FEET.reduce((s, f) => s + f.z, 0) / DANCE_N : 0;
         if (mekan) {
           const venue = await loadGlb(loader, DANCE_MEKAN);
           if (drop) return;
           toLambert(venue.scene);
           fitMekan(venue.scene, DANCE_MEKAN_SPAN);
+          // Slide venue so the open plaza (and dancers) sit at world origin — frame center.
+          if (useStreet) {
+            venue.scene.position.x -= packCx;
+            venue.scene.position.z -= packCz;
+          }
           floor.current?.clear();
           floor.current?.add(venue.scene);
           if (useStreet) {
             const deckY = DANCE_STREET_FEET[0].y;
-            const cx = DANCE_STREET_FEET.reduce((s, f) => s + f.x, 0) / DANCE_N;
-            const cz = DANCE_STREET_FEET.reduce((s, f) => s + f.z, 0) / DANCE_N;
-            // Compact asphalt pad under the centered pack.
             const pad = new THREE.Mesh(
-              new THREE.BoxGeometry(9.2, 0.06, 5.6),
+              new THREE.BoxGeometry(11.2, 0.06, 7.4),
               new THREE.MeshLambertMaterial({ color: "#3f3f42" }),
             );
-            pad.position.set(cx, deckY - 0.03, cz);
+            pad.position.set(0, deckY - 0.03, 0);
             pad.receiveShadow = false;
             floor.current?.add(pad);
           }
@@ -226,7 +230,7 @@ export function DanceBattle({ names, mekan = true }: { names: string[]; mekan?: 
           holder.add(body);
           if (useStreet) {
             const foot = DANCE_STREET_FEET[i];
-            holder.position.set(foot.x, foot.y + 0.02, foot.z);
+            holder.position.set(foot.x - packCx, foot.y + 0.02, foot.z - packCz);
           } else {
             const spot = danceSpot(i);
             holder.position.set(spot.x, 0.03, spot.z);

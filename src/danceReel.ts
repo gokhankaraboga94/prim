@@ -51,26 +51,26 @@ export function danceSpot(i: number) {
 }
 
 /**
- * Baked open-plaza feet for mekan.glb after fitMekan(DANCE_MEKAN_SPAN).
- * Centered in the venue (not the map edge) so orbit stays inside the model.
+ * Open street plaza feet in mekan.glb space after fitMekan(DANCE_MEKAN_SPAN).
+ * DanceBattle shifts the venue so this pack sits at world origin (frame center).
  */
 export const DANCE_MEKAN_SPAN = 34;
 export const DANCE_STREET_FEET: ReadonlyArray<{ x: number; y: number; z: number }> = [
-  { x: -3.1, y: 2.5, z: -1.6 },
-  { x: -1.55, y: 2.5, z: -1.6 },
-  { x: 0, y: 2.5, z: -1.6 },
-  { x: 1.55, y: 2.5, z: -1.6 },
-  { x: 3.1, y: 2.5, z: -1.6 },
-  { x: -2.9, y: 2.5, z: -3.2 },
-  { x: -1.35, y: 2.5, z: -3.2 },
-  { x: 0.2, y: 2.5, z: -3.2 },
-  { x: 1.75, y: 2.5, z: -3.2 },
-  { x: 3.3, y: 2.5, z: -3.2 },
-  { x: -3.1, y: 2.5, z: -4.8 },
-  { x: -1.55, y: 2.5, z: -4.8 },
-  { x: 0, y: 2.5, z: -4.8 },
-  { x: 1.55, y: 2.5, z: -4.8 },
-  { x: 3.1, y: 2.5, z: -4.8 },
+  { x: 0.5, y: 2.5, z: 11.5 },
+  { x: 2.25, y: 2.5, z: 11.5 },
+  { x: 4.0, y: 2.5, z: 11.5 },
+  { x: 5.75, y: 2.5, z: 11.5 },
+  { x: 7.5, y: 2.5, z: 11.5 },
+  { x: 0.72, y: 2.5, z: 9.7 },
+  { x: 2.47, y: 2.5, z: 9.7 },
+  { x: 4.22, y: 2.5, z: 9.7 },
+  { x: 5.97, y: 2.5, z: 9.7 },
+  { x: 7.72, y: 2.5, z: 9.7 },
+  { x: 0.5, y: 2.5, z: 7.9 },
+  { x: 2.25, y: 2.5, z: 7.9 },
+  { x: 4.0, y: 2.5, z: 7.9 },
+  { x: 5.75, y: 2.5, z: 7.9 },
+  { x: 7.5, y: 2.5, z: 7.9 },
 ];
 
 export type DanceCam = { x: number; y: number; z: number; lx: number; ly: number; lz: number; fov: number };
@@ -81,7 +81,7 @@ let camCz = -1.6;
 /** street = tight inside mekan; club = wider neon stage. */
 let camMode: "street" | "club" = "club";
 const CAM = {
-  street: { r: 6.8, y: 2.85, lookY: 1.15, fov: 36 },
+  street: { r: 7.4, y: 3.6, lookY: 1.35, fov: 34 },
   club: { r: 9.8, y: 3.35, lookY: 1.25, fov: 40 },
 } as const;
 
