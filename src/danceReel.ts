@@ -98,14 +98,15 @@ export function danceResetCamTarget() {
 }
 
 /**
- * Same distance the whole time — full 360° orbit so every dancer enters frame.
- * Street mode keeps the lens inside mekan so the void outside never reads.
+ * Club: full 360°. Street: short arc from the plaza edge looking into the city
+ * so the void outside mekan.glb never enters frame.
  */
 export function danceCam(t: number): DanceCam {
   const seconds = camMode === "street" ? DANCE_SECONDS : DANCE2_SECONDS;
   const u = Math.min(1, Math.max(0, t) / seconds);
-  const ang = u * Math.PI * 2;
   const shot = CAM[camMode];
+  // street: stay on +Z side of pack (outside edge) and look inward (−Z into streets)
+  const ang = camMode === "street" ? (u - 0.5) * 1.55 : u * Math.PI * 2;
   return {
     x: camCx + Math.sin(ang) * shot.r,
     y: shot.y,
