@@ -2018,8 +2018,8 @@ export function AdminPage() {
           )}
           {isD14112026(reelShot) && (
             <p className="muted">
-              16s. İlham videosunun alternatifi: çember kuşatma yok. Mavi takipçi mızrağı, kırmızı düşman duvarına hücum.
-              Gün sayısı, isimler, “takip et · orduya yazıl”. Düşman ~3×. Çim zemin, şövalye + roman.
+              15s. İlham alternatifi (çember kopyası değil): isimli ada + yukarıdan kırmızı SEL → iki yana KISKAÇ →
+              ortadan kırılıp çıkış → “takip et · orduya yazıl”. Gün sayacı, isimler, düşman ~4×. Çim, şövalye + roman.
             </p>
           )}
           {isOrdu(reelShot) && (

@@ -1,10 +1,16 @@
-/** 14112026 — ilham videosunun alternatifi: çember kuşatma değil, mızrak/wedge vs düşman duvarı. */
+/**
+ * 14112026 — ilham videosunun ALTERNATİFİ (çember kuşatma kopyası değil).
+ *
+ * Viral DNA: gün sayacı + isimli takipçi ordusu + sayı baskısı + takip CTA.
+ * Farklı format: kırmızı SEL yukarıdan akar → iki YANA KISKAÇ kapanır →
+ * isimli ada büyür → ortadan KIRILIP çıkar. Geometri ≠ eşmerkezli çember.
+ */
 export const D14112026_ID = "14112026" as const;
 export type D14112026Id = typeof D14112026_ID;
 export const D14112026_MODE = { id: D14112026_ID, label: "14112026" } as const;
-export const D14112026_SECONDS = 16;
+export const D14112026_SECONDS = 15;
 
-const PITCH = 2.35;
+const PITCH = 2.28;
 
 export function isD14112026(id: string | null | undefined): id is D14112026Id {
   return id === D14112026_ID;
@@ -27,80 +33,68 @@ function easeInOut(u: number) {
 export type D1411Form = {
   friends: number;
   foes: number;
-  cols: number;
-  rows: number;
-  foeCols: number;
-  foeRows: number;
   pitch: number;
-  gap: number;
   width: number;
   depth: number;
-  friendDepth: number;
-  foeDepth: number;
+  islandR: number;
+  wallW: number;
+  wallD: number;
 };
 
 export function d1411Form(friendsIn: number): D1411Form {
   const friends = Math.max(1, Math.floor(friendsIn));
-  const foes = Math.max(friends * 3, friends + 24);
-  // Wedge: narrower tip, deeper ranks
-  const cols = Math.max(3, Math.ceil(Math.sqrt(friends * 0.85)));
-  const rows = Math.max(2, Math.ceil(friends / cols));
-  const foeCols = Math.max(cols + 4, Math.ceil(Math.sqrt(foes * 1.35)));
-  const foeRows = Math.max(4, Math.ceil(foes / foeCols));
-  const friendDepth = Math.max(0, rows - 1) * PITCH;
-  const foeDepth = Math.max(0, foeRows - 1) * PITCH;
-  const gap = 14 + Math.min(18, Math.sqrt(friends) * 0.55);
-  const width = Math.max((cols - 1) * PITCH, (foeCols - 1) * PITCH);
+  const foes = Math.max(friends * 4, friends + 40);
+  const islandR = Math.max(4.5, Math.sqrt(friends) * 1.15);
+  const wallW = Math.max(22, islandR * 3.4 + 10);
+  const wallD = Math.max(10, Math.ceil(foes / 28) * PITCH * 0.9);
   return {
     friends,
     foes,
-    cols,
-    rows,
-    foeCols,
-    foeRows,
     pitch: PITCH,
-    gap,
-    width,
-    depth: friendDepth + foeDepth,
-    friendDepth,
-    foeDepth,
+    width: wallW,
+    depth: wallD + islandR * 2 + 28,
+    islandR,
+    wallW,
+    wallD,
   };
 }
 
 export type D1411Layout = D1411Form & {
   friendX: Float32Array;
   friendZ: Float32Array;
-  friendRow: Uint16Array;
   friendPhase: Float32Array;
+  /** 0 = left jaw, 1 = right jaw */
+  foeSide: Uint8Array;
   romanX: Float32Array;
   romanZ: Float32Array;
-  romanRow: Uint16Array;
   romanPhase: Float32Array;
   liveX: Float32Array;
   liveZ: Float32Array;
 };
 
-/** Arrowhead / spear: front tip narrow, rear wider — not a circle. */
-function wedgeSeat(cols: number, rows: number, count: number, i: number, pitch: number, zTip: number) {
-  const row = Math.floor(i / cols);
-  const col = i % cols;
-  const inRow = row === rows - 1 ? count - row * cols : cols;
-  // Tip at high z (toward enemy); rear rows get more lateral spread
-  const tipFrac = 1 - row / Math.max(1, rows - 1);
-  const rowWidth = Math.max(1, Math.round(inRow * (0.35 + tipFrac * 0.65)));
-  const local = Math.min(col, rowWidth - 1);
-  const x = (local - (rowWidth - 1) / 2) * pitch * (0.78 + (1 - tipFrac) * 0.45);
-  const z = zTip - row * pitch;
-  return { x, z, row };
+/** Dense disk island — readable “we are the named few”. */
+function islandSeat(count: number, i: number, rMax: number, pitch: number) {
+  const golden = Math.PI * (3 - Math.sqrt(5));
+  const t = (i + 0.5) / Math.max(1, count);
+  const r = Math.sqrt(t) * rMax;
+  const a = i * golden;
+  // slight lattice so they don’t look like a perfect circle copy of ilham
+  const x = Math.cos(a) * r + ((i % 5) - 2) * pitch * 0.04;
+  const z = Math.sin(a) * r * 0.78 + ((i % 3) - 1) * pitch * 0.05;
+  return { x, z };
 }
 
-function wallSeat(cols: number, rows: number, count: number, i: number, pitch: number, zFront: number) {
+/** Foe seats: start as TOP flood band, animated into left/right jaws. */
+function foeSeat(count: number, i: number, wallW: number, wallD: number, pitch: number) {
+  const cols = Math.max(10, Math.ceil(wallW / pitch));
+  const rows = Math.max(3, Math.ceil(count / cols));
   const col = i % cols;
   const row = Math.floor(i / cols);
   const inRow = row === rows - 1 ? count - row * cols : cols;
-  const x = (col - (inRow - 1) / 2) * pitch * 0.92;
-  const z = zFront + row * pitch * 0.88;
-  return { x, z, row };
+  const x = (col - (inRow - 1) / 2) * pitch * 0.95;
+  const z = row * pitch * 0.85;
+  const side = col < inRow / 2 ? 0 : 1;
+  return { x, z, side };
 }
 
 export function makeD1411Layout(friendsIn: number): D1411Layout {
@@ -109,29 +103,25 @@ export function makeD1411Layout(friendsIn: number): D1411Layout {
     ...form,
     friendX: new Float32Array(form.friends),
     friendZ: new Float32Array(form.friends),
-    friendRow: new Uint16Array(form.friends),
     friendPhase: new Float32Array(form.friends),
+    foeSide: new Uint8Array(form.foes),
     romanX: new Float32Array(form.foes),
     romanZ: new Float32Array(form.foes),
-    romanRow: new Uint16Array(form.foes),
     romanPhase: new Float32Array(form.foes),
     liveX: new Float32Array(form.friends),
     liveZ: new Float32Array(form.friends),
   };
-  const tipZ = -form.gap * 0.42;
   for (let i = 0; i < form.friends; i++) {
-    const s = wedgeSeat(form.cols, form.rows, form.friends, i, form.pitch, tipZ);
+    const s = islandSeat(form.friends, i, form.islandR, form.pitch);
     layout.friendX[i] = s.x;
-    layout.friendZ[i] = s.z;
-    layout.friendRow[i] = s.row;
+    layout.friendZ[i] = s.z - 1.2;
     layout.friendPhase[i] = (i % 17) * 0.37;
   }
-  const wallZ = form.gap * 0.42;
   for (let i = 0; i < form.foes; i++) {
-    const s = wallSeat(form.foeCols, form.foeRows, form.foes, i, form.pitch, wallZ);
+    const s = foeSeat(form.foes, i, form.wallW, form.wallD, form.pitch);
     layout.romanX[i] = s.x;
     layout.romanZ[i] = s.z;
-    layout.romanRow[i] = s.row;
+    layout.foeSide[i] = s.side;
     layout.romanPhase[i] = (i % 19) * 0.31;
   }
   return layout;
@@ -139,40 +129,67 @@ export function makeD1411Layout(friendsIn: number): D1411Layout {
 
 export type D1411Pose = { x: number; z: number; yaw: number; pitch: number; roll: number; show: boolean };
 
-/** March timeline: reveal → close gap → clash shake. */
+/**
+ * Timeline (15s):
+ * 0–1.2  flood tip already in frame (stop scroll)
+ * 1.2–3.5 jaws form + names spawn (new beat)
+ * 3.5–7.5 jaws slam shut
+ * 7.5–11 breakthrough corridor
+ * 11–15 name cam + CTA hold
+ */
 export function d1411Knight(layout: D1411Layout, i: number, t: number): D1411Pose {
   const phase = layout.friendPhase[i];
-  const row = layout.friendRow[i];
-  const reveal = easeOut(clamp01((t - row * 0.07) / 1.15));
-  const march = easeInOut(clamp01((t - 2.4) / 5.2));
-  const clash = easeOut(clamp01((t - 8.1) / 1.4));
-  const sway = Math.sin(t * 1.1 + phase) * 0.04;
-  const charge = layout.gap * 0.38 * march;
-  const punch = clash * (0.55 + (i % 5) * 0.08);
+  // Spawn reveal: island fills so early frames already have some names, then densifies
+  const reveal = easeOut(clamp01((t - i * 0.035) / 1.05));
+  const brace = easeInOut(clamp01((t - 3.2) / 3.8));
+  const breakU = easeOut(clamp01((t - 7.6) / 2.4));
+  const sway = Math.sin(t * 1.15 + phase) * 0.035;
   const x0 = layout.friendX[i];
   const z0 = layout.friendZ[i];
+  // Pack tighter under pressure, then surge +Z through the jaw gap
+  const pack = 1 - brace * 0.18;
+  const surgeZ = breakU * (layout.islandR * 1.8 + 10);
+  const surgeX = -x0 * breakU * 0.35; // funnel toward center lane
   return {
-    x: x0 + sway + Math.sin(t * 2.2 + phase) * clash * 0.12,
-    z: z0 + charge + punch,
-    yaw: sway * 0.8,
-    pitch: -0.06 - march * 0.04,
+    x: x0 * pack + sway + surgeX,
+    z: z0 * pack + surgeZ,
+    yaw: Math.atan2(0.01, 1) + sway * 0.6,
+    pitch: -0.05 - brace * 0.03,
     roll: sway * 0.02,
-    show: reveal > 0.08,
+    show: reveal > 0.12,
   };
 }
 
 export function d1411Roman(layout: D1411Layout, i: number, t: number): D1411Pose {
   const phase = layout.romanPhase[i];
-  const march = easeInOut(clamp01((t - 2.1) / 5.4));
-  const clash = easeOut(clamp01((t - 8.1) / 1.4));
-  const sway = Math.sin(t * 0.95 + phase) * 0.035;
-  const advance = -layout.gap * 0.34 * march;
-  const give = -clash * 0.35;
+  const side = layout.foeSide[i] === 0 ? -1 : 1;
+  const flood = easeOut(clamp01(t / 1.15)); // already pouring at t=0→1
+  const jaw = easeInOut(clamp01((t - 1.1) / 2.4));
+  const slam = easeInOut(clamp01((t - 3.4) / 3.6));
+  const hold = easeOut(clamp01((t - 7.4) / 1.2));
+  const sway = Math.sin(t * 0.9 + phase) * 0.03;
+
+  // Rest pose: top band above island
+  const restX = layout.romanX[i];
+  const restZ = 8 + layout.islandR + layout.romanZ[i];
+
+  // Flood comes down toward island
+  const floodZ = restZ - flood * (5.5 + layout.islandR * 0.35);
+
+  // Split into jaws: left/right and close in
+  const jawX = restX + side * (6.5 + layout.islandR * 0.55) * jaw;
+  const jawZ = floodZ - slam * (3.8 + layout.islandR * 0.25);
+
+  // After breakthrough, jaws stall slightly open at center lane
+  const openLane = hold * 2.4;
+  const x = jawX - side * openLane * 0.35;
+  const z = jawZ;
+
   return {
-    x: layout.romanX[i] + sway,
-    z: layout.romanZ[i] + advance + give,
-    yaw: Math.PI + sway * 0.5,
-    pitch: -0.05,
+    x: x + sway,
+    z,
+    yaw: Math.PI + side * jaw * 0.35,
+    pitch: -0.04,
     roll: sway * 0.015,
     show: true,
   };
@@ -195,98 +212,95 @@ function mixCam(a: Cam, b: Cam, u: number): Cam {
 
 export function d1411Cam(t: number, friends = 1): Cam {
   const form = d1411Form(Math.max(1, friends));
-  const span = Math.max(form.width, form.depth + form.gap);
-  // 3/4 rear view of wedge — NOT top-down circle
+  const r = form.islandR;
+
+  // High 3/4 — flood + island readable in first frame (not flat top-down circle shot)
   const open: Cam = {
-    x: span * 0.08,
-    y: 9.5 + span * 0.045,
-    z: -form.gap * 0.95 - form.friendDepth * 0.55 - 10,
+    x: 2.2,
+    y: 16 + r * 0.55,
+    z: -r * 1.1 - 8,
     lx: 0,
-    ly: 1.3,
-    lz: form.gap * 0.15,
-    fov: 46,
-  };
-  const mid: Cam = {
-    x: -span * 0.06,
-    y: 14 + span * 0.06,
-    z: -form.gap * 0.35 - 6,
-    lx: 0,
-    ly: 1.2,
-    lz: form.gap * 0.25,
+    ly: 1.1,
+    lz: r * 0.2,
     fov: 44,
   };
-  const clash: Cam = {
-    x: span * 0.04,
-    y: 7.2 + span * 0.02,
-    z: -2.5,
+  // Drop as jaws close — pressure readable
+  const squeeze: Cam = {
+    x: -1.4,
+    y: 11 + r * 0.25,
+    z: -r * 0.4 - 4,
     lx: 0,
-    ly: 1.5,
-    lz: 3.2,
+    ly: 1.3,
+    lz: 1.5,
+    fov: 46,
+  };
+  // Breakthrough follow
+  const breakCam: Cam = {
+    x: 0.8,
+    y: 6.5,
+    z: -2.2,
+    lx: 0,
+    ly: 1.6,
+    lz: 6,
     fov: 48,
   };
+  // Name payoff
   const names: Cam = {
-    x: 1.2,
-    y: 4.8,
-    z: -form.gap * 0.2 - 3.5,
-    lx: 0.4,
-    ly: 1.8,
-    lz: -form.gap * 0.15,
-    fov: 42,
+    x: 1.6,
+    y: 4.2,
+    z: -r * 0.15 - 2.2,
+    lx: 0.3,
+    ly: 1.85,
+    lz: 1.2,
+    fov: 40,
   };
 
-  if (t < 1.0) return open;
-  if (t < 3.2) return mixCam(open, mid, easeOut((t - 1.0) / 2.2));
-  if (t < 8.0) return mixCam(mid, clash, easeInOut((t - 3.2) / 4.8));
-  if (t < 11.5) return mixCam(clash, names, easeInOut((t - 8.0) / 3.5));
-  return names;
+  if (t < 1.15) return mixCam(open, open, 0);
+  if (t < 3.5) return mixCam(open, squeeze, easeOut((t - 1.15) / 2.35));
+  if (t < 7.6) return mixCam(squeeze, squeeze, 0);
+  if (t < 11.0) return mixCam(squeeze, breakCam, easeInOut((t - 7.6) / 3.4));
+  return mixCam(breakCam, names, easeInOut((t - 11.0) / 3.2));
 }
 
 export function d1411Far(friends: number) {
   const form = d1411Form(friends);
-  return Math.max(480, form.depth * 9 + form.width * 4 + form.gap * 6 + 160);
+  return Math.max(420, form.depth * 8 + form.width * 3 + 140);
 }
 
 export function d1411Haze(friends: number) {
   const form = d1411Form(friends);
-  const far = Math.max(380, form.width * 2.2 + form.depth * 3.5 + 140);
-  return { near: 70, far };
+  const far = Math.max(340, form.width * 2 + form.depth * 2.8 + 120);
+  return { near: 55, far };
 }
 
 export type D1411Caption = { title: string; sub: string; accent: "white" | "red" | "gold" };
 
 export function d1411Caption(t: number, day: number): D1411Caption | null {
   const d = Math.max(1, Math.floor(day) || 1);
-  if (t < 3.1) {
+  if (t < 2.8) {
     return {
       title: `GÜN ${d}`,
-      sub: "Takipçilerle düşman duvarına gidiyoruz",
+      sub: "Takipçilerimle ayaktayız — düşman sel gibi",
       accent: "white",
     };
   }
-  if (t < 6.6) {
+  if (t < 6.2) {
     return {
-      title: "DUVAR DAHA KALIN",
-      sub: "Ordumuz büyüyor — onlar daha kalabalık",
+      title: "İKİ YANDAN",
+      sub: "Kıskaç kapanıyor",
       accent: "red",
     };
   }
-  if (t < 10.2) {
-    return {
-      title: "MIZRAK İLERİ",
-      sub: "İsmini görüyorsan buradasın",
-      accent: "gold",
-    };
-  }
-  if (t < 14.8) {
+  if (t < 9.8) {
     return {
       title: "TAKİP ET · ORDUYA YAZIL",
-      sub: "1 takip = 1 asker",
+      sub: "1 takip = 1 asker — ismini gör",
       accent: "gold",
     };
   }
   return {
-    title: "TAKİP ET",
-    sub: "Sonraki günde sen de sahadasın",
-    accent: "white",
+    title: "YARIN SEN DE BURADASIN",
+    sub: "Takip et, orduya yazıl",
+    accent: "gold",
   };
 }

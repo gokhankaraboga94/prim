@@ -273,7 +273,7 @@ function ScorePlate({ soldiers }: { soldiers: number }) {
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.font = "900 78px Inter, sans-serif";
-    const line = `${formatCount(form.friends)} mızrak   VS   ${formatCount(form.foes)} duvar`;
+    const line = `${formatCount(form.friends)} isim   VS   ${formatCount(form.foes)} sel`;
     ctx.lineWidth = 10;
     ctx.strokeStyle = "rgba(0,0,0,0.9)";
     ctx.strokeText(line, 800, 110);
