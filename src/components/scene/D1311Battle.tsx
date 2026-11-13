@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import { Hud, OrthographicCamera } from "@react-three/drei";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
@@ -68,12 +68,6 @@ function cutPlinth(root: THREE.Object3D) {
       return;
     }
     const cut = minY + h * 0.36;
-    let low = 0;
-    for (let i = 0; i < pos.count; i++) {
-      if (pos.getY(i) > cut) continue;
-      low += 1;
-    }
-    if (low < 12) return;
     const src = index.array;
     const kept: number[] = [];
     for (let i = 0; i < src.length; i += 3) {
@@ -83,8 +77,8 @@ function cutPlinth(root: THREE.Object3D) {
       if (Math.max(pos.getY(a), pos.getY(b), pos.getY(c)) <= cut) continue;
       kept.push(a, b, c);
     }
-    if (kept.length === src.length || kept.length === 0) {
-      if (kept.length === 0) mesh.visible = false;
+    if (!kept.length || kept.length === src.length) {
+      if (!kept.length) mesh.visible = false;
       return;
     }
     geo.setIndex(kept);
@@ -96,24 +90,15 @@ function cutPlinth(root: THREE.Object3D) {
 
 function seatFeet(root: THREE.Object3D) {
   root.updateMatrixWorld(true);
-  const box = new THREE.Box3();
-  let hit = false;
-  root.traverse((obj) => {
-    const mesh = obj as THREE.Mesh;
-    if (!mesh.isMesh || !mesh.visible) return;
-    const next = new THREE.Box3().setFromObject(mesh);
-    if (next.isEmpty()) return;
-    if (!hit) {
-      box.copy(next);
-      hit = true;
-    } else box.union(next);
-  });
-  if (hit && Number.isFinite(box.min.y)) root.position.y -= box.min.y;
+  const box = new THREE.Box3().setFromObject(root);
+  if (Number.isFinite(box.min.y)) root.position.y -= box.min.y;
 }
 
-function bakeRoman(root: THREE.Object3D) {
+/** Solid red army — ignore source textures so the wall always reads on phone. */
+function bakeRedRoman(root: THREE.Object3D) {
   root.updateMatrixWorld(true);
   const parts: THREE.BufferGeometry[] = [];
+  const red = new THREE.Color("#d41818");
   root.traverse((obj) => {
     const mesh = obj as THREE.Mesh;
     if (!mesh.isMesh || !mesh.visible) return;
@@ -121,27 +106,33 @@ function bakeRoman(root: THREE.Object3D) {
     src.applyMatrix4(mesh.matrixWorld);
     const pos = src.getAttribute("position");
     if (!pos) return;
-    const mat = Array.isArray(mesh.material) ? mesh.material[0] : mesh.material;
-    const base = (mat as THREE.MeshStandardMaterial).color ?? new THREE.Color("#b08968");
-    const max = Math.max(base.r, base.g, base.b);
-    const min = Math.min(base.r, base.g, base.b);
-    const sat = max < 0.02 ? 0 : (max - min) / max;
-    const skin = sat > 0.4 && base.r > 0.75 && base.g > 0.4 && base.b > 0.15 && base.b < 0.5;
-    const steel = sat < 0.22 && max > 0.55;
-    const color = skin || steel ? base.clone() : new THREE.Color("#c41c16");
     const col = new Float32Array(pos.count * 3);
     for (let i = 0; i < pos.count; i++) {
-      col[i * 3] = color.r;
-      col[i * 3 + 1] = color.g;
-      col[i * 3 + 2] = color.b;
+      col[i * 3] = red.r;
+      col[i * 3 + 1] = red.g;
+      col[i * 3 + 2] = red.b;
     }
     const geo = new THREE.BufferGeometry();
-    geo.setAttribute("position", pos);
+    geo.setAttribute("position", pos.clone());
+    const norm = src.getAttribute("normal");
+    if (norm) geo.setAttribute("normal", norm.clone());
     geo.setAttribute("color", new THREE.BufferAttribute(col, 3));
+    if (!norm) geo.computeVertexNormals();
     parts.push(geo);
+    if (src !== mesh.geometry) src.dispose();
   });
   const merged = mergeGeometries(parts, false);
+  for (const part of parts) part.dispose();
   merged?.computeVertexNormals();
+  if (merged) {
+    const box = new THREE.Box3().setFromBufferAttribute(merged.getAttribute("position") as THREE.BufferAttribute);
+    const h = Math.max(0.001, box.max.y - box.min.y);
+    const s = 1.66 / h;
+    const cx = (box.min.x + box.max.x) / 2;
+    const cz = (box.min.z + box.max.z) / 2;
+    merged.applyMatrix4(new THREE.Matrix4().makeScale(s, s, s).multiply(new THREE.Matrix4().makeTranslation(-cx, -box.min.y, -cz)));
+    merged.computeVertexNormals();
+  }
   return merged;
 }
 
@@ -221,22 +212,56 @@ function GateProp() {
     <group position={[0, 0, 22]}>
       <mesh position={[0, 2.2, 0]}>
         <boxGeometry args={[18, 4.4, 2.4]} />
-        <meshLambertMaterial color="#5a3a22" />
+        <meshBasicMaterial color="#5a3a22" />
       </mesh>
       <mesh position={[-7.2, 4.6, 0]}>
         <boxGeometry args={[3.2, 3.2, 3.2]} />
-        <meshLambertMaterial color="#4a301c" />
+        <meshBasicMaterial color="#4a301c" />
       </mesh>
       <mesh position={[7.2, 4.6, 0]}>
         <boxGeometry args={[3.2, 3.2, 3.2]} />
-        <meshLambertMaterial color="#4a301c" />
+        <meshBasicMaterial color="#4a301c" />
       </mesh>
       <mesh position={[0, 5.4, -0.2]}>
         <boxGeometry args={[4.6, 1.6, 2]} />
-        <meshLambertMaterial color="#6b4228" />
+        <meshBasicMaterial color="#6b4228" />
       </mesh>
     </group>
   );
+}
+
+function applyUnits(
+  t: number,
+  bodies: THREE.InstancedMesh | null,
+  helms: THREE.InstancedMesh | null,
+  wall: THREE.InstancedMesh | null,
+) {
+  if (bodies && helms) {
+    for (let i = 0; i < D1311_FRIENDS; i++) {
+      const seat = d1311Friend(i, t);
+      liveX[i] = seat.x;
+      liveZ[i] = seat.z;
+      dummy.position.set(seat.x, 0.02, seat.z);
+      dummy.rotation.set(0, seat.yaw, 0);
+      dummy.scale.set(1, 1, 1);
+      dummy.updateMatrix();
+      bodies.setMatrixAt(i, dummy.matrix);
+      helms.setMatrixAt(i, dummy.matrix);
+    }
+    bodies.instanceMatrix.needsUpdate = true;
+    helms.instanceMatrix.needsUpdate = true;
+  }
+  if (wall) {
+    for (let i = 0; i < D1311_FOES; i++) {
+      const seat = d1311Foe(i, t);
+      dummy.position.set(seat.x, 0, seat.z);
+      dummy.rotation.set(0, seat.yaw, 0);
+      dummy.scale.setScalar(seat.show ? 1.2 : 0.001);
+      dummy.updateMatrix();
+      wall.setMatrixAt(i, dummy.matrix);
+    }
+    wall.instanceMatrix.needsUpdate = true;
+  }
 }
 
 export function D1311Battle({ names, day = 21 }: { names: string[]; day?: number }) {
@@ -272,8 +297,11 @@ export function D1311Battle({ names, day = 21 }: { names: string[]; day?: number
         fitHero(romanGltf.scene, -Math.PI / 2, true, false);
         cutPlinth(romanGltf.scene);
         seatFeet(romanGltf.scene);
-        const roman = bakeRoman(romanGltf.scene);
-        if (drop || !roman) return;
+        const roman = bakeRedRoman(romanGltf.scene);
+        if (drop || !roman) {
+          console.warn("13112026 roman bake failed");
+          return;
+        }
         setPack({ body: knight.body, helm: knight.helm, roman });
       } catch (err) {
         console.warn("13112026", err);
@@ -292,45 +320,23 @@ export function D1311Battle({ names, day = 21 }: { names: string[]; day?: number
     return () => atlas.dispose();
   }, [atlas]);
 
+  useLayoutEffect(() => {
+    if (!pack) return;
+    applyUnits(d1311T(), bodies.current, helms.current, romans.current);
+  }, [pack]);
+
   useFrame(({ camera }) => {
     if (!pack) return;
     const t = d1311T();
-    const body = bodies.current;
-    const helm = helms.current;
-    if (body && helm) {
-      for (let i = 0; i < D1311_FRIENDS; i++) {
-        const seat = d1311Friend(i, t);
-        liveX[i] = seat.x;
-        liveZ[i] = seat.z;
-        dummy.position.set(seat.x, 0.02, seat.z);
-        dummy.rotation.set(0, seat.yaw, 0);
-        dummy.scale.set(1, 1, 1);
-        dummy.updateMatrix();
-        body.setMatrixAt(i, dummy.matrix);
-        helm.setMatrixAt(i, dummy.matrix);
-      }
-      body.instanceMatrix.needsUpdate = true;
-      helm.instanceMatrix.needsUpdate = true;
-    }
-    const wall = romans.current;
-    if (wall) {
-      for (let i = 0; i < D1311_FOES; i++) {
-        const seat = d1311Foe(i, t);
-        dummy.position.set(seat.x, 0, seat.z);
-        dummy.rotation.set(0, seat.yaw, 0);
-        dummy.scale.setScalar(seat.show ? 1.15 : 0.001);
-        dummy.updateMatrix();
-        wall.setMatrixAt(i, dummy.matrix);
-      }
-      wall.instanceMatrix.needsUpdate = true;
-    }
+    applyUnits(t, bodies.current, helms.current, romans.current);
     const show = d1311ShowNames(t);
     for (const sheet of atlas.sheets) {
       const inst = sheet.geometry.userData.mesh as THREE.InstancedMesh | undefined;
       if (!inst) continue;
+      const sheetIndex = atlas.sheets.indexOf(sheet);
       for (let n = 0; n < named.length; n++) {
         const cell = atlas.cells[n];
-        if (!cell || cell.sheet !== atlas.sheets.indexOf(sheet)) continue;
+        if (!cell || cell.sheet !== sheetIndex) continue;
         const hide = !show;
         const w = Math.min(cell.sx, 1.15);
         const h = (cell.sy * w) / Math.max(cell.sx, 0.01);
@@ -348,21 +354,22 @@ export function D1311Battle({ names, day = 21 }: { names: string[]; day?: number
 
   return (
     <group>
-      <hemisphereLight args={["#c8e0a8", "#4a6a2a", 1.15]} />
-      <directionalLight position={[-10, 28, 8]} intensity={1.15} color="#fff4d6" />
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 2]}>
-        <planeGeometry args={[160, 160]} />
-        <meshLambertMaterial color="#4fad3a" />
+      <ambientLight intensity={1.35} />
+      <hemisphereLight args={["#e8f4ff", "#5a7a3a", 1.1]} />
+      <directionalLight position={[-12, 30, 10]} intensity={1.35} color="#fff6e0" />
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.02, 2]} receiveShadow={false}>
+        <planeGeometry args={[180, 180]} />
+        <meshBasicMaterial color="#4fad3a" toneMapped={false} />
       </mesh>
       <GateProp />
       <instancedMesh ref={bodies} args={[pack.body, undefined, D1311_FRIENDS]} frustumCulled={false}>
-        <meshLambertMaterial color="#141414" />
+        <meshLambertMaterial color="#111111" />
       </instancedMesh>
       <instancedMesh ref={helms} args={[pack.helm, undefined, D1311_FRIENDS]} frustumCulled={false}>
-        <meshLambertMaterial color="#222222" />
+        <meshLambertMaterial color="#2a2a2a" />
       </instancedMesh>
       <instancedMesh ref={romans} args={[pack.roman, undefined, D1311_FOES]} frustumCulled={false}>
-        <meshLambertMaterial vertexColors color="#c41c16" />
+        <meshLambertMaterial vertexColors />
       </instancedMesh>
       {atlas.sheets.map((sheet, s) => (
         <instancedMesh
@@ -382,13 +389,15 @@ export function D1311Battle({ names, day = 21 }: { names: string[]; day?: number
 export function D1311Cam() {
   const camera = useThree((s) => s.camera) as THREE.PerspectiveCamera;
   useFrame(() => {
+    if (!camera.isPerspectiveCamera) return;
     const shot = d1311Cam(d1311T());
+    camera.near = 0.4;
+    camera.far = 500;
+    camera.fov = shot.fov;
+    camera.updateProjectionMatrix();
     camera.position.set(shot.x, shot.y, shot.z);
+    camera.up.set(0, 1, 0);
     camera.lookAt(shot.lx, shot.ly, shot.lz);
-    if (camera.fov !== shot.fov) {
-      camera.fov = shot.fov;
-      camera.updateProjectionMatrix();
-    }
   });
   return null;
 }

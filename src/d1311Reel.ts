@@ -143,36 +143,36 @@ export function d1311Cam(t: number): D1311Cam {
   if (t < 6.5) {
     const u = smo(t, 0, 6.5);
     return {
-      x: Math.sin(t * 0.12) * 2.4,
-      y: 48 - u * 6,
-      z: -18 + u * 4,
+      x: Math.sin(t * 0.1) * 1.6,
+      y: 42 - u * 4,
+      z: -14 + u * 3,
       lx: 0,
-      ly: 0,
-      lz: 2 + u * 4,
-      fov: 42,
+      ly: 0.2,
+      lz: 4 + u * 3,
+      fov: 40,
     };
   }
   if (t < 12) {
     const u = smo(t, 6.5, 12);
     return {
-      x: 4.2 - u * 3.5,
-      y: 36 - u * 8,
-      z: -8 + u * 6,
+      x: 3.2 - u * 2.8,
+      y: 34 - u * 6,
+      z: -6 + u * 5,
       lx: 0,
       ly: 0.4,
-      lz: 4 + u * 3,
-      fov: 40,
+      lz: 6 + u * 2,
+      fov: 38,
     };
   }
   if (t < BREAK_AT) {
     return {
-      x: Math.sin(t * 0.2) * 1.2,
-      y: 28,
-      z: -2,
+      x: Math.sin(t * 0.18) * 1.0,
+      y: 26,
+      z: 0,
       lx: 0,
       ly: 0.5,
-      lz: 8,
-      fov: 38,
+      lz: 9,
+      fov: 36,
     };
   }
   if (t < CLOSE_AT) {
