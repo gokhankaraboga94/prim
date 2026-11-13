@@ -235,11 +235,12 @@ export function DanceBattle({ names, mekan = true }: { names: string[]; mekan?: 
         // Free dancer GLB buffers after parse — phones need headroom before skins + venue.
         releasePreloadedGlbs(DANCE_MODELS);
 
-        const useStreet = mekan && DANCE_STREET_FEET.length === DANCE_N;
-        const packCx = useStreet ? DANCE_STREET_FEET.reduce((s, f) => s + f.x, 0) / DANCE_N : 0;
-        const packCz = useStreet ? DANCE_STREET_FEET.reduce((s, f) => s + f.z, 0) / DANCE_N : 0;
-        // Nudge pack into the street (−Z) so the map rim stays behind the camera.
-        const intoCity = useStreet ? 2.4 : 0;
+        // Street pack stands on a flat stage at world origin — not on uneven GLB mesh.
+        const packCx = DANCE_STREET_FEET.reduce((s, f) => s + f.x, 0) / DANCE_N;
+        const packCz = DANCE_STREET_FEET.reduce((s, f) => s + f.z, 0) / DANCE_N;
+        const streetY = DANCE_STREET_FEET[0]?.y ?? 0;
+        // Stage top at y=0; bury mekan street/props under it so nothing clips legs.
+        const deckTop = 0;
         if (mekan) {
           floor.current?.clear();
           let venueOk = false;
@@ -248,38 +249,32 @@ export function DanceBattle({ names, mekan = true }: { names: string[]; mekan?: 
             if (drop) return;
             toLambert(venue.scene);
             fitMekan(venue.scene, DANCE_MEKAN_SPAN);
-            // Slide venue so the open plaza sits near world origin — frame center.
-            if (useStreet) {
-              venue.scene.position.x -= packCx;
-              venue.scene.position.z -= packCz;
-              venue.scene.updateMatrixWorld(true);
-            }
+            // Plaza under origin for backdrop; sink street below the flat stage.
+            venue.scene.position.x -= packCx;
+            venue.scene.position.z -= packCz;
+            venue.scene.position.y -= streetY + 0.85;
+            venue.scene.updateMatrixWorld(true);
             floor.current?.add(venue.scene);
-            if (useStreet) {
-              // Raised flat deck — covers uneven street so every dancer shares one sole plane.
-              const deckTop = DANCE_STREET_FEET[0].y + 0.04;
-              const padH = 0.14;
-              const pad = new THREE.Mesh(
-                new THREE.BoxGeometry(18, padH, 12),
-                new THREE.MeshLambertMaterial({ color: "#3f3f42" }),
-              );
-              pad.position.set(0, deckTop - padH / 2, -intoCity * 0.45);
-              pad.receiveShadow = false;
-              floor.current?.add(pad);
-              // Dark underlay past the GLB rim (same tone as street night) — no bright void.
-              const under = new THREE.Mesh(
-                new THREE.CircleGeometry(phone ? 48 : 80, phone ? 40 : 64),
-                new THREE.MeshLambertMaterial({ color: "#12141a" }),
-              );
-              under.rotation.x = -Math.PI / 2;
-              under.position.y = -0.08;
-              floor.current?.add(under);
-            }
+            const padH = 0.22;
+            const pad = new THREE.Mesh(
+              new THREE.BoxGeometry(20, padH, 14),
+              new THREE.MeshLambertMaterial({ color: "#3a3c42" }),
+            );
+            pad.position.set(0, deckTop - padH / 2, -0.4);
+            pad.receiveShadow = false;
+            floor.current?.add(pad);
+            const under = new THREE.Mesh(
+              new THREE.CircleGeometry(phone ? 48 : 80, phone ? 40 : 64),
+              new THREE.MeshLambertMaterial({ color: "#12141a" }),
+            );
+            under.rotation.x = -Math.PI / 2;
+            under.position.y = -0.95;
+            floor.current?.add(under);
             venueOk = true;
           } catch (err) {
             console.warn("dance mekan", err);
             if (phone && floor.current) {
-              buildStreetFallback(floor.current, useStreet ? DANCE_STREET_FEET[0].y + 0.04 : 0.02);
+              buildStreetFallback(floor.current, deckTop);
               venueOk = true;
             }
           }
@@ -292,27 +287,21 @@ export function DanceBattle({ names, mekan = true }: { names: string[]; mekan?: 
 
         const root = host.current;
         if (!root) throw new Error("dans sahne kökü yok");
-        const deckTop = useStreet ? DANCE_STREET_FEET[0].y + 0.04 : 0.02;
         const men: Dancer[] = [];
         for (let i = 0; i < DANCE_N; i++) {
           const source = files[i % files.length];
           const body = cloneSkinned(source.scene) as THREE.Group;
           const holder = new THREE.Group();
           holder.add(body);
-          if (useStreet) {
-            const foot = DANCE_STREET_FEET[i];
-            holder.position.set(foot.x - packCx, deckTop, foot.z - packCz - intoCity);
-          } else {
-            const spot = danceSpot(i);
-            holder.position.set(spot.x, deckTop, spot.z);
-          }
+          const spot = danceSpot(i);
+          // Same flat grid as dance2 — no per-foot GLB heights.
+          holder.position.set(spot.x, deckTop, spot.z);
           holder.rotation.y = Math.PI;
           const mix = new THREE.AnimationMixer(body);
           const clips = danceClips(source.animations);
           const man: Dancer = { i, host: holder, mix, clips, index: 0, offFinished: null };
           if (clips.length) {
             playClip(man, i % clips.length);
-            // Sample bind of first dance frame, then plant soles on the shared deck.
             mix.update(0);
           }
           plantOnDeck(holder, deckTop);
@@ -323,7 +312,6 @@ export function DanceBattle({ names, mekan = true }: { names: string[]; mekan?: 
         if (men.length < DANCE_N) throw new Error("dans sahne eksik");
         if (mekan && !floor.current?.children.length) throw new Error("mekan yüklenemedi");
         pack.current = men;
-        // One lift for the whole pack — equal deck, no per-foot average drift.
         streetLift = deckTop;
         const cx = men.reduce((s, m) => s + m.host.position.x, 0) / men.length;
         const cz = men.reduce((s, m) => s + m.host.position.z, 0) / men.length;
