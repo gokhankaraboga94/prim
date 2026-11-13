@@ -11,7 +11,7 @@ export const DANCE3_MODE = { id: DANCE3_ID, label: "dance3" } as const;
 export const DANCE_SECONDS = 30;
 export const DANCE2_SECONDS = 18;
 /** Quick single-subject cuts on the club stage. */
-export const DANCE3_SECONDS = 18;
+export const DANCE3_SECONDS = 36;
 export const DANCE_N = 15;
 
 /** User drops these into public/models (or repo root → copy there). */
