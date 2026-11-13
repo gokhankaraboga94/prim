@@ -13,7 +13,6 @@ export function Dance2Club({ lite = false }: { lite?: boolean }) {
   const ring = useRef<THREE.Mesh>(null);
   const ring2 = useRef<THREE.Mesh>(null);
   const ring3 = useRef<THREE.Mesh>(null);
-  const beams = useRef<THREE.Group>(null);
   const screens = useRef<THREE.Group>(null);
   const ball = useRef<THREE.Mesh>(null);
   const pulse = useRef<THREE.PointLight>(null);
@@ -29,27 +28,6 @@ export function Dance2Club({ lite = false }: { lite?: boolean }) {
       amber: neon(AMBER),
       magenta: neon(MAGENTA),
       lime: neon(LIME),
-      beam: new THREE.MeshBasicMaterial({
-        color: CYAN,
-        transparent: true,
-        opacity: 0.22,
-        depthWrite: false,
-        side: THREE.DoubleSide,
-      }),
-      beamWarm: new THREE.MeshBasicMaterial({
-        color: AMBER,
-        transparent: true,
-        opacity: 0.18,
-        depthWrite: false,
-        side: THREE.DoubleSide,
-      }),
-      beamHot: new THREE.MeshBasicMaterial({
-        color: MAGENTA,
-        transparent: true,
-        opacity: 0.16,
-        depthWrite: false,
-        side: THREE.DoubleSide,
-      }),
       wall: new THREE.MeshLambertMaterial({ color: "#0d1018" }),
       metal: new THREE.MeshLambertMaterial({ color: "#2a303c" }),
       screen: new THREE.MeshBasicMaterial({ color: "#152033" }),
@@ -75,7 +53,6 @@ export function Dance2Club({ lite = false }: { lite?: boolean }) {
   }, [lite]);
 
   const segs = lite ? 32 : 64;
-  const beamN = lite ? 4 : 8;
   const spotN = lite ? 1 : 4;
 
   useFrame(() => {
@@ -98,7 +75,6 @@ export function Dance2Club({ lite = false }: { lite?: boolean }) {
       const s = 1 + (1 - beat) * 0.05;
       ring3.current.scale.setScalar(s);
     }
-    if (beams.current) beams.current.rotation.y = swirl;
     if (ball.current) {
       ball.current.rotation.y = t * 1.4;
       ball.current.rotation.x = Math.sin(t * 0.8) * 0.35;
@@ -280,23 +256,6 @@ export function Dance2Club({ lite = false }: { lite?: boolean }) {
       <mesh position={[0, 6.85, -1.35]} material={mats.metal}>
         <cylinderGeometry args={[0.04, 0.04, 0.7, 8]} />
       </mesh>
-
-      <group ref={beams} position={[0, 6.85, -1.35]}>
-        {Array.from({ length: beamN }, (_, i) => {
-          const a = (i / beamN) * Math.PI * 2;
-          const mat = i % 3 === 0 ? mats.beam : i % 3 === 1 ? mats.beamWarm : mats.beamHot;
-          return (
-            <mesh
-              key={i}
-              position={[Math.cos(a) * 1.1, -3.1, Math.sin(a) * 1.1]}
-              rotation={[0.62, a, 0]}
-              material={mat}
-            >
-              <planeGeometry args={[0.7, 7.4]} />
-            </mesh>
-          );
-        })}
-      </group>
 
       <group ref={spots}>
         {Array.from({ length: spotN }, (_, i) => (

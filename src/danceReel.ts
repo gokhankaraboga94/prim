@@ -90,7 +90,7 @@ let camCz = -1.6;
 let camMode: "street" | "club" = "club";
 const CAM = {
   street: { r: 8.2, y: 4.2, lookY: 1.55, fov: 32 },
-  club: { r: 9.8, y: 3.35, lookY: 1.25, fov: 40 },
+  club: { r: 8.33, y: 3.2, lookY: 1.25, fov: 40 },
 } as const;
 
 export function danceSetCamTarget(x: number, z: number, mode: "street" | "club" = "club") {

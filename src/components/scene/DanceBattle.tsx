@@ -360,7 +360,9 @@ export function DanceBattle({ names, mekan = true }: { names: string[]; mekan?: 
         const row = Math.floor(idx / 5);
         const col = idx % 5;
         // Stagger plates by row + slight col offset so names stay readable in orbit
-        const headY = foot + 2.15 + row * 0.35 + (col % 2) * 0.12;
+        // dance2: names 20% lower — head-to-plate gap was too wide
+        const lift = (2.15 + row * 0.35 + (col % 2) * 0.12) * (mekan ? 1 : 0.8);
+        const headY = foot + lift;
         const dx = px - camera.position.x;
         const dy = headY - camera.position.y;
         const dz = pz - camera.position.z;
