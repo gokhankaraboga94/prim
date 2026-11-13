@@ -53,6 +53,7 @@ import { DANCE_URLS, DANCE2_URLS, DANCE3_URLS, danceHold, danceIsPhone, danceIsR
 import { ekranHold, ekranIsReady, ekranStart, ekranWhenReady, type EkranId } from "../ekranReel";
 import { ekran1Hold, ekran1IsReady, ekran1Start, ekran1WhenReady, type Ekran1Id } from "../ekran1Reel";
 import { ekran2Hold, ekran2IsReady, ekran2Start, ekran2WhenReady, type Ekran2Id } from "../ekran2Reel";
+import { ekran3Hold, ekran3IsReady, ekran3Start, ekran3WhenReady, type Ekran3Id } from "../ekran3Reel";
 import { KUYULAR_URLS, kuyularHold, kuyularIsReady, kuyularStart, kuyularWhenReady, type KuyularId } from "../kuyularReel";
 import { TEK_URLS, tekHold, tekIsReady, tekStart, tekWhenReady, type TekId } from "../tekReel";
 import { TEK2_URLS, tek2Hold, tek2IsReady, tek2Start, tek2WhenReady, type Tek2Id } from "../tek2Reel";
@@ -125,6 +126,7 @@ type ReelCaptureProps = {
   ekran?: EkranId | null;
   ekran1?: Ekran1Id | null;
   ekran2?: Ekran2Id | null;
+  ekran3?: Ekran3Id | null;
   kuyular?: KuyularId | null;
   tek?: TekId | null;
   tek2?: Tek2Id | null;
@@ -143,7 +145,7 @@ type ReelCaptureProps = {
   onClose: () => void;
 };
 
-export function ReelCapture({ soldiers, names, commanders = [], level, pressure, hp, maxHp, seconds, showTitles = true, warLook = false, day = 0, skipCommander = false, shotMode = null, cinema = false, roster = null, saga = null, discover = null, countdown = null, defend = null, vs = null, new1 = null, new2 = null, new3 = null, new4 = null, new5 = null, new6 = null, new62 = null, new7 = null, maze = null, film = null, dragon = null, giant = null, wars = null, ordu = null, karsi = null, ok = null, elf = null, kalkan = null, hero = null, loop = null, kurtar = null, gecme = null, kuyu = null, kapi = null, magdur = null, kare = null, devKong = null, savas = null, kirmizi = null, baska = null, aragorn = null, dovus = null, vsss = null, epik = null, dance = null, dance2 = null, dance3 = null, ekran = null, ekran1 = null, ekran2 = null, kuyular = null, tek = null, tek2 = null, tek3 = null, kale = null, run = null, arena = null, arena2 = null, arena3 = null, bout = null, kayit = null, mix = null, xxx = null, rosterIds = null, onRecorded, onClose }: ReelCaptureProps) {
+export function ReelCapture({ soldiers, names, commanders = [], level, pressure, hp, maxHp, seconds, showTitles = true, warLook = false, day = 0, skipCommander = false, shotMode = null, cinema = false, roster = null, saga = null, discover = null, countdown = null, defend = null, vs = null, new1 = null, new2 = null, new3 = null, new4 = null, new5 = null, new6 = null, new62 = null, new7 = null, maze = null, film = null, dragon = null, giant = null, wars = null, ordu = null, karsi = null, ok = null, elf = null, kalkan = null, hero = null, loop = null, kurtar = null, gecme = null, kuyu = null, kapi = null, magdur = null, kare = null, devKong = null, savas = null, kirmizi = null, baska = null, aragorn = null, dovus = null, vsss = null, epik = null, dance = null, dance2 = null, dance3 = null, ekran = null, ekran1 = null, ekran2 = null, ekran3 = null, kuyular = null, tek = null, tek2 = null, tek3 = null, kale = null, run = null, arena = null, arena2 = null, arena3 = null, bout = null, kayit = null, mix = null, xxx = null, rosterIds = null, onRecorded, onClose }: ReelCaptureProps) {
   const clip = roster && isJoin(roster) && rosterIds?.length ? rosterDuration(roster, rosterIds.length) : seconds;
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [phase, setPhase] = useState<"boot" | "rec" | "done" | "err">("boot");
@@ -267,9 +269,9 @@ export function ReelCapture({ soldiers, names, commanders = [], level, pressure,
         setPhase("err");
         return;
       }
-      if (kurtar || gecme || kuyu || kapi || magdur || kare || devKong || savas || kirmizi || baska || aragorn || dovus || vsss || epik || dance || dance2 || dance3 || ekran || ekran1 || ekran2 || kuyular || tek || tek2 || tek3 || kale || run) {
+      if (kurtar || gecme || kuyu || kapi || magdur || kare || devKong || savas || kirmizi || baska || aragorn || dovus || vsss || epik || dance || dance2 || dance3 || ekran || ekran1 || ekran2 || ekran3 || kuyular || tek || tek2 || tek3 || kale || run) {
         const loadStart = performance.now();
-        const sceneReady = kurtar ? kurtarIsReady : gecme ? gecmeIsReady : kuyu ? kuyuIsReady : devKong ? devKongIsReady : savas ? savasIsReady : kirmizi ? kirmiziIsReady : baska ? baskaIsReady : aragorn ? aragornIsReady : dance || dance2 || dance3 ? danceIsReady : ekran ? ekranIsReady : ekran1 ? ekran1IsReady : ekran2 ? ekran2IsReady : epik ? epikIsReady : vsss ? vsssIsReady : dovus ? dovusIsReady : kuyular ? kuyularIsReady : tek ? tekIsReady : tek2 ? tek2IsReady : tek3 ? tek3IsReady : kale ? kaleIsReady : run ? runIsReady : kare ? kareIsReady : magdur ? magdurIsReady : kapiIsReady;
+        const sceneReady = kurtar ? kurtarIsReady : gecme ? gecmeIsReady : kuyu ? kuyuIsReady : devKong ? devKongIsReady : savas ? savasIsReady : kirmizi ? kirmiziIsReady : baska ? baskaIsReady : aragorn ? aragornIsReady : dance || dance2 || dance3 ? danceIsReady : ekran ? ekranIsReady : ekran1 ? ekran1IsReady : ekran2 ? ekran2IsReady : ekran3 ? ekran3IsReady : epik ? epikIsReady : vsss ? vsssIsReady : dovus ? dovusIsReady : kuyular ? kuyularIsReady : tek ? tekIsReady : tek2 ? tek2IsReady : tek3 ? tek3IsReady : kale ? kaleIsReady : run ? runIsReady : kare ? kareIsReady : magdur ? magdurIsReady : kapiIsReady;
         const danceWait = dance || dance2 || dance3 ? (danceIsPhone() ? 150000 : 90000) : 0;
         while (!sceneReady() && performance.now() - loadStart < (danceWait || (savas || kirmizi || baska || kuyular || tek || tek2 || tek3 || kale || run ? 50000 : 25000))) {
           await wait(80);
@@ -292,6 +294,7 @@ export function ReelCapture({ soldiers, names, commanders = [], level, pressure,
         else if (ekran) ekranHold();
         else if (ekran1) ekran1Hold();
         else if (ekran2) ekran2Hold();
+        else if (ekran3) ekran3Hold();
         else if (epik) epikHold();
         else if (vsss) vsssHold();
         else if (dovus) dovusHold();
@@ -316,6 +319,7 @@ export function ReelCapture({ soldiers, names, commanders = [], level, pressure,
         else if (ekran) await ekranWhenReady();
         else if (ekran1) await ekran1WhenReady();
         else if (ekran2) await ekran2WhenReady();
+        else if (ekran3) await ekran3WhenReady();
         else if (epik) await epikWhenReady();
         else if (vsss) await vsssWhenReady();
         else if (dovus) await dovusWhenReady();
@@ -371,7 +375,7 @@ export function ReelCapture({ soldiers, names, commanders = [], level, pressure,
         const fps = run ? 60 : phoneDance ? 24 : undefined;
         const outW = phoneDance ? REEL_PHONE_WIDTH : REEL_WIDTH;
         const outH = phoneDance ? REEL_PHONE_HEIGHT : REEL_HEIGHT;
-        const recorded = await recordCanvas(canvas, clip, reelSfxStream(), bits, heavy, isDevSmall(giant) ? zillaStart : kurtar ? kurtarStart : gecme ? gecmeStart : kuyu ? kuyuStart : devKong ? devKongStart : savas ? savasStart : kirmizi ? kirmiziStart : baska ? baskaStart : aragorn ? aragornStart : dance || dance2 || dance3 ? danceStart : ekran ? ekranStart : ekran1 ? ekran1Start : ekran2 ? ekran2Start : epik ? epikStart : vsss ? vsssStart : dovus ? dovusStart : kuyular ? kuyularStart : tek ? tekStart : tek2 ? tek2Start : tek3 ? tek3Start : kale ? kaleStart : run ? runStart : kare ? kareStart : magdur ? magdurStart : kapi ? kapiStart : elf ? elfStartPlay : undefined, fps, outW, outH);
+        const recorded = await recordCanvas(canvas, clip, reelSfxStream(), bits, heavy, isDevSmall(giant) ? zillaStart : kurtar ? kurtarStart : gecme ? gecmeStart : kuyu ? kuyuStart : devKong ? devKongStart : savas ? savasStart : kirmizi ? kirmiziStart : baska ? baskaStart : aragorn ? aragornStart : dance || dance2 || dance3 ? danceStart : ekran ? ekranStart : ekran1 ? ekran1Start : ekran2 ? ekran2Start : ekran3 ? ekran3Start : epik ? epikStart : vsss ? vsssStart : dovus ? dovusStart : kuyular ? kuyularStart : tek ? tekStart : tek2 ? tek2Start : tek3 ? tek3Start : kale ? kaleStart : run ? runStart : kare ? kareStart : magdur ? magdurStart : kapi ? kapiStart : elf ? elfStartPlay : undefined, fps, outW, outH);
         if (stop) return;
         setBlob(recorded);
         setPreview(URL.createObjectURL(recorded));
@@ -494,6 +498,7 @@ export function ReelCapture({ soldiers, names, commanders = [], level, pressure,
             ekran={ekran}
             ekran1={ekran1}
             ekran2={ekran2}
+            ekran3={ekran3}
             kuyular={kuyular}
             tek={tek}
             tek2={tek2}
@@ -507,7 +512,7 @@ export function ReelCapture({ soldiers, names, commanders = [], level, pressure,
             kayit={kayit}
             mix={mix}
             xxx={xxx}
-            showTitles={showTitles && !mix && !xxx && !new1 && !new2 && !new3 && !new4 && !new5 && !new6 && !new62 && !new7 && !maze && !film && !dragon && !giant && !wars && !ordu && !karsi && !ok && !elf && !kalkan && !hero && !loop && !kurtar && !gecme && !kuyu && !kapi && !magdur && !kare && !devKong && !savas && !kirmizi && !baska && !aragorn && !dovus && !vsss && !epik && !dance && !dance2 && !dance3 && !ekran && !ekran1 && !ekran2 && !kuyular && !tek && !tek2 && !tek3 && !kale && !run && !arena && !arena2 && !arena3 && !bout && !kayit}
+            showTitles={showTitles && !mix && !xxx && !new1 && !new2 && !new3 && !new4 && !new5 && !new6 && !new62 && !new7 && !maze && !film && !dragon && !giant && !wars && !ordu && !karsi && !ok && !elf && !kalkan && !hero && !loop && !kurtar && !gecme && !kuyu && !kapi && !magdur && !kare && !devKong && !savas && !kirmizi && !baska && !aragorn && !dovus && !vsss && !epik && !dance && !dance2 && !dance3 && !ekran && !ekran1 && !ekran2 && !ekran3 && !kuyular && !tek && !tek2 && !tek3 && !kale && !run && !arena && !arena2 && !arena3 && !bout && !kayit}
             rosterIds={rosterIds}
             onReady={(canvas) => {
               canvasRef.current = canvas;
@@ -521,7 +526,7 @@ export function ReelCapture({ soldiers, names, commanders = [], level, pressure,
 
       {(phase === "boot" || phase === "rec") && (
         <div className="reel-capture-hud">
-          <p>{phase === "boot" ? (!assets.ready || (elf && !elfReady) || ((kurtar && !kurtarIsReady()) || (gecme && !gecmeIsReady()) || (kuyu && !kuyuIsReady()) || (kapi && !kapiIsReady()) || (magdur && !magdurIsReady()) || (kare && !kareIsReady()) || (devKong && !devKongIsReady()) || (savas && !savasIsReady()) || (kirmizi && !kirmiziIsReady()) || (baska && !baskaIsReady()) || (aragorn && !aragornIsReady()) || (dance && !danceIsReady()) || (dance2 && !danceIsReady()) || (dance3 && !danceIsReady()) || (ekran && !ekranIsReady()) || (ekran1 && !ekran1IsReady()) || (ekran2 && !ekran2IsReady()) || (epik && !epikIsReady()) || (vsss && !vsssIsReady()) || (dovus && !dovusIsReady()) || (kuyular && !kuyularIsReady()) || (tek && !tekIsReady()) || (tek2 && !tek2IsReady()) || (tek3 && !tek3IsReady())) ? `Modeller yükleniyor… ${elf ? `${elfDone}/${elfLoadTotal()}` : assets.total ? `${assets.done}/${assets.total}` : ""}` : "Sahne hazırlanıyor…") : "Kayıt alınıyor…"}</p>
+          <p>{phase === "boot" ? (!assets.ready || (elf && !elfReady) || ((kurtar && !kurtarIsReady()) || (gecme && !gecmeIsReady()) || (kuyu && !kuyuIsReady()) || (kapi && !kapiIsReady()) || (magdur && !magdurIsReady()) || (kare && !kareIsReady()) || (devKong && !devKongIsReady()) || (savas && !savasIsReady()) || (kirmizi && !kirmiziIsReady()) || (baska && !baskaIsReady()) || (aragorn && !aragornIsReady()) || (dance && !danceIsReady()) || (dance2 && !danceIsReady()) || (dance3 && !danceIsReady()) || (ekran && !ekranIsReady()) || (ekran1 && !ekran1IsReady()) || (ekran2 && !ekran2IsReady()) || (ekran3 && !ekran3IsReady()) || (epik && !epikIsReady()) || (vsss && !vsssIsReady()) || (dovus && !dovusIsReady()) || (kuyular && !kuyularIsReady()) || (tek && !tekIsReady()) || (tek2 && !tek2IsReady()) || (tek3 && !tek3IsReady())) ? `Modeller yükleniyor… ${elf ? `${elfDone}/${elfLoadTotal()}` : assets.total ? `${assets.done}/${assets.total}` : ""}` : "Sahne hazırlanıyor…") : "Kayıt alınıyor…"}</p>
         </div>
       )}
 
