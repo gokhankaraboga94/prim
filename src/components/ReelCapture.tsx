@@ -19,6 +19,7 @@ import type { DragonId } from "../dragonReel";
 import { isDev16, isDev17, isDevSmall, setDevRingSpread, zillaHold, zillaIsReady, zillaSetRig, zillaStart, type GiantId } from "../devReel";
 import type { WarsId } from "../warsReel";
 import type { OrduId } from "../orduReel";
+import type { D14112026Id } from "../d14112026Reel";
 import type { Rival } from "../karsiReel";
 import type { OkId } from "../okReel";
 import { elfHasScene, elfHold, elfIsReady, elfLoadDone, elfLoadTotal, elfStartPlay, elfWarm, elfWhenReady, type ElfId } from "../elfReel";
@@ -103,6 +104,7 @@ type ReelCaptureProps = {
   giant?: GiantId | null;
   wars?: WarsId | null;
   ordu?: OrduId | null;
+  d14112026?: D14112026Id | null;
   karsi?: Rival | null;
   ok?: OkId | null;
   elf?: ElfId | null;
@@ -151,7 +153,7 @@ type ReelCaptureProps = {
   onClose: () => void;
 };
 
-export function ReelCapture({ soldiers, names, commanders = [], level, pressure, hp, maxHp, seconds, showTitles = true, warLook = false, day = 0, skipCommander = false, shotMode = null, cinema = false, roster = null, saga = null, discover = null, countdown = null, defend = null, vs = null, new1 = null, new2 = null, new3 = null, new4 = null, new5 = null, new6 = null, new62 = null, new7 = null, maze = null, film = null, dragon = null, giant = null, wars = null, ordu = null, karsi = null, ok = null, elf = null, kalkan = null, hero = null, loop = null, kurtar = null, gecme = null, kuyu = null, kapi = null, magdur = null, kare = null, d1311 = null, devKong = null, savas = null, kirmizi = null, baska = null, aragorn = null, dovus = null, vsss = null, epik = null, dance = null, dance2 = null, dance3 = null, ekran = null, ekran1 = null, ekran2 = null, ekran3 = null, ekran4 = null, ekran5 = null, kuyular = null, tek = null, tek2 = null, tek3 = null, kale = null, run = null, arena = null, arena2 = null, arena3 = null, bout = null, kayit = null, mix = null, xxx = null, rosterIds = null, onRecorded, onClose }: ReelCaptureProps) {
+export function ReelCapture({ soldiers, names, commanders = [], level, pressure, hp, maxHp, seconds, showTitles = true, warLook = false, day = 0, skipCommander = false, shotMode = null, cinema = false, roster = null, saga = null, discover = null, countdown = null, defend = null, vs = null, new1 = null, new2 = null, new3 = null, new4 = null, new5 = null, new6 = null, new62 = null, new7 = null, maze = null, film = null, dragon = null, giant = null, wars = null, ordu = null, d14112026 = null, karsi = null, ok = null, elf = null, kalkan = null, hero = null, loop = null, kurtar = null, gecme = null, kuyu = null, kapi = null, magdur = null, kare = null, d1311 = null, devKong = null, savas = null, kirmizi = null, baska = null, aragorn = null, dovus = null, vsss = null, epik = null, dance = null, dance2 = null, dance3 = null, ekran = null, ekran1 = null, ekran2 = null, ekran3 = null, ekran4 = null, ekran5 = null, kuyular = null, tek = null, tek2 = null, tek3 = null, kale = null, run = null, arena = null, arena2 = null, arena3 = null, bout = null, kayit = null, mix = null, xxx = null, rosterIds = null, onRecorded, onClose }: ReelCaptureProps) {
   const clip = roster && isJoin(roster) && rosterIds?.length ? rosterDuration(roster, rosterIds.length) : seconds;
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [phase, setPhase] = useState<"boot" | "rec" | "done" | "err">("boot");
@@ -463,8 +465,8 @@ export function ReelCapture({ soldiers, names, commanders = [], level, pressure,
             duration={clip}
             warLook={warLook}
             day={day}
-            skipCommander={skipCommander || Boolean(discover) || Boolean(countdown) || Boolean(defend) || Boolean(vs) || Boolean(new1) || Boolean(new2) || Boolean(new3) || Boolean(new4) || Boolean(new5) || Boolean(new6) || Boolean(new62) || Boolean(new7) || Boolean(maze) || Boolean(film) || Boolean(giant) || Boolean(wars) || Boolean(ordu) || Boolean(karsi) || Boolean(ok) || Boolean(elf) || Boolean(kalkan) || Boolean(hero) || Boolean(loop) || Boolean(kare) || Boolean(d1311) || Boolean(arena) || Boolean(arena2) || Boolean(arena3) || Boolean(bout) || Boolean(kayit) || Boolean(xxx && xxxHideCmd(xxx))}
-            shotMode={cinema || roster || saga || discover || countdown || defend || vs || new1 || new2 || new3 || new4 || new5 || new6 || new62 || new7 || maze || film || giant || wars || ordu || karsi || ok || elf || kalkan || hero || loop || kare || d1311 || arena || arena2 || arena3 || bout || kayit || mix || xxx ? null : shotMode}
+            skipCommander={skipCommander || Boolean(discover) || Boolean(countdown) || Boolean(defend) || Boolean(vs) || Boolean(new1) || Boolean(new2) || Boolean(new3) || Boolean(new4) || Boolean(new5) || Boolean(new6) || Boolean(new62) || Boolean(new7) || Boolean(maze) || Boolean(film) || Boolean(giant) || Boolean(wars) || Boolean(ordu) || Boolean(d14112026) || Boolean(karsi) || Boolean(ok) || Boolean(elf) || Boolean(kalkan) || Boolean(hero) || Boolean(loop) || Boolean(kare) || Boolean(d1311) || Boolean(arena) || Boolean(arena2) || Boolean(arena3) || Boolean(bout) || Boolean(kayit) || Boolean(xxx && xxxHideCmd(xxx))}
+            shotMode={cinema || roster || saga || discover || countdown || defend || vs || new1 || new2 || new3 || new4 || new5 || new6 || new62 || new7 || maze || film || giant || wars || ordu || d14112026 || karsi || ok || elf || kalkan || hero || loop || kare || d1311 || arena || arena2 || arena3 || bout || kayit || mix || xxx ? null : shotMode}
             cinema={cinema}
             roster={roster}
             saga={saga}
@@ -486,6 +488,7 @@ export function ReelCapture({ soldiers, names, commanders = [], level, pressure,
             giant={giant}
             wars={wars}
             ordu={ordu}
+            d14112026={d14112026}
             karsi={karsi}
             ok={ok}
             elf={elf}
@@ -529,7 +532,7 @@ export function ReelCapture({ soldiers, names, commanders = [], level, pressure,
             kayit={kayit}
             mix={mix}
             xxx={xxx}
-            showTitles={showTitles && !mix && !xxx && !new1 && !new2 && !new3 && !new4 && !new5 && !new6 && !new62 && !new7 && !maze && !film && !dragon && !giant && !wars && !ordu && !karsi && !ok && !elf && !kalkan && !hero && !loop && !kurtar && !gecme && !kuyu && !kapi && !magdur && !kare && !devKong && !savas && !kirmizi && !baska && !aragorn && !dovus && !vsss && !epik && !dance && !dance2 && !dance3 && !ekran && !ekran1 && !ekran2 && !ekran3 && !ekran4 && !ekran5 && !kuyular && !tek && !tek2 && !tek3 && !kale && !run && !arena && !arena2 && !arena3 && !bout && !kayit}
+            showTitles={showTitles && !mix && !xxx && !new1 && !new2 && !new3 && !new4 && !new5 && !new6 && !new62 && !new7 && !maze && !film && !dragon && !giant && !wars && !ordu && !d14112026 && !karsi && !ok && !elf && !kalkan && !hero && !loop && !kurtar && !gecme && !kuyu && !kapi && !magdur && !kare && !devKong && !savas && !kirmizi && !baska && !aragorn && !dovus && !vsss && !epik && !dance && !dance2 && !dance3 && !ekran && !ekran1 && !ekran2 && !ekran3 && !ekran4 && !ekran5 && !kuyular && !tek && !tek2 && !tek3 && !kale && !run && !arena && !arena2 && !arena3 && !bout && !kayit}
             rosterIds={rosterIds}
             onReady={(canvas) => {
               canvasRef.current = canvas;

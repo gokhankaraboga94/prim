@@ -35,10 +35,12 @@ import { RUN_ID, RUN_MODE, RUN_SECONDS } from "./runReel";
 import { DRAGON_ID, DRAGON_MODE, DRAGON_SECONDS } from "./dragonReel";
 import { ELF_ID, ELF_MODE, ELF_SECONDS } from "./elfReel";
 import { D1311_ID, D1311_MODE, D1311_SECONDS } from "./d1311Reel";
+import { D14112026_ID, D14112026_MODE, D14112026_SECONDS } from "./d14112026Reel";
 export const RECENT_BUTTON_LIMIT = 20;
 
 /** Yeniden eskiye. Bir buton güncellenirse en üste alınır, en alttaki 20'nin dışına düşer. */
 export const RECENT_BUTTONS = [
+  { id: D14112026_ID, label: `${D14112026_MODE.label} — ${D14112026_SECONDS}s`, seconds: D14112026_SECONDS },
   { id: D1311_ID, label: `${D1311_MODE.label} — ${D1311_SECONDS}s`, seconds: D1311_SECONDS },
   { id: EKRAN5_ID, label: `${EKRAN5_MODE.label} — ${EKRAN5_SECONDS}s`, seconds: EKRAN5_SECONDS },
   { id: EKRAN4_ID, label: `${EKRAN4_MODE.label} — ${EKRAN4_SECONDS}s`, seconds: EKRAN4_SECONDS },
