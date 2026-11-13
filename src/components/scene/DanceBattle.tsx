@@ -11,7 +11,6 @@ import {
   DANCE_MODELS,
   DANCE_N,
   DANCE_STREET_FEET,
-  dance3FocusIndex,
   danceCam,
   danceIsPhone,
   danceMarkReady,
@@ -346,7 +345,6 @@ export function DanceBattle({ names, mekan = true, solo = false }: { names: stri
     for (const man of pack.current) {
       if (t > 0) man.mix.update(dt);
     }
-    const focus = solo ? dance3FocusIndex(t) : -1;
     for (const sheet of atlas.sheets) {
       const inst = sheet.geometry.userData.mesh as THREE.InstancedMesh | undefined;
       if (!inst) continue;
@@ -362,17 +360,19 @@ export function DanceBattle({ names, mekan = true, solo = false }: { names: stri
         const row = Math.floor(idx / 5);
         const col = idx % 5;
         // Stagger plates by row + slight col offset so names stay readable in orbit
-        // club/solo: names 20% lower — head-to-plate gap was too wide
-        const lift = (2.15 + row * 0.35 + (col % 2) * 0.12) * (mekan ? 1 : 0.8);
+        // club: 20% lower; dance3 solo: almost on the scalp so close-ups keep every name in frame
+        const lift = solo
+          ? 1.58 + row * 0.06 + (col % 2) * 0.02
+          : (2.15 + row * 0.35 + (col % 2) * 0.12) * (mekan ? 1 : 0.8);
         const headY = foot + lift;
-        // dance3: only the framed dancer’s name
-        const show = !solo || idx === focus;
+        // dance3: show every named plate (tight to head); hide only empty roster slots
+        const show = true;
         const dx = px - camera.position.x;
         const dy = headY - camera.position.y;
         const dz = pz - camera.position.z;
         const dist = Math.hypot(dx, dy, dz);
-        const base = Math.min(0.52, 0.24 + dist * 0.011) * (solo ? 1.15 : 1);
-        const w = show ? base * 1.45 : 0.001;
+        const base = Math.min(solo ? 0.38 : 0.52, (solo ? 0.18 : 0.24) + dist * (solo ? 0.008 : 0.011));
+        const w = show ? base * (solo ? 1.2 : 1.45) : 0.001;
         const h = show ? (cell.sy * w) / Math.max(cell.sx, 0.01) : 0.001;
         dummy.position.set(px, headY, pz);
         dummy.quaternion.copy(camera.quaternion);
