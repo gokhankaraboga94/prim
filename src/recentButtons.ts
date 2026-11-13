@@ -24,6 +24,7 @@ import { EKRAN_ID, EKRAN_MODE, EKRAN_SECONDS } from "./ekranReel";
 import { EKRAN1_ID, EKRAN1_MODE, EKRAN1_SECONDS } from "./ekran1Reel";
 import { EKRAN2_ID, EKRAN2_MODE, EKRAN2_SECONDS } from "./ekran2Reel";
 import { EKRAN3_ID, EKRAN3_MODE, EKRAN3_SECONDS } from "./ekran3Reel";
+import { EKRAN4_ID, EKRAN4_MODE, EKRAN4_SECONDS } from "./ekran4Reel";
 import { KUYULAR_ID, KUYULAR_MODE, KUYULAR_SECONDS } from "./kuyularReel";
 import { TEK_ID, TEK_MODE, TEK_SECONDS } from "./tekReel";
 import { TEK2_ID, TEK2_MODE, TEK2_SECONDS } from "./tek2Reel";
@@ -36,6 +37,7 @@ export const RECENT_BUTTON_LIMIT = 20;
 
 /** Yeniden eskiye. Bir buton güncellenirse en üste alınır, en alttaki 20'nin dışına düşer. */
 export const RECENT_BUTTONS = [
+  { id: EKRAN4_ID, label: `${EKRAN4_MODE.label} — ${EKRAN4_SECONDS}s`, seconds: EKRAN4_SECONDS },
   { id: EKRAN3_ID, label: `${EKRAN3_MODE.label} — ${EKRAN3_SECONDS}s`, seconds: EKRAN3_SECONDS },
   { id: EKRAN2_ID, label: `${EKRAN2_MODE.label} — ${EKRAN2_SECONDS}s`, seconds: EKRAN2_SECONDS },
   { id: EKRAN1_ID, label: `${EKRAN1_MODE.label} — ${EKRAN1_SECONDS}s`, seconds: EKRAN1_SECONDS },
