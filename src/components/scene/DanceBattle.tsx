@@ -11,6 +11,7 @@ import {
   DANCE_MODELS,
   DANCE_N,
   DANCE_STREET_FEET,
+  dance3FocusIndex,
   danceCam,
   danceIsPhone,
   danceMarkReady,
@@ -180,7 +181,7 @@ function playClip(man: Dancer, at: number) {
   man.mix.addEventListener("finished", onDone as unknown as (e: object) => void);
 }
 
-export function DanceBattle({ names, mekan = true }: { names: string[]; mekan?: boolean }) {
+export function DanceBattle({ names, mekan = true, solo = false }: { names: string[]; mekan?: boolean; solo?: boolean }) {
   const host = useRef<THREE.Group>(null);
   const floor = useRef<THREE.Group>(null);
   const pack = useRef<Dancer[]>([]);
@@ -315,7 +316,7 @@ export function DanceBattle({ names, mekan = true }: { names: string[]; mekan?: 
         streetLift = deckTop;
         const cx = men.reduce((s, m) => s + m.host.position.x, 0) / men.length;
         const cz = men.reduce((s, m) => s + m.host.position.z, 0) / men.length;
-        danceSetCamTarget(cx, cz, mekan ? "street" : "club");
+        danceSetCamTarget(cx, cz, solo ? "solo" : mekan ? "street" : "club");
         await new Promise<void>((ok) => requestAnimationFrame(() => ok()));
         if (drop) return;
         danceMarkReady();
@@ -338,13 +339,14 @@ export function DanceBattle({ names, mekan = true }: { names: string[]; mekan?: 
       floor.current?.clear();
       danceReset();
     };
-  }, [mekan, phone]);
+  }, [mekan, phone, solo]);
 
   useFrame((_, dt) => {
     const t = danceT();
     for (const man of pack.current) {
       if (t > 0) man.mix.update(dt);
     }
+    const focus = solo ? dance3FocusIndex(t) : -1;
     for (const sheet of atlas.sheets) {
       const inst = sheet.geometry.userData.mesh as THREE.InstancedMesh | undefined;
       if (!inst) continue;
@@ -360,16 +362,18 @@ export function DanceBattle({ names, mekan = true }: { names: string[]; mekan?: 
         const row = Math.floor(idx / 5);
         const col = idx % 5;
         // Stagger plates by row + slight col offset so names stay readable in orbit
-        // dance2: names 20% lower — head-to-plate gap was too wide
+        // club/solo: names 20% lower — head-to-plate gap was too wide
         const lift = (2.15 + row * 0.35 + (col % 2) * 0.12) * (mekan ? 1 : 0.8);
         const headY = foot + lift;
+        // dance3: only the framed dancer’s name
+        const show = !solo || idx === focus;
         const dx = px - camera.position.x;
         const dy = headY - camera.position.y;
         const dz = pz - camera.position.z;
         const dist = Math.hypot(dx, dy, dz);
-        const base = Math.min(0.52, 0.24 + dist * 0.011);
-        const w = base * 1.45;
-        const h = (cell.sy * w) / Math.max(cell.sx, 0.01);
+        const base = Math.min(0.52, 0.24 + dist * 0.011) * (solo ? 1.15 : 1);
+        const w = show ? base * 1.45 : 0.001;
+        const h = show ? (cell.sy * w) / Math.max(cell.sx, 0.01) : 0.001;
         dummy.position.set(px, headY, pz);
         dummy.quaternion.copy(camera.quaternion);
         dummy.scale.set(w, h, 1);

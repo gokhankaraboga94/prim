@@ -1,7 +1,7 @@
 import { useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
-import { DANCE2_SECONDS, danceT } from "../../danceReel";
+import { DANCE2_SECONDS, DANCE3_SECONDS, danceT } from "../../danceReel";
 
 const CYAN = "#3de7ff";
 const AMBER = "#ffc15a";
@@ -57,7 +57,7 @@ export function Dance2Club({ lite = false }: { lite?: boolean }) {
 
   useFrame(() => {
     const t = danceT();
-    const u = Math.min(1, Math.max(0, t) / DANCE2_SECONDS);
+    const u = Math.min(1, Math.max(0, t) / Math.max(DANCE2_SECONDS, DANCE3_SECONDS));
     const beat = 0.5 + 0.5 * Math.sin(t * 9.4);
     const swirl = t * 0.7;
     if (ring.current) {
