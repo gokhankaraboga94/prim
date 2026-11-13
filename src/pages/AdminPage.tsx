@@ -66,6 +66,7 @@ import { EKRAN2_ID, EKRAN2_MODE, EKRAN2_SECONDS, isEkran2, type Ekran2Id } from 
 import { EKRAN3_ID, EKRAN3_MODE, EKRAN3_SECONDS, isEkran3, type Ekran3Id } from "../ekran3Reel";
 import { EKRAN4_ID, EKRAN4_MODE, EKRAN4_SECONDS, isEkran4, type Ekran4Id } from "../ekran4Reel";
 import { EKRAN5_ID, EKRAN5_MODE, EKRAN5_SECONDS, isEkran5, type Ekran5Id } from "../ekran5Reel";
+import { D1311_ID, D1311_MODE, D1311_SECONDS, isD1311, type D1311Id } from "../d1311Reel";
 import { KUYULAR_ID, KUYULAR_MODE, KUYULAR_SECONDS, isKuyular, type KuyularId } from "../kuyularReel";
 import { TEK_ID, TEK_MODE, TEK_SECONDS, isTek, type TekId } from "../tekReel";
 import { TEK2_ID, TEK2_MODE, TEK2_SECONDS, isTek2, type Tek2Id } from "../tek2Reel";
@@ -99,7 +100,7 @@ export function AdminPage() {
   const [reelSeconds, setReelSeconds] = useState<number>(7);
   const [reelText, setReelText] = useState(true);
   const [reelSkipCmd, setReelSkipCmd] = useState(false);
-  const [reelShot, setReelShot] = useState<ReelShot | PlanBId | SagaId | DiscoverId | MixId | CountdownId | DefendId | VsId | New1Id | New2Id | New3Id | New4Id | New5Id | New6Id | New62Id | New7Id | LabId | DevId | Dev2Id | Dev3Id | Dev4Id | Dev5Id | Dev6Id | Dev7Id | Dev8Id | Dev9Id | Dev10Id | Dev11Id | Dev12Id | Dev13Id | Dev14Id | Dev15Id | Dev16Id | Dev17Id | SnakeId | DevsId | FilmId | DragonId | WarsId | OrduId | KarsiId | Karsi0Id | Karsi2Id | Karsi3Id | YediId | LoopId | KurtarId | GecmeId | KuyuId | KapiId | MagdurId | KareId | DevKongId | SavasId | KirmiziId | BaskaId | AragornId | DovusId | VsssId | EpikId | DanceId | Dance2Id | Dance3Id | EkranId | Ekran1Id | Ekran2Id | Ekran3Id | Ekran4Id | Ekran5Id | KuyularId | TekId | Tek2Id | Tek3Id | KaleId | RunId | OkId | ElfId | KalkanId | HeroId | ArenaId | Arena2Id | Arena3Id | BoutId | Bout2Id | KayitId | XxxId | null>(null);
+  const [reelShot, setReelShot] = useState<ReelShot | PlanBId | SagaId | DiscoverId | MixId | CountdownId | DefendId | VsId | New1Id | New2Id | New3Id | New4Id | New5Id | New6Id | New62Id | New7Id | LabId | DevId | Dev2Id | Dev3Id | Dev4Id | Dev5Id | Dev6Id | Dev7Id | Dev8Id | Dev9Id | Dev10Id | Dev11Id | Dev12Id | Dev13Id | Dev14Id | Dev15Id | Dev16Id | Dev17Id | SnakeId | DevsId | FilmId | DragonId | WarsId | OrduId | KarsiId | Karsi0Id | Karsi2Id | Karsi3Id | YediId | LoopId | KurtarId | GecmeId | KuyuId | KapiId | MagdurId | KareId | DevKongId | SavasId | KirmiziId | BaskaId | AragornId | DovusId | VsssId | EpikId | DanceId | Dance2Id | Dance3Id | EkranId | Ekran1Id | Ekran2Id | Ekran3Id | Ekran4Id | Ekran5Id | D1311Id | KuyularId | TekId | Tek2Id | Tek3Id | KaleId | RunId | OkId | ElfId | KalkanId | HeroId | ArenaId | Arena2Id | Arena3Id | BoutId | Bout2Id | KayitId | XxxId | null>(null);
   const [rival, setRival] = useState<Rival | null>(null);
   const [rivalHandleInput, setRivalHandleInput] = useState("");
   const [rivalNamesInput, setRivalNamesInput] = useState("");
@@ -790,6 +791,8 @@ export function AdminPage() {
                     ? [EKRAN3_SECONDS]
                   : isEkran4(reelShot)
                     ? [EKRAN4_SECONDS]
+                  : isD1311(reelShot)
+                    ? [D1311_SECONDS]
                   : isEkran5(reelShot)
                     ? [EKRAN5_SECONDS]
                   : isVsss(reelShot)
@@ -1305,6 +1308,18 @@ export function AdminPage() {
               }}
             >
               {VSSS_MODE.label} — {VSSS_SECONDS}s
+            </button>
+            <button
+              type="button"
+              className={reelShot === D1311_ID ? "on" : ""}
+              onClick={() => {
+                setReelShot((cur) => (cur === D1311_ID ? null : D1311_ID));
+                setReelSeconds(D1311_SECONDS);
+                setReelText(false);
+                setReelSkipCmd(true);
+              }}
+            >
+              {D1311_MODE.label} — {D1311_SECONDS}s
             </button>
             <button
               type="button"
@@ -1943,6 +1958,9 @@ export function AdminPage() {
           )}
           {isVsss(reelShot) && (
             <p className="muted">20 saniye. Ekranda yazı yok. King Kong ve hulk_v2 eşit boyda, yeşil çimde karşı karşıya. Kamera ikisini birden görür. Koşu ve yürüyüş yok. Yumruk, tekme, savurma, kafa, takla ve kazma sırayla gelir. Her hamle diğerinin gövdesinde biter. Kayıt modeller inmeden başlamaz.</p>
+          )}
+          {isD1311(reelShot) && (
+            <p className="muted">30 saniye. Viral kuşatma kopyası değil: kırmızı düşman DUVAR (çember yok). Siyah isimli ordu kama olup duvarı yarar. Metin: gün + DUVAR KALIN + Takip et orduya katıl + KIRILDI. İsimler CTA ile gelir. Gün alanını kullanır.</p>
           )}
           {isEkran1(reelShot) && (
             <p className="muted">12 saniye. Siyah zemin, #39FF14. İlk 0,5 sn merkez nabız; mekanik dijital göz açılır, tarama halkaları ve çizgiler ekranı ele geçirir; sonda parçacık sel. Yazı/logo yok.</p>
@@ -2678,8 +2696,8 @@ export function AdminPage() {
           maxHp={maxHp}
           seconds={captureSec}
           showTitles={reelText}
-          skipCommander={reelSkipCmd || isDiscover(reelShot) || isCountdown(reelShot) || isDefend(reelShot) || isVsMode(reelShot) || isNewField(reelShot) || isLab(reelShot) || isGiantShot(reelShot) || isFilm(reelShot) || isDragon(reelShot) || isWars(reelShot) || isOrdu(reelShot) || isKarsiMode(reelShot) || isOk(reelShot) || isElf(reelShot) || isKalkan(reelShot) || isHero(reelShot) || isLoop(reelShot) || isKurtar(reelShot) || isGecme(reelShot) || isKuyu(reelShot) || isKapi(reelShot) || isMagdur(reelShot) || isKare(reelShot) || isDevKong(reelShot) || isSavas(reelShot) || isKirmizi(reelShot) || isBaska(reelShot) || isAragorn(reelShot) || isDovus(reelShot) || isVsss(reelShot) || isEpik(reelShot) || isDance(reelShot) || isDance2(reelShot) || isDance3(reelShot) || isEkran(reelShot) || isEkran1(reelShot) || isEkran2(reelShot) || isEkran3(reelShot) || isEkran4(reelShot) || isEkran5(reelShot) || isKuyular(reelShot) || isTek(reelShot) || isTek2(reelShot) || isTek3(reelShot) || isKale(reelShot) || isRun(reelShot) || isArena(reelShot) || isArena2(reelShot) || isArena3(reelShot) || isBout(reelShot) || isBout2(reelShot) || isKayit(reelShot) || (isXxx(reelShot) && xxxHideCmd(reelShot))}
-          shotMode={reelShot === CINEMA_ID || isPlanB(reelShot) || isSaga(reelShot) || isDiscover(reelShot) || isCountdown(reelShot) || isDefend(reelShot) || isVsMode(reelShot) || isNewField(reelShot) || isLab(reelShot) || isGiantShot(reelShot) || isFilm(reelShot) || isDragon(reelShot) || isWars(reelShot) || isOrdu(reelShot) || isKarsiMode(reelShot) || isOk(reelShot) || isElf(reelShot) || isKalkan(reelShot) || isHero(reelShot) || isLoop(reelShot) || isKurtar(reelShot) || isGecme(reelShot) || isKuyu(reelShot) || isKapi(reelShot) || isMagdur(reelShot) || isKare(reelShot) || isDevKong(reelShot) || isSavas(reelShot) || isKirmizi(reelShot) || isBaska(reelShot) || isAragorn(reelShot) || isDovus(reelShot) || isVsss(reelShot) || isEpik(reelShot) || isDance(reelShot) || isDance2(reelShot) || isDance3(reelShot) || isEkran(reelShot) || isEkran1(reelShot) || isEkran2(reelShot) || isEkran3(reelShot) || isEkran4(reelShot) || isEkran5(reelShot) || isKuyular(reelShot) || isTek(reelShot) || isTek2(reelShot) || isTek3(reelShot) || isKale(reelShot) || isRun(reelShot) || isArena(reelShot) || isArena2(reelShot) || isArena3(reelShot) || isBout(reelShot) || isBout2(reelShot) || isKayit(reelShot) || isMix(reelShot) || isXxx(reelShot) ? null : reelShot}
+          skipCommander={reelSkipCmd || isDiscover(reelShot) || isCountdown(reelShot) || isDefend(reelShot) || isVsMode(reelShot) || isNewField(reelShot) || isLab(reelShot) || isGiantShot(reelShot) || isFilm(reelShot) || isDragon(reelShot) || isWars(reelShot) || isOrdu(reelShot) || isKarsiMode(reelShot) || isOk(reelShot) || isElf(reelShot) || isKalkan(reelShot) || isHero(reelShot) || isLoop(reelShot) || isKurtar(reelShot) || isGecme(reelShot) || isKuyu(reelShot) || isKapi(reelShot) || isMagdur(reelShot) || isKare(reelShot) || isDevKong(reelShot) || isSavas(reelShot) || isKirmizi(reelShot) || isBaska(reelShot) || isAragorn(reelShot) || isDovus(reelShot) || isVsss(reelShot) || isEpik(reelShot) || isDance(reelShot) || isDance2(reelShot) || isDance3(reelShot) || isEkran(reelShot) || isEkran1(reelShot) || isEkran2(reelShot) || isEkran3(reelShot) || isEkran4(reelShot) || isEkran5(reelShot) || isD1311(reelShot) || isKuyular(reelShot) || isTek(reelShot) || isTek2(reelShot) || isTek3(reelShot) || isKale(reelShot) || isRun(reelShot) || isArena(reelShot) || isArena2(reelShot) || isArena3(reelShot) || isBout(reelShot) || isBout2(reelShot) || isKayit(reelShot) || (isXxx(reelShot) && xxxHideCmd(reelShot))}
+          shotMode={reelShot === CINEMA_ID || isPlanB(reelShot) || isSaga(reelShot) || isDiscover(reelShot) || isCountdown(reelShot) || isDefend(reelShot) || isVsMode(reelShot) || isNewField(reelShot) || isLab(reelShot) || isGiantShot(reelShot) || isFilm(reelShot) || isDragon(reelShot) || isWars(reelShot) || isOrdu(reelShot) || isKarsiMode(reelShot) || isOk(reelShot) || isElf(reelShot) || isKalkan(reelShot) || isHero(reelShot) || isLoop(reelShot) || isKurtar(reelShot) || isGecme(reelShot) || isKuyu(reelShot) || isKapi(reelShot) || isMagdur(reelShot) || isKare(reelShot) || isDevKong(reelShot) || isSavas(reelShot) || isKirmizi(reelShot) || isBaska(reelShot) || isAragorn(reelShot) || isDovus(reelShot) || isVsss(reelShot) || isEpik(reelShot) || isDance(reelShot) || isDance2(reelShot) || isDance3(reelShot) || isEkran(reelShot) || isEkran1(reelShot) || isEkran2(reelShot) || isEkran3(reelShot) || isEkran4(reelShot) || isEkran5(reelShot) || isD1311(reelShot) || isKuyular(reelShot) || isTek(reelShot) || isTek2(reelShot) || isTek3(reelShot) || isKale(reelShot) || isRun(reelShot) || isArena(reelShot) || isArena2(reelShot) || isArena3(reelShot) || isBout(reelShot) || isBout2(reelShot) || isKayit(reelShot) || isMix(reelShot) || isXxx(reelShot) ? null : reelShot}
           cinema={reelShot === CINEMA_ID}
           roster={isPlanB(reelShot) ? reelShot : null}
           saga={isSaga(reelShot) ? reelShot : null}
@@ -2730,6 +2748,7 @@ export function AdminPage() {
           ekran3={isEkran3(reelShot) ? reelShot : null}
           ekran4={isEkran4(reelShot) ? reelShot : null}
           ekran5={isEkran5(reelShot) ? reelShot : null}
+          d1311={isD1311(reelShot) ? reelShot : null}
           kuyular={isKuyular(reelShot) ? reelShot : null}
           tek={isTek(reelShot) ? reelShot : null}
           tek2={isTek2(reelShot) ? reelShot : null}
