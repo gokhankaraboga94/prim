@@ -231,7 +231,7 @@ export function ReelCapture({ soldiers, names, commanders = [], level, pressure,
     } else {
       setDevRingSpread(1);
     }
-    if (!arena3 && !kurtar && !gecme && !kuyu && !kapi && !magdur && !kare && !devKong && !savas && !kirmizi && !baska && !aragorn && !dovus && !vsss && !epik && !dance && !dance2 && !dance3 && !kuyular && !tek && !tek2 && !tek3 && !kale && !run && !isDevSmall(giant)) return;
+    if (!arena3 && !kurtar && !gecme && !kuyu && !kapi && !magdur && !kare && !d1311 && !devKong && !savas && !kirmizi && !baska && !aragorn && !dovus && !vsss && !epik && !dance && !dance2 && !dance3 && !kuyular && !tek && !tek2 && !tek3 && !kale && !run && !isDevSmall(giant)) return;
     let stop = false;
     const urls = arena3 ? [...ARENA3_HERO_URLS, ARENA3_ARENA_URL] : kurtar ? KURTAR_URLS : gecme ? GECME_URLS : kuyu ? KUYU_URLS : devKong ? DEVKONG_URLS : savas ? SAVAS_URLS : kirmizi ? KIRMIZI_URLS : baska ? [BASKA_URL] : aragorn ? ARAGORN_URLS : dance ? DANCE_URLS : dance2 ? DANCE2_URLS : dance3 ? DANCE3_URLS : epik ? EPIK_URLS : vsss ? VSSS_URLS : dovus ? DOVUS_URLS : kuyular ? KUYULAR_URLS : tek ? TEK_URLS : tek2 ? TEK2_URLS : tek3 ? TEK3_URLS : kale ? KALE_URLS : run ? RUN_URLS : kare ? KARE_URLS : d1311 ? D1311_URLS : magdur ? MAGDUR_URLS : isDev17(giant) ? ["/models/cuce.glb"] : isDev16(giant) ? ["/models/hulk_v2.glb"] : isDevSmall(giant) ? ["/models/king.glb"] : KAPI_URLS;
     void preloadGlbs(urls, (done, total) => {
@@ -242,7 +242,7 @@ export function ReelCapture({ soldiers, names, commanders = [], level, pressure,
     return () => {
       stop = true;
     };
-  }, [arena3, kurtar, gecme, kuyu, kapi, magdur, kare, devKong, savas, kirmizi, baska, aragorn, dovus, vsss, epik, dance, dance2, dance3, kuyular, tek, tek2, tek3, kale, run, giant]);
+  }, [arena3, kurtar, gecme, kuyu, kapi, magdur, kare, d1311, devKong, savas, kirmizi, baska, aragorn, dovus, vsss, epik, dance, dance2, dance3, kuyular, tek, tek2, tek3, kale, run, giant]);
 
   useEffect(() => {
     if (!elf) return;
@@ -543,7 +543,7 @@ export function ReelCapture({ soldiers, names, commanders = [], level, pressure,
 
       {(phase === "boot" || phase === "rec") && (
         <div className="reel-capture-hud">
-          <p>{phase === "boot" ? (!assets.ready || (elf && !elfReady) || ((kurtar && !kurtarIsReady()) || (gecme && !gecmeIsReady()) || (kuyu && !kuyuIsReady()) || (kapi && !kapiIsReady()) || (magdur && !magdurIsReady()) || (kare && !kareIsReady()) || (devKong && !devKongIsReady()) || (savas && !savasIsReady()) || (kirmizi && !kirmiziIsReady()) || (baska && !baskaIsReady()) || (aragorn && !aragornIsReady()) || (dance && !danceIsReady()) || (dance2 && !danceIsReady()) || (dance3 && !danceIsReady()) || (ekran && !ekranIsReady()) || (ekran1 && !ekran1IsReady()) || (ekran2 && !ekran2IsReady()) || (ekran3 && !ekran3IsReady()) || (ekran4 && !ekran4IsReady()) || (ekran5 && !ekran5IsReady()) || (epik && !epikIsReady()) || (vsss && !vsssIsReady()) || (dovus && !dovusIsReady()) || (kuyular && !kuyularIsReady()) || (tek && !tekIsReady()) || (tek2 && !tek2IsReady()) || (tek3 && !tek3IsReady())) ? `Modeller yükleniyor… ${elf ? `${elfDone}/${elfLoadTotal()}` : assets.total ? `${assets.done}/${assets.total}` : ""}` : "Sahne hazırlanıyor…") : "Kayıt alınıyor…"}</p>
+          <p>{phase === "boot" ? (!assets.ready || (elf && !elfReady) || ((kurtar && !kurtarIsReady()) || (gecme && !gecmeIsReady()) || (kuyu && !kuyuIsReady()) || (kapi && !kapiIsReady()) || (magdur && !magdurIsReady()) || (kare && !kareIsReady()) || (d1311 && !d1311IsReady()) || (devKong && !devKongIsReady()) || (savas && !savasIsReady()) || (kirmizi && !kirmiziIsReady()) || (baska && !baskaIsReady()) || (aragorn && !aragornIsReady()) || (dance && !danceIsReady()) || (dance2 && !danceIsReady()) || (dance3 && !danceIsReady()) || (ekran && !ekranIsReady()) || (ekran1 && !ekran1IsReady()) || (ekran2 && !ekran2IsReady()) || (ekran3 && !ekran3IsReady()) || (ekran4 && !ekran4IsReady()) || (ekran5 && !ekran5IsReady()) || (epik && !epikIsReady()) || (vsss && !vsssIsReady()) || (dovus && !dovusIsReady()) || (kuyular && !kuyularIsReady()) || (tek && !tekIsReady()) || (tek2 && !tek2IsReady()) || (tek3 && !tek3IsReady())) ? `Modeller yükleniyor… ${elf ? `${elfDone}/${elfLoadTotal()}` : assets.total ? `${assets.done}/${assets.total}` : ""}` : "Sahne hazırlanıyor…") : "Kayıt alınıyor…"}</p>
         </div>
       )}
 
