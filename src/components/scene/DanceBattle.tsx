@@ -107,6 +107,15 @@ function fitMekan(root: THREE.Object3D, targetSpan = DANCE_MEKAN_SPAN) {
   root.updateMatrixWorld(true);
 }
 
+/** Snap figure soles to one deck — kills model/pose foot drift. */
+function plantOnDeck(holder: THREE.Object3D, deckTop: number) {
+  holder.updateMatrixWorld(true);
+  const box = new THREE.Box3().setFromObject(holder);
+  if (!Number.isFinite(box.min.y)) return;
+  holder.position.y += deckTop - box.min.y;
+  holder.updateMatrixWorld(true);
+}
+
 /** Prefer dance-named clips; otherwise keep all clips in file order (1–3 dances). */
 function danceClips(clips: THREE.AnimationClip[]) {
   if (!clips.length) return [] as THREE.AnimationClip[];
@@ -116,7 +125,7 @@ function danceClips(clips: THREE.AnimationClip[]) {
 }
 
 /** Phone fallback when mekan.glb OOMs — dark plaza so dance1 still records. */
-function buildStreetFallback(parent: THREE.Group, deckY: number) {
+function buildStreetFallback(parent: THREE.Group, deckTop: number) {
   const under = new THREE.Mesh(
     new THREE.CircleGeometry(80, 48),
     new THREE.MeshLambertMaterial({ color: "#12141a" }),
@@ -124,24 +133,25 @@ function buildStreetFallback(parent: THREE.Group, deckY: number) {
   under.rotation.x = -Math.PI / 2;
   under.position.y = -0.08;
   parent.add(under);
+  const padH = 0.14;
   const pad = new THREE.Mesh(
-    new THREE.BoxGeometry(16, 0.06, 11),
+    new THREE.BoxGeometry(18, padH, 12),
     new THREE.MeshLambertMaterial({ color: "#3a3a3e" }),
   );
-  pad.position.set(0, deckY - 0.03, 0);
+  pad.position.set(0, deckTop - padH / 2, -1.1);
   parent.add(pad);
   const curb = new THREE.Mesh(
     new THREE.BoxGeometry(18, 0.35, 0.4),
     new THREE.MeshLambertMaterial({ color: "#2a2c32" }),
   );
-  curb.position.set(0, deckY + 0.1, -5.2);
+  curb.position.set(0, deckTop + 0.1, -5.2);
   parent.add(curb);
   for (const side of [-1, 1] as const) {
     const block = new THREE.Mesh(
       new THREE.BoxGeometry(4.5, 6.5, 3.2),
       new THREE.MeshLambertMaterial({ color: "#1c1e24" }),
     );
-    block.position.set(side * 9.5, deckY + 3.2, -8);
+    block.position.set(side * 9.5, deckTop + 3.2, -8);
     parent.add(block);
   }
 }
@@ -246,12 +256,14 @@ export function DanceBattle({ names, mekan = true }: { names: string[]; mekan?: 
             }
             floor.current?.add(venue.scene);
             if (useStreet) {
-              const deckY = DANCE_STREET_FEET[0].y;
+              // Raised flat deck — covers uneven street so every dancer shares one sole plane.
+              const deckTop = DANCE_STREET_FEET[0].y + 0.04;
+              const padH = 0.14;
               const pad = new THREE.Mesh(
-                new THREE.BoxGeometry(14, 0.06, 9),
+                new THREE.BoxGeometry(18, padH, 12),
                 new THREE.MeshLambertMaterial({ color: "#3f3f42" }),
               );
-              pad.position.set(0, deckY - 0.03, 0);
+              pad.position.set(0, deckTop - padH / 2, -intoCity * 0.45);
               pad.receiveShadow = false;
               floor.current?.add(pad);
               // Dark underlay past the GLB rim (same tone as street night) — no bright void.
@@ -267,7 +279,7 @@ export function DanceBattle({ names, mekan = true }: { names: string[]; mekan?: 
           } catch (err) {
             console.warn("dance mekan", err);
             if (phone && floor.current) {
-              buildStreetFallback(floor.current, useStreet ? DANCE_STREET_FEET[0].y : 0);
+              buildStreetFallback(floor.current, useStreet ? DANCE_STREET_FEET[0].y + 0.04 : 0.02);
               venueOk = true;
             }
           }
@@ -280,6 +292,7 @@ export function DanceBattle({ names, mekan = true }: { names: string[]; mekan?: 
 
         const root = host.current;
         if (!root) throw new Error("dans sahne kökü yok");
+        const deckTop = useStreet ? DANCE_STREET_FEET[0].y + 0.04 : 0.02;
         const men: Dancer[] = [];
         for (let i = 0; i < DANCE_N; i++) {
           const source = files[i % files.length];
@@ -288,16 +301,21 @@ export function DanceBattle({ names, mekan = true }: { names: string[]; mekan?: 
           holder.add(body);
           if (useStreet) {
             const foot = DANCE_STREET_FEET[i];
-            holder.position.set(foot.x - packCx, foot.y + 0.06, foot.z - packCz - intoCity);
+            holder.position.set(foot.x - packCx, deckTop, foot.z - packCz - intoCity);
           } else {
             const spot = danceSpot(i);
-            holder.position.set(spot.x, 0.03, spot.z);
+            holder.position.set(spot.x, deckTop, spot.z);
           }
           holder.rotation.y = Math.PI;
           const mix = new THREE.AnimationMixer(body);
           const clips = danceClips(source.animations);
           const man: Dancer = { i, host: holder, mix, clips, index: 0, offFinished: null };
-          if (clips.length) playClip(man, i % clips.length);
+          if (clips.length) {
+            playClip(man, i % clips.length);
+            // Sample bind of first dance frame, then plant soles on the shared deck.
+            mix.update(0);
+          }
+          plantOnDeck(holder, deckTop);
           root.add(holder);
           men.push(man);
         }
@@ -305,7 +323,8 @@ export function DanceBattle({ names, mekan = true }: { names: string[]; mekan?: 
         if (men.length < DANCE_N) throw new Error("dans sahne eksik");
         if (mekan && !floor.current?.children.length) throw new Error("mekan yüklenemedi");
         pack.current = men;
-        streetLift = men.reduce((s, m) => s + m.host.position.y, 0) / Math.max(1, men.length);
+        // One lift for the whole pack — equal deck, no per-foot average drift.
+        streetLift = deckTop;
         const cx = men.reduce((s, m) => s + m.host.position.x, 0) / men.length;
         const cz = men.reduce((s, m) => s + m.host.position.z, 0) / men.length;
         danceSetCamTarget(cx, cz, mekan ? "street" : "club");
