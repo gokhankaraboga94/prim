@@ -1884,6 +1884,9 @@ export function AdminPage() {
           {isVsss(reelShot) && (
             <p className="muted">20 saniye. Ekranda yazı yok. King Kong ve hulk_v2 eşit boyda, yeşil çimde karşı karşıya. Kamera ikisini birden görür. Koşu ve yürüyüş yok. Yumruk, tekme, savurma, kafa, takla ve kazma sırayla gelir. Her hamle diğerinin gövdesinde biter. Kayıt modeller inmeden başlamaz.</p>
           )}
+          {isEkran1(reelShot) && (
+            <p className="muted">12 saniye. Siyah zemin, #39FF14. İlk 0,5 sn merkez nabız; mekanik dijital göz açılır, tarama halkaları ve çizgiler ekranı ele geçirir; sonda parçacık sel. Yazı/logo yok.</p>
+          )}
           {isEkran(reelShot) && (
             <p className="muted">15 saniye. Siyah zemin, matrix yeşili. İlk karede 4 köşe kutusu yanar; dikey/yatay barlar ekranı ele geçirir. Tam yeşil ~12–15 sn. Ekranda yazı yok. Kaydırma bırakmama için açılış hızlı.</p>
           )}
