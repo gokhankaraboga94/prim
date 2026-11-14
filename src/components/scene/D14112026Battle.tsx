@@ -9,6 +9,7 @@ import { formatCount } from "../../game";
 import { buildNameAtlas, type NameAtlas, type NameCell } from "../../nameAtlas";
 import { preloadedGlb } from "../../arenaPreload";
 import {
+  D1411_ATTACK_PREFIXES,
   D14112026_HERO,
   D14112026_ROMAN,
   d1411Cam,
@@ -328,16 +329,24 @@ function fitHero(root: THREE.Object3D) {
   );
 }
 
-function attackClip(clips: THREE.AnimationClip[]) {
-  return (
-    clips.find((clip) => clip.name.startsWith("The warrior aggressively")) ??
-    clips.find((clip) => clip.name.startsWith("The warrior performs")) ??
-    clips.find((clip) => clip.name.startsWith("The warrior assumes")) ??
-    clips[0]
-  );
+function attackClips(clips: THREE.AnimationClip[]) {
+  const picked: THREE.AnimationClip[] = [];
+  for (const prefix of D1411_ATTACK_PREFIXES) {
+    const clip = clips.find((c) => c.name.startsWith(prefix));
+    if (clip) picked.push(clip);
+  }
+  if (!picked.length && clips[0]) picked.push(clips[0]);
+  return picked;
 }
 
-type HeroMan = { i: number; hold: THREE.Group; mix: THREE.AnimationMixer; dur: number };
+type HeroMan = {
+  i: number;
+  hold: THREE.Group;
+  mix: THREE.AnimationMixer;
+  actions: THREE.AnimationAction[];
+  durs: number[];
+  clipI: number;
+};
 
 function Fighters({ layout }: { layout: D1411Layout }) {
   const host = useRef<THREE.Group>(null);
@@ -362,7 +371,7 @@ function Fighters({ layout }: { layout: D1411Layout }) {
 
         toLambert(heroFile.scene);
         fitHero(heroFile.scene);
-        const clip = attackClip(heroFile.animations);
+        const clips = attackClips(heroFile.animations);
         const men: HeroMan[] = [];
         for (let i = 0; i < layout.friends; i++) {
           const model = cloneSkinned(heroFile.scene) as THREE.Group;
@@ -370,11 +379,21 @@ function Fighters({ layout }: { layout: D1411Layout }) {
           hold.add(model);
           root.add(hold);
           const mix = new THREE.AnimationMixer(model);
-          if (clip) {
+          const actions: THREE.AnimationAction[] = [];
+          const durs: number[] = [];
+          for (const clip of clips) {
             const action = mix.clipAction(clip);
-            action.play();
+            action.enabled = false;
+            action.setLoop(THREE.LoopOnce, 1);
+            action.clampWhenFinished = true;
+            actions.push(action);
+            durs.push(Math.max(0.3, clip.duration));
           }
-          men.push({ i, hold, mix, dur: Math.max(0.3, clip?.duration ?? 1.5) });
+          if (actions[0]) {
+            actions[0].enabled = true;
+            actions[0].play();
+          }
+          men.push({ i, hold, mix, actions, durs, clipI: 0 });
         }
         heroes.current = men;
 
@@ -411,7 +430,29 @@ function Fighters({ layout }: { layout: D1411Layout }) {
       man.hold.visible = show;
       man.hold.position.set(p.x, 0, p.z);
       man.hold.rotation.set(p.pitch, p.yaw, p.roll);
-      man.mix.setTime(Math.min(man.dur - 0.001, Math.max(0, p.clipTime % man.dur)));
+
+      const clipI = Math.max(0, Math.min(man.actions.length - 1, p.clipI));
+      if (clipI !== man.clipI) {
+        for (let a = 0; a < man.actions.length; a++) {
+          const action = man.actions[a];
+          if (a === clipI) {
+            action.reset();
+            action.enabled = true;
+            action.play();
+          } else {
+            action.stop();
+            action.enabled = false;
+          }
+        }
+        man.clipI = clipI;
+      }
+      const dur = man.durs[clipI] ?? 1;
+      const action = man.actions[clipI];
+      if (action) {
+        action.time = Math.min(dur - 0.001, Math.max(0, p.clipTime % dur));
+        action.enabled = true;
+        man.mix.update(0);
+      }
     }
     const foes = romanRef.current;
     if (!foes) return;

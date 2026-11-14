@@ -7,20 +7,29 @@ export type D14112026Id = typeof D14112026_ID;
 export const D14112026_MODE = { id: D14112026_ID, label: "14112026" } as const;
 export const D14112026_SECONDS = 30;
 export const D14112026_FRIENDS = 10;
-export const D14112026_FOES = 240;
+export const D14112026_FOES = 480;
 export const D14112026_HERO = "/models/savaci.glb";
 export const D14112026_ROMAN = "/models/roman.glb";
 export const D14112026_URLS = [D14112026_HERO, D14112026_ROMAN] as const;
 
 /** Yakın temas — gövde sabit, silah uzanır. */
 const CONTACT = 1.05;
-const STACK = 0.58;
-/** Aggressive clip vuruş zirveleri (tekReel). */
-const STRIKES = [0.5, 1.05, 1.24];
-const COMBO = 1.48;
-const OPEN = STRIKES[0];
-/** Vuruş teması sonrası kısa toparlanma. */
-const HIT_TAIL = 0.12;
+const STACK = 0.55;
+/** savaci.glb: aggressively / performs / assumes — vuruş zirveleri. */
+export const D1411_ATTACK_PREFIXES = [
+  "The warrior aggressively",
+  "The warrior performs",
+  "The warrior assumes",
+] as const;
+const CLIP_HITS = [
+  [0.5, 1.05, 1.24, 1.9, 2.45],
+  [0.45, 0.9, 1.35, 1.85, 2.4],
+  [0.4, 0.85, 1.3, 1.9, 2.5],
+];
+const CLIP_N = CLIP_HITS.length;
+/** Vuruşlar arası — kalabalık için sıkı tempo. */
+const HIT_GAP = 0.4;
+const HIT_TAIL = 0.1;
 
 let playAt = 0;
 let ready = false;
@@ -94,7 +103,7 @@ export type D1411Form = {
 export function d1411Form(friendsIn: number): D1411Form {
   const friends = Math.max(1, Math.min(D14112026_FRIENDS, Math.floor(friendsIn)));
   const foes = D14112026_FOES;
-  return { friends, foes, pitch: 2.1, width: 48, depth: 48 };
+  return { friends, foes, pitch: 2.1, width: 56, depth: 56 };
 }
 
 export function d1411Haze(_friends: number) {
@@ -111,6 +120,8 @@ type Bout = {
   tHit: number;
   tDone: number;
   strikeI: number;
+  clipI: number;
+  hitPeak: number;
 };
 
 type Sim = {
@@ -219,18 +230,19 @@ function ensureSim(friends: number): Sim {
 
   for (let f = 0; f < n; f++) {
     const ordered = orderFrontToBack(queues[f], friendX0[f], friendZ0[f], foeX0, foeZ0);
-    const t0 = 0.22 + f * 0.07;
+    const t0 = 0.2 + f * 0.06;
     fightAt[f] = t0;
     let strikeI = 0;
     for (const foe of ordered) {
-      const strike = STRIKES[strikeI % STRIKES.length];
-      const film = t0 + Math.floor(strikeI / STRIKES.length) * COMBO + (strike - OPEN);
-      if (film > D14112026_SECONDS - 0.6) break;
-      const tHit = film;
+      const clipI = strikeI % CLIP_N;
+      const peaks = CLIP_HITS[clipI];
+      const hitPeak = peaks[Math.floor(strikeI / CLIP_N) % peaks.length];
+      const tHit = t0 + strikeI * HIT_GAP;
+      if (tHit > D14112026_SECONDS - 0.55) break;
       const tContact = Math.max(t0, tHit - 0.05);
-      const tMove = Math.max(t0 * 0.5, tContact - 0.35);
+      const tMove = Math.max(t0 * 0.4, tContact - 0.32);
       const tDone = tHit + HIT_TAIL;
-      bouts[f].push({ foe, tMove, tContact, tHit, tDone, strikeI });
+      bouts[f].push({ foe, tMove, tContact, tHit, tDone, strikeI, clipI, hitPeak });
       dieAt[foe] = tHit;
       strikeI++;
     }
@@ -264,6 +276,7 @@ export type D1411Pose = {
   pitch: number;
   roll: number;
   show: boolean;
+  clipI: number;
   clipTime: number;
   attacking: boolean;
   dead: boolean;
@@ -276,30 +289,52 @@ function boutAt(bouts: Bout[], t: number): Bout | null {
   return bouts.length ? bouts[bouts.length - 1] : null;
 }
 
-/** Tüm aggressive clip vuruşlarını seri ve güçlü oynat. */
-export function d1411ClipTime(t: number, friendI: number) {
-  const sim = ensureSim(D14112026_FRIENDS);
-  const start = sim.fightAt[Math.max(0, Math.min(sim.fightAt.length - 1, friendI))] ?? 0.22;
-  return OPEN + Math.max(0, t - start);
-}
-
 export function d1411Knight(layout: D1411Layout, i: number, t: number): D1411Pose {
   const sim = ensureSim(layout.friends);
   const bouts = sim.bouts[i] || [];
   const b = boutAt(bouts, t);
   const x = sim.friendX0[i];
   const z = sim.friendZ0[i];
-  const clipTime = d1411ClipTime(t, i);
 
   if (!b) {
-    return { x, z, yaw: Math.atan2(x, z), pitch: -0.04, roll: 0, show: true, clipTime, attacking: false, dead: false };
+    return {
+      x,
+      z,
+      yaw: Math.atan2(x, z),
+      pitch: -0.04,
+      roll: 0,
+      show: true,
+      clipI: 0,
+      clipTime: 0.25,
+      attacking: false,
+      dead: false,
+    };
   }
 
   const foe = d1411RomanPos(sim, b.foe, t);
   const yaw = Math.atan2(foe.x - x, foe.z - z);
   const attacking = t >= b.tContact && t <= b.tDone;
+  let clipTime = b.hitPeak * 0.45;
+  if (attacking) {
+    const local = Math.max(0, t - b.tContact);
+    // Zirveye sert bas, clip içinde vuruşu tara
+    clipTime = Math.max(0.05, b.hitPeak - 0.1 + local * 1.35);
+  } else if (t >= b.tMove) {
+    clipTime = Math.max(0.12, b.hitPeak - 0.22);
+  }
 
-  return { x, z, yaw, pitch: -0.05, roll: 0, show: true, clipTime, attacking, dead: false };
+  return {
+    x,
+    z,
+    yaw,
+    pitch: -0.05,
+    roll: 0,
+    show: true,
+    clipI: b.clipI,
+    clipTime,
+    attacking,
+    dead: false,
+  };
 }
 
 function livingAhead(sim: Sim, owner: number, foeI: number, t: number) {
@@ -366,6 +401,7 @@ export function d1411Roman(layout: D1411Layout, i: number, t: number): D1411Pose
     pitch: fall * 1.3,
     roll: fall * 0.4 * ((i % 2) * 2 - 1),
     show: !dead || fall < 0.98,
+    clipI: 0,
     clipTime: 0,
     attacking: false,
     dead,
