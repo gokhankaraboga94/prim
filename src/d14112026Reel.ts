@@ -1,24 +1,26 @@
 /**
- * 14112026 — 10 savaşçı, eşit dağılım roman, tepeden bakış.
- * Sert seri vuruş (sağ / sol / karşı). Modeller hazır olmadan kayıt yok.
+ * 14112026 — 10 savaşçı, tepeden-açılı kamera, kalabalık roman.
+ * Ön sıra ölünce arkadakiler öne; sert seri vuruş. Modeller hazır olmadan kayıt yok.
  */
 export const D14112026_ID = "14112026" as const;
 export type D14112026Id = typeof D14112026_ID;
 export const D14112026_MODE = { id: D14112026_ID, label: "14112026" } as const;
 export const D14112026_SECONDS = 30;
 export const D14112026_FRIENDS = 10;
-export const D14112026_FOES = 144;
+export const D14112026_FOES = 240;
 export const D14112026_HERO = "/models/savaci.glb";
 export const D14112026_ROMAN = "/models/roman.glb";
 export const D14112026_URLS = [D14112026_HERO, D14112026_ROMAN] as const;
 
 /** Yakın temas — gövde sabit, silah uzanır. */
 const CONTACT = 1.05;
-const APPROACH = 5.2;
-/** Aggressive clip vuruş zirveleri. */
-const STRIKE_T = [0.5, 1.05, 1.24];
-/** Tek düşman için sert kısa vuruş. */
-const ATTACK_LEN = 0.52;
+const STACK = 0.58;
+/** Aggressive clip vuruş zirveleri (tekReel). */
+const STRIKES = [0.5, 1.05, 1.24];
+const COMBO = 1.48;
+const OPEN = STRIKES[0];
+/** Vuruş teması sonrası kısa toparlanma. */
+const HIT_TAIL = 0.12;
 
 let playAt = 0;
 let ready = false;
@@ -71,6 +73,9 @@ function easeInOut(u: number) {
   const x = clamp01(u);
   return x * x * (3 - 2 * x);
 }
+function lerp(a: number, b: number, u: number) {
+  return a + (b - a) * u;
+}
 function wrapPi(a: number) {
   let x = a;
   while (x > Math.PI) x -= Math.PI * 2;
@@ -89,14 +94,14 @@ export type D1411Form = {
 export function d1411Form(friendsIn: number): D1411Form {
   const friends = Math.max(1, Math.min(D14112026_FRIENDS, Math.floor(friendsIn)));
   const foes = D14112026_FOES;
-  return { friends, foes, pitch: 2.1, width: 42, depth: 42 };
+  return { friends, foes, pitch: 2.1, width: 48, depth: 48 };
 }
 
 export function d1411Haze(_friends: number) {
-  return { near: 55, far: 110 };
+  return { near: 48, far: 100 };
 }
 export function d1411Far(_friends: number) {
-  return 180;
+  return 160;
 }
 
 type Bout = {
@@ -105,6 +110,7 @@ type Bout = {
   tContact: number;
   tHit: number;
   tDone: number;
+  strikeI: number;
 };
 
 type Sim = {
@@ -113,12 +119,14 @@ type Sim = {
   foeX0: Float32Array;
   foeZ0: Float32Array;
   foeOwner: Int16Array;
+  foeDist: Float32Array;
   bouts: Bout[][];
   dieAt: Float32Array;
+  fightAt: Float32Array;
 };
 
-/** Sağ → sol → karşı sırasıyla indir. */
-function weaveSides(
+/** Ön sıra önce; aynı mesafede sağ → sol → karşı. */
+function orderFrontToBack(
   foes: number[],
   fx: number,
   fz: number,
@@ -127,26 +135,40 @@ function weaveSides(
 ) {
   const outward = Math.atan2(fx, fz);
   const items = foes.map((foe) => {
-    const ang = Math.atan2(foeX0[foe] - fx, foeZ0[foe] - fz);
-    return { foe, rel: wrapPi(ang - outward) };
+    const dx = foeX0[foe] - fx;
+    const dz = foeZ0[foe] - fz;
+    const ang = Math.atan2(dx, dz);
+    return { foe, dist: Math.hypot(dx, dz), rel: wrapPi(ang - outward) };
   });
-  const right = items.filter((x) => x.rel > 0.28).sort((a, b) => b.rel - a.rel);
-  const left = items.filter((x) => x.rel < -0.28).sort((a, b) => a.rel - b.rel);
-  const front = items.filter((x) => Math.abs(x.rel) <= 0.28).sort((a, b) => Math.abs(a.rel) - Math.abs(b.rel));
+  items.sort((a, b) => a.dist - b.dist || a.rel - b.rel);
+
+  const rows: typeof items[] = [];
+  const ROW = 1.1;
+  for (const it of items) {
+    const last = rows[rows.length - 1];
+    if (!last || Math.abs(it.dist - last[0].dist) > ROW) rows.push([it]);
+    else last.push(it);
+  }
+
   const out: number[] = [];
-  let ri = 0;
-  let li = 0;
-  let fi = 0;
-  let turn = 0;
-  while (out.length < items.length) {
-    const slot = turn % 3;
-    if (slot === 0 && ri < right.length) out.push(right[ri++].foe);
-    else if (slot === 1 && li < left.length) out.push(left[li++].foe);
-    else if (slot === 2 && fi < front.length) out.push(front[fi++].foe);
-    else if (ri < right.length) out.push(right[ri++].foe);
-    else if (li < left.length) out.push(left[li++].foe);
-    else if (fi < front.length) out.push(front[fi++].foe);
-    turn++;
+  for (const row of rows) {
+    const right = row.filter((x) => x.rel > 0.28).sort((a, b) => b.rel - a.rel);
+    const left = row.filter((x) => x.rel < -0.28).sort((a, b) => a.rel - b.rel);
+    const front = row.filter((x) => Math.abs(x.rel) <= 0.28).sort((a, b) => Math.abs(a.rel) - Math.abs(b.rel));
+    let ri = 0;
+    let li = 0;
+    let fi = 0;
+    let turn = 0;
+    while (ri + li + fi < row.length) {
+      const slot = turn % 3;
+      if (slot === 0 && ri < right.length) out.push(right[ri++].foe);
+      else if (slot === 1 && li < left.length) out.push(left[li++].foe);
+      else if (slot === 2 && fi < front.length) out.push(front[fi++].foe);
+      else if (ri < right.length) out.push(right[ri++].foe);
+      else if (li < left.length) out.push(left[li++].foe);
+      else if (fi < front.length) out.push(front[fi++].foe);
+      turn++;
+    }
   }
   return out;
 }
@@ -159,16 +181,16 @@ function ensureSim(friends: number): Sim {
   const friendZ0 = new Float32Array(n);
   for (let i = 0; i < n; i++) {
     const a = (i / n) * Math.PI * 2;
-    friendX0[i] = Math.sin(a) * 2.4;
-    friendZ0[i] = Math.cos(a) * 2.4;
+    friendX0[i] = Math.sin(a) * 2.5;
+    friendZ0[i] = Math.cos(a) * 2.5;
   }
 
   const foeX0 = new Float32Array(D14112026_FOES);
   const foeZ0 = new Float32Array(D14112026_FOES);
   const foeOwner = new Int16Array(D14112026_FOES);
+  const foeDist = new Float32Array(D14112026_FOES);
   const counts = new Int16Array(n);
 
-  // Eşit dağılım: her düşman sırayla bir askere
   for (let i = 0; i < D14112026_FOES; i++) {
     const owner = i % n;
     foeOwner[i] = owner;
@@ -177,11 +199,14 @@ function ensureSim(friends: number): Sim {
     const fz = friendZ0[owner];
     const outward = Math.atan2(fx, fz);
     const per = Math.ceil(D14112026_FOES / n);
-    const spread = (k - (per - 1) / 2) * (2.4 / Math.max(1, per));
-    const ring = 6.4 + (k % 4) * 2.35 + (owner % 3) * 0.35;
+    const col = k % 5;
+    const row = Math.floor(k / 5);
+    const spread = (col - 2) * 0.42 + (owner % 2) * 0.08;
+    const ring = 5.6 + row * 1.15 + (owner % 3) * 0.2;
     const a = outward + spread;
     foeX0[i] = fx + Math.sin(a) * ring;
     foeZ0[i] = fz + Math.cos(a) * ring;
+    foeDist[i] = ring;
   }
 
   const queues: number[][] = Array.from({ length: n }, () => []);
@@ -190,29 +215,28 @@ function ensureSim(friends: number): Sim {
   const dieAt = new Float32Array(D14112026_FOES);
   dieAt.fill(1e9);
   const bouts: Bout[][] = Array.from({ length: n }, () => []);
+  const fightAt = new Float32Array(n);
 
   for (let f = 0; f < n; f++) {
-    const ordered = weaveSides(queues[f], friendX0[f], friendZ0[f], foeX0, foeZ0);
-    let t = 0.28 + f * 0.09;
-    const cx = friendX0[f];
-    const cz = friendZ0[f];
+    const ordered = orderFrontToBack(queues[f], friendX0[f], friendZ0[f], foeX0, foeZ0);
+    const t0 = 0.22 + f * 0.07;
+    fightAt[f] = t0;
+    let strikeI = 0;
     for (const foe of ordered) {
-      const fx = foeX0[foe];
-      const fz = foeZ0[foe];
-      const dist = Math.hypot(fx - cx, fz - cz);
-      const moveDur = Math.max(0.18, Math.min(0.55, (dist - CONTACT) / APPROACH));
-      const tMove = t;
-      const tContact = t + moveDur;
-      const tHit = tContact + 0.06;
-      const tDone = tContact + ATTACK_LEN;
-      bouts[f].push({ foe, tMove, tContact, tHit, tDone });
+      const strike = STRIKES[strikeI % STRIKES.length];
+      const film = t0 + Math.floor(strikeI / STRIKES.length) * COMBO + (strike - OPEN);
+      if (film > D14112026_SECONDS - 0.6) break;
+      const tHit = film;
+      const tContact = Math.max(t0, tHit - 0.05);
+      const tMove = Math.max(t0 * 0.5, tContact - 0.35);
+      const tDone = tHit + HIT_TAIL;
+      bouts[f].push({ foe, tMove, tContact, tHit, tDone, strikeI });
       dieAt[foe] = tHit;
-      t = tDone + 0.02;
-      if (t > D14112026_SECONDS - 0.8) break;
+      strikeI++;
     }
   }
 
-  SIM = { friendX0, friendZ0, foeX0, foeZ0, foeOwner, bouts, dieAt };
+  SIM = { friendX0, friendZ0, foeX0, foeZ0, foeOwner, foeDist, bouts, dieAt, fightAt };
   return SIM;
 }
 
@@ -252,33 +276,41 @@ function boutAt(bouts: Bout[], t: number): Bout | null {
   return bouts.length ? bouts[bouts.length - 1] : null;
 }
 
+/** Tüm aggressive clip vuruşlarını seri ve güçlü oynat. */
+export function d1411ClipTime(t: number, friendI: number) {
+  const sim = ensureSim(D14112026_FRIENDS);
+  const start = sim.fightAt[Math.max(0, Math.min(sim.fightAt.length - 1, friendI))] ?? 0.22;
+  return OPEN + Math.max(0, t - start);
+}
+
 export function d1411Knight(layout: D1411Layout, i: number, t: number): D1411Pose {
   const sim = ensureSim(layout.friends);
   const bouts = sim.bouts[i] || [];
   const b = boutAt(bouts, t);
   const x = sim.friendX0[i];
   const z = sim.friendZ0[i];
+  const clipTime = d1411ClipTime(t, i);
+
   if (!b) {
-    return { x, z, yaw: Math.atan2(x, z), pitch: -0.04, roll: 0, show: true, clipTime: 0.2, attacking: false, dead: false };
+    return { x, z, yaw: Math.atan2(x, z), pitch: -0.04, roll: 0, show: true, clipTime, attacking: false, dead: false };
   }
 
   const foe = d1411RomanPos(sim, b.foe, t);
   const yaw = Math.atan2(foe.x - x, foe.z - z);
-  let attacking = false;
-  let clipTime = 0.18;
-
-  if (t >= b.tContact && t < b.tDone) {
-    attacking = true;
-    const local = Math.max(0, t - b.tContact);
-    const u = clamp01(local / ATTACK_LEN);
-    // Sert vuruş: strike zirvesine hızlı bas
-    const hit = STRIKE_T[Math.min(STRIKE_T.length - 1, Math.floor(u * STRIKE_T.length))];
-    clipTime = hit + u * 0.08;
-  } else if (t >= b.tMove) {
-    clipTime = STRIKE_T[0] * 0.55;
-  }
+  const attacking = t >= b.tContact && t <= b.tDone;
 
   return { x, z, yaw, pitch: -0.05, roll: 0, show: true, clipTime, attacking, dead: false };
+}
+
+function livingAhead(sim: Sim, owner: number, foeI: number, t: number) {
+  const myDist = sim.foeDist[foeI];
+  let n = 0;
+  for (let j = 0; j < D14112026_FOES; j++) {
+    if (sim.foeOwner[j] !== owner || j === foeI) continue;
+    if (t >= sim.dieAt[j]) continue;
+    if (sim.foeDist[j] < myDist - 0.08) n++;
+  }
+  return n;
 }
 
 function d1411RomanPos(sim: Sim, i: number, t: number) {
@@ -291,13 +323,17 @@ function d1411RomanPos(sim: Sim, i: number, t: number) {
   const dx = fx0 - x0;
   const dz = fz0 - z0;
   const dist = Math.hypot(dx, dz) || 1;
-  const stop = CONTACT;
+  const ahead = livingAhead(sim, owner, i, t);
+  const stop = CONTACT + ahead * STACK;
   const travel = Math.max(0, dist - stop);
-  const arrive = clamp01(t / Math.max(0.15, die - 0.35));
-  return {
-    x: x0 + (dx / dist) * travel * easeInOut(arrive),
-    z: z0 + (dz / dist) * travel * easeInOut(arrive),
-  };
+  const wantX = x0 + (dx / dist) * travel;
+  const wantZ = z0 + (dz / dist) * travel;
+
+  // Zamanla yaklaş; ön sıra düşünce stop küçülür → öne kayar
+  const byTime = easeInOut(clamp01(t / Math.max(0.18, die - 0.28)));
+  const bySlot = easeInOut(clamp01(1 - stop / Math.max(dist, 0.01)));
+  const u = Math.max(byTime, bySlot * 0.92);
+  return { x: lerp(x0, wantX, u), z: lerp(z0, wantZ, u) };
 }
 
 export function d1411Roman(layout: D1411Layout, i: number, t: number): D1411Pose {
@@ -319,11 +355,9 @@ export function d1411Roman(layout: D1411Layout, i: number, t: number): D1411Pose
     }
   }
 
-  // roman.glb +X; en yakın askerimize yüz
   const yaw = Math.atan2(tx - x, tz - z) - Math.PI / 2;
-
   const dead = t >= die;
-  const fall = dead ? Math.min(1, (t - die) / 0.4) : 0;
+  const fall = dead ? Math.min(1, (t - die) / 0.38) : 0;
 
   return {
     x,
@@ -340,29 +374,22 @@ export function d1411Roman(layout: D1411Layout, i: number, t: number): D1411Pose
 
 type Cam = { x: number; y: number; z: number; lx: number; ly: number; lz: number; fov: number };
 
-/** Sabit tepeden — tüm alan görünsün. */
-export function d1411Cam(_t: number, friends = 1): Cam {
-  const form = d1411Form(friends);
-  const span = Math.max(form.width, form.depth);
+/** Yakın açılı tepeden — dik bakış değil, alanı görür. */
+export function d1411Cam(t: number, _friends = 1): Cam {
+  const swing = Math.sin(t * 0.11) * 1.2;
   return {
-    x: 0.05,
-    y: Math.max(26, span * 0.72),
-    z: 0.05,
+    x: 9.5 + swing,
+    y: 13.2,
+    z: 15.8,
     lx: 0,
-    ly: 0.6,
-    lz: 0,
-    fov: 40,
+    ly: 1.05,
+    lz: -0.6,
+    fov: 38,
   };
 }
 
 export type D1411Caption = { title: string; sub: string; accent: "white" | "red" | "gold" };
 
-export function d1411Caption(t: number, day: number): D1411Caption | null {
-  const d = Math.max(1, Math.floor(day) || 1);
-  if (t < 1.1) return null;
-  if (t < 5) return { title: `GÜN ${d}`, sub: "10 savaşçı — eşit yük, her yönden", accent: "white" };
-  if (t < 12) return { title: "SAĞ · SOL · KARŞI", sub: "Sert vuruş, tek tek indir", accent: "red" };
-  if (t < 20) return { title: "TAKİP ET · ORDUYA YAZIL", sub: "1 takip = 1 asker", accent: "gold" };
-  if (t < 26) return { title: "KALABALIK ERİYOR", sub: "İsmini görüyorsan buradasın", accent: "gold" };
-  return { title: "YARIN SEN DE", sub: "Takip et — orduya yazıl", accent: "white" };
+export function d1411Caption(_t: number, _day: number): D1411Caption | null {
+  return null;
 }

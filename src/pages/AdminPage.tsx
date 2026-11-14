@@ -2018,8 +2018,8 @@ export function AdminPage() {
           )}
           {isD14112026(reelShot) && (
             <p className="muted">
-              {D14112026_SECONDS}s · {D14112026_FRIENDS} savaşçı. Her biri en yakın romana seri yakın temaslı vuruş;
-              eşit dağılım düşman; sağ-sol-karşı sert seri vuruş. Romanlar yüzü en yakın askerimize. Tepeden kamera. Modeller hazır olmadan kayıt yok.
+              {D14112026_SECONDS}s · {D14112026_FRIENDS} savaşçı. Sert seri vuruş; ön sıra ölünce arkadakiler öne.
+              Romanlar yüzü en yakın askerimize. Açılı tepeden kamera, ekranda kanca yazısı yok. Modeller hazır olmadan kayıt yok.
             </p>
           )}
           {isOrdu(reelShot) && (
