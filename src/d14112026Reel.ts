@@ -1,13 +1,13 @@
 /**
  * 14112026 — 10 savaşçı, her yönden roman, yakın temaslı seri vuruş.
- * TPS / FPS kesmeler, 30 sn. Modeller hazır olmadan kayıt yok.
+ * TPS + tepeden kamera, 30 sn. Modeller hazır olmadan kayıt yok.
  */
 export const D14112026_ID = "14112026" as const;
 export type D14112026Id = typeof D14112026_ID;
 export const D14112026_MODE = { id: D14112026_ID, label: "14112026" } as const;
 export const D14112026_SECONDS = 30;
 export const D14112026_FRIENDS = 10;
-export const D14112026_FOES = 48;
+export const D14112026_FOES = 144;
 export const D14112026_HERO = "/models/savaci.glb";
 export const D14112026_ROMAN = "/models/roman.glb";
 export const D14112026_URLS = [D14112026_HERO, D14112026_ROMAN] as const;
@@ -133,8 +133,8 @@ function ensureSim(friends: number): Sim {
   const foeZ0 = new Float32Array(D14112026_FOES);
   const foeOwner = new Int16Array(D14112026_FOES);
   for (let i = 0; i < D14112026_FOES; i++) {
-    const ring = 7.5 + (i % 3) * 3.2;
-    const a = (i / D14112026_FOES) * Math.PI * 2 + (i % 5) * 0.07;
+    const ring = 7.2 + (i % 5) * 2.6;
+    const a = (i / D14112026_FOES) * Math.PI * 2 + (i % 7) * 0.05;
     foeX0[i] = Math.sin(a) * ring;
     foeZ0[i] = Math.cos(a) * ring;
     let best = 0;
@@ -358,21 +358,9 @@ export function d1411Cam(t: number, friends = 1): Cam {
   const ux = dx / len;
   const uz = dz / len;
 
-  // TPS / FPS dönüşümlü
-  const beat = Math.floor(t / 2.6) % 4;
-  if (beat === 0 || beat === 2) {
-    // FPS omuz/göz
-    return {
-      x: hx + ux * 0.15,
-      y: 1.62,
-      z: hz + uz * 0.15,
-      lx: fx,
-      ly: 1.35,
-      lz: fz,
-      fov: 58,
-    };
-  }
-  if (beat === 1) {
+  // TPS / tepeden dönüşümlü (FPS yok)
+  const beat = Math.floor(t / 2.8) % 3;
+  if (beat === 0) {
     // TPS arkadan
     return {
       x: hx - ux * 3.4,
@@ -384,15 +372,27 @@ export function d1411Cam(t: number, friends = 1): Cam {
       fov: 42,
     };
   }
-  // Geniş TPS — alan baskısı
+  if (beat === 1) {
+    // TPS yan / omuz üstü
+    return {
+      x: hx - uz * 2.8 - ux * 1.4,
+      y: 2.9,
+      z: hz + ux * 2.8 - uz * 1.4,
+      lx: (hx + fx) * 0.5,
+      ly: 1.25,
+      lz: (hz + fz) * 0.5,
+      fov: 40,
+    };
+  }
+  // Tepeden — alan baskısı
   return {
-    x: hx - uz * 2.2 - ux * 1.2,
-    y: 7.5,
-    z: hz + ux * 2.2 - uz * 1.2,
-    lx: (hx + fx) * 0.5,
-    ly: 1.1,
-    lz: (hz + fz) * 0.5,
-    fov: 40,
+    x: hx - ux * 0.4,
+    y: 14.5,
+    z: hz - uz * 0.4,
+    lx: hx,
+    ly: 0.8,
+    lz: hz,
+    fov: 38,
   };
 }
 

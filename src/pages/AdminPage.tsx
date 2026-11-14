@@ -2019,7 +2019,7 @@ export function AdminPage() {
           {isD14112026(reelShot) && (
             <p className="muted">
               {D14112026_SECONDS}s · {D14112026_FRIENDS} savaşçı. Her biri en yakın romana seri yakın temaslı vuruş;
-              öldürünce sonrakine geçer. Romanlar yüzü en yakın askerimize. TPS/FPS kamera. Modeller hazır olmadan kayıt yok.
+              öldürünce sonrakine geçer. Romanlar yüzü en yakın askerimize. TPS + tepeden kamera. Modeller hazır olmadan kayıt yok.
             </p>
           )}
           {isOrdu(reelShot) && (
