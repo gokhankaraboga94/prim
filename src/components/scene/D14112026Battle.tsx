@@ -7,14 +7,16 @@ import * as THREE from "three";
 import { formatCount } from "../../game";
 import { buildKnightSoldier } from "../../knightSoldier";
 import { buildNameAtlas, type NameAtlas, type NameCell } from "../../nameAtlas";
-import { REEL_HOLD } from "../../recordCanvas";
 import {
   d1411Cam,
   d1411Caption,
   d1411Far,
   d1411Form,
   d1411Knight,
+  d1411MarkReady,
+  d1411Reset,
   d1411Roman,
+  d1411T,
   makeD1411Layout,
   type D1411Layout,
 } from "../../d14112026Reel";
@@ -150,11 +152,11 @@ function inFront(camera: THREE.Camera, x: number, z: number) {
 
 export function D14112026Cam({ soldiers }: { soldiers: number }) {
   const perspCam = useRef<THREE.PerspectiveCamera | null>(null);
-  useFrame(({ camera, clock }) => {
+  useFrame(({ camera }) => {
     if ((camera as THREE.PerspectiveCamera).isPerspectiveCamera) perspCam.current = camera as THREE.PerspectiveCamera;
     const persp = perspCam.current;
     if (!persp) return;
-    const shot = d1411Cam(Math.max(0, clock.elapsedTime - REEL_HOLD), soldiers);
+    const shot = d1411Cam(d1411T(), soldiers);
     persp.fov = shot.fov;
     persp.near = 0.35;
     persp.far = d1411Far(soldiers);
@@ -196,8 +198,8 @@ function CaptionHud({ day, soldiers }: { day: number; soldiers: number }) {
   }, [canvas]);
   const lastKey = useRef("");
   useEffect(() => () => tex.dispose(), [tex]);
-  useFrame(({ clock }) => {
-    const t = Math.max(0, clock.elapsedTime - REEL_HOLD);
+  useFrame(() => {
+    const t = d1411T();
     const cap = d1411Caption(t, day);
     const key = cap ? `${cap.title}|${cap.sub}|${cap.accent}` : "";
     if (key !== lastKey.current) {
@@ -316,11 +318,19 @@ function Fighters({ layout }: { layout: D1411Layout }) {
   );
 
   useEffect(() => {
+    d1411Reset();
     let drop = false;
+    let gotKnight = false;
+    let gotRoman = false;
+    const maybeReady = () => {
+      if (!drop && gotKnight && gotRoman) d1411MarkReady();
+    };
     const loader = new GLTFLoader();
     loader.load("/models/knight.glb", (gltf) => {
       if (drop) return;
       setKnight(buildKnightSoldier(gltf.scene));
+      gotKnight = true;
+      maybeReady();
     });
     loader.load("/models/roman.glb", (gltf) => {
       const built = buildRoman(gltf.scene);
@@ -329,9 +339,12 @@ function Fighters({ layout }: { layout: D1411Layout }) {
         return;
       }
       setRoman(built);
+      gotRoman = true;
+      maybeReady();
     });
     return () => {
       drop = true;
+      d1411Reset();
     };
   }, []);
 
@@ -357,8 +370,8 @@ function Fighters({ layout }: { layout: D1411Layout }) {
     markDynamic(romanRef.current);
   }, [knight, roman, layout.friends]);
 
-  useFrame(({ clock, camera }) => {
-    const t = Math.max(0, clock.elapsedTime - REEL_HOLD);
+  useFrame(({ camera }) => {
+    const t = d1411T();
     const body = bodyRef.current;
     const helm = helmRef.current;
     for (let i = 0; i < layout.friends; i++) {

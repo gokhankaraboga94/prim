@@ -19,7 +19,7 @@ import type { DragonId } from "../dragonReel";
 import { isDev16, isDev17, isDevSmall, setDevRingSpread, zillaHold, zillaIsReady, zillaSetRig, zillaStart, type GiantId } from "../devReel";
 import type { WarsId } from "../warsReel";
 import type { OrduId } from "../orduReel";
-import type { D14112026Id } from "../d14112026Reel";
+import { D14112026_URLS, d1411Hold, d1411IsReady, d1411Start, d1411WhenReady, type D14112026Id } from "../d14112026Reel";
 import type { Rival } from "../karsiReel";
 import type { OkId } from "../okReel";
 import { elfHasScene, elfHold, elfIsReady, elfLoadDone, elfLoadTotal, elfStartPlay, elfWarm, elfWhenReady, type ElfId } from "../elfReel";
@@ -213,6 +213,8 @@ export function ReelCapture({ soldiers, names, commanders = [], level, pressure,
                   ? { ready: false, done: 0, total: KARE_URLS.length }
                 : d1311
                   ? { ready: false, done: 0, total: D1311_URLS.length }
+                : d14112026
+                  ? { ready: false, done: 0, total: D14112026_URLS.length }
                 : magdur
                   ? { ready: false, done: 0, total: MAGDUR_URLS.length }
                   : isDevSmall(giant)
@@ -233,9 +235,9 @@ export function ReelCapture({ soldiers, names, commanders = [], level, pressure,
     } else {
       setDevRingSpread(1);
     }
-    if (!arena3 && !kurtar && !gecme && !kuyu && !kapi && !magdur && !kare && !d1311 && !devKong && !savas && !kirmizi && !baska && !aragorn && !dovus && !vsss && !epik && !dance && !dance2 && !dance3 && !kuyular && !tek && !tek2 && !tek3 && !kale && !run && !isDevSmall(giant)) return;
+    if (!arena3 && !kurtar && !gecme && !kuyu && !kapi && !magdur && !kare && !d1311 && !d14112026 && !devKong && !savas && !kirmizi && !baska && !aragorn && !dovus && !vsss && !epik && !dance && !dance2 && !dance3 && !kuyular && !tek && !tek2 && !tek3 && !kale && !run && !isDevSmall(giant)) return;
     let stop = false;
-    const urls = arena3 ? [...ARENA3_HERO_URLS, ARENA3_ARENA_URL] : kurtar ? KURTAR_URLS : gecme ? GECME_URLS : kuyu ? KUYU_URLS : devKong ? DEVKONG_URLS : savas ? SAVAS_URLS : kirmizi ? KIRMIZI_URLS : baska ? [BASKA_URL] : aragorn ? ARAGORN_URLS : dance ? DANCE_URLS : dance2 ? DANCE2_URLS : dance3 ? DANCE3_URLS : epik ? EPIK_URLS : vsss ? VSSS_URLS : dovus ? DOVUS_URLS : kuyular ? KUYULAR_URLS : tek ? TEK_URLS : tek2 ? TEK2_URLS : tek3 ? TEK3_URLS : kale ? KALE_URLS : run ? RUN_URLS : kare ? KARE_URLS : d1311 ? D1311_URLS : magdur ? MAGDUR_URLS : isDev17(giant) ? ["/models/cuce.glb"] : isDev16(giant) ? ["/models/hulk_v2.glb"] : isDevSmall(giant) ? ["/models/king.glb"] : KAPI_URLS;
+    const urls = arena3 ? [...ARENA3_HERO_URLS, ARENA3_ARENA_URL] : kurtar ? KURTAR_URLS : gecme ? GECME_URLS : kuyu ? KUYU_URLS : devKong ? DEVKONG_URLS : savas ? SAVAS_URLS : kirmizi ? KIRMIZI_URLS : baska ? [BASKA_URL] : aragorn ? ARAGORN_URLS : dance ? DANCE_URLS : dance2 ? DANCE2_URLS : dance3 ? DANCE3_URLS : epik ? EPIK_URLS : vsss ? VSSS_URLS : dovus ? DOVUS_URLS : kuyular ? KUYULAR_URLS : tek ? TEK_URLS : tek2 ? TEK2_URLS : tek3 ? TEK3_URLS : kale ? KALE_URLS : run ? RUN_URLS : kare ? KARE_URLS : d1311 ? D1311_URLS : d14112026 ? D14112026_URLS : magdur ? MAGDUR_URLS : isDev17(giant) ? ["/models/cuce.glb"] : isDev16(giant) ? ["/models/hulk_v2.glb"] : isDevSmall(giant) ? ["/models/king.glb"] : KAPI_URLS;
     void preloadGlbs(urls, (done, total) => {
       if (!stop) setAssets({ ready: false, done, total });
     }).then(() => {
@@ -244,7 +246,7 @@ export function ReelCapture({ soldiers, names, commanders = [], level, pressure,
     return () => {
       stop = true;
     };
-  }, [arena3, kurtar, gecme, kuyu, kapi, magdur, kare, d1311, devKong, savas, kirmizi, baska, aragorn, dovus, vsss, epik, dance, dance2, dance3, kuyular, tek, tek2, tek3, kale, run, giant]);
+  }, [arena3, kurtar, gecme, kuyu, kapi, magdur, kare, d1311, d14112026, devKong, savas, kirmizi, baska, aragorn, dovus, vsss, epik, dance, dance2, dance3, kuyular, tek, tek2, tek3, kale, run, giant]);
 
   useEffect(() => {
     if (!elf) return;
@@ -279,9 +281,9 @@ export function ReelCapture({ soldiers, names, commanders = [], level, pressure,
         setPhase("err");
         return;
       }
-      if (kurtar || gecme || kuyu || kapi || magdur || kare || d1311 || devKong || savas || kirmizi || baska || aragorn || dovus || vsss || epik || dance || dance2 || dance3 || ekran || ekran1 || ekran2 || ekran3 || ekran4 || ekran5 || kuyular || tek || tek2 || tek3 || kale || run) {
+      if (kurtar || gecme || kuyu || kapi || magdur || kare || d1311 || d14112026 || devKong || savas || kirmizi || baska || aragorn || dovus || vsss || epik || dance || dance2 || dance3 || ekran || ekran1 || ekran2 || ekran3 || ekran4 || ekran5 || kuyular || tek || tek2 || tek3 || kale || run) {
         const loadStart = performance.now();
-        const sceneReady = kurtar ? kurtarIsReady : gecme ? gecmeIsReady : kuyu ? kuyuIsReady : devKong ? devKongIsReady : savas ? savasIsReady : kirmizi ? kirmiziIsReady : baska ? baskaIsReady : aragorn ? aragornIsReady : dance || dance2 || dance3 ? danceIsReady : ekran ? ekranIsReady : ekran1 ? ekran1IsReady : ekran2 ? ekran2IsReady : ekran3 ? ekran3IsReady : ekran4 ? ekran4IsReady : ekran5 ? ekran5IsReady : epik ? epikIsReady : vsss ? vsssIsReady : dovus ? dovusIsReady : kuyular ? kuyularIsReady : tek ? tekIsReady : tek2 ? tek2IsReady : tek3 ? tek3IsReady : kale ? kaleIsReady : run ? runIsReady : kare ? kareIsReady : d1311 ? d1311IsReady : magdur ? magdurIsReady : kapiIsReady;
+        const sceneReady = kurtar ? kurtarIsReady : gecme ? gecmeIsReady : kuyu ? kuyuIsReady : devKong ? devKongIsReady : savas ? savasIsReady : kirmizi ? kirmiziIsReady : baska ? baskaIsReady : aragorn ? aragornIsReady : dance || dance2 || dance3 ? danceIsReady : ekran ? ekranIsReady : ekran1 ? ekran1IsReady : ekran2 ? ekran2IsReady : ekran3 ? ekran3IsReady : ekran4 ? ekran4IsReady : ekran5 ? ekran5IsReady : epik ? epikIsReady : vsss ? vsssIsReady : dovus ? dovusIsReady : kuyular ? kuyularIsReady : tek ? tekIsReady : tek2 ? tek2IsReady : tek3 ? tek3IsReady : kale ? kaleIsReady : run ? runIsReady : kare ? kareIsReady : d1311 ? d1311IsReady : d14112026 ? d1411IsReady : magdur ? magdurIsReady : kapiIsReady;
         const danceWait = dance || dance2 || dance3 ? (danceIsPhone() ? 150000 : 90000) : 0;
         while (!sceneReady() && performance.now() - loadStart < (danceWait || (savas || kirmizi || baska || kuyular || tek || tek2 || tek3 || kale || run ? 50000 : 25000))) {
           await wait(80);
@@ -318,6 +320,7 @@ export function ReelCapture({ soldiers, names, commanders = [], level, pressure,
         else if (run) runHold();
         else if (kare) kareHold();
         else if (d1311) d1311Hold();
+        else if (d14112026) d1411Hold();
         else if (magdur) magdurHold();
         else kapiHold();
         if (kurtar) await kurtarWhenReady();
@@ -346,6 +349,7 @@ export function ReelCapture({ soldiers, names, commanders = [], level, pressure,
         else if (run) await runWhenReady();
         else if (kare) await kareWhenReady();
         else if (d1311) await d1311WhenReady();
+        else if (d14112026) await d1411WhenReady();
         else if (magdur) await magdurWhenReady();
         else await kapiWhenReady();
       }
@@ -391,7 +395,7 @@ export function ReelCapture({ soldiers, names, commanders = [], level, pressure,
         const fps = run ? 60 : phoneDance ? 24 : undefined;
         const outW = phoneDance ? REEL_PHONE_WIDTH : REEL_WIDTH;
         const outH = phoneDance ? REEL_PHONE_HEIGHT : REEL_HEIGHT;
-        const recorded = await recordCanvas(canvas, clip, reelSfxStream(), bits, heavy, isDevSmall(giant) ? zillaStart : kurtar ? kurtarStart : gecme ? gecmeStart : kuyu ? kuyuStart : devKong ? devKongStart : savas ? savasStart : kirmizi ? kirmiziStart : baska ? baskaStart : aragorn ? aragornStart : dance || dance2 || dance3 ? danceStart : ekran ? ekranStart : ekran1 ? ekran1Start : ekran2 ? ekran2Start : ekran3 ? ekran3Start : ekran4 ? ekran4Start : ekran5 ? ekran5Start : epik ? epikStart : vsss ? vsssStart : dovus ? dovusStart : kuyular ? kuyularStart : tek ? tekStart : tek2 ? tek2Start : tek3 ? tek3Start : kale ? kaleStart : run ? runStart : kare ? kareStart : d1311 ? d1311Start : magdur ? magdurStart : kapi ? kapiStart : elf ? elfStartPlay : undefined, fps, outW, outH);
+        const recorded = await recordCanvas(canvas, clip, reelSfxStream(), bits, heavy, isDevSmall(giant) ? zillaStart : kurtar ? kurtarStart : gecme ? gecmeStart : kuyu ? kuyuStart : devKong ? devKongStart : savas ? savasStart : kirmizi ? kirmiziStart : baska ? baskaStart : aragorn ? aragornStart : dance || dance2 || dance3 ? danceStart : ekran ? ekranStart : ekran1 ? ekran1Start : ekran2 ? ekran2Start : ekran3 ? ekran3Start : ekran4 ? ekran4Start : ekran5 ? ekran5Start : epik ? epikStart : vsss ? vsssStart : dovus ? dovusStart : kuyular ? kuyularStart : tek ? tekStart : tek2 ? tek2Start : tek3 ? tek3Start : kale ? kaleStart : run ? runStart : kare ? kareStart : d1311 ? d1311Start : d14112026 ? d1411Start : magdur ? magdurStart : kapi ? kapiStart : elf ? elfStartPlay : undefined, fps, outW, outH);
         if (stop) return;
         setBlob(recorded);
         setPreview(URL.createObjectURL(recorded));
@@ -546,7 +550,7 @@ export function ReelCapture({ soldiers, names, commanders = [], level, pressure,
 
       {(phase === "boot" || phase === "rec") && (
         <div className="reel-capture-hud">
-          <p>{phase === "boot" ? (!assets.ready || (elf && !elfReady) || ((kurtar && !kurtarIsReady()) || (gecme && !gecmeIsReady()) || (kuyu && !kuyuIsReady()) || (kapi && !kapiIsReady()) || (magdur && !magdurIsReady()) || (kare && !kareIsReady()) || (d1311 && !d1311IsReady()) || (devKong && !devKongIsReady()) || (savas && !savasIsReady()) || (kirmizi && !kirmiziIsReady()) || (baska && !baskaIsReady()) || (aragorn && !aragornIsReady()) || (dance && !danceIsReady()) || (dance2 && !danceIsReady()) || (dance3 && !danceIsReady()) || (ekran && !ekranIsReady()) || (ekran1 && !ekran1IsReady()) || (ekran2 && !ekran2IsReady()) || (ekran3 && !ekran3IsReady()) || (ekran4 && !ekran4IsReady()) || (ekran5 && !ekran5IsReady()) || (epik && !epikIsReady()) || (vsss && !vsssIsReady()) || (dovus && !dovusIsReady()) || (kuyular && !kuyularIsReady()) || (tek && !tekIsReady()) || (tek2 && !tek2IsReady()) || (tek3 && !tek3IsReady())) ? `Modeller yükleniyor… ${elf ? `${elfDone}/${elfLoadTotal()}` : assets.total ? `${assets.done}/${assets.total}` : ""}` : "Sahne hazırlanıyor…") : "Kayıt alınıyor…"}</p>
+          <p>{phase === "boot" ? (!assets.ready || (elf && !elfReady) || ((kurtar && !kurtarIsReady()) || (gecme && !gecmeIsReady()) || (kuyu && !kuyuIsReady()) || (kapi && !kapiIsReady()) || (magdur && !magdurIsReady()) || (kare && !kareIsReady()) || (d1311 && !d1311IsReady()) || (d14112026 && !d1411IsReady()) || (devKong && !devKongIsReady()) || (savas && !savasIsReady()) || (kirmizi && !kirmiziIsReady()) || (baska && !baskaIsReady()) || (aragorn && !aragornIsReady()) || (dance && !danceIsReady()) || (dance2 && !danceIsReady()) || (dance3 && !danceIsReady()) || (ekran && !ekranIsReady()) || (ekran1 && !ekran1IsReady()) || (ekran2 && !ekran2IsReady()) || (ekran3 && !ekran3IsReady()) || (ekran4 && !ekran4IsReady()) || (ekran5 && !ekran5IsReady()) || (epik && !epikIsReady()) || (vsss && !vsssIsReady()) || (dovus && !dovusIsReady()) || (kuyular && !kuyularIsReady()) || (tek && !tekIsReady()) || (tek2 && !tek2IsReady()) || (tek3 && !tek3IsReady())) ? `Modeller yükleniyor… ${elf ? `${elfDone}/${elfLoadTotal()}` : assets.total ? `${assets.done}/${assets.total}` : ""}` : "Sahne hazırlanıyor…") : "Kayıt alınıyor…"}</p>
         </div>
       )}
 

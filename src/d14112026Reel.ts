@@ -11,8 +11,47 @@ export const D14112026_MODE = { id: D14112026_ID, label: "14112026" } as const;
 export const D14112026_SECONDS = 15;
 /** Sahada yalnızca son katılan bu kadar takipçi. */
 export const D14112026_FRIENDS = 100;
+export const D14112026_KNIGHT = "/models/knight.glb";
+export const D14112026_ROMAN = "/models/roman.glb";
+export const D14112026_URLS = [D14112026_KNIGHT, D14112026_ROMAN] as const;
 
 const PITCH = 2.28;
+
+let playAt = 0;
+let ready = false;
+const waiters: Array<() => void> = [];
+
+export function d1411MarkReady() {
+  ready = true;
+  for (const fn of waiters.splice(0)) fn();
+}
+
+export function d1411IsReady() {
+  return ready;
+}
+
+export function d1411WhenReady() {
+  if (ready) return Promise.resolve();
+  return new Promise<void>((ok) => waiters.push(ok));
+}
+
+export function d1411Hold() {
+  playAt = 0;
+}
+
+export function d1411Start() {
+  playAt = performance.now() / 1000;
+}
+
+export function d1411T() {
+  if (!playAt) return 0;
+  return Math.max(0, performance.now() / 1000 - playAt);
+}
+
+export function d1411Reset() {
+  ready = false;
+  playAt = 0;
+}
 
 /** Son katılan takipçiler (isim listesinin sonu). */
 export function d1411Roster(names: string[], soldiers: number) {

@@ -118,7 +118,52 @@ export function AdminPage() {
   const [joinExtras, setJoinExtras] = useState("");
   const [captureGen, setCaptureGen] = useState(0);
   const [captureSec, setCaptureSec] = useState(7);
+  const [pushBanner, setPushBanner] = useState<string | null>(null);
   const captureJoinIds = useRef<number[]>([]);
+
+  useEffect(() => {
+    let stop = false;
+    let hideTimer = 0;
+    const key = "wars_seen_deploy_id";
+    void fetch(`/deploy.json?t=${Date.now()}`, { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data: { id?: string; at?: string; note?: string } | null) => {
+        if (stop || !data?.id || data.id === "pending") return;
+        let seen = "";
+        try {
+          seen = localStorage.getItem(key) || "";
+        } catch {
+          /* ignore */
+        }
+        if (seen === data.id) return;
+        const when = data.at
+          ? new Date(data.at).toLocaleString("tr-TR", {
+              year: "numeric",
+              month: "2-digit",
+              day: "2-digit",
+              hour: "2-digit",
+              minute: "2-digit",
+              second: "2-digit",
+            })
+          : "";
+        setPushBanner(`Push başarılı · ${when}${data.note ? ` · ${data.note}` : ""}`);
+        try {
+          localStorage.setItem(key, data.id);
+        } catch {
+          /* ignore */
+        }
+        hideTimer = window.setTimeout(() => {
+          if (!stop) setPushBanner(null);
+        }, 5000);
+      })
+      .catch(() => {
+        /* deploy.json yoksa sessiz */
+      });
+    return () => {
+      stop = true;
+      if (hideTimer) window.clearTimeout(hideTimer);
+    };
+  }, []);
 
   const handle = handleInput || game.instagramHandle;
   const cmdValue = cmdDraft ?? game.commanders.join("\n");
@@ -484,6 +529,11 @@ export function AdminPage() {
       </section>
 
       {msg && !capturing && <p className="admin-msg">{msg}</p>}
+      {pushBanner && !capturing && (
+        <div className="admin-push-banner" role="status">
+          {pushBanner}
+        </div>
+      )}
 
       {!capturing && <div className="admin-grid">
         <section className="admin-card">
