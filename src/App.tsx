@@ -1,4 +1,5 @@
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { DeployBanner } from "./components/DeployBanner";
 import { HomePage } from "./pages/HomePage";
 import { AdminGate } from "./pages/AdminGate";
 import { EditPage } from "./pages/EditPage";
@@ -8,6 +9,7 @@ import { DancePreviewPage } from "./pages/DancePreviewPage";
 export default function App() {
   return (
     <BrowserRouter>
+      <DeployBanner />
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/admin" element={<AdminGate />} />

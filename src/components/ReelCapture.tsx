@@ -285,7 +285,7 @@ export function ReelCapture({ soldiers, names, commanders = [], level, pressure,
         const loadStart = performance.now();
         const sceneReady = kurtar ? kurtarIsReady : gecme ? gecmeIsReady : kuyu ? kuyuIsReady : devKong ? devKongIsReady : savas ? savasIsReady : kirmizi ? kirmiziIsReady : baska ? baskaIsReady : aragorn ? aragornIsReady : dance || dance2 || dance3 ? danceIsReady : ekran ? ekranIsReady : ekran1 ? ekran1IsReady : ekran2 ? ekran2IsReady : ekran3 ? ekran3IsReady : ekran4 ? ekran4IsReady : ekran5 ? ekran5IsReady : epik ? epikIsReady : vsss ? vsssIsReady : dovus ? dovusIsReady : kuyular ? kuyularIsReady : tek ? tekIsReady : tek2 ? tek2IsReady : tek3 ? tek3IsReady : kale ? kaleIsReady : run ? runIsReady : kare ? kareIsReady : d1311 ? d1311IsReady : d14112026 ? d1411IsReady : magdur ? magdurIsReady : kapiIsReady;
         const danceWait = dance || dance2 || dance3 ? (danceIsPhone() ? 150000 : 90000) : 0;
-        while (!sceneReady() && performance.now() - loadStart < (danceWait || (savas || kirmizi || baska || kuyular || tek || tek2 || tek3 || kale || run ? 50000 : 25000))) {
+        while (!sceneReady() && performance.now() - loadStart < (danceWait || (savas || kirmizi || baska || kuyular || tek || tek2 || tek3 || kale || run || d14112026 ? 50000 : 25000))) {
           await wait(80);
           if (stop) return;
         }

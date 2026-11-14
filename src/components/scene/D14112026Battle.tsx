@@ -27,7 +27,6 @@ import {
 type Gltf = Parameters<Parameters<GLTFLoader["load"]>[1]>[0];
 
 const HERO_H = 1.82;
-
 const dummy = new THREE.Object3D();
 const lookDir = new THREE.Vector3();
 
@@ -143,9 +142,9 @@ function buildRoman(root: THREE.Object3D) {
 
 function pose(x: number, z: number, yaw: number, pitch: number, roll: number, show: boolean) {
   dummy.rotation.order = "YXZ";
-  dummy.position.set(x, 0.05, z);
+  dummy.position.set(x, show ? 0.05 : -20, z);
   dummy.rotation.set(pitch, yaw, roll);
-  dummy.scale.setScalar(show ? 1 : 0);
+  dummy.scale.setScalar(show ? 1 : 0.001);
   dummy.updateMatrix();
 }
 
@@ -154,7 +153,7 @@ function inFront(camera: THREE.Camera, x: number, z: number) {
   const dx = x - camera.position.x;
   const dy = 1.4 - camera.position.y;
   const dz = z - camera.position.z;
-  return dx * lookDir.x + dy * lookDir.y + dz * lookDir.z > 1.6;
+  return dx * lookDir.x + dy * lookDir.y + dz * lookDir.z > 0.4;
 }
 
 export function D14112026Cam({ soldiers }: { soldiers: number }) {
@@ -165,7 +164,7 @@ export function D14112026Cam({ soldiers }: { soldiers: number }) {
     if (!persp) return;
     const shot = d1411Cam(d1411T(), soldiers);
     persp.fov = shot.fov;
-    persp.near = 0.35;
+    persp.near = 0.12;
     persp.far = d1411Far(soldiers);
     persp.updateProjectionMatrix();
     persp.position.set(shot.x, shot.y, shot.z);
@@ -204,7 +203,40 @@ function CaptionHud({ day, soldiers }: { day: number; soldiers: number }) {
     return map;
   }, [canvas]);
   const lastKey = useRef("");
-  useEffect(() => () => tex.dispose(), [tex]);
+  const form = d1411Form(soldiers);
+  const score = useMemo(() => {
+    const c = document.createElement("canvas");
+    c.width = 1600;
+    c.height = 200;
+    const ctx = c.getContext("2d");
+    const map = new THREE.CanvasTexture(c);
+    map.colorSpace = THREE.SRGBColorSpace;
+    map.generateMipmaps = false;
+    map.minFilter = THREE.LinearFilter;
+    if (ctx) {
+      ctx.clearRect(0, 0, 1600, 200);
+      roundRect(ctx, 16, 16, 1568, 168, 24);
+      ctx.fillStyle = "rgba(8,4,2,0.82)";
+      ctx.fill();
+      ctx.strokeStyle = "#ffe14a";
+      ctx.lineWidth = 8;
+      ctx.stroke();
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.font = "900 64px Inter,sans-serif";
+      const line = `${formatCount(form.friends)} savaşçı   VS   ${formatCount(form.foes)} roman`;
+      ctx.lineWidth = 8;
+      ctx.strokeStyle = "#000";
+      ctx.strokeText(line, 800, 100);
+      ctx.fillStyle = "#fff4c4";
+      ctx.fillText(line, 800, 100);
+    }
+    return map;
+  }, [form.foes, form.friends]);
+  useEffect(() => () => {
+    tex.dispose();
+    score.dispose();
+  }, [tex, score]);
   useFrame(() => {
     const t = d1411T();
     const cap = d1411Caption(t, day);
@@ -223,16 +255,15 @@ function CaptionHud({ day, soldiers }: { day: number; soldiers: number }) {
           ctx.stroke();
           ctx.textAlign = "center";
           ctx.textBaseline = "middle";
-          ctx.lineJoin = "round";
           const titleFill = cap.accent === "red" ? "#ff4d42" : cap.accent === "gold" ? "#ffe14a" : "#ffffff";
-          ctx.font = "900 132px Inter, Segoe UI, sans-serif";
-          ctx.lineWidth = 18;
+          ctx.font = "900 120px Inter, Segoe UI, sans-serif";
+          ctx.lineWidth = 16;
           ctx.strokeStyle = "rgba(0,0,0,0.92)";
           ctx.strokeText(cap.title, 1024, 190);
           ctx.fillStyle = titleFill;
           ctx.fillText(cap.title, 1024, 190);
-          ctx.font = "800 64px Inter, Segoe UI, sans-serif";
-          ctx.lineWidth = 12;
+          ctx.font = "800 58px Inter, Segoe UI, sans-serif";
+          ctx.lineWidth = 11;
           ctx.strokeText(cap.sub, 1024, 360);
           ctx.fillStyle = "#f0f2f6";
           ctx.fillText(cap.sub, 1024, 360);
@@ -240,64 +271,24 @@ function CaptionHud({ day, soldiers }: { day: number; soldiers: number }) {
         tex.needsUpdate = true;
       }
     }
-    const pulse = 1 + Math.sin(t * 3.1) * 0.03;
-    plate.current?.scale.set(pulse, pulse, 1);
     if (plate.current) plate.current.visible = Boolean(cap);
   });
   const w = size.width * 0.94;
   const h = w * (560 / 2048);
+  const sw = size.width * 0.86;
+  const sh = sw * (200 / 1600);
   return (
     <Hud renderPriority={3}>
       <OrthographicCamera makeDefault position={[0, 0, 10]} />
-      <mesh ref={plate} position={[0, size.height / 2 - h * 0.52 - 18, 4]} renderOrder={30}>
+      <mesh ref={plate} position={[0, size.height / 2 - h * 0.52 - 14, 4]} renderOrder={30}>
         <planeGeometry args={[w, h]} />
         <meshBasicMaterial map={tex} transparent depthTest={false} toneMapped={false} />
       </mesh>
-      <ScorePlate soldiers={soldiers} />
+      <mesh position={[0, -size.height / 2 + sh * 0.55 + 12, 3]} renderOrder={28}>
+        <planeGeometry args={[sw, sh]} />
+        <meshBasicMaterial map={score} transparent depthTest={false} toneMapped={false} />
+      </mesh>
     </Hud>
-  );
-}
-
-function ScorePlate({ soldiers }: { soldiers: number }) {
-  const size = useThree((s) => s.size);
-  const form = d1411Form(soldiers);
-  const tex = useMemo(() => {
-    const canvas = document.createElement("canvas");
-    canvas.width = 1600;
-    canvas.height = 220;
-    const ctx = canvas.getContext("2d");
-    const map = new THREE.CanvasTexture(canvas);
-    map.colorSpace = THREE.SRGBColorSpace;
-    map.generateMipmaps = false;
-    map.minFilter = THREE.LinearFilter;
-    map.magFilter = THREE.LinearFilter;
-    if (!ctx) return map;
-    ctx.clearRect(0, 0, 1600, 220);
-    roundRect(ctx, 20, 20, 1560, 180, 28);
-    ctx.fillStyle = "rgba(8, 4, 2, 0.82)";
-    ctx.fill();
-    ctx.lineWidth = 10;
-    ctx.strokeStyle = "#ffe14a";
-    ctx.stroke();
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.font = "900 78px Inter, sans-serif";
-    const line = `${formatCount(form.friends)} isim   VS   ${formatCount(form.foes)} perde`;
-    ctx.lineWidth = 10;
-    ctx.strokeStyle = "rgba(0,0,0,0.9)";
-    ctx.strokeText(line, 800, 110);
-    ctx.fillStyle = "#fff4c4";
-    ctx.fillText(line, 800, 110);
-    return map;
-  }, [form.foes, form.friends]);
-  useEffect(() => () => tex.dispose(), [tex]);
-  const w = size.width * 0.88;
-  const h = w * (220 / 1600);
-  return (
-    <mesh position={[0, -size.height / 2 + h * 0.55 + 16, 3]} renderOrder={28}>
-      <planeGeometry args={[w, h]} />
-      <meshBasicMaterial map={tex} transparent depthTest={false} toneMapped={false} />
-    </mesh>
   );
 }
 
@@ -337,16 +328,16 @@ function fitHero(root: THREE.Object3D) {
   );
 }
 
-function guardClip(clips: THREE.AnimationClip[]) {
+function attackClip(clips: THREE.AnimationClip[]) {
   return (
-    clips.find((clip) => clip.name.startsWith("The warrior assumes")) ??
     clips.find((clip) => clip.name.startsWith("The warrior aggressively")) ??
     clips.find((clip) => clip.name.startsWith("The warrior performs")) ??
+    clips.find((clip) => clip.name.startsWith("The warrior assumes")) ??
     clips[0]
   );
 }
 
-type HeroMan = { i: number; hold: THREE.Group; mix: THREE.AnimationMixer };
+type HeroMan = { i: number; hold: THREE.Group; mix: THREE.AnimationMixer; dur: number };
 
 function Fighters({ layout }: { layout: D1411Layout }) {
   const host = useRef<THREE.Group>(null);
@@ -371,7 +362,7 @@ function Fighters({ layout }: { layout: D1411Layout }) {
 
         toLambert(heroFile.scene);
         fitHero(heroFile.scene);
-        const clip = guardClip(heroFile.animations);
+        const clip = attackClip(heroFile.animations);
         const men: HeroMan[] = [];
         for (let i = 0; i < layout.friends; i++) {
           const model = cloneSkinned(heroFile.scene) as THREE.Group;
@@ -382,9 +373,8 @@ function Fighters({ layout }: { layout: D1411Layout }) {
           if (clip) {
             const action = mix.clipAction(clip);
             action.play();
-            mix.setTime((i % 7) * 0.19);
           }
-          men.push({ i, hold, mix });
+          men.push({ i, hold, mix, dur: Math.max(0.3, clip?.duration ?? 1.5) });
         }
         heroes.current = men;
 
@@ -396,7 +386,6 @@ function Fighters({ layout }: { layout: D1411Layout }) {
         mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
         root.add(mesh);
         romanRef.current = mesh;
-
         if (!drop) d1411MarkReady();
       } catch (err) {
         console.warn("14112026", err);
@@ -412,9 +401,8 @@ function Fighters({ layout }: { layout: D1411Layout }) {
     };
   }, [layout.friends, layout.foes]);
 
-  useFrame(({ camera }, dt) => {
+  useFrame(({ camera }) => {
     const t = d1411T();
-    const step = Math.min(0.05, Math.max(0, dt));
     for (const man of heroes.current) {
       const p = d1411Knight(layout, man.i, t);
       layout.liveX[man.i] = p.x;
@@ -423,7 +411,7 @@ function Fighters({ layout }: { layout: D1411Layout }) {
       man.hold.visible = show;
       man.hold.position.set(p.x, 0, p.z);
       man.hold.rotation.set(p.pitch, p.yaw, p.roll);
-      if (show) man.mix.update(step);
+      man.mix.setTime(Math.min(man.dur - 0.001, Math.max(0, p.clipTime % man.dur)));
     }
     const foes = romanRef.current;
     if (!foes) return;
@@ -477,12 +465,12 @@ function Names({ names, layout }: { names: string[]; layout: D1411Layout }) {
       const z = layout.liveZ[slot];
       const dx = x - camera.position.x;
       const dz = z - camera.position.z;
-      const ahead = dx * lookDir.x + (2.45 - camera.position.y) * lookDir.y + dz * lookDir.z;
-      const dist = Math.hypot(dx, camera.position.y - 2.45, dz);
-      const hide = ahead < 1.8;
-      const want = Math.min(layout.pitch * 0.9, dist * tanH * 0.5) * 1.15;
+      const ahead = dx * lookDir.x + (2.1 - camera.position.y) * lookDir.y + dz * lookDir.z;
+      const dist = Math.hypot(dx, camera.position.y - 2.1, dz);
+      const hide = ahead < 0.6;
+      const want = Math.min(2.2, dist * tanH * 0.55) * 1.05;
       const size = want / 2.9;
-      dummy.position.set(x, 2.42, z);
+      dummy.position.set(x, 2.15, z);
       dummy.scale.set(hide ? 0 : cell.sx * size, hide ? 0 : cell.sy * size, 1);
       dummy.updateMatrix();
       mesh.setMatrixAt(cell.local, dummy.matrix);

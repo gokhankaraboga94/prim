@@ -1,58 +1,54 @@
 /**
- * 14112026 — 99 puan hedefi (çember / kıskaç kopyası değil).
- *
- * Format: İSİM CLOSE-UP → patlayan zoom-out (ada + kırmızı PERDE) →
- * perde tek yönden yaklaşır → CTA isimde.
- *
- * Viral DNA korunur: gün, isimli takipçi, sayı baskısı, takip et.
- * Geometri farklı: eşmerkezli çember yok; tek cephe perde.
+ * 14112026 — 10 savaşçı, her yönden roman, yakın temaslı seri vuruş.
+ * TPS / FPS kesmeler, 30 sn. Modeller hazır olmadan kayıt yok.
  */
 export const D14112026_ID = "14112026" as const;
 export type D14112026Id = typeof D14112026_ID;
 export const D14112026_MODE = { id: D14112026_ID, label: "14112026" } as const;
-export const D14112026_SECONDS = 14;
-/** Son katılan takipçiler — yarıya indirildi. */
-export const D14112026_FRIENDS = 50;
+export const D14112026_SECONDS = 30;
+export const D14112026_FRIENDS = 10;
+export const D14112026_FOES = 48;
 export const D14112026_HERO = "/models/savaci.glb";
 export const D14112026_ROMAN = "/models/roman.glb";
 export const D14112026_URLS = [D14112026_HERO, D14112026_ROMAN] as const;
 
-const PITCH = 2.15;
+/** Yakın temas — silah uzanır, gövde zıplamaz. */
+const CONTACT = 0.95;
+const APPROACH = 4.6;
+/** Aggressive clip içindeki vuruş zirveleri (tekReel STRIKES). */
+const STRIKE_T = [0.5, 1.05, 1.24];
+const ATTACK_LEN = 0.92;
 
 let playAt = 0;
 let ready = false;
 const waiters: Array<() => void> = [];
+let SIM: Sim | null = null;
 
 export function d1411MarkReady() {
   ready = true;
   for (const fn of waiters.splice(0)) fn();
 }
-
 export function d1411IsReady() {
   return ready;
 }
-
 export function d1411WhenReady() {
   if (ready) return Promise.resolve();
   return new Promise<void>((ok) => waiters.push(ok));
 }
-
 export function d1411Hold() {
   playAt = 0;
 }
-
 export function d1411Start() {
   playAt = performance.now() / 1000;
 }
-
 export function d1411T() {
   if (!playAt) return 0;
   return Math.max(0, performance.now() / 1000 - playAt);
 }
-
 export function d1411Reset() {
   ready = false;
   playAt = 0;
+  SIM = null;
 }
 
 export function d1411Roster(names: string[], soldiers: number) {
@@ -70,21 +66,12 @@ export function isD14112026(id: string | null | undefined): id is D14112026Id {
 function clamp01(u: number) {
   return Math.max(0, Math.min(1, u));
 }
-
-function easeOut(u: number) {
-  const x = clamp01(u);
-  return 1 - (1 - x) * (1 - x);
-}
-
 function easeInOut(u: number) {
   const x = clamp01(u);
   return x * x * (3 - 2 * x);
 }
-
-/** Hard ease for the 0→3s hook pull. */
-function easeOutExpo(u: number) {
-  const x = clamp01(u);
-  return x >= 1 ? 1 : 1 - Math.pow(2, -10 * x);
+function lerp(a: number, b: number, u: number) {
+  return a + (b - a) * u;
 }
 
 export type D1411Form = {
@@ -93,259 +80,330 @@ export type D1411Form = {
   pitch: number;
   width: number;
   depth: number;
-  cols: number;
-  rows: number;
-  foeCols: number;
-  foeRows: number;
-  gap: number;
 };
 
 export function d1411Form(friendsIn: number): D1411Form {
   const friends = Math.max(1, Math.min(D14112026_FRIENDS, Math.floor(friendsIn)));
-  const foes = Math.max(friends * 2, friends + 20);
-  const cols = Math.max(8, Math.ceil(Math.sqrt(friends * 1.15)));
-  const rows = Math.max(4, Math.ceil(friends / cols));
-  const foeCols = Math.max(cols + 6, Math.ceil(Math.sqrt(foes * 1.2)));
-  const foeRows = Math.max(5, Math.ceil(foes / foeCols));
-  const gap = 16;
-  return {
-    friends,
-    foes,
-    pitch: PITCH,
-    width: Math.max((cols - 1) * PITCH, (foeCols - 1) * PITCH * 0.95),
-    depth: (rows - 1) * PITCH + (foeRows - 1) * PITCH + gap,
-    cols,
-    rows,
-    foeCols,
-    foeRows,
-    gap,
-  };
+  const foes = D14112026_FOES;
+  return { friends, foes, pitch: 2.1, width: 36, depth: 36 };
+}
+
+export function d1411Haze(_friends: number) {
+  return { near: 40, far: 90 };
+}
+export function d1411Far(_friends: number) {
+  return 140;
+}
+
+type Bout = {
+  foe: number;
+  tMove: number;
+  tContact: number;
+  tHit: number;
+  tDone: number;
+  fromX: number;
+  fromZ: number;
+  toX: number;
+  toZ: number;
+};
+
+type Sim = {
+  friendX0: Float32Array;
+  friendZ0: Float32Array;
+  foeX0: Float32Array;
+  foeZ0: Float32Array;
+  foeOwner: Int16Array;
+  bouts: Bout[][];
+  dieAt: Float32Array;
+};
+
+function ensureSim(friends: number): Sim {
+  const n = Math.max(1, Math.min(D14112026_FRIENDS, friends));
+  if (SIM && SIM.friendX0.length === n) return SIM;
+
+  const friendX0 = new Float32Array(n);
+  const friendZ0 = new Float32Array(n);
+  for (let i = 0; i < n; i++) {
+    const a = (i / n) * Math.PI * 2;
+    friendX0[i] = Math.sin(a) * 2.1;
+    friendZ0[i] = Math.cos(a) * 2.1;
+  }
+
+  const foeX0 = new Float32Array(D14112026_FOES);
+  const foeZ0 = new Float32Array(D14112026_FOES);
+  const foeOwner = new Int16Array(D14112026_FOES);
+  for (let i = 0; i < D14112026_FOES; i++) {
+    const ring = 7.5 + (i % 3) * 3.2;
+    const a = (i / D14112026_FOES) * Math.PI * 2 + (i % 5) * 0.07;
+    foeX0[i] = Math.sin(a) * ring;
+    foeZ0[i] = Math.cos(a) * ring;
+    let best = 0;
+    let bestD = 1e9;
+    for (let f = 0; f < n; f++) {
+      const d = Math.hypot(foeX0[i] - friendX0[f], foeZ0[i] - friendZ0[f]);
+      if (d < bestD) {
+        bestD = d;
+        best = f;
+      }
+    }
+    foeOwner[i] = best;
+  }
+
+  const queues: number[][] = Array.from({ length: n }, () => []);
+  for (let i = 0; i < D14112026_FOES; i++) queues[foeOwner[i]].push(i);
+  for (let f = 0; f < n; f++) {
+    queues[f].sort(
+      (a, b) =>
+        Math.hypot(foeX0[a] - friendX0[f], foeZ0[a] - friendZ0[f]) -
+        Math.hypot(foeX0[b] - friendX0[f], foeZ0[b] - friendZ0[f])
+    );
+  }
+
+  const dieAt = new Float32Array(D14112026_FOES);
+  dieAt.fill(1e9);
+  const bouts: Bout[][] = Array.from({ length: n }, () => []);
+
+  for (let f = 0; f < n; f++) {
+    let t = 0.35 + f * 0.18;
+    let cx = friendX0[f];
+    let cz = friendZ0[f];
+    for (const foe of queues[f]) {
+      const fx = foeX0[foe];
+      const fz = foeZ0[foe];
+      const dx = fx - cx;
+      const dz = fz - cz;
+      const dist = Math.hypot(dx, dz) || 1;
+      const ux = dx / dist;
+      const uz = dz / dist;
+      const toX = fx - ux * CONTACT;
+      const toZ = fz - uz * CONTACT;
+      const moveDist = Math.hypot(toX - cx, toZ - cz);
+      const moveDur = Math.max(0.14, Math.min(0.7, moveDist / APPROACH));
+      const tMove = t;
+      const tContact = t + moveDur;
+      const tHit = tContact + 0.08;
+      const tDone = tContact + ATTACK_LEN;
+      bouts[f].push({ foe, tMove, tContact, tHit, tDone, fromX: cx, fromZ: cz, toX, toZ });
+      dieAt[foe] = tHit;
+      cx = toX;
+      cz = toZ;
+      t = tDone + 0.03;
+      if (t > D14112026_SECONDS - 1.2) break;
+    }
+  }
+
+  SIM = { friendX0, friendZ0, foeX0, foeZ0, foeOwner, bouts, dieAt };
+  return SIM;
 }
 
 export type D1411Layout = D1411Form & {
-  friendX: Float32Array;
-  friendZ: Float32Array;
-  friendPhase: Float32Array;
-  romanX: Float32Array;
-  romanZ: Float32Array;
-  romanPhase: Float32Array;
   liveX: Float32Array;
   liveZ: Float32Array;
-  /** Front-most friend index for close-up hook */
   hookSlot: number;
 };
 
-function packSeat(cols: number, rows: number, count: number, i: number, pitch: number, z0: number, zSign: number) {
-  const col = i % cols;
-  const row = Math.floor(i / cols);
-  const inRow = row === rows - 1 ? count - row * cols : cols;
-  const x = (col - (inRow - 1) / 2) * pitch;
-  const z = z0 + zSign * row * pitch;
-  return { x, z, row, col };
-}
-
 export function makeD1411Layout(friendsIn: number): D1411Layout {
   const form = d1411Form(friendsIn);
-  const layout: D1411Layout = {
+  const sim = ensureSim(form.friends);
+  return {
     ...form,
-    friendX: new Float32Array(form.friends),
-    friendZ: new Float32Array(form.friends),
-    friendPhase: new Float32Array(form.friends),
-    romanX: new Float32Array(form.foes),
-    romanZ: new Float32Array(form.foes),
-    romanPhase: new Float32Array(form.foes),
-    liveX: new Float32Array(form.friends),
-    liveZ: new Float32Array(form.friends),
+    liveX: new Float32Array(sim.friendX0),
+    liveZ: new Float32Array(sim.friendZ0),
     hookSlot: 0,
   };
-
-  // Friends: dense block, tip toward +Z (enemy). Front row = highest z among friends.
-  const tipZ = -form.gap * 0.38;
-  let bestZ = -1e9;
-  let hook = 0;
-  for (let i = 0; i < form.friends; i++) {
-    const s = packSeat(form.cols, form.rows, form.friends, i, form.pitch, tipZ, -1);
-    layout.friendX[i] = s.x;
-    layout.friendZ[i] = s.z;
-    layout.friendPhase[i] = (i % 17) * 0.37;
-    if (s.z > bestZ) {
-      bestZ = s.z;
-      hook = i;
-    }
-  }
-  layout.hookSlot = hook;
-
-  // Foes: wide curtain wall at +Z
-  const wallZ = form.gap * 0.42;
-  for (let i = 0; i < form.foes; i++) {
-    const s = packSeat(form.foeCols, form.foeRows, form.foes, i, form.pitch * 0.92, wallZ, 1);
-    layout.romanX[i] = s.x;
-    layout.romanZ[i] = s.z;
-    layout.romanPhase[i] = (i % 19) * 0.31;
-  }
-  return layout;
 }
 
-export type D1411Pose = { x: number; z: number; yaw: number; pitch: number; roll: number; show: boolean };
+export type D1411Pose = {
+  x: number;
+  z: number;
+  yaw: number;
+  pitch: number;
+  roll: number;
+  show: boolean;
+  clipTime: number;
+  attacking: boolean;
+  dead: boolean;
+};
+
+function boutAt(bouts: Bout[], t: number): Bout | null {
+  for (const b of bouts) {
+    if (t < b.tDone + 0.02) return b;
+  }
+  return bouts.length ? bouts[bouts.length - 1] : null;
+}
 
 export function d1411Knight(layout: D1411Layout, i: number, t: number): D1411Pose {
-  const phase = layout.friendPhase[i];
-  // All visible from frame 0 — close-up needs bodies; reveal is camera, not spawn
-  const brace = easeInOut(clamp01((t - 3.0) / 4.5));
-  const sway = Math.sin(t * 1.2 + phase) * 0.03;
-  const x0 = layout.friendX[i];
-  const z0 = layout.friendZ[i];
-  // Slight pack under pressure; no long march (tempo stays on camera + wall)
-  const pack = 1 - brace * 0.12;
+  const sim = ensureSim(layout.friends);
+  const bouts = sim.bouts[i] || [];
+  const b = boutAt(bouts, t);
+  const x0 = sim.friendX0[i];
+  const z0 = sim.friendZ0[i];
+  if (!b) {
+    return { x: x0, z: z0, yaw: 0, pitch: -0.04, roll: 0, show: true, clipTime: 0.2, attacking: false, dead: false };
+  }
+
+  let x = x0;
+  let z = z0;
+  let attacking = false;
+  let clipTime = 0.15;
+
+  if (t < b.tMove) {
+    x = b.fromX;
+    z = b.fromZ;
+  } else if (t < b.tContact) {
+    const u = easeInOut((t - b.tMove) / Math.max(0.01, b.tContact - b.tMove));
+    x = lerp(b.fromX, b.toX, u);
+    z = lerp(b.fromZ, b.toZ, u);
+  } else {
+    x = b.toX;
+    z = b.toZ;
+    attacking = t < b.tDone;
+    const local = Math.max(0, t - b.tContact);
+    // Seri vuruş: strike zirvelerini hızlı tara
+    const cycle = (local / ATTACK_LEN) % 1;
+    const hit = STRIKE_T[Math.min(STRIKE_T.length - 1, Math.floor(cycle * STRIKE_T.length))];
+    clipTime = hit + (cycle * STRIKE_T.length) % 1 * 0.12;
+  }
+
+  const foe = d1411RomanPos(sim, b.foe, t);
+  const yaw = Math.atan2(foe.x - x, foe.z - z);
+
+  return { x, z, yaw, pitch: -0.05, roll: 0, show: true, clipTime, attacking, dead: false };
+}
+
+function d1411RomanPos(sim: Sim, i: number, t: number) {
+  const die = sim.dieAt[i];
+  const owner = sim.foeOwner[i];
+  const fx0 = sim.friendX0[Math.max(0, owner)];
+  const fz0 = sim.friendZ0[Math.max(0, owner)];
+  const arrive = clamp01(t / Math.max(0.2, die - 0.4));
+  const x0 = sim.foeX0[i];
+  const z0 = sim.foeZ0[i];
+  const dx = fx0 - x0;
+  const dz = fz0 - z0;
+  const dist = Math.hypot(dx, dz) || 1;
+  const stop = CONTACT + 0.05;
+  const travel = Math.max(0, dist - stop);
   return {
-    x: x0 * pack + sway,
-    z: z0 * pack + brace * 0.8,
-    yaw: sway * 0.5,
-    pitch: -0.05,
-    roll: sway * 0.015,
-    show: true,
+    x: x0 + (dx / dist) * travel * easeInOut(arrive),
+    z: z0 + (dz / dist) * travel * easeInOut(arrive),
   };
 }
 
 export function d1411Roman(layout: D1411Layout, i: number, t: number): D1411Pose {
-  const phase = layout.romanPhase[i];
-  // Curtain already in frame at t=0; advances hard after reveal
-  const creep = easeOut(clamp01(t / 0.9)) * 1.8;
-  const slam = easeInOut(clamp01((t - 2.6) / 6.2));
-  const sway = Math.sin(t * 0.95 + phase) * 0.025;
-  const x = layout.romanX[i] + sway;
-  const z = layout.romanZ[i] - creep - slam * (layout.gap * 0.55);
+  const sim = ensureSim(layout.friends);
+  const die = sim.dieAt[i];
+  const owner = Math.max(0, sim.foeOwner[i]);
+  const { x, z } = d1411RomanPos(sim, i, t);
 
-  // Kale/ordu ile aynı: roman yaw=Math.PI → bizim tarafa (-Z) bakar (sağa değil)
-  const faceX = 0;
-  const faceZ = -layout.gap * 0.28;
-  const aim = Math.atan2(faceX - x, faceZ - z);
-  const yaw = Number.isFinite(aim) ? aim : Math.PI;
+  let tx = layout.liveX[owner] ?? sim.friendX0[owner];
+  let tz = layout.liveZ[owner] ?? sim.friendZ0[owner];
+  let nearest = 1e9;
+  for (let f = 0; f < layout.friends; f++) {
+    const lx = layout.liveX[f];
+    const lz = layout.liveZ[f];
+    if (!Number.isFinite(lx)) continue;
+    const d = Math.hypot(lx - x, lz - z);
+    if (d < nearest) {
+      nearest = d;
+      tx = lx;
+      tz = lz;
+    }
+  }
+
+  // roman.glb +X bakıyor (catalog / ordu); en yakın savaşçıya dön
+  const yaw = Math.atan2(tx - x, tz - z) - Math.PI / 2;
+
+  const dead = t >= die;
+  const fall = dead ? Math.min(1, (t - die) / 0.45) : 0;
 
   return {
     x,
     z,
     yaw,
-    pitch: -0.04,
-    roll: sway * 0.012,
-    show: true,
+    pitch: fall * 1.25,
+    roll: fall * 0.35 * ((i % 2) * 2 - 1),
+    show: !dead || fall < 0.98,
+    clipTime: 0,
+    attacking: false,
+    dead,
   };
 }
 
 type Cam = { x: number; y: number; z: number; lx: number; ly: number; lz: number; fov: number };
 
-function mixCam(a: Cam, b: Cam, u: number): Cam {
-  const k = clamp01(u);
-  return {
-    x: a.x + (b.x - a.x) * k,
-    y: a.y + (b.y - a.y) * k,
-    z: a.z + (b.z - a.z) * k,
-    lx: a.lx + (b.lx - a.lx) * k,
-    ly: a.ly + (b.ly - a.ly) * k,
-    lz: a.lz + (b.lz - a.lz) * k,
-    fov: a.fov + (b.fov - a.fov) * k,
-  };
-}
-
 export function d1411Cam(t: number, friends = 1): Cam {
-  const form = d1411Form(Math.max(1, friends));
-  // Front-center friend (hook) without rebuilding layout each frame
-  const tipZ = -form.gap * 0.38;
-  const hx = 0;
-  const hz = tipZ;
+  const form = d1411Form(friends);
+  const sim = ensureSim(form.friends);
+  const layout = makeD1411Layout(form.friends);
+  // Update live from poses for cam target
+  for (let i = 0; i < form.friends; i++) {
+    const p = d1411Knight(layout, i, t);
+    layout.liveX[i] = p.x;
+    layout.liveZ[i] = p.z;
+  }
 
-  // 0–0.85s: name fills the phone — stop the scroll
-  const close: Cam = {
-    x: hx + 0.35,
-    y: 2.55,
-    z: hz - 3.1,
-    lx: hx,
-    ly: 1.85,
-    lz: hz + 0.4,
-    fov: 38,
-  };
+  const slot = Math.min(form.friends - 1, Math.floor(t / 2.7) % form.friends);
+  const hero = d1411Knight(layout, slot, t);
+  const bout = boutAt(sim.bouts[slot] || [], t);
+  const foeI = bout?.foe ?? 0;
+  const foe = d1411Roman(layout, foeI, t);
+  const hx = hero.x;
+  const hz = hero.z;
+  const fx = foe.x;
+  const fz = foe.z;
+  const dx = fx - hx;
+  const dz = fz - hz;
+  const len = Math.hypot(dx, dz) || 1;
+  const ux = dx / len;
+  const uz = dz / len;
 
-  // 0.85–2.7s: explode out — island + red curtain readable together
-  const wide: Cam = {
-    x: 1.8,
-    y: 14.5 + form.width * 0.04,
-    z: -form.gap * 0.85 - 9,
-    lx: 0,
-    ly: 1.2,
-    lz: form.gap * 0.12,
-    fov: 44,
-  };
-
-  // Pressure: sit above the gap while curtain closes
-  const press: Cam = {
-    x: -1.1,
-    y: 11.2,
-    z: -form.gap * 0.25 - 5,
-    lx: 0,
-    ly: 1.35,
-    lz: 2.2,
-    fov: 46,
-  };
-
-  // CTA: back into names
-  const names: Cam = {
-    x: hx * 0.4 + 1.1,
-    y: 4.4,
-    z: hz - 4.2,
-    lx: hx * 0.3,
-    ly: 1.9,
-    lz: hz + 1.2,
+  // TPS / FPS dönüşümlü
+  const beat = Math.floor(t / 2.6) % 4;
+  if (beat === 0 || beat === 2) {
+    // FPS omuz/göz
+    return {
+      x: hx + ux * 0.15,
+      y: 1.62,
+      z: hz + uz * 0.15,
+      lx: fx,
+      ly: 1.35,
+      lz: fz,
+      fov: 58,
+    };
+  }
+  if (beat === 1) {
+    // TPS arkadan
+    return {
+      x: hx - ux * 3.4,
+      y: 2.6,
+      z: hz - uz * 3.4,
+      lx: fx,
+      ly: 1.2,
+      lz: fz,
+      fov: 42,
+    };
+  }
+  // Geniş TPS — alan baskısı
+  return {
+    x: hx - uz * 2.2 - ux * 1.2,
+    y: 7.5,
+    z: hz + ux * 2.2 - uz * 1.2,
+    lx: (hx + fx) * 0.5,
+    ly: 1.1,
+    lz: (hz + fz) * 0.5,
     fov: 40,
   };
-
-  if (t < 0.85) return close;
-  if (t < 2.7) return mixCam(close, wide, easeOutExpo((t - 0.85) / 1.85));
-  if (t < 7.4) return mixCam(wide, press, easeInOut((t - 2.7) / 4.7));
-  if (t < 10.5) return mixCam(press, names, easeInOut((t - 7.4) / 3.1));
-  return names;
-}
-
-export function d1411Far(friends: number) {
-  const form = d1411Form(friends);
-  return Math.max(400, form.depth * 8 + form.width * 3 + 120);
-}
-
-export function d1411Haze(friends: number) {
-  const form = d1411Form(friends);
-  const far = Math.max(320, form.width * 2 + form.depth * 2.6 + 110);
-  return { near: 48, far };
 }
 
 export type D1411Caption = { title: string; sub: string; accent: "white" | "red" | "gold" };
 
 export function d1411Caption(t: number, day: number): D1411Caption | null {
   const d = Math.max(1, Math.floor(day) || 1);
-  // First ~0.9s: no plate — isim close-up alone stops the thumb
-  if (t < 0.95) return null;
-  if (t < 3.1) {
-    return {
-      title: `GÜN ${d}`,
-      sub: `Son ${D14112026_FRIENDS} takipçi — ismini ara`,
-      accent: "white",
-    };
-  }
-  if (t < 7.0) {
-    return {
-      title: "KIRMIZI PERDE",
-      sub: "Ordumuz büyüyor, onlar daha kalabalık",
-      accent: "red",
-    };
-  }
-  if (t < 11.2) {
-    return {
-      title: "TAKİP ET · ORDUYA YAZIL",
-      sub: "1 takip = 1 asker",
-      accent: "gold",
-    };
-  }
-  return {
-    title: "YARIN İSMİN BURADA",
-    sub: "Takip et — sonraki günde sen de sahadasın",
-    accent: "gold",
-  };
+  if (t < 1.1) return null;
+  if (t < 5) return { title: `GÜN ${d}`, sub: "10 savaşçı — her yönden geliyorlar", accent: "white" };
+  if (t < 12) return { title: "YAKIN TEMAS", sub: "Geleni indir, sonrakine geç", accent: "red" };
+  if (t < 20) return { title: "TAKİP ET · ORDUYA YAZIL", sub: "1 takip = 1 asker", accent: "gold" };
+  if (t < 26) return { title: "KALABALIK ERİYOR", sub: "İsmini görüyorsan buradasın", accent: "gold" };
+  return { title: "YARIN SEN DE", sub: "Takip et — orduya yazıl", accent: "white" };
 }
