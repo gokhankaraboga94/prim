@@ -2068,9 +2068,8 @@ export function AdminPage() {
           )}
           {isD14112026(reelShot) && (
             <p className="muted">
-              14s · 99 hedef. Çember/kıskaç yok. İlk kare: tek isim close-up → patlayan zoom-out (100 isim + kırmızı PERDE) →
-              perde tek yönden yaklaşır → “takip et · orduya yazıl”. Son {D14112026_FRIENDS} takipçi, düşman ~2×, romanlar bize bakıyor.
-              Modeller yüklenmeden kayıt başlamaz.
+              14s · 99 hedef. Savaşçı modeli (animasyonlu). İlk kare isim close-up → zoom-out + kırmızı perde → CTA.
+              Son {D14112026_FRIENDS} takipçi, düşman ~2×, romanlar yüzü bize. Modeller hazır olmadan kayıt yok.
             </p>
           )}
           {isOrdu(reelShot) && (

@@ -11,10 +11,11 @@ export const D14112026_ID = "14112026" as const;
 export type D14112026Id = typeof D14112026_ID;
 export const D14112026_MODE = { id: D14112026_ID, label: "14112026" } as const;
 export const D14112026_SECONDS = 14;
-export const D14112026_FRIENDS = 100;
-export const D14112026_KNIGHT = "/models/knight.glb";
+/** Son katılan takipçiler — yarıya indirildi. */
+export const D14112026_FRIENDS = 50;
+export const D14112026_HERO = "/models/savaci.glb";
 export const D14112026_ROMAN = "/models/roman.glb";
-export const D14112026_URLS = [D14112026_KNIGHT, D14112026_ROMAN] as const;
+export const D14112026_URLS = [D14112026_HERO, D14112026_ROMAN] as const;
 
 const PITCH = 2.15;
 
@@ -215,10 +216,11 @@ export function d1411Roman(layout: D1411Layout, i: number, t: number): D1411Pose
   const x = layout.romanX[i] + sway;
   const z = layout.romanZ[i] - creep - slam * (layout.gap * 0.55);
 
-  // Face the named island
+  // Kale/ordu ile aynı: roman yaw=Math.PI → bizim tarafa (-Z) bakar (sağa değil)
   const faceX = 0;
-  const faceZ = -layout.gap * 0.25;
-  const yaw = Math.atan2(faceX - x, faceZ - z);
+  const faceZ = -layout.gap * 0.28;
+  const aim = Math.atan2(faceX - x, faceZ - z);
+  const yaw = Number.isFinite(aim) ? aim : Math.PI;
 
   return {
     x,
@@ -323,7 +325,7 @@ export function d1411Caption(t: number, day: number): D1411Caption | null {
   if (t < 3.1) {
     return {
       title: `GÜN ${d}`,
-      sub: "Son 100 takipçi — ismini ara",
+      sub: `Son ${D14112026_FRIENDS} takipçi — ismini ara`,
       accent: "white",
     };
   }

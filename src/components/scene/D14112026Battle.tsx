@@ -1,13 +1,16 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import { Hud, OrthographicCamera } from "@react-three/drei";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
+import { clone as cloneSkinned } from "three/examples/jsm/utils/SkeletonUtils.js";
 import * as THREE from "three";
 import { formatCount } from "../../game";
-import { buildKnightSoldier } from "../../knightSoldier";
 import { buildNameAtlas, type NameAtlas, type NameCell } from "../../nameAtlas";
+import { preloadedGlb } from "../../arenaPreload";
 import {
+  D14112026_HERO,
+  D14112026_ROMAN,
   d1411Cam,
   d1411Caption,
   d1411Far,
@@ -20,6 +23,10 @@ import {
   makeD1411Layout,
   type D1411Layout,
 } from "../../d14112026Reel";
+
+type Gltf = Parameters<Parameters<GLTFLoader["load"]>[1]>[0];
+
+const HERO_H = 1.82;
 
 const dummy = new THREE.Object3D();
 const lookDir = new THREE.Vector3();
@@ -294,99 +301,129 @@ function ScorePlate({ soldiers }: { soldiers: number }) {
   );
 }
 
-function markDynamic(mesh: THREE.InstancedMesh | null) {
-  mesh?.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+function loadGlb(loader: GLTFLoader, url: string) {
+  const buf = preloadedGlb(url);
+  return new Promise<Gltf>((ok, fail) => {
+    if (buf) loader.parse(buf.slice(0), "", ok, fail);
+    else loader.load(url, ok, undefined, fail);
+  });
 }
 
+function toLambert(root: THREE.Object3D) {
+  root.traverse((obj) => {
+    const mesh = obj as THREE.Mesh;
+    if (!mesh.isMesh) return;
+    const src = (Array.isArray(mesh.material) ? mesh.material[0] : mesh.material) as THREE.MeshStandardMaterial;
+    mesh.material = new THREE.MeshLambertMaterial({
+      map: src.map ?? null,
+      color: src.color ? src.color.clone() : "#ffffff",
+    });
+    mesh.castShadow = false;
+    mesh.receiveShadow = false;
+    mesh.frustumCulled = false;
+  });
+}
+
+function fitHero(root: THREE.Object3D) {
+  root.updateMatrixWorld(true);
+  const box = new THREE.Box3().setFromObject(root);
+  const span = Math.max(0.001, box.max.y - box.min.y);
+  const scale = HERO_H / span;
+  root.scale.setScalar(scale);
+  root.position.set(
+    -((box.min.x + box.max.x) / 2) * scale,
+    -box.min.y * scale,
+    -((box.min.z + box.max.z) / 2) * scale
+  );
+}
+
+function guardClip(clips: THREE.AnimationClip[]) {
+  return (
+    clips.find((clip) => clip.name.startsWith("The warrior assumes")) ??
+    clips.find((clip) => clip.name.startsWith("The warrior aggressively")) ??
+    clips.find((clip) => clip.name.startsWith("The warrior performs")) ??
+    clips[0]
+  );
+}
+
+type HeroMan = { i: number; hold: THREE.Group; mix: THREE.AnimationMixer };
+
 function Fighters({ layout }: { layout: D1411Layout }) {
-  const [knight, setKnight] = useState<{ body: THREE.BufferGeometry; helm: THREE.BufferGeometry } | null>(null);
-  const [roman, setRoman] = useState<THREE.BufferGeometry | null>(null);
-  const bodyRef = useRef<THREE.InstancedMesh>(null);
-  const helmRef = useRef<THREE.InstancedMesh>(null);
-  const romanRef = useRef<THREE.InstancedMesh>(null);
-  const bodyMat = useMemo(
-    () => new THREE.MeshStandardMaterial({ color: "#1a56e8", roughness: 0.42, metalness: 0.38, envMapIntensity: 0.85 }),
-    []
-  );
-  const helmMat = useMemo(
-    () => new THREE.MeshStandardMaterial({ color: "#e7eef5", roughness: 0.18, metalness: 0.9, envMapIntensity: 1.15 }),
-    []
-  );
-  const romanMat = useMemo(
-    () => new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.46, metalness: 0.4, envMapIntensity: 0.7 }),
-    []
-  );
+  const host = useRef<THREE.Group>(null);
+  const heroes = useRef<HeroMan[]>([]);
+  const romanRef = useRef<THREE.InstancedMesh | null>(null);
 
   useEffect(() => {
     d1411Reset();
     let drop = false;
-    let gotKnight = false;
-    let gotRoman = false;
-    const maybeReady = () => {
-      if (!drop && gotKnight && gotRoman) d1411MarkReady();
-    };
     const loader = new GLTFLoader();
-    loader.load("/models/knight.glb", (gltf) => {
-      if (drop) return;
-      setKnight(buildKnightSoldier(gltf.scene));
-      gotKnight = true;
-      maybeReady();
-    });
-    loader.load("/models/roman.glb", (gltf) => {
-      const built = buildRoman(gltf.scene);
-      if (drop) {
-        built?.dispose();
-        return;
+    void (async () => {
+      try {
+        const [heroFile, romanFile] = await Promise.all([
+          loadGlb(loader, D14112026_HERO),
+          loadGlb(loader, D14112026_ROMAN),
+        ]);
+        if (drop || !host.current) return;
+        const root = host.current;
+        root.clear();
+        heroes.current = [];
+        romanRef.current = null;
+
+        toLambert(heroFile.scene);
+        fitHero(heroFile.scene);
+        const clip = guardClip(heroFile.animations);
+        const men: HeroMan[] = [];
+        for (let i = 0; i < layout.friends; i++) {
+          const model = cloneSkinned(heroFile.scene) as THREE.Group;
+          const hold = new THREE.Group();
+          hold.add(model);
+          root.add(hold);
+          const mix = new THREE.AnimationMixer(model);
+          if (clip) {
+            const action = mix.clipAction(clip);
+            action.play();
+            mix.setTime((i % 7) * 0.19);
+          }
+          men.push({ i, hold, mix });
+        }
+        heroes.current = men;
+
+        const geo = buildRoman(romanFile.scene);
+        if (!geo || drop) return;
+        const mat = new THREE.MeshLambertMaterial({ vertexColors: true });
+        const mesh = new THREE.InstancedMesh(geo, mat, layout.foes);
+        mesh.frustumCulled = false;
+        mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+        root.add(mesh);
+        romanRef.current = mesh;
+
+        if (!drop) d1411MarkReady();
+      } catch (err) {
+        console.warn("14112026", err);
       }
-      setRoman(built);
-      gotRoman = true;
-      maybeReady();
-    });
+    })();
     return () => {
       drop = true;
+      for (const man of heroes.current) man.mix.stopAllAction();
+      heroes.current = [];
+      romanRef.current = null;
+      host.current?.clear();
       d1411Reset();
     };
-  }, []);
+  }, [layout.friends, layout.foes]);
 
-  useEffect(
-    () => () => {
-      bodyMat.dispose();
-      helmMat.dispose();
-      romanMat.dispose();
-    },
-    [bodyMat, helmMat, romanMat]
-  );
-  useEffect(
-    () => () => {
-      knight?.body.dispose();
-      knight?.helm.dispose();
-    },
-    [knight]
-  );
-  useEffect(() => () => roman?.dispose(), [roman]);
-  useLayoutEffect(() => {
-    markDynamic(bodyRef.current);
-    markDynamic(helmRef.current);
-    markDynamic(romanRef.current);
-  }, [knight, roman, layout.friends]);
-
-  useFrame(({ camera }) => {
+  useFrame(({ camera }, dt) => {
     const t = d1411T();
-    const body = bodyRef.current;
-    const helm = helmRef.current;
-    for (let i = 0; i < layout.friends; i++) {
-      const p = d1411Knight(layout, i, t);
-      layout.liveX[i] = p.x;
-      layout.liveZ[i] = p.z;
+    const step = Math.min(0.05, Math.max(0, dt));
+    for (const man of heroes.current) {
+      const p = d1411Knight(layout, man.i, t);
+      layout.liveX[man.i] = p.x;
+      layout.liveZ[man.i] = p.z;
       const show = p.show && inFront(camera, p.x, p.z);
-      if (!body || !helm) continue;
-      pose(p.x, p.z, p.yaw, p.pitch, p.roll, show);
-      body.setMatrixAt(i, dummy.matrix);
-      helm.setMatrixAt(i, dummy.matrix);
-    }
-    if (body && helm) {
-      body.instanceMatrix.needsUpdate = true;
-      helm.instanceMatrix.needsUpdate = true;
+      man.hold.visible = show;
+      man.hold.position.set(p.x, 0, p.z);
+      man.hold.rotation.set(p.pitch, p.yaw, p.roll);
+      if (show) man.mix.update(step);
     }
     const foes = romanRef.current;
     if (!foes) return;
@@ -399,18 +436,7 @@ function Fighters({ layout }: { layout: D1411Layout }) {
     foes.instanceMatrix.needsUpdate = true;
   });
 
-  if (layout.friends < 1) return null;
-  return (
-    <group>
-      {knight && (
-        <>
-          <instancedMesh ref={bodyRef} args={[knight.body, bodyMat, layout.friends]} frustumCulled={false} />
-          <instancedMesh ref={helmRef} args={[knight.helm, helmMat, layout.friends]} frustumCulled={false} />
-        </>
-      )}
-      {roman && <instancedMesh ref={romanRef} args={[roman, romanMat, layout.foes]} frustumCulled={false} />}
-    </group>
-  );
+  return <group ref={host} />;
 }
 
 function Names({ names, layout }: { names: string[]; layout: D1411Layout }) {
