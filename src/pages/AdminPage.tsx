@@ -2068,8 +2068,9 @@ export function AdminPage() {
           )}
           {isD14112026(reelShot) && (
             <p className="muted">
-              15s. İlham alternatifi (çember kopyası değil): son {D14112026_FRIENDS} takipçi isimli ada + yukarıdan kırmızı SEL →
-              iki yana KISKAÇ → kırılıp çıkış → “takip et · orduya yazıl”. Düşman ~2× (yine kalabalık). Romanlar yüzü bize dönük.
+              14s · 99 hedef. Çember/kıskaç yok. İlk kare: tek isim close-up → patlayan zoom-out (100 isim + kırmızı PERDE) →
+              perde tek yönden yaklaşır → “takip et · orduya yazıl”. Son {D14112026_FRIENDS} takipçi, düşman ~2×, romanlar bize bakıyor.
+              Modeller yüklenmeden kayıt başlamaz.
             </p>
           )}
           {isOrdu(reelShot) && (
