@@ -67,7 +67,7 @@ import { EKRAN3_ID, EKRAN3_MODE, EKRAN3_SECONDS, isEkran3, type Ekran3Id } from 
 import { EKRAN4_ID, EKRAN4_MODE, EKRAN4_SECONDS, isEkran4, type Ekran4Id } from "../ekran4Reel";
 import { EKRAN5_ID, EKRAN5_MODE, EKRAN5_SECONDS, isEkran5, type Ekran5Id } from "../ekran5Reel";
 import { D1311_ID, D1311_MODE, D1311_SECONDS, isD1311, type D1311Id } from "../d1311Reel";
-import { D14112026_ID, D14112026_MODE, D14112026_SECONDS, isD14112026, type D14112026Id } from "../d14112026Reel";
+import { D14112026_FRIENDS, D14112026_ID, D14112026_MODE, D14112026_SECONDS, d1411Roster, isD14112026, type D14112026Id } from "../d14112026Reel";
 import { KUYULAR_ID, KUYULAR_MODE, KUYULAR_SECONDS, isKuyular, type KuyularId } from "../kuyularReel";
 import { TEK_ID, TEK_MODE, TEK_SECONDS, isTek, type TekId } from "../tekReel";
 import { TEK2_ID, TEK2_MODE, TEK2_SECONDS, isTek2, type Tek2Id } from "../tek2Reel";
@@ -2018,8 +2018,8 @@ export function AdminPage() {
           )}
           {isD14112026(reelShot) && (
             <p className="muted">
-              15s. İlham alternatifi (çember kopyası değil): isimli ada + yukarıdan kırmızı SEL → iki yana KISKAÇ →
-              ortadan kırılıp çıkış → “takip et · orduya yazıl”. Gün sayacı, isimler, düşman ~4×. Çim, şövalye + roman.
+              15s. İlham alternatifi (çember kopyası değil): son {D14112026_FRIENDS} takipçi isimli ada + yukarıdan kırmızı SEL →
+              iki yana KISKAÇ → kırılıp çıkış → “takip et · orduya yazıl”. Düşman ~2× (yine kalabalık). Romanlar yüzü bize dönük.
             </p>
           )}
           {isOrdu(reelShot) && (
@@ -2708,8 +2708,8 @@ export function AdminPage() {
       {capturing && (
         <ReelCapture
           key={captureGen}
-          soldiers={game.soldiers}
-          names={isElf(reelShot) ? [] : game.names}
+          soldiers={isD14112026(reelShot) ? d1411Roster(game.names, game.soldiers).soldiers : game.soldiers}
+          names={isElf(reelShot) ? [] : isD14112026(reelShot) ? d1411Roster(game.names, game.soldiers).names : game.names}
           commanders={game.commanders}
           level={level}
           pressure={pressure}

@@ -9,8 +9,20 @@ export const D14112026_ID = "14112026" as const;
 export type D14112026Id = typeof D14112026_ID;
 export const D14112026_MODE = { id: D14112026_ID, label: "14112026" } as const;
 export const D14112026_SECONDS = 15;
+/** Sahada yalnızca son katılan bu kadar takipçi. */
+export const D14112026_FRIENDS = 100;
 
 const PITCH = 2.28;
+
+/** Son katılan takipçiler (isim listesinin sonu). */
+export function d1411Roster(names: string[], soldiers: number) {
+  const cap = D14112026_FRIENDS;
+  const n = Math.max(1, Math.min(cap, Math.floor(soldiers) || names.length || 1));
+  const cleaned = names.map((s) => String(s ?? "").trim()).filter(Boolean);
+  const slice = cleaned.length > n ? cleaned.slice(-n) : cleaned;
+  // Asker sayısı isimden azsa yine n kadar slot (isimler döner)
+  return { soldiers: n, names: slice.length ? slice : cleaned.slice(-n) };
+}
 
 export function isD14112026(id: string | null | undefined): id is D14112026Id {
   return id === D14112026_ID;
@@ -42,8 +54,9 @@ export type D1411Form = {
 };
 
 export function d1411Form(friendsIn: number): D1411Form {
-  const friends = Math.max(1, Math.floor(friendsIn));
-  const foes = Math.max(friends * 4, friends + 40);
+  const friends = Math.max(1, Math.min(D14112026_FRIENDS, Math.floor(friendsIn)));
+  // Eski ~4×’in yarısı → ~2×; yine bizden kalabalık
+  const foes = Math.max(friends * 2, friends + 20);
   const islandR = Math.max(4.5, Math.sqrt(friends) * 1.15);
   const wallW = Math.max(22, islandR * 3.4 + 10);
   const wallD = Math.max(10, Math.ceil(foes / 28) * PITCH * 0.9);
@@ -182,13 +195,18 @@ export function d1411Roman(layout: D1411Layout, i: number, t: number): D1411Pose
 
   // After breakthrough, jaws stall slightly open at center lane
   const openLane = hold * 2.4;
-  const x = jawX - side * openLane * 0.35;
+  const x = jawX - side * openLane * 0.35 + sway;
   const z = jawZ;
 
+  // Yüz her zaman bizim adaya (isimli askerlere) dönük
+  const faceX = 0;
+  const faceZ = -1.2;
+  const yaw = Math.atan2(faceX - x, faceZ - z);
+
   return {
-    x: x + sway,
+    x,
     z,
-    yaw: Math.PI + side * jaw * 0.35,
+    yaw,
     pitch: -0.04,
     roll: sway * 0.015,
     show: true,
