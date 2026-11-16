@@ -20,7 +20,7 @@ import {
 type Gltf = Parameters<Parameters<GLTFLoader["load"]>[1]>[0];
 
 const MAN_H = 1.78;
-const CAR_LEN = 3.4;
+const CAR_LEN = 5.6;
 
 function loadGlb(loader: GLTFLoader, url: string) {
   const buf = preloadedGlb(url);
@@ -201,8 +201,8 @@ function numberSprite(n: number, kind: MafyaKind) {
   tex.minFilter = THREE.LinearFilter;
   const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false, toneMapped: false });
   const spr = new THREE.Sprite(mat);
-  spr.scale.set(kind === "car" ? 0.85 : 0.55, kind === "car" ? 0.85 : 0.55, 1);
-  spr.position.set(0, kind === "car" ? 2.6 : 2.15, 0);
+  spr.scale.set(kind === "car" ? 1.1 : 0.55, kind === "car" ? 1.1 : 0.55, 1);
+  spr.position.set(0, kind === "car" ? 3.4 : 2.15, 0);
   spr.renderOrder = 50;
   return spr;
 }

@@ -74,16 +74,16 @@ export function mafyaReset() {
 export function mafyaSpot(i: number) {
   let x = 0;
   for (let k = 0; k < i; k++) {
-    x += MAFYA_ENTRIES[k].kind === "car" ? 4.2 : 1.55;
+    x += MAFYA_ENTRIES[k].kind === "car" ? 6.4 : 1.55;
   }
   const kind = MAFYA_ENTRIES[i]?.kind ?? "man";
-  x += kind === "car" ? 2.1 : 0.75;
+  x += kind === "car" ? 3.2 : 0.75;
 
   let total = 0;
   for (let k = 0; k < MAFYA_N; k++) {
-    total += MAFYA_ENTRIES[k].kind === "car" ? 4.2 : 1.55;
+    total += MAFYA_ENTRIES[k].kind === "car" ? 6.4 : 1.55;
   }
-  return { x: x - total / 2, z: kind === "car" ? 0.4 : 0, yaw: Math.PI };
+  return { x: x - total / 2, z: kind === "car" ? 0.5 : 0, yaw: Math.PI };
 }
 
 export function mafyaFar() {
@@ -111,14 +111,14 @@ export function mafyaCam(t: number): Cam {
   const u = easeInOut(clamp01(t / Math.max(0.01, MAFYA_SECONDS - 0.8)));
   const lx = first.x + (last.x - first.x) * u;
   const kind = MAFYA_ENTRIES[Math.min(MAFYA_N - 1, Math.floor(u * MAFYA_N))]?.kind ?? "man";
-  const dist = kind === "car" ? 6.2 : 4.4;
+  const dist = kind === "car" ? 8.5 : 4.4;
   return {
     x: lx,
-    y: kind === "car" ? 2.8 : 2.15,
+    y: kind === "car" ? 3.4 : 2.15,
     z: dist,
     lx,
-    ly: kind === "car" ? 1.15 : 1.05,
+    ly: kind === "car" ? 1.35 : 1.05,
     lz: 0,
-    fov: kind === "car" ? 42 : 36,
+    fov: kind === "car" ? 44 : 36,
   };
 }
