@@ -93,30 +93,67 @@ export function mafyaReset() {
 
 type Spot = { x: number; z: number; yaw: number };
 
-/** Daha sıkı kadro — kamera hepsini görsün. */
-export function mafyaSpot(i: number): Spot {
+function mafyaPos(i: number): { x: number; z: number } {
   const e = MAFYA_ENTRIES[i];
-  if (!e) return { x: 0, z: 0, yaw: 0 };
-
+  if (!e) return { x: 0, z: 0 };
   if (e.team === 1) {
-    if (e.role === "leader") return { x: 0, z: -3.2, yaw: 0 };
+    if (e.role === "leader") return { x: 0, z: -3.2 };
     if (e.role === "soldier") {
       const order = [2, 8, 9];
       const k = Math.max(0, order.indexOf(e.num));
       const xs = [-2.0, 0, 2.0];
-      return { x: xs[k] ?? 0, z: -4.6, yaw: 0 };
+      return { x: xs[k] ?? 0, z: -4.6 };
     }
-    return { x: e.num === 10 ? -4.4 : 4.4, z: -7.0, yaw: 0 };
+    return { x: e.num === 10 ? -4.4 : 4.4, z: -7.0 };
   }
-
-  if (e.role === "leader") return { x: 0, z: 3.2, yaw: Math.PI };
+  if (e.role === "leader") return { x: 0, z: 3.2 };
   if (e.role === "soldier") {
     const order = [3, 4, 5, 7];
     const k = Math.max(0, order.indexOf(e.num));
     const xs = [-2.7, -0.9, 0.9, 2.7];
-    return { x: xs[k] ?? 0, z: 4.6, yaw: Math.PI };
+    return { x: xs[k] ?? 0, z: 4.6 };
   }
-  return { x: 0, z: 7.2, yaw: Math.PI };
+  return { x: 0, z: 7.2 };
+}
+
+/** En yakın karşı takım adamı (yoksa araç). */
+export function mafyaNearestFoe(fromI: number): number {
+  const from = MAFYA_ENTRIES[fromI];
+  const a = mafyaPos(fromI);
+  let best = -1;
+  let bestD = 1e9;
+  for (let j = 0; j < MAFYA_N; j++) {
+    const to = MAFYA_ENTRIES[j];
+    if (!from || !to || to.team === from.team) continue;
+    if (from.kind === "man" && to.kind !== "man") continue;
+    const b = mafyaPos(j);
+    const d = Math.hypot(b.x - a.x, b.z - a.z);
+    if (d < bestD) {
+      bestD = d;
+      best = j;
+    }
+  }
+  if (best >= 0) return best;
+  for (let j = 0; j < MAFYA_N; j++) {
+    const to = MAFYA_ENTRIES[j];
+    if (!from || !to || to.team === from.team) continue;
+    const b = mafyaPos(j);
+    const d = Math.hypot(b.x - a.x, b.z - a.z);
+    if (d < bestD) {
+      bestD = d;
+      best = j;
+    }
+  }
+  return Math.max(0, best);
+}
+
+/** Pozisyon + en yakın düşmana yaw. */
+export function mafyaSpot(i: number): Spot {
+  const a = mafyaPos(i);
+  const foe = mafyaNearestFoe(i);
+  const b = mafyaPos(foe);
+  const yaw = Math.atan2(b.x - a.x, b.z - a.z);
+  return { x: a.x, z: a.z, yaw };
 }
 
 export function mafyaFar() {
@@ -144,7 +181,7 @@ export function mafyaCam(t: number): Cam {
   };
 }
 
-/** Ateş: her adam karşı takımdan bir hedefe mermi. */
+/** Ateş: her adam en yakın düşmana. */
 export type MafyaShot = {
   fromI: number;
   toI: number;
@@ -154,20 +191,19 @@ export type MafyaShot = {
 
 export function mafyaShots(): MafyaShot[] {
   const men = MAFYA_ENTRIES.map((e, i) => ({ e, i })).filter((x) => x.e.kind === "man");
-  const t1 = men.filter((x) => x.e.team === 1);
-  const t2 = men.filter((x) => x.e.team === 2);
   const out: MafyaShot[] = [];
-  let t = 0.6;
+  let t = 0.55;
   while (t < MAFYA_SECONDS - 0.8) {
-    for (const shooter of t1) {
-      const foe = t2[Math.floor((t * 7 + shooter.i * 3) % t2.length)];
-      out.push({ fromI: shooter.i, toI: foe.i, t0: t + (shooter.i % 5) * 0.05, dur: 0.28 });
+    for (const shooter of men) {
+      const toI = mafyaNearestFoe(shooter.i);
+      out.push({
+        fromI: shooter.i,
+        toI,
+        t0: t + (shooter.i % 7) * 0.04,
+        dur: 0.22,
+      });
     }
-    for (const shooter of t2) {
-      const foe = t1[Math.floor((t * 5 + shooter.i * 2) % t1.length)];
-      out.push({ fromI: shooter.i, toI: foe.i, t0: t + 0.12 + (shooter.i % 5) * 0.05, dur: 0.28 });
-    }
-    t += 0.55;
+    t += 0.48;
   }
   return out;
 }

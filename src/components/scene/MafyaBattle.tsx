@@ -233,7 +233,9 @@ const _muzzle = new THREE.Vector3();
 const _target = new THREE.Vector3();
 const _mid = new THREE.Vector3();
 const _dir = new THREE.Vector3();
+const _up = new THREE.Vector3(0, 1, 0);
 const dummy = new THREE.Object3D();
+const _quat = new THREE.Quaternion();
 
 function Ground() {
   return (
@@ -361,32 +363,34 @@ export function MafyaBattle() {
       else _muzzle.set(from.hold.position.x, 1.35, from.hold.position.z);
       _target.set(to.hold.position.x, 1.25, to.hold.position.z);
 
-      // muzzle flash
-      if (local >= 0 && local < 0.08) {
+      // muzzle flash (küçük)
+      if (local >= 0 && local < 0.07) {
+        dummy.quaternion.identity();
         dummy.position.copy(_muzzle);
-        dummy.scale.setScalar(0.18 + local * 2);
-        dummy.rotation.set(0, t * 20, 0);
+        dummy.scale.setScalar(0.06 + local * 0.5);
         dummy.updateMatrix();
         flashes.setMatrixAt(slot, dummy.matrix);
       }
 
-      // tracer
+      // tracer — silindir Y ekseni uçuş yönüne; ince ve kısa
       const u = Math.max(0, Math.min(1, local / shot.dur));
-      _mid.lerpVectors(_muzzle, _target, u);
       _dir.subVectors(_target, _muzzle);
       const len = _dir.length() || 1;
+      _dir.multiplyScalar(1 / len);
+      _mid.copy(_muzzle).addScaledVector(_dir, len * u);
+      _quat.setFromUnitVectors(_up, _dir);
       dummy.position.copy(_mid);
-      dummy.scale.set(0.04, 0.04, Math.min(0.85, len * 0.12));
-      dummy.lookAt(_target);
-      dummy.rotateX(Math.PI / 2);
+      dummy.quaternion.copy(_quat);
+      const streak = Math.min(0.32, Math.max(0.12, len * 0.035));
+      dummy.scale.set(0.012, streak, 0.012);
       dummy.updateMatrix();
       tracers.setMatrixAt(slot, dummy.matrix);
 
       // hit spark
-      if (u > 0.92) {
+      if (u > 0.9) {
+        dummy.quaternion.identity();
         dummy.position.copy(_target);
-        dummy.scale.setScalar(0.22 * (1 - (u - 0.92) / 0.08));
-        dummy.rotation.set(t * 8, t * 11, 0);
+        dummy.scale.setScalar(0.08 * (1 - (u - 0.9) / 0.1));
         dummy.updateMatrix();
         hits.setMatrixAt(slot, dummy.matrix);
       }
@@ -394,17 +398,25 @@ export function MafyaBattle() {
       slot++;
     }
 
-    // ateş anında hafif geri tepme (birikmesin)
+    // en yakın düşmana dön + hafif geri tepme
     for (let i = 0; i < men.current.length; i++) {
       const man = men.current[i];
-      if (man.kind !== "man") continue;
+      const spot = mafyaSpot(i);
+      man.hold.rotation.y = spot.yaw;
+      if (man.kind !== "man") {
+        man.hold.position.z = man.baseZ;
+        continue;
+      }
       let kick = 0;
       for (const shot of shots) {
         if (shot.fromI !== i) continue;
         const local = t - shot.t0;
-        if (local >= 0 && local < 0.1) kick = Math.max(kick, (1 - local / 0.1) * 0.04);
+        if (local >= 0 && local < 0.1) kick = Math.max(kick, (1 - local / 0.1) * 0.035);
       }
-      man.hold.position.z = man.baseZ + (man.team === 1 ? -kick : kick);
+      const backX = Math.sin(spot.yaw) * -kick;
+      const backZ = Math.cos(spot.yaw) * -kick;
+      man.hold.position.x = spot.x + backX;
+      man.hold.position.z = spot.z + backZ;
     }
 
     tracers.instanceMatrix.needsUpdate = true;
