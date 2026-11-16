@@ -568,20 +568,48 @@ function EditRig({ store, assets }: { store: EditStore; assets: Record<string, C
       Math.sin(shot.pitch) * shot.dist,
       store.viewZ + Math.cos(shot.yaw) * Math.cos(shot.pitch) * shot.dist
     );
+    // Kayıt2: bir kez tüm birimleri kadraja al (tam harita)
+    if (store.recording && store.recordMode === "map" && store.fitMapOnce) {
+      const alive = store.units.filter((unit) => unit.alive);
+      if (alive.length) {
+        let minX = Infinity;
+        let maxX = -Infinity;
+        let minZ = Infinity;
+        let maxZ = -Infinity;
+        for (const unit of alive) {
+          minX = Math.min(minX, unit.x - unit.radius);
+          maxX = Math.max(maxX, unit.x + unit.radius);
+          minZ = Math.min(minZ, unit.z - unit.radius);
+          maxZ = Math.max(maxZ, unit.z + unit.radius);
+        }
+        store.viewX = (minX + maxX) / 2;
+        store.viewZ = (minZ + maxZ) / 2;
+        const span = Math.max(12, maxX - minX, maxZ - minZ);
+        shot.pitch = 0.95;
+        shot.yaw = 0.35;
+        shot.dist = Math.min(170, Math.max(28, span * 1.35));
+      } else {
+        shot.dist = Math.min(170, Math.max(shot.dist, 70));
+        shot.pitch = 0.95;
+      }
+      store.fitMapOnce = false;
+      fovLocked.current = false;
+    }
+
     camera.lookAt(store.viewX, 0, store.viewZ);
     if (camera instanceof THREE.PerspectiveCamera) {
-      const wantFov = store.recording ? 44 : 42;
+      const wantFov = store.recordMode === "map" ? 52 : store.recording ? 44 : 42;
       if (!fovLocked.current || camera.fov !== wantFov) {
         camera.fov = wantFov;
         camera.near = 0.25;
-        camera.far = 420;
+        camera.far = store.recordMode === "map" ? 520 : 420;
         camera.updateProjectionMatrix();
         fovLocked.current = true;
       }
     }
     store.reelU = 0.5;
     store.reelV = 0.5;
-    if (store.recording) {
+    if (store.recording && store.recordMode === "reel") {
       const frame = document.querySelector(".edit-reel-frame") as HTMLElement | null;
       if (frame) {
         const rect = gl.domElement.getBoundingClientRect();

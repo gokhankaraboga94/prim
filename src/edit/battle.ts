@@ -39,6 +39,8 @@ export type Unit = {
 };
 
 export type PlaceMode = "team" | "member";
+/** reel = 9:16 çerçeveli; map = tam harita ekranda, dosya yine 9:16 */
+export type RecordMode = "reel" | "map";
 
 export type EditStore = {
   units: Unit[];
@@ -49,6 +51,9 @@ export type EditStore = {
   viewX: number;
   viewZ: number;
   recording: boolean;
+  recordMode: RecordMode | null;
+  /** Kayıt2: bir kez haritayı kadraja al */
+  fitMapOnce: boolean;
   reelU: number;
   reelV: number;
   nextId: number;
@@ -71,6 +76,8 @@ export function createStore(): EditStore {
     viewX: 0,
     viewZ: 0,
     recording: false,
+    recordMode: null,
+    fitMapOnce: false,
     reelU: 0.5,
     reelV: 0.5,
     nextId: 1,

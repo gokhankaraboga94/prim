@@ -1178,8 +1178,13 @@ body.edit-route .seo-doc {
   border-color: #e10600 !important;
 }
 
-.edit-rec.on {
+.edit-rec.on,
+.edit-rec2.on {
   background: #8d1d1d !important;
+}
+
+.edit-rec2 {
+  border-color: #8a5a2a;
 }
 
 .edit-name input,

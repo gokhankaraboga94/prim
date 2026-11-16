@@ -49,6 +49,7 @@ export function EditPage() {
   const [thumbs, setThumbs] = useState<Record<string, string>>({});
   const [failed, setFailed] = useState<Record<string, boolean>>({});
   const [recording, setRecording] = useState(false);
+  const [recordMode, setRecordMode] = useState<"reel" | "map" | null>(null);
   const recorder = useRef<MediaRecorder | null>(null);
   const loaded = useRef<CharacterAsset[]>([]);
 
@@ -205,12 +206,20 @@ export function EditPage() {
     spawnUnits(store, def, asset.radius, counts[id] ?? 1);
   }
 
-  function toggleRecord() {
+  function stopRecord() {
+    if (recorder.current && recorder.current.state === "recording") recorder.current.stop();
+    store.recording = false;
+    store.recordMode = null;
+    store.fitMapOnce = false;
+    if (document.fullscreenElement) void document.exitFullscreen().catch(() => undefined);
+  }
+
+  function toggleRecord(mode: "reel" | "map") {
     if (recorder.current && recorder.current.state === "recording") {
-      store.recording = false;
-      recorder.current.stop();
+      stopRecord();
       return;
     }
+    const stage = document.querySelector(".edit-stage") as HTMLElement | null;
     const canvas = document.querySelector(".edit-stage canvas") as HTMLCanvasElement | null;
     if (!canvas || typeof canvas.captureStream !== "function") {
       store.note = "Bu tarayıcı kaydı desteklemiyor.";
@@ -231,8 +240,8 @@ export function EditPage() {
       if (!copying) return;
       const sw = canvas.width;
       const sh = canvas.height;
-      const rect = canvas.getBoundingClientRect();
-      if (sw > 0 && sh > 0 && rect.width > 0 && rect.height > 0) {
+      if (sw > 0 && sh > 0) {
+        // Ekran geniş olsa da dosya her zaman 9:16 reels
         const crop = reelWindow(sw, sh, store.reelU, store.reelV);
         flat.drawImage(canvas, crop.x, crop.y, crop.frameW, crop.frameH, 0, 0, REEL_WIDTH, REEL_HEIGHT);
       }
@@ -262,20 +271,34 @@ export function EditPage() {
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = type.includes("mp4") ? "wargame-edit.mp4" : "wargame-edit.webm";
+      link.download = type.includes("mp4") ? (mode === "map" ? "wargame-edit-map.mp4" : "wargame-edit.mp4") : mode === "map" ? "wargame-edit-map.webm" : "wargame-edit.webm";
       link.click();
       window.setTimeout(() => URL.revokeObjectURL(url), 5000);
       stream.getTracks().forEach((track) => track.stop());
       setRecording(false);
+      setRecordMode(null);
       recorder.current = null;
-      store.note = "9:16 kayıt indirildi.";
+      store.recording = false;
+      store.recordMode = null;
+      store.fitMapOnce = false;
+      if (document.fullscreenElement) void document.exitFullscreen().catch(() => undefined);
+      store.note = "9:16 reels kaydı indirildi.";
       store.bump();
     };
     rec.start(250);
     recorder.current = rec;
     store.recording = true;
+    store.recordMode = mode;
+    store.fitMapOnce = mode === "map";
     setRecording(true);
-    store.note = "Kayıt: Ok kaydır · Q/E dön · R/F eğim · +/- zoom. Çerçeve senin kameran.";
+    setRecordMode(mode);
+    if (mode === "map" && stage?.requestFullscreen) {
+      void stage.requestFullscreen().catch(() => undefined);
+    }
+    store.note =
+      mode === "map"
+        ? "Kayıt2: tam harita ekranda · dosya 9:16. Ok/Q-E/R-F/+- · Durdur."
+        : "Kayıt: Ok kaydır · Q/E dön · R/F eğim · +/- zoom. Çerçeve senin kameran.";
     store.bump();
   }
 
@@ -393,8 +416,22 @@ export function EditPage() {
         >
           Load
         </button>
-        <button type="button" className={recording ? "edit-rec on" : "edit-rec"} onClick={toggleRecord}>
-          {recording ? "Kaydı durdur" : "Kayıt"}
+        <button
+          type="button"
+          className={recording && recordMode === "reel" ? "edit-rec on" : "edit-rec"}
+          onClick={() => toggleRecord("reel")}
+          disabled={recording && recordMode === "map"}
+        >
+          {recording && recordMode === "reel" ? "Kaydı durdur" : "Kayıt"}
+        </button>
+        <button
+          type="button"
+          className={recording && recordMode === "map" ? "edit-rec on" : "edit-rec2"}
+          onClick={() => toggleRecord("map")}
+          disabled={recording && recordMode === "reel"}
+          title="Tam harita ekranda izle, dosya yine 9:16 reels"
+        >
+          {recording && recordMode === "map" ? "Kaydı durdur" : "Kayıt2"}
         </button>
         <button type="button" onClick={() => selectAll(store)} disabled={!standing}>
           Hepsini seç
@@ -424,11 +461,11 @@ export function EditPage() {
       </header>
 
       <p className="edit-help">
-        Üye taşı ile konan birim sabitlenir; Nizam sıfırla demeden toplu taşımada kıpırdamaz. Save/Load aynı tarayıcıda sahneyi saklar. Sol+sağ tık = seçimi bırak. Kayıt: Ok / Q-E / R-F / +/-.
+        Üye taşı ile konan birim sabitlenir; Nizam sıfırla demeden toplu taşımada kıpırdamaz. Save/Load aynı tarayıcıda sahneyi saklar. Kayıt2: tam harita ekranda, indirme 9:16. Sol+sağ tık = seçimi bırak.
       </p>
 
       <div className="edit-stage">
-        {recording && <div className="edit-reel-frame" aria-hidden="true" />}
+        {recording && recordMode === "reel" && <div className="edit-reel-frame" aria-hidden="true" />}
         {(tab === "chars" || tab === "mafya") && (
           <section className="edit-roster" aria-label={tab === "mafya" ? "Karakterler2" : "Karakter listesi"}>
             {rosterList.map((def) => {
