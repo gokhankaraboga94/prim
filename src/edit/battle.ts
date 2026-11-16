@@ -104,8 +104,9 @@ function stats(def: CharacterDef, radius: number) {
     height: def.height,
     speed: car ? 0 : giant ? 4.4 : def.gun ? 2.8 : 3.3,
     /** Araç saldıramaz; sadece hasar yer. */
-    damage: car ? 0 : def.gun ? 14 : def.id === "savaci" ? 24 : giant ? 26 : 8,
-    maxHp: car ? 600 : giant ? 480 : def.gun ? 110 : 86,
+    // VS uzun sürsün: yüksek can, düşük hasar
+    damage: car ? 0 : def.gun ? 5 : def.id === "savaci" ? 9 : giant ? 11 : 4,
+    maxHp: car ? 1100 : giant ? 900 : def.gun ? 320 : 260,
   };
 }
 
@@ -1121,8 +1122,16 @@ export function startBattle(store: EditStore) {
     store.bump();
     return;
   }
+  // Ateşleri senkron kopar — toplu ölüm olmasın
+  for (const unit of store.units) {
+    if (!unit.alive) continue;
+    unit.hp = unit.maxHp;
+    unit.cooldown = 0.5 + Math.random() * 2.4;
+    unit.swing = 0;
+    unit.boltAge = 0;
+  }
   store.battle = true;
-  store.note = "Savaş başladı — konuşlandıkları yerden ateş.";
+  store.note = "Savaş başladı — uzun çatışma, isabet düşük.";
   store.bump();
 }
 
@@ -1205,13 +1214,16 @@ export function stepUnits(store: EditStore, dt: number) {
         continue;
       }
 
+      // Hedefi biraz dağıt — herkes aynı adama yığılmasın
       let target: Unit | null = null;
       let best = Infinity;
       for (const enemy of foes) {
         if (!enemy.alive) continue;
         const d2 = (enemy.x - unit.x) ** 2 + (enemy.z - unit.z) ** 2;
-        if (d2 < best) {
-          best = d2;
+        const scatter = ((unit.id * 17 + enemy.id * 31) % 97) * 0.12;
+        const score = d2 + scatter * scatter;
+        if (score < best) {
+          best = score;
           target = enemy;
         }
       }
@@ -1224,42 +1236,50 @@ export function stepUnits(store: EditStore, dt: number) {
         unit.yaw = look + unit.yawOffset;
       }
 
-      // Üye taşı (pinned) veya silahlı: konuşlandırıldığı yerden ateş; nizam kaydırmaz
       // Yalnızca sabitlenmemiş yakın dövüşçü hedefe yürür
       if (!unit.pinned && !gun && target && unit.speed > 0.05) {
         const meleeReach = unit.radius + target.radius + 0.45;
         const dist = Math.hypot(target.x - unit.x, target.z - unit.z);
         if (dist > meleeReach) {
-          const move = Math.min(dist - meleeReach + 0.02, unit.speed * step);
+          const move = Math.min(dist - meleeReach + 0.02, unit.speed * step * 0.85);
           unit.x = clampMap(unit.x + unit.aimX * move);
           unit.z = clampMap(unit.z + unit.aimZ * move);
         }
       }
 
       const meleeReach = target ? unit.radius + target.radius + 0.45 : 0;
-      const gunReach = 18;
+      const gunReach = 16;
       const distTo = target ? Math.hypot(target.x - unit.x, target.z - unit.z) : 1e9;
       const engaged = target ? (gun ? distTo <= gunReach : distTo <= meleeReach) : false;
       if (target && engaged && unit.damage > 0) {
         unit.cooldown -= step;
-        unit.swing = Math.min(1, unit.swing + step * (gun ? 5 : 7));
+        unit.swing = Math.min(1, unit.swing + step * (gun ? 3.2 : 4.5));
         if (unit.cooldown <= 0) {
-          target.hp -= unit.damage;
-          unit.cooldown = gun ? 0.55 : 0.68;
+          // Mesafe büyüdükçe isabet düşer — çoğu atış ıska
+          const hitChance = gun
+            ? Math.max(0.16, 0.42 - (distTo / gunReach) * 0.28)
+            : Math.max(0.4, 0.68 - distTo * 0.04);
+          const hit = Math.random() < hitChance;
+          unit.cooldown = gun ? 0.95 + Math.random() * 0.7 : 1.05 + Math.random() * 0.55;
           unit.swing = 1;
           if (gun) {
-            unit.boltAge = 0.22;
+            const miss = hit ? 0 : 0.7 + Math.random() * 1.4;
+            const side = Math.random() > 0.5 ? 1 : -1;
+            unit.boltAge = 0.2;
             unit.boltX = unit.x;
             unit.boltZ = unit.z;
-            unit.boltTX = target.x;
-            unit.boltTZ = target.z;
+            unit.boltTX = target.x + side * miss * 0.55;
+            unit.boltTZ = target.z + (Math.random() - 0.5) * miss;
           }
-          if (target.hp <= 0) {
-            target.hp = 0;
-            target.alive = false;
-            target.fall = 0;
-            store.selected.delete(target.id);
-            changed = true;
+          if (hit) {
+            target.hp -= unit.damage;
+            if (target.hp <= 0) {
+              target.hp = 0;
+              target.alive = false;
+              target.fall = 0;
+              store.selected.delete(target.id);
+              changed = true;
+            }
           }
         }
       } else unit.swing = Math.max(0, unit.swing - step * 3);
