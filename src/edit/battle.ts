@@ -127,7 +127,8 @@ export function spawnUnits(store: EditStore, def: CharacterDef, radius: number, 
   const cols = Math.ceil(Math.sqrt(n));
   const rows = Math.ceil(n / cols);
   const gap = Math.max(1.15, radius * 2.2);
-  const origin = freeSpot(store, (cols - 1) * gap + radius * 2, (rows - 1) * gap + radius * 2);
+  // Aynı model peş peşe → aynı nokta; takım varsa ondan uzak ama kendi aralarında üst üste OK
+  const origin = spawnOrigin(store, def.id, (cols - 1) * gap + radius * 2, (rows - 1) * gap + radius * 2);
   // The fresh block becomes the selection so a team button applies to it straight away.
   store.selected.clear();
   for (let i = 0; i < n; i++) {
@@ -182,17 +183,32 @@ function clampMap(value: number) {
   return Math.max(-MAP_LIMIT, Math.min(MAP_LIMIT, value));
 }
 
+/** Aynı takımsız modelin merkezi — peş peşe Ekle aynı noktaya yığılır. */
+function spawnOrigin(store: EditStore, modelId: string, w: number, d: number) {
+  const loose = store.units.filter((unit) => unit.alive && unit.model === modelId && unit.team <= 0);
+  if (loose.length) {
+    let x = 0;
+    let z = 0;
+    for (const unit of loose) {
+      x += unit.x;
+      z += unit.z;
+    }
+    return { x: x / loose.length, z: z / loose.length };
+  }
+  return freeSpotAwayFromTeams(store, w, d);
+}
+
 /**
- * Yeni blok mevcut birimlerin (özellikle takımların) üstüne binmesin.
- * Haritada boş bir yana koyar — kamera altındaki takıma yapışmaz.
+ * İlk parti: takımlı birimlerden uzak boş yer.
+ * Takımsız aynı model üzerine binmeye izin var (spawnOrigin).
  */
-function freeSpot(store: EditStore, w: number, d: number) {
-  const standing = store.units.filter((unit) => unit.alive);
-  if (!standing.length) return { x: clampMap(store.viewX), z: clampMap(store.viewZ) };
+function freeSpotAwayFromTeams(store: EditStore, w: number, d: number) {
+  const teams = store.units.filter((unit) => unit.alive && unit.team > 0);
+  if (!teams.length) return { x: clampMap(store.viewX), z: clampMap(store.viewZ) };
 
   const pad = Math.max(10, Math.max(w, d) * 0.55 + 8);
   const clear = (x: number, z: number) => {
-    for (const unit of standing) {
+    for (const unit of teams) {
       if (Math.abs(unit.x - x) < w / 2 + unit.radius + pad && Math.abs(unit.z - z) < d / 2 + unit.radius + pad) return false;
     }
     return true;
@@ -200,14 +216,13 @@ function freeSpot(store: EditStore, w: number, d: number) {
 
   let mx = 0;
   let mz = 0;
-  for (const unit of standing) {
+  for (const unit of teams) {
     mx += unit.x;
     mz += unit.z;
   }
-  mx /= standing.length;
-  mz /= standing.length;
+  mx /= teams.length;
+  mz /= teams.length;
 
-  // Takım / küme merkezinden uzak yönlere bak
   const base = Math.max(w, d) + pad + 6;
   for (let ring = 1; ring <= 18; ring++) {
     const dist = base * ring * 0.85;
@@ -220,7 +235,6 @@ function freeSpot(store: EditStore, w: number, d: number) {
     }
   }
 
-  // Son çare: kamera etrafı, yine geniş boşlukla
   const stepX = Math.max(w + 6, 14);
   const stepZ = Math.max(d + 6, 14);
   for (let ring = 1; ring < 14; ring++) {
