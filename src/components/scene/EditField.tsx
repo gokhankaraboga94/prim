@@ -286,8 +286,9 @@ function EditRig({ store, assets }: { store: EditStore; assets: Record<string, C
     const down = (event: KeyboardEvent) => {
       const tag = (event.target as HTMLElement | null)?.tagName;
       if (tag === "INPUT" || tag === "TEXTAREA") return;
-      const rec = ["KeyQ", "KeyE", "KeyR", "KeyF", "Equal", "Minus", "NumpadAdd", "NumpadSubtract"].includes(event.code);
+      const rec = ["KeyQ", "KeyE", "KeyR", "KeyF", "KeyW", "KeyA", "KeyS", "KeyD", "Equal", "Minus", "NumpadAdd", "NumpadSubtract"].includes(event.code);
       if (!event.key.startsWith("Arrow") && !rec) return;
+      if (event.ctrlKey || event.metaKey || event.altKey) return;
       event.preventDefault();
       keysRef.add(event.code.startsWith("Key") || event.code.startsWith("Numpad") || event.code === "Equal" || event.code === "Minus" ? event.code : event.key);
     };
@@ -536,20 +537,20 @@ function EditRig({ store, assets }: { store: EditStore; assets: Record<string, C
     const fl = Math.hypot(fx, fz) || 1;
     const rl = Math.hypot(rx, rz) || 1;
     const held = keys.current;
-    // Kayıt dahil: ok = kaydır, Q/E = yaw, R/F = pitch, +/- = zoom
-    if (held.has("ArrowUp")) {
+    // Kayıt dahil: ok/WASD = kaydır, Q/E = yaw, R/F = pitch, +/- = zoom
+    if (held.has("ArrowUp") || held.has("KeyW")) {
       store.viewX += (fx / fl) * pan;
       store.viewZ += (fz / fl) * pan;
     }
-    if (held.has("ArrowDown")) {
+    if (held.has("ArrowDown") || held.has("KeyS")) {
       store.viewX -= (fx / fl) * pan;
       store.viewZ -= (fz / fl) * pan;
     }
-    if (held.has("ArrowLeft")) {
+    if (held.has("ArrowLeft") || held.has("KeyA")) {
       store.viewX -= (rx / rl) * pan;
       store.viewZ -= (rz / rl) * pan;
     }
-    if (held.has("ArrowRight")) {
+    if (held.has("ArrowRight") || held.has("KeyD")) {
       store.viewX += (rx / rl) * pan;
       store.viewZ += (rz / rl) * pan;
     }
