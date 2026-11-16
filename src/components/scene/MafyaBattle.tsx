@@ -205,22 +205,28 @@ function attachGun(root: THREE.Object3D, kind: MafyaGun) {
   return gun;
 }
 
-/** Koşu / yürüyüş asla. m08'de fire yok → ateş-koşarken son çare. */
+function isPureLocoName(n: string) {
+  const s = n.toLowerCase();
+  return /run|running|walk|walking|sprint|koş|kos/.test(s) && !/fire|ateş|ates|silah|attack|shoot/.test(s);
+}
+
+/** Koşu / yürüyüş asla. m08'de fire yok → ateş-koşarken (saf run silindi). */
 function pickFireClip(clips: THREE.AnimationClip[]) {
+  const pool = clips.filter((c) => !isPureLocoName(c.name));
   const isRun = (n: string) => /(?:^|[^a-zıiğüşöç])(run|running|walk|walking)(?:$|[^a-zıiğüşöç])/i.test(n) || /koş|kosar|koşar/i.test(n);
   const isFire = (n: string) => /fire|ateş|ates|silah/i.test(n);
 
   const exact = ["fire", "silah ile ateş ediyor"];
   for (const name of exact) {
-    const hit = clips.find((c) => c.name === name || c.name.toLowerCase() === name);
+    const hit = pool.find((c) => c.name === name || c.name.toLowerCase() === name);
     if (hit) return hit;
   }
 
-  const standingFire = clips.find((c) => isFire(c.name) && !isRun(c.name));
+  const standingFire = pool.find((c) => isFire(c.name) && !isRun(c.name));
   if (standingFire) return standingFire;
 
-  // m08: yalnızca "silah ile ateş ediyor koşarken" var — koşudan iyi
-  const fireRun = clips.find((c) => isFire(c.name));
+  // m08: saf run yok; ateş-koşarken duruş gibi (yavaşlatma yok)
+  const fireRun = pool.find((c) => isFire(c.name));
   if (fireRun) return fireRun;
 
   return null;
@@ -343,7 +349,7 @@ export function MafyaBattle() {
             if (clip) {
               const action = mix.clipAction(clip);
               action.setLoop(THREE.LoopRepeat, Infinity);
-              action.timeScale = /koş|kos|run/i.test(clip.name) ? 0.45 : 1;
+              action.timeScale = 1;
               action.play();
             }
             mix.update(0);

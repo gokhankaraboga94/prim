@@ -60,6 +60,14 @@ function inPlace(clip: THREE.AnimationClip) {
   return next;
 }
 
+/** Saf koşu/yürüyüş — ateş/silah kliplerine dokunma. */
+function isPureLoco(name: string) {
+  const n = name.toLowerCase();
+  const loco = /run|running|walk|walking|sprint|koş|kos/.test(n);
+  const combat = /fire|ateş|ates|silah|attack|shoot/.test(n);
+  return loco && !combat;
+}
+
 function materialColor(src: THREE.Material) {
   const mat = (Array.isArray(src) ? src[0] : src) as THREE.MeshStandardMaterial;
   return mat.color ? mat.color.clone() : new THREE.Color("#d8d2c8");
@@ -194,13 +202,16 @@ export async function loadCharacter(def: CharacterDef): Promise<CharacterAsset> 
   if (skinned && file.animations.length) {
     toLambert(scene);
     const radius = fitRig(scene, def.height);
+    let clips = file.animations.map(inPlace);
+    // mafya-8: koşu klibi spawn'da devreye giriyor — çıkar
+    if (def.id === "mafya-8") clips = clips.filter((clip) => !isPureLoco(clip.name));
     return {
       id: def.id,
       geometry: new THREE.BufferGeometry(),
       material: new THREE.MeshBasicMaterial(),
       radius,
       template: scene,
-      clips: file.animations.map(inPlace),
+      clips,
     };
   }
   const meshes: THREE.Mesh[] = [];

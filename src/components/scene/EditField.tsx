@@ -161,6 +161,11 @@ function clipBy(clips: THREE.AnimationClip[], keys: string[]) {
   return null;
 }
 
+function isPureLocoClip(name: string) {
+  const n = name.toLowerCase();
+  return /run|running|walk|walking|sprint|koş|kos/.test(n) && !/fire|ateş|ates|silah|attack|shoot/.test(n);
+}
+
 type Actor = {
   id: number;
   holder: THREE.Group;
@@ -197,11 +202,18 @@ function makeActor(asset: CharacterAsset): Omit<Actor, "id"> {
     clips.find((c) => c.name === "silah ile ateş ediyor koşarken") ??
     clips.find((c) => /ateş|fire|silah/i.test(c.name) && /koş|kos|run|walk/i.test(c.name)) ??
     null;
-  const walk = clipBy(clips, ["walk", "run", "sprint"]);
-  const idle = play(clipBy(clips, ["idle", "defensive", "stance"])) ?? play(fireStand) ?? play(clips[0] ?? null);
-  const move = play(walk);
+  // mafya-8: saf koşu yok; idle asla run olmasın
+  const noRun = asset.id === "mafya-8";
+  const walk = noRun ? null : clipBy(clips, ["walk", "run", "sprint"]);
+  const idleClip =
+    clipBy(clips, ["idle", "defensive", "stance"]) ??
+    fireStand ??
+    clips.find((c) => !isPureLocoClip(c.name)) ??
+    null;
+  const idle = play(idleClip);
+  const move = noRun ? null : play(walk);
   const attack = play(fireStand) ?? play(clipBy(clips, ["aggress", "sword", "attack", "combo", "fire", "ateş"]));
-  const fireWalk = play(fireRun) ?? attack;
+  const fireWalk = noRun ? attack : play(fireRun) ?? attack;
   idle?.play();
   return { holder, mixer, idle, move, attack, fireWalk, current: idle, mode: "idle", px: 0, pz: 0 };
 }
