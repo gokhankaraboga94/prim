@@ -10,10 +10,13 @@ import {
   clearField,
   clearNames,
   createStore,
+  hasSavedScene,
+  loadScene,
   nudgeSelected,
   removeSelected,
   resetSlotOffsets,
   rotateSelected,
+  saveScene,
   selectAll,
   selectTeam,
   setGround,
@@ -351,6 +354,24 @@ export function EditPage() {
         <button type="button" className="edit-vs" onClick={() => startBattle(store)}>
           {store.battle ? "Savaşı durdur" : "VS"}
         </button>
+        <button
+          type="button"
+          className="edit-save"
+          onClick={() => saveScene(store)}
+          disabled={recording}
+          title="Sahneyi bu tarayıcıya kaydet"
+        >
+          Save
+        </button>
+        <button
+          type="button"
+          className="edit-load"
+          onClick={() => loadScene(store)}
+          disabled={recording || !hasSavedScene()}
+          title="Son kaydedilen sahneyi yükle"
+        >
+          Load
+        </button>
         <button type="button" className={recording ? "edit-rec on" : "edit-rec"} onClick={toggleRecord}>
           {recording ? "Kaydı durdur" : "Kayıt"}
         </button>
@@ -382,7 +403,7 @@ export function EditPage() {
       </header>
 
       <p className="edit-help">
-        Üye taşı ile konan birim sabitlenir; Nizam sıfırla demeden toplu taşımada kıpırdamaz. Takım taşında 2+ seçiliyse yalnız onlar gider. Sol+sağ tık = seçimi bırak. Kayıt: Ok / Q-E / R-F / +/-.
+        Üye taşı ile konan birim sabitlenir; Nizam sıfırla demeden toplu taşımada kıpırdamaz. Save/Load aynı tarayıcıda sahneyi saklar. Sol+sağ tık = seçimi bırak. Kayıt: Ok / Q-E / R-F / +/-.
       </p>
 
       <div className="edit-stage">

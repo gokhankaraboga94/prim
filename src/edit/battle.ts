@@ -1,4 +1,4 @@
-import { MAX_PER_MODEL, MAX_UNITS, TEAMS, characterById, type CharacterDef, type GroundId } from "./catalog";
+import { GROUNDS, MAX_PER_MODEL, MAX_UNITS, TEAMS, characterById, type CharacterDef, type GroundId } from "./catalog";
 
 export type Unit = {
   id: number;
@@ -225,6 +225,219 @@ export function clearField(store: EditStore) {
   store.nameStamp += 1;
   store.note = `${n} asker kaldırıldı. Harita boş.`;
   store.bump();
+}
+
+const SAVE_KEY = "wargame-edit-scene-v1";
+
+type SavedUnit = {
+  id: number;
+  model: string;
+  x: number;
+  y: number;
+  z: number;
+  yaw: number;
+  yawOffset: number;
+  team: number;
+  name: string;
+  hp: number;
+  maxHp: number;
+  alive: boolean;
+  radius: number;
+  height: number;
+  speed: number;
+  damage: number;
+  aimX: number;
+  aimZ: number;
+  rank: number;
+  slotOffR: number;
+  slotOffF: number;
+  pinned: boolean;
+};
+
+type SavedScene = {
+  v: 1;
+  at: string;
+  ground: GroundId;
+  viewX: number;
+  viewZ: number;
+  placeMode: PlaceMode;
+  nextId: number;
+  nameStamp: number;
+  units: SavedUnit[];
+};
+
+function num(value: unknown, fallback: number) {
+  return typeof value === "number" && Number.isFinite(value) ? value : fallback;
+}
+
+function bool(value: unknown, fallback: boolean) {
+  return typeof value === "boolean" ? value : fallback;
+}
+
+export function hasSavedScene() {
+  try {
+    return Boolean(localStorage.getItem(SAVE_KEY));
+  } catch {
+    return false;
+  }
+}
+
+export function saveScene(store: EditStore) {
+  if (store.recording) {
+    store.note = "Kayıt sürerken Save yok. Önce kaydı durdur.";
+    store.bump();
+    return false;
+  }
+  const payload: SavedScene = {
+    v: 1,
+    at: new Date().toISOString(),
+    ground: store.ground,
+    viewX: store.viewX,
+    viewZ: store.viewZ,
+    placeMode: store.placeMode,
+    nextId: store.nextId,
+    nameStamp: store.nameStamp,
+    units: store.units.map((unit) => ({
+      id: unit.id,
+      model: unit.model,
+      x: unit.x,
+      y: unit.y,
+      z: unit.z,
+      yaw: unit.yaw,
+      yawOffset: unit.yawOffset,
+      team: unit.team,
+      name: unit.name,
+      hp: unit.hp,
+      maxHp: unit.maxHp,
+      alive: unit.alive,
+      radius: unit.radius,
+      height: unit.height,
+      speed: unit.speed,
+      damage: unit.damage,
+      aimX: unit.aimX,
+      aimZ: unit.aimZ,
+      rank: unit.rank,
+      slotOffR: unit.slotOffR,
+      slotOffF: unit.slotOffF,
+      pinned: unit.pinned,
+    })),
+  };
+  try {
+    localStorage.setItem(SAVE_KEY, JSON.stringify(payload));
+  } catch {
+    store.note = "Save başarısız (tarayıcı depolama dolu olabilir).";
+    store.bump();
+    return false;
+  }
+  const when = new Date(payload.at).toLocaleString("tr-TR");
+  store.note = `Save OK · ${payload.units.length} birim · ${when}`;
+  store.bump();
+  return true;
+}
+
+export function loadScene(store: EditStore) {
+  if (store.recording) {
+    store.note = "Kayıt sürerken Load yok. Önce kaydı durdur.";
+    store.bump();
+    return false;
+  }
+  let raw = "";
+  try {
+    raw = localStorage.getItem(SAVE_KEY) ?? "";
+  } catch {
+    store.note = "Load başarısız (tarayıcı depolama okunamadı).";
+    store.bump();
+    return false;
+  }
+  if (!raw) {
+    store.note = "Kayıtlı sahne yok. Önce Save.";
+    store.bump();
+    return false;
+  }
+  let data: SavedScene;
+  try {
+    data = JSON.parse(raw) as SavedScene;
+  } catch {
+    store.note = "Kayıt bozuk, Load iptal.";
+    store.bump();
+    return false;
+  }
+  if (!data || data.v !== 1 || !Array.isArray(data.units)) {
+    store.note = "Kayıt sürümü uyumsuz.";
+    store.bump();
+    return false;
+  }
+
+  const grounds = new Set(GROUNDS.map((g) => g.id));
+  const units: Unit[] = [];
+  let skipped = 0;
+  let maxId = 0;
+  for (const row of data.units) {
+    if (!row || typeof row.model !== "string") {
+      skipped += 1;
+      continue;
+    }
+    const def = characterById(row.model);
+    if (!def) {
+      skipped += 1;
+      continue;
+    }
+    const fit = stats(def, Math.max(0.4, num(row.radius, 0.55)));
+    const id = Math.max(1, Math.floor(num(row.id, 0)));
+    maxId = Math.max(maxId, id);
+    const maxHp = Math.max(1, num(row.maxHp, fit.maxHp));
+    const alive = bool(row.alive, true);
+    units.push({
+      id,
+      model: def.id,
+      x: clampMap(num(row.x, 0)),
+      y: 0,
+      z: clampMap(num(row.z, 0)),
+      yaw: num(row.yaw, def.yaw),
+      yawOffset: num(row.yawOffset, def.yaw),
+      team: Math.max(0, Math.floor(num(row.team, 0))),
+      name: typeof row.name === "string" ? row.name.slice(0, 40) : "",
+      hp: alive ? Math.max(1, Math.min(maxHp, num(row.hp, maxHp))) : 0,
+      maxHp,
+      alive,
+      fall: alive ? 0 : 1,
+      pitch: alive ? 0 : 1.5,
+      swing: 0,
+      cooldown: 0.35,
+      radius: fit.radius,
+      height: fit.height,
+      speed: fit.speed,
+      damage: fit.damage,
+      aimX: num(row.aimX, 0),
+      aimZ: num(row.aimZ, 1),
+      rank: Math.floor(num(row.rank, -1)),
+      slotOffR: num(row.slotOffR, 0),
+      slotOffF: num(row.slotOffF, 0),
+      pinned: bool(row.pinned, false),
+      boltAge: 0,
+      boltX: 0,
+      boltZ: 0,
+      boltTX: 0,
+      boltTZ: 0,
+    });
+  }
+
+  store.battle = false;
+  store.units = units;
+  store.byId = new Map(units.map((unit) => [unit.id, unit]));
+  store.selected.clear();
+  store.ground = grounds.has(data.ground) ? data.ground : "grass";
+  store.viewX = clampMap(num(data.viewX, 0));
+  store.viewZ = clampMap(num(data.viewZ, 0));
+  store.placeMode = data.placeMode === "member" ? "member" : "team";
+  store.nextId = Math.max(num(data.nextId, 1), maxId + 1);
+  store.nameStamp = Math.max(0, Math.floor(num(data.nameStamp, 0))) + 1;
+  const when = data.at ? new Date(data.at).toLocaleString("tr-TR") : "?";
+  store.note = skipped
+    ? `Load · ${units.length} birim (${skipped} atlandı) · ${when}`
+    : `Load · ${units.length} birim · ${when}`;
+  store.bump();
+  return true;
 }
 
 export function unassignTeam(store: EditStore) {

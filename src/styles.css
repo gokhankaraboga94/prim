@@ -1168,6 +1168,11 @@ body.edit-route .seo-doc {
   display: block;
 }
 
+.edit-save,
+.edit-load {
+  border-color: #5a7a9a;
+}
+
 .edit-vs {
   background: #6d1410 !important;
   border-color: #e10600 !important;
