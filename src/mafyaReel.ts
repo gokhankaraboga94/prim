@@ -97,23 +97,23 @@ function mafyaPos(i: number): { x: number; z: number } {
   const e = MAFYA_ENTRIES[i];
   if (!e) return { x: 0, z: 0 };
   if (e.team === 1) {
-    if (e.role === "leader") return { x: 0, z: -3.2 };
+    if (e.role === "leader") return { x: 0, z: -2.6 };
     if (e.role === "soldier") {
       const order = [2, 8, 9];
       const k = Math.max(0, order.indexOf(e.num));
-      const xs = [-2.0, 0, 2.0];
-      return { x: xs[k] ?? 0, z: -4.6 };
+      const xs = [-1.7, 0, 1.7];
+      return { x: xs[k] ?? 0, z: -3.8 };
     }
-    return { x: e.num === 10 ? -4.4 : 4.4, z: -7.0 };
+    return { x: e.num === 10 ? -3.5 : 3.5, z: -5.6 };
   }
-  if (e.role === "leader") return { x: 0, z: 3.2 };
+  if (e.role === "leader") return { x: 0, z: 2.6 };
   if (e.role === "soldier") {
     const order = [3, 4, 5, 7];
     const k = Math.max(0, order.indexOf(e.num));
-    const xs = [-2.7, -0.9, 0.9, 2.7];
-    return { x: xs[k] ?? 0, z: 4.6 };
+    const xs = [-2.2, -0.75, 0.75, 2.2];
+    return { x: xs[k] ?? 0, z: 3.8 };
   }
-  return { x: 0, z: 7.2 };
+  return { x: 0, z: 5.6 };
 }
 
 /** En yakın karşı takım adamı (yoksa araç). */
@@ -157,27 +157,26 @@ export function mafyaSpot(i: number): Spot {
 }
 
 export function mafyaFar() {
-  return 160;
+  return 200;
 }
 
 export function mafyaHaze() {
-  return { near: 35, far: 70 };
+  return { near: 45, far: 90 };
 }
 
 type Cam = { x: number; y: number; z: number; lx: number; ly: number; lz: number; fov: number };
 
-/** Yüksek yan bakış — tüm sahne sürekli kadroda, yavaş döner. */
+/** Yüksek geniş bakış — 9:16 kadroda herkes sığsın, hafif salınım. */
 export function mafyaCam(t: number): Cam {
-  const ang = -0.55 + Math.sin(t * 0.09) * 0.35;
-  const r = 16.5;
+  const ang = Math.sin(t * 0.08) * 0.22;
   return {
-    x: Math.sin(ang) * r,
-    y: 12.5,
-    z: Math.cos(ang) * r * 0.35,
+    x: Math.sin(ang) * 6.5,
+    y: 18.5,
+    z: Math.cos(ang) * 11.5,
     lx: 0,
-    ly: 1.0,
+    ly: 0.6,
     lz: 0,
-    fov: 42,
+    fov: 50,
   };
 }
 

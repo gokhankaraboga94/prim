@@ -22,7 +22,7 @@ import {
 type Gltf = Parameters<Parameters<GLTFLoader["load"]>[1]>[0];
 
 const MAN_H = 1.78;
-const CAR_LEN = 4.4;
+const CAR_LEN = 3.6;
 const BULLET_N = 48;
 
 function loadGlb(loader: GLTFLoader, url: string) {
