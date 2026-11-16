@@ -183,36 +183,57 @@ function clampMap(value: number) {
 }
 
 /**
- * Centre of a block `w` × `d` that does not overlap standing units, searched in
- * rings around what the camera is looking at. New troops therefore appear on
- * screen instead of marching off to the right of the previous batch.
+ * Yeni blok mevcut birimlerin (özellikle takımların) üstüne binmesin.
+ * Haritada boş bir yana koyar — kamera altındaki takıma yapışmaz.
  */
 function freeSpot(store: EditStore, w: number, d: number) {
   const standing = store.units.filter((unit) => unit.alive);
+  if (!standing.length) return { x: clampMap(store.viewX), z: clampMap(store.viewZ) };
+
+  const pad = Math.max(10, Math.max(w, d) * 0.55 + 8);
   const clear = (x: number, z: number) => {
     for (const unit of standing) {
-      if (Math.abs(unit.x - x) < w / 2 + unit.radius + 0.6 && Math.abs(unit.z - z) < d / 2 + unit.radius + 0.6) return false;
+      if (Math.abs(unit.x - x) < w / 2 + unit.radius + pad && Math.abs(unit.z - z) < d / 2 + unit.radius + pad) return false;
     }
     return true;
   };
-  const stepX = w + 1.6;
-  const stepZ = d + 1.6;
-  for (let ring = 0; ring < 12; ring++) {
-    const spots: [number, number][] = [];
-    for (let i = -ring; i <= ring; i++) {
-      for (let j = -ring; j <= ring; j++) {
-        if (Math.max(Math.abs(i), Math.abs(j)) !== ring) continue;
-        spots.push([i, j]);
-      }
-    }
-    spots.sort((a, b) => a[0] * a[0] + a[1] * a[1] * 0.5 - (b[0] * b[0] + b[1] * b[1] * 0.5));
-    for (const [i, j] of spots) {
-      const x = clampMap(store.viewX + i * stepX);
-      const z = clampMap(store.viewZ + j * stepZ);
+
+  let mx = 0;
+  let mz = 0;
+  for (const unit of standing) {
+    mx += unit.x;
+    mz += unit.z;
+  }
+  mx /= standing.length;
+  mz /= standing.length;
+
+  // Takım / küme merkezinden uzak yönlere bak
+  const base = Math.max(w, d) + pad + 6;
+  for (let ring = 1; ring <= 18; ring++) {
+    const dist = base * ring * 0.85;
+    const dirs = 8 + (ring > 3 ? 4 : 0);
+    for (let k = 0; k < dirs; k++) {
+      const ang = (k / dirs) * Math.PI * 2 + ring * 0.31;
+      const x = clampMap(mx + Math.sin(ang) * dist);
+      const z = clampMap(mz + Math.cos(ang) * dist);
       if (clear(x, z)) return { x, z };
     }
   }
-  return { x: clampMap(store.viewX), z: clampMap(store.viewZ) };
+
+  // Son çare: kamera etrafı, yine geniş boşlukla
+  const stepX = Math.max(w + 6, 14);
+  const stepZ = Math.max(d + 6, 14);
+  for (let ring = 1; ring < 14; ring++) {
+    for (let i = -ring; i <= ring; i++) {
+      for (let j = -ring; j <= ring; j++) {
+        if (Math.max(Math.abs(i), Math.abs(j)) !== ring) continue;
+        const x = clampMap(store.viewX + i * stepX);
+        const z = clampMap(store.viewZ + j * stepZ);
+        if (clear(x, z)) return { x, z };
+      }
+    }
+  }
+  return { x: clampMap(mx + base * 2), z: clampMap(mz) };
 }
 
 export function selectAll(store: EditStore) {
