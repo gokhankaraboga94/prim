@@ -53,9 +53,9 @@ export const CHARACTERS2: CharacterDef[] = [
   { id: "mafya-7", label: "Mafya 7", url: "/models/mafya/m07.glb", height: 1.78, yaw: MAFYA_YAW, kind: "man", gun: true, heavy: true },
   { id: "mafya-8", label: "Mafya 8", url: "/models/mafya/m08.glb", height: 1.78, yaw: MAFYA_YAW, kind: "man", gun: true, heavy: true },
   { id: "mafya-9", label: "Mafya 9", url: "/models/mafya/m09.glb", height: 1.78, yaw: MAFYA_YAW, kind: "man", gun: true, heavy: true },
-  { id: "mafya-10", label: "Araç 10", url: "/models/mafya/c01.glb", height: 1.35, yaw: 0, kind: "car", heavy: true },
-  { id: "mafya-11", label: "Araç 11", url: "/models/mafya/c02.glb", height: 1.35, yaw: 0, kind: "car", heavy: true },
-  { id: "mafya-12", label: "Araç 12", url: "/models/mafya/c03.glb", height: 1.35, yaw: 0, kind: "car", heavy: true },
+  { id: "mafya-10", label: "Araç 10", url: "/models/mafya/c01.glb", height: 1.35, yaw: 0, kind: "car" },
+  { id: "mafya-11", label: "Araç 11", url: "/models/mafya/c02.glb", height: 1.35, yaw: 0, kind: "car" },
+  { id: "mafya-12", label: "Araç 12", url: "/models/mafya/c03.glb", height: 1.35, yaw: 0, kind: "car" },
 ];
 
 export const ALL_CHARACTERS: CharacterDef[] = [...CHARACTERS, ...CHARACTERS2];

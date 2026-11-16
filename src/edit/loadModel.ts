@@ -1,5 +1,6 @@
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
+import { clone as cloneSkinned } from "three/examples/jsm/utils/SkeletonUtils.js";
 import * as THREE from "three";
 import { dropGroundSlab } from "../groundSlab";
 import { simplifySkinned } from "../knightSoldier";
@@ -262,31 +263,39 @@ export function snapshotCharacter(asset: CharacterAsset) {
   if (!thumbRenderer) {
     thumbRenderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
     thumbRenderer.setSize(160, 160, false);
-    thumbRenderer.setClearColor(0x14110e, 1);
+    thumbRenderer.setClearColor(0x2a323c, 1);
     thumbRenderer.outputColorSpace = THREE.SRGBColorSpace;
   }
   const scene = new THREE.Scene();
-  scene.add(new THREE.AmbientLight("#ffffff", 0.85));
-  const sun = new THREE.DirectionalLight("#fff2dc", 1.6);
+  scene.add(new THREE.AmbientLight("#ffffff", 1.1));
+  const sun = new THREE.DirectionalLight("#fff2dc", 1.8);
   sun.position.set(3, 5, 4);
   scene.add(sun);
+  const fill = new THREE.DirectionalLight("#c8e0ff", 0.7);
+  fill.position.set(-4, 2, -2);
+  scene.add(fill);
   let subject: THREE.Object3D;
   if (asset.template) {
-    subject = asset.template.clone(true);
+    subject = cloneSkinned(asset.template);
     scene.add(subject);
-  } else {
+  } else if (asset.geometry.attributes.position) {
     subject = new THREE.Mesh(asset.geometry, asset.material);
     scene.add(subject);
+  } else {
+    throw new Error("thumb");
   }
+  subject.updateMatrixWorld(true);
   const box = new THREE.Box3().setFromObject(subject);
   const size = box.getSize(new THREE.Vector3());
   const center = box.getCenter(new THREE.Vector3());
+  const span = Math.max(size.x, size.y, size.z);
+  if (!(span > 1e-4)) throw new Error("empty-thumb");
   const cam = new THREE.PerspectiveCamera(28, 1, 0.05, 200);
-  const dist = Math.max(0.4, Math.max(size.x, size.y, size.z) * 1.7);
-  cam.position.set(center.x + dist * 0.45, center.y + dist * 0.28, center.z + dist);
+  const dist = span * 1.85;
+  cam.position.set(center.x + dist * 0.55, center.y + dist * 0.35, center.z + dist);
   cam.lookAt(center);
   thumbRenderer.render(scene, cam);
-  const url = thumbRenderer.domElement.toDataURL("image/jpeg", 0.72);
+  const url = thumbRenderer.domElement.toDataURL("image/jpeg", 0.78);
   scene.clear();
   return url;
 }

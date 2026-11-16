@@ -111,7 +111,8 @@ export function EditPage() {
 
   function makeThumb(def: CharacterDef, asset: CharacterAsset) {
     try {
-      return phone ? letterThumb(def.label) : snapshotCharacter(asset);
+      if (phone) return letterThumb(def.label);
+      return snapshotCharacter(asset) || letterThumb(def.label);
     } catch {
       return letterThumb(def.label);
     }
@@ -121,18 +122,26 @@ export function EditPage() {
     const def = characterById(id);
     if (!def || started.current.has(id)) return;
     started.current.add(id);
+    setThumbs((prev) => (prev[def.id] ? prev : { ...prev, [def.id]: letterThumb(def.label) }));
     void loadCharacter(def)
       .then((asset) => {
         loaded.current.push(asset);
+        const thumb = makeThumb(def, asset);
         setAssets((prev) => ({ ...prev, [def.id]: asset }));
-        setThumbs((prev) => ({ ...prev, [def.id]: makeThumb(def, asset) }));
+        setThumbs((prev) => ({ ...prev, [def.id]: thumb }));
       })
-      .catch(() => setFailed((prev) => ({ ...prev, [def.id]: true })));
+      .catch(() => {
+        started.current.delete(id);
+        setFailed((prev) => ({ ...prev, [def.id]: true }));
+      });
   }
 
   function preloadRoster(list: CharacterDef[]) {
     for (const def of list) {
-      if (!started.current.has(def.id) && !(phone && def.heavy && !assets[def.id])) loadOne(def.id);
+      setThumbs((prev) => (prev[def.id] ? prev : { ...prev, [def.id]: letterThumb(def.label) }));
+      if (started.current.has(def.id) || assets[def.id]) continue;
+      if (phone && def.heavy) continue;
+      loadOne(def.id);
     }
   }
 

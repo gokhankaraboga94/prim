@@ -94,7 +94,8 @@ function stats(def: CharacterDef, radius: number) {
     radius: car ? Math.max(radius, 1.6) : radius,
     height: def.height,
     speed: car ? 0 : giant ? 4.4 : def.gun ? 2.8 : 3.3,
-    damage: def.gun ? 14 : def.id === "savaci" ? 24 : giant ? 26 : 8,
+    /** Araç saldıramaz; sadece hasar yer. */
+    damage: car ? 0 : def.gun ? 14 : def.id === "savaci" ? 24 : giant ? 26 : 8,
     maxHp: car ? 600 : giant ? 480 : def.gun ? 110 : 86,
   };
 }
@@ -783,13 +784,23 @@ export function stepUnits(store: EditStore, dt: number) {
       const forward = slot.forward + unit.slotOffF;
       const sx = cx + right * rx + forward * fx;
       const sz = cz + right * rz + forward * fz;
+      unit.aimX = Math.sin(face);
+      unit.aimZ = Math.cos(face);
+      unit.yaw = face + unit.yawOffset;
+
+      // Araç: yerinde kalır, saldırmas, sadece hasar yer
+      if (car) {
+        unit.x = clampMap(sx);
+        unit.z = clampMap(sz);
+        unit.swing = 0;
+        unit.cooldown = 1;
+        continue;
+      }
+
       let target: Unit | null = null;
       let best = Infinity;
       for (const enemy of foes) {
         if (!enemy.alive) continue;
-        if (characterById(enemy.model)?.kind === "car" && gun) {
-          /* araçlara da ateş */
-        }
         const d2 = (enemy.x - unit.x) ** 2 + (enemy.z - unit.z) ** 2;
         if (d2 < best) {
           best = d2;
@@ -803,12 +814,8 @@ export function stepUnits(store: EditStore, dt: number) {
         unit.aimX = Math.sin(look);
         unit.aimZ = Math.cos(look);
         unit.yaw = look + unit.yawOffset;
-      } else {
-        unit.aimX = Math.sin(face);
-        unit.aimZ = Math.cos(face);
-        unit.yaw = face + unit.yawOffset;
       }
-      if (!car && unit.speed > 0.05) {
+      if (unit.speed > 0.05) {
         const dx = sx - unit.x;
         const dz = sz - unit.z;
         const dist = Math.hypot(dx, dz);
@@ -822,7 +829,7 @@ export function stepUnits(store: EditStore, dt: number) {
       const gunReach = 18;
       const distTo = target ? Math.hypot(target.x - unit.x, target.z - unit.z) : 1e9;
       const engaged = target ? (gun ? distTo <= gunReach : distTo <= meleeReach) : false;
-      if (target && engaged && !car) {
+      if (target && engaged && unit.damage > 0) {
         unit.cooldown -= step;
         unit.swing = Math.min(1, unit.swing + step * (gun ? 5 : 7));
         if (unit.cooldown <= 0) {
