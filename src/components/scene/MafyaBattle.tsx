@@ -29,7 +29,7 @@ type Gltf = Parameters<Parameters<GLTFLoader["load"]>[1]>[0];
 
 const MAN_H = 1.78;
 const CAR_LEN = 3.8;
-const BULLET_N = 36;
+const BULLET_N = 24;
 
 function loadGlb(loader: GLTFLoader, url: string) {
   const buf = preloadedGlb(url);
@@ -376,14 +376,14 @@ export function MafyaBattle() {
   useFrame((_, dt) => {
     const t = mafyaT();
     const frame = ++frameRef.current;
-    const slice = frame % 3;
+    const slice = frame % 4;
 
-    // Animasyonları 3 kareye böl
-    for (let i = slice; i < men.current.length; i += 3) {
+    // Animasyonları 4 kareye böl
+    for (let i = slice; i < men.current.length; i += 4) {
       const man = men.current[i];
       if (!man.mix || !mafyaAlive(i, t) || !man.hold.visible) continue;
-      man.mix.update(dt * 3);
-      if ((frame & 1) === 0) pinRootMotion(man.scene);
+      man.mix.update(dt * 4);
+      if (frame % 4 === slice) pinRootMotion(man.scene);
     }
 
     const tracers = tracerRef.current;
@@ -454,15 +454,18 @@ export function MafyaBattle() {
       slot++;
     }
 
-    // Yön/ölüm: her kare; ağır aim araması 2 karede bir
-    const refreshAim = (frame & 1) === 0;
+    // Aim 3 karede bir; pozisyon her kare
+    const refreshAim = frame % 3 === 0;
     for (let i = 0; i < men.current.length; i++) {
       const man = men.current[i];
       const dead = !mafyaAlive(i, t);
       const die = mafyaDieAt(i);
       const gone = dead && t >= die + 1;
-      man.hold.visible = !gone;
-      if (gone) continue;
+      if (gone) {
+        if (man.hold.visible) man.hold.visible = false;
+        continue;
+      }
+      if (!man.hold.visible) man.hold.visible = true;
 
       const spot = mafyaPos(i);
       const fall = dead ? Math.min(1, (t - die) / 0.45) : 0;

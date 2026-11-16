@@ -1,6 +1,6 @@
 /**
  * mafya — iki takım çatışma (film/oyun sahnesi).
- * Lider 1+6 tek; askerler çoğaltılır; T1 araç=11, T2 araç=10+12.
+ * Lider 1+6 tek; T1 araç=10+12, T2 araç=11.
  * Bakış: atan2(-dz, dx)+π — dokunma (mafya-facing kuralı).
  */
 export const MAFYA_ID = "mafya" as const;
@@ -34,12 +34,12 @@ const BY_NUM: Record<number, { url: string; kind: MafyaKind }> = {
   12: { url: "/models/mafya/c03.glb", kind: "car" },
 };
 
-const SOLDIER_SCALE = 7;
+const SOLDIER_SCALE = 5;
 const T1_SOLDIER_MODELS = [2, 8, 9];
 const T2_SOLDIER_MODELS = [3, 4, 5, 7];
-/** T1: yalnız 11. T2: 10 ve 12. */
-const T1_CAR_MODELS = [11, 11, 11, 11, 11];
-const T2_CAR_MODELS = [10, 12, 10, 12, 10];
+/** Lider 1 → 10+12; lider 6 → yalnız 11. Sayı yarıya. */
+const T1_CAR_MODELS = [10, 12, 10];
+const T2_CAR_MODELS = [11, 11];
 
 function buildEntries(): MafyaEntry[] {
   const out: MafyaEntry[] = [];
@@ -342,14 +342,14 @@ export function mafyaHaze() {
 type Cam = { x: number; y: number; z: number; lx: number; ly: number; lz: number; fov: number };
 
 /**
- * Daha geriden, hızlı orbit: ~60s'de 2 tam tur.
+ * Sabit yüksek açı + çok yavaş pan (~60s'de yarım tur).
  */
 export function mafyaCam(t: number): Cam {
-  const ang = (t / MAFYA_SECONDS) * Math.PI * 4;
-  const rad = 34;
+  const ang = 0.55 + (t / MAFYA_SECONDS) * Math.PI;
+  const rad = 32;
   return {
     x: Math.sin(ang) * rad,
-    y: 22,
+    y: 20,
     z: Math.cos(ang) * rad,
     lx: 0,
     ly: 0.5,

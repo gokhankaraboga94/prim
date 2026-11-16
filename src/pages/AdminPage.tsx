@@ -2021,7 +2021,7 @@ export function AdminPage() {
           )}
           {isMafya(reelShot) && (
             <p className="muted">
-              {MAFYA_SECONDS}s · T1 araç 11, T2 araç 10+12; 360 orbit.
+              {MAFYA_SECONDS}s · T1 araç 10+12, T2 araç 11; yavaş kamera.
             </p>
           )}
           {isD14112026(reelShot) && (
