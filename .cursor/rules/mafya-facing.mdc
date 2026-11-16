@@ -1,0 +1,19 @@
+---
+description: Mafya reel Tripo/Mixamo bakış yönü (doğrulandı)
+globs: src/mafyaReel.ts,src/components/scene/MafyaBattle.tsx
+alwaysApply: false
+---
+
+# Mafya bakış (doğrulandı)
+
+Tripo/Mixamo kalça bind'i −90° Y. Model burnu local **−X**.
+
+Hedefe yaw (değiştirme — kullanıcı onayladı):
+
+```ts
+Math.atan2(-(tz - az), tx - ax) + Math.PI
+```
+
+- `atan2(dx, dz)` → sağa/sola bakar
+- `atan2(-dz, dx)` → sırtları döner
+- `atan2(-dz, dx) + π` → yüzler rakibe (doğru)

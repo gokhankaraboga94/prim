@@ -28,8 +28,8 @@ import {
 type Gltf = Parameters<Parameters<GLTFLoader["load"]>[1]>[0];
 
 const MAN_H = 1.78;
-const CAR_LEN = 3.6;
-const BULLET_N = 96;
+const CAR_LEN = 3.8;
+const BULLET_N = 128;
 
 function loadGlb(loader: GLTFLoader, url: string) {
   const buf = preloadedGlb(url);
@@ -230,38 +230,6 @@ function pinRootMotion(root: THREE.Object3D) {
   hips.position.z = 0;
 }
 
-function numberSprite(n: number, kind: MafyaKind) {
-  const c = document.createElement("canvas");
-  c.width = 256;
-  c.height = 256;
-  const ctx = c.getContext("2d");
-  if (ctx) {
-    ctx.clearRect(0, 0, 256, 256);
-    ctx.beginPath();
-    ctx.arc(128, 128, 110, 0, Math.PI * 2);
-    ctx.fillStyle = "rgba(8,8,10,0.88)";
-    ctx.fill();
-    ctx.lineWidth = 10;
-    ctx.strokeStyle = kind === "car" ? "#6ec8ff" : "#ffe14a";
-    ctx.stroke();
-    ctx.fillStyle = kind === "car" ? "#6ec8ff" : "#ffe14a";
-    ctx.font = "900 120px Inter, Segoe UI, sans-serif";
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillText(String(n), 128, 138);
-  }
-  const tex = new THREE.CanvasTexture(c);
-  tex.colorSpace = THREE.SRGBColorSpace;
-  tex.generateMipmaps = false;
-  tex.minFilter = THREE.LinearFilter;
-  const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false, toneMapped: false });
-  const spr = new THREE.Sprite(mat);
-  spr.scale.set(kind === "car" ? 0.95 : 0.55, kind === "car" ? 0.95 : 0.55, 1);
-  spr.position.set(0, kind === "car" ? 2.8 : 2.15, 0);
-  spr.renderOrder = 50;
-  return spr;
-}
-
 type Man = {
   mix: THREE.AnimationMixer | null;
   hold: THREE.Group;
@@ -283,33 +251,43 @@ function Ground() {
   return (
     <group>
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.04, 0]} receiveShadow={false}>
-        <planeGeometry args={[72, 48]} />
-        <meshLambertMaterial color="#1c222a" />
+        <planeGeometry args={[96, 64]} />
+        <meshLambertMaterial color="#1a1f26" />
       </mesh>
-      <mesh position={[0, -0.08, 0]} receiveShadow={false}>
-        <boxGeometry args={[22, 0.16, 18]} />
-        <meshLambertMaterial color="#3a424c" />
+      <mesh position={[0, -0.1, 0]} receiveShadow={false}>
+        <boxGeometry args={[36, 0.18, 32]} />
+        <meshLambertMaterial color="#343c46" />
       </mesh>
       <mesh position={[0, 0.01, 0]} receiveShadow={false}>
-        <boxGeometry args={[20.5, 0.04, 16.5]} />
-        <meshLambertMaterial color="#4a5560" />
+        <boxGeometry args={[34, 0.04, 30]} />
+        <meshLambertMaterial color="#454e58" />
       </mesh>
     </group>
   );
 }
 
 export function MafyaCam() {
-  useFrame(({ camera }) => {
+  const smooth = useRef({ x: 0, y: 22, z: 16, lx: 0, ly: 0.5, lz: 0, fov: 46 });
+  useFrame(({ camera }, dt) => {
     const persp = camera as THREE.PerspectiveCamera;
     if (!persp.isPerspectiveCamera) return;
     const shot = mafyaCam(mafyaT());
-    persp.fov = shot.fov;
-    persp.near = 0.12;
+    const s = smooth.current;
+    const k = 1 - Math.exp(-Math.min(8, 3.2 + dt * 4) * dt);
+    s.x += (shot.x - s.x) * k;
+    s.y += (shot.y - s.y) * k;
+    s.z += (shot.z - s.z) * k;
+    s.lx += (shot.lx - s.lx) * k;
+    s.ly += (shot.ly - s.ly) * k;
+    s.lz += (shot.lz - s.lz) * k;
+    s.fov += (shot.fov - s.fov) * k;
+    persp.fov = s.fov;
+    persp.near = 0.1;
     persp.far = mafyaFar();
     persp.updateProjectionMatrix();
-    persp.position.set(shot.x, shot.y, shot.z);
+    persp.position.set(s.x, s.y, s.z);
     persp.up.set(0, 1, 0);
-    persp.lookAt(shot.lx, shot.ly, shot.lz);
+    persp.lookAt(s.lx, s.ly, s.lz);
   });
   return null;
 }
@@ -365,7 +343,6 @@ export function MafyaBattle() {
           hold.rotation.order = "YXZ";
           hold.rotation.y = spot.yaw;
           hold.add(scene);
-          hold.add(numberSprite(i + 1, entry.kind));
           root.add(hold);
 
           let mix: THREE.AnimationMixer | null = null;

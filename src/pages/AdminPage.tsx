@@ -2021,7 +2021,7 @@ export function AdminPage() {
           )}
           {isMafya(reelShot) && (
             <p className="muted">
-              {MAFYA_SECONDS}s · askerler 5×; hedefe dönük ateş; yavaş ölüm; koşu animasyonu yok.
+              {MAFYA_SECONDS}s · geniş hat, çok asker/araç; TPS+tepeden kamera; 11 yok.
             </p>
           )}
           {isD14112026(reelShot) && (

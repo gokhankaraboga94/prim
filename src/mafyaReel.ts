@@ -1,8 +1,7 @@
 /**
- * mafya — iki takım çatışma: hedefe dön, isabet/sekme, yavaş ölüm.
- * Liderler tek; askerler aynı modellerden 5× çoğaltılır.
- * Takım1: lider 1, asker 2/8/9 ×5, araç 10-12
- * Takım2: lider 6, asker 3/4/5/7 ×5, araç 11
+ * mafya — iki takım çatışma (film/oyun sahnesi).
+ * Lider 1+6 tek; askerler çoğaltılır; araçlar 10+12 (11/c02 yok).
+ * Bakış: atan2(-dz, dx)+π — dokunma (mafya-facing kuralı).
  */
 export const MAFYA_ID = "mafya" as const;
 export type MafyaId = typeof MAFYA_ID;
@@ -14,11 +13,9 @@ export type MafyaTeam = 1 | 2;
 export type MafyaEntry = {
   url: string;
   kind: MafyaKind;
-  /** Görünen numara (kaynak model). */
   num: number;
   team: MafyaTeam;
   role: "leader" | "soldier" | "car";
-  /** Asker sırası (0..n-1), lider/araç için -1. */
   slot: number;
 };
 
@@ -33,13 +30,16 @@ const BY_NUM: Record<number, { url: string; kind: MafyaKind }> = {
   8: { url: "/models/mafya/m08.glb", kind: "man" },
   9: { url: "/models/mafya/m09.glb", kind: "man" },
   10: { url: "/models/mafya/c01.glb", kind: "car" },
-  11: { url: "/models/mafya/c02.glb", kind: "car" },
   12: { url: "/models/mafya/c03.glb", kind: "car" },
 };
 
-const SOLDIER_SCALE = 5;
+/** 11 / c02 bilerek yok — yerine 12. */
+const SOLDIER_SCALE = 7;
 const T1_SOLDIER_MODELS = [2, 8, 9];
 const T2_SOLDIER_MODELS = [3, 4, 5, 7];
+/** Takım başı araç: 10 ve 12 karışık, 11 yok. */
+const T1_CAR_MODELS = [10, 12, 10, 12, 12];
+const T2_CAR_MODELS = [12, 10, 12, 10, 12];
 
 function buildEntries(): MafyaEntry[] {
   const out: MafyaEntry[] = [];
@@ -48,15 +48,20 @@ function buildEntries(): MafyaEntry[] {
     const num = T1_SOLDIER_MODELS[k % T1_SOLDIER_MODELS.length];
     out.push({ ...BY_NUM[num], num, team: 1, role: "soldier", slot: k });
   }
-  out.push({ ...BY_NUM[10], num: 10, team: 1, role: "car", slot: -1 });
-  out.push({ ...BY_NUM[12], num: 12, team: 1, role: "car", slot: -1 });
+  for (let k = 0; k < T1_CAR_MODELS.length; k++) {
+    const num = T1_CAR_MODELS[k];
+    out.push({ ...BY_NUM[num], num, team: 1, role: "car", slot: k });
+  }
 
   out.push({ ...BY_NUM[6], num: 6, team: 2, role: "leader", slot: -1 });
   for (let k = 0; k < T2_SOLDIER_MODELS.length * SOLDIER_SCALE; k++) {
     const num = T2_SOLDIER_MODELS[k % T2_SOLDIER_MODELS.length];
     out.push({ ...BY_NUM[num], num, team: 2, role: "soldier", slot: k });
   }
-  out.push({ ...BY_NUM[11], num: 11, team: 2, role: "car", slot: -1 });
+  for (let k = 0; k < T2_CAR_MODELS.length; k++) {
+    const num = T2_CAR_MODELS[k];
+    out.push({ ...BY_NUM[num], num, team: 2, role: "car", slot: k });
+  }
   return out;
 }
 
@@ -108,38 +113,43 @@ export function mafyaReset() {
 type Spot = { x: number; z: number; yaw: number };
 
 function soldierGrid(slot: number, count: number, z: number, halfW: number) {
-  const cols = Math.ceil(Math.sqrt(count * 1.35));
+  const cols = Math.ceil(Math.sqrt(count * 1.2));
   const rows = Math.ceil(count / cols);
   const col = slot % cols;
   const row = Math.floor(slot / cols);
   const x = cols <= 1 ? 0 : -halfW + (col / (cols - 1)) * halfW * 2;
-  const depth = rows <= 1 ? 0 : (row - (rows - 1) / 2) * 1.05;
+  const depth = rows <= 1 ? 0 : (row - (rows - 1) / 2) * 1.35;
   return { x, z: z + depth };
+}
+
+function carLine(slot: number, count: number, z: number, halfW: number) {
+  const x = count <= 1 ? 0 : -halfW + (slot / (count - 1)) * halfW * 2;
+  return { x, z };
 }
 
 export function mafyaPos(i: number): { x: number; z: number } {
   const e = MAFYA_ENTRIES[i];
   if (!e) return { x: 0, z: 0 };
   if (e.team === 1) {
-    if (e.role === "leader") return { x: 0, z: -2.2 };
+    if (e.role === "leader") return { x: 0, z: -6.5 };
     if (e.role === "soldier") {
       const n = T1_SOLDIER_MODELS.length * SOLDIER_SCALE;
-      return soldierGrid(e.slot, n, -4.2, 5.2);
+      return soldierGrid(e.slot, n, -9.2, 7.5);
     }
-    return { x: e.num === 10 ? -6.2 : 6.2, z: -7.4 };
+    return carLine(e.slot, T1_CAR_MODELS.length, -13.5, 9);
   }
-  if (e.role === "leader") return { x: 0, z: 2.2 };
+  if (e.role === "leader") return { x: 0, z: 6.5 };
   if (e.role === "soldier") {
     const n = T2_SOLDIER_MODELS.length * SOLDIER_SCALE;
-    return soldierGrid(e.slot, n, 4.2, 5.8);
+    return soldierGrid(e.slot, n, 9.2, 8);
   }
-  return { x: 0, z: 7.4 };
+  return carLine(e.slot, T2_CAR_MODELS.length, 13.5, 9);
 }
 
 function hpFor(i: number) {
   const e = MAFYA_ENTRIES[i];
   if (!e || e.kind !== "man") return 99;
-  return e.role === "leader" ? 18 : 12;
+  return e.role === "leader" ? 20 : 14;
 }
 
 export type MafyaShot = {
@@ -156,7 +166,6 @@ export type MafyaShot = {
 type Combat = {
   dieAt: Float32Array;
   shots: MafyaShot[];
-  /** Zaman diliminde her nişancının o anki hedefi. */
   aimAt: Int16Array[];
   aimTimes: Float32Array;
 };
@@ -173,7 +182,6 @@ export function mafyaAlive(i: number, t: number) {
   return t < c.dieAt[i];
 }
 
-/** En yakın canlı rakip adam. */
 export function mafyaNearestFoe(fromI: number, t = 0): number {
   const from = MAFYA_ENTRIES[fromI];
   const a = mafyaPos(fromI);
@@ -195,19 +203,16 @@ export function mafyaNearestFoe(fromI: number, t = 0): number {
   return best;
 }
 
-/** Ateş ettiği hedef varsa ona, yoksa en yakın rakibe bak. */
 export function mafyaAimTarget(fromI: number, t = 0): number {
   const c = ensureCombat();
   for (let s = c.shots.length - 1; s >= 0; s--) {
     const shot = c.shots[s];
     if (shot.fromI !== fromI) continue;
-    // Ateş öncesi/sonrası da o rakibe dönük kalsın
     if (t >= shot.t0 - 0.35 && t <= shot.t0 + shot.dur + 0.55) return shot.toI;
   }
   return mafyaNearestFoe(fromI, t);
 }
 
-/** Karşı takımın canlı ortasına bak (yan bakmayı azaltır). */
 function mafyaEnemyCenter(fromI: number, t: number): { x: number; z: number } {
   const from = MAFYA_ENTRIES[fromI];
   const c = ensureCombat();
@@ -224,13 +229,10 @@ function mafyaEnemyCenter(fromI: number, t: number): { x: number; z: number } {
     n += 1;
   }
   if (n > 0) return { x: sx / n, z: sz / n };
-  return { x: 0, z: from?.team === 1 ? 4 : -4 };
+  return { x: 0, z: from?.team === 1 ? 8 : -8 };
 }
 
-/**
- * Tripo/Mixamo: bind -90° Y; burnu local -X (önceki +X sırtları çeviriyordu).
- * Hedefe: atan2(-dz, dx) + π
- */
+/** Doğrulandı: yüzler rakibe. Değiştirme. */
 function yawToward(ax: number, az: number, tx: number, tz: number) {
   return Math.atan2(-(tz - az), tx - ax) + Math.PI;
 }
@@ -268,8 +270,7 @@ function ensureCombat(): Combat {
   const shots: MafyaShot[] = [];
   const men = MAFYA_ENTRIES.map((e, i) => ({ e, i })).filter((x) => x.e.kind === "man");
 
-  // Daha seyrek volley → yavaş ölüm
-  let t = 1.2;
+  let t = 1.4;
   let salt = 1;
   while (t < MAFYA_SECONDS - 2.0) {
     for (const shooter of men) {
@@ -290,17 +291,17 @@ function ensureCombat(): Combat {
       }
       if (best < 0) continue;
 
-      // Nişancı başına hafif jitter — aynı anda herkes ateş etmesin
-      const stagger = hash01(salt + shooter.i * 17) * 0.35;
+      const stagger = hash01(salt + shooter.i * 17) * 0.4;
       const h = hash01(salt++);
-      const hit = h < 0.55;
+      const hit = h < 0.52;
       const missAng = hash01(salt++) * Math.PI * 2;
-      const missR = 0.7 + hash01(salt++) * 1.3;
+      const missR = 0.85 + hash01(salt++) * 1.4;
+      const flight = 0.18 + Math.min(0.2, bestD * 0.012);
       const shot: MafyaShot = {
         fromI: shooter.i,
         toI: best,
         t0: t + stagger,
-        dur: 0.22,
+        dur: flight,
         hit,
         missX: hit ? 0 : Math.cos(missAng) * missR,
         missY: hit ? 0 : 0.2 + hash01(salt++) * 0.55,
@@ -316,7 +317,7 @@ function ensureCombat(): Combat {
         }
       }
     }
-    t += 0.85;
+    t += 0.9;
   }
 
   COMBAT = { dieAt, shots, aimAt: [], aimTimes: new Float32Array(0) };
@@ -328,23 +329,143 @@ export function mafyaShots(): MafyaShot[] {
 }
 
 export function mafyaFar() {
-  return 260;
+  return 320;
 }
 
 export function mafyaHaze() {
-  return { near: 55, far: 120 };
+  return { near: 70, far: 150 };
 }
 
 type Cam = { x: number; y: number; z: number; lx: number; ly: number; lz: number; fov: number };
 
+function lerp(a: number, b: number, u: number) {
+  return a + (b - a) * u;
+}
+
+function smoothstep(u: number) {
+  const x = Math.max(0, Math.min(1, u));
+  return x * x * (3 - 2 * x);
+}
+
+/** Aktif ateş eden canlı nişancı (TPS için). */
+function mafyaCamHero(t: number): { from: number; to: number } {
+  const c = ensureCombat();
+  let best = -1;
+  let bestTo = -1;
+  let bestScore = -1;
+  for (const shot of c.shots) {
+    if (t < shot.t0 - 0.4 || t > shot.t0 + 1.2) continue;
+    if (t >= c.dieAt[shot.fromI]) continue;
+    const score = 1.2 - Math.abs(t - shot.t0);
+    if (score > bestScore) {
+      bestScore = score;
+      best = shot.fromI;
+      bestTo = shot.toI;
+    }
+  }
+  if (best >= 0) return { from: best, to: bestTo };
+  // fallback: canlı lider veya ilk canlı
+  for (let i = 0; i < MAFYA_N; i++) {
+    if (MAFYA_ENTRIES[i].role === "leader" && t < c.dieAt[i]) {
+      return { from: i, to: mafyaNearestFoe(i, t) };
+    }
+  }
+  for (let i = 0; i < MAFYA_N; i++) {
+    if (MAFYA_ENTRIES[i].kind === "man" && t < c.dieAt[i]) {
+      return { from: i, to: mafyaNearestFoe(i, t) };
+    }
+  }
+  return { from: 0, to: -1 };
+}
+
+/**
+ * Film/oyun kamerası: TPS omuz + tepeden crane + yan dolly, yumuşak kesmeler.
+ * Segment ~6–7s.
+ */
 export function mafyaCam(t: number): Cam {
-  const ang = Math.sin(t * 0.07) * 0.18;
+  const seg = Math.floor(t / 6.5) % 5;
+  const u = smoothstep((t % 6.5) / 6.5);
+  const hero = mafyaCamHero(t);
+  const a = mafyaPos(hero.from);
+  const b = hero.to >= 0 ? mafyaPos(hero.to) : { x: -a.x, z: -a.z };
+  const dx = b.x - a.x;
+  const dz = b.z - a.z;
+  const len = Math.max(0.01, Math.hypot(dx, dz));
+  const fx = dx / len;
+  const fz = dz / len;
+  const rx = -fz;
+  const rz = fx;
+
+  if (seg === 0) {
+    // TPS omuz arkası
+    const back = 4.2 + u * 0.6;
+    const side = 1.1;
+    return {
+      x: a.x - fx * back + rx * side,
+      y: 1.65 + Math.sin(t * 0.9) * 0.04,
+      z: a.z - fz * back + rz * side,
+      lx: lerp(b.x, (a.x + b.x) * 0.5, 0.25),
+      ly: 1.25,
+      lz: lerp(b.z, (a.z + b.z) * 0.5, 0.25),
+      fov: 42,
+    };
+  }
+  if (seg === 1) {
+    // Tepeden crane
+    const ang = -0.4 + u * 0.55;
+    const rad = 18 + u * 4;
+    return {
+      x: Math.sin(ang) * rad,
+      y: 26 - u * 4,
+      z: Math.cos(ang) * rad,
+      lx: 0,
+      ly: 0.4,
+      lz: 0,
+      fov: 46,
+    };
+  }
+  if (seg === 2) {
+    // Yan dolly — hat boyunca
+    const along = -8 + u * 16;
+    return {
+      x: rx * 11 + fx * along * 0.15,
+      y: 3.2,
+      z: rz * 11 + fz * along * 0.15,
+      lx: 0,
+      ly: 1.1,
+      lz: 0,
+      fov: 44,
+    };
+  }
+  if (seg === 3) {
+    // Rakip taraf TPS
+    const foe = hero.to >= 0 ? hero.to : hero.from;
+    const p = mafyaPos(foe);
+    const aim = mafyaNearestFoe(foe, t);
+    const q = aim >= 0 ? mafyaPos(aim) : a;
+    const ex = q.x - p.x;
+    const ez = q.z - p.z;
+    const el = Math.max(0.01, Math.hypot(ex, ez));
+    const efx = ex / el;
+    const efz = ez / el;
+    return {
+      x: p.x - efx * 3.8 + efz * 1.2,
+      y: 1.7,
+      z: p.z - efz * 3.8 - efx * 1.2,
+      lx: q.x,
+      ly: 1.3,
+      lz: q.z,
+      fov: 40,
+    };
+  }
+  // Geniş hero — alçak + yavaş orbit
+  const ang = t * 0.12;
   return {
-    x: Math.sin(ang) * 8,
-    y: 24,
+    x: Math.sin(ang) * 14,
+    y: 8 + Math.sin(t * 0.15) * 1.2,
     z: Math.cos(ang) * 16,
     lx: 0,
-    ly: 0.5,
+    ly: 1,
     lz: 0,
     fov: 48,
   };
