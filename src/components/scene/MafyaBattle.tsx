@@ -1,30 +1,34 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+import { clone as cloneSkinned } from "three/examples/jsm/utils/SkeletonUtils.js";
 import * as THREE from "three";
 import { preloadedGlb } from "../../arenaPreload";
 import {
   MAFYA_ENTRIES,
-  MAFYA_N,
   mafyaAlive,
+  mafyaAimTarget,
   mafyaCam,
   mafyaDieAt,
   mafyaFar,
   mafyaGunFor,
   mafyaMarkReady,
+  mafyaPos,
   mafyaReset,
   mafyaShots,
   mafyaSpot,
   mafyaT,
+  mafyaYawTo,
   type MafyaGun,
   type MafyaKind,
+  type MafyaShot,
 } from "../../mafyaReel";
 
 type Gltf = Parameters<Parameters<GLTFLoader["load"]>[1]>[0];
 
 const MAN_H = 1.78;
 const CAR_LEN = 3.6;
-const BULLET_N = 48;
+const BULLET_N = 96;
 
 function loadGlb(loader: GLTFLoader, url: string) {
   const buf = preloadedGlb(url);
@@ -122,7 +126,6 @@ function makePistol() {
   handle.position.set(0, -0.04, 0.02);
   handle.rotation.x = 0.18;
   g.add(handle);
-  // namlu ucu marker
   const tip = new THREE.Object3D();
   tip.name = "muzzle";
   tip.position.set(0, 0.028, 0.22);
@@ -179,16 +182,34 @@ function attachGun(root: THREE.Object3D, kind: MafyaGun) {
   return gun;
 }
 
+/** Koşu / yürüyüş asla. m08'de fire yok → ateş-koşarken son çare. */
 function pickFireClip(clips: THREE.AnimationClip[]) {
-  const noRun = clips.filter((c) => !/run|koş|kos|walk/i.test(c.name));
-  const pool = noRun.length ? noRun : clips;
-  const prefer = ["fire", "silah ile ateş ediyor"];
-  for (const name of prefer) {
-    const hit = pool.find((c) => c.name === name || c.name.toLowerCase() === name);
+  const isRun = (n: string) => /(?:^|[^a-zıiğüşöç])(run|running|walk|walking)(?:$|[^a-zıiğüşöç])/i.test(n) || /koş|kosar|koşar/i.test(n);
+  const isFire = (n: string) => /fire|ateş|ates|silah/i.test(n);
+
+  const exact = ["fire", "silah ile ateş ediyor"];
+  for (const name of exact) {
+    const hit = clips.find((c) => c.name === name || c.name.toLowerCase() === name);
     if (hit) return hit;
   }
-  const soft = pool.find((c) => /fire|ateş|silah/i.test(c.name) && !/koş|kos|run/i.test(c.name));
-  return soft ?? pool[0] ?? clips[0];
+
+  const standingFire = clips.find((c) => isFire(c.name) && !isRun(c.name));
+  if (standingFire) return standingFire;
+
+  // m08: yalnızca "silah ile ateş ediyor koşarken" var — koşudan iyi
+  const fireRun = clips.find((c) => isFire(c.name));
+  if (fireRun) return fireRun;
+
+  return null;
+}
+
+/** Animasyon kök hareketini ve kalça yaw'ını kilitle — hold yönü bozulmasın. */
+function lockHips(root: THREE.Object3D) {
+  const hips = findBone(root, ["mixamorig:Hips", "Hips", "mixamorig_Hips"]);
+  if (!hips) return;
+  hips.position.x = 0;
+  hips.position.z = 0;
+  hips.rotation.y = 0;
 }
 
 function numberSprite(n: number, kind: MafyaKind) {
@@ -226,10 +247,10 @@ function numberSprite(n: number, kind: MafyaKind) {
 type Man = {
   mix: THREE.AnimationMixer | null;
   hold: THREE.Group;
+  scene: THREE.Object3D;
   muzzle: THREE.Object3D | null;
   team: 1 | 2;
   kind: MafyaKind;
-  baseZ: number;
 };
 
 const _muzzle = new THREE.Vector3();
@@ -243,7 +264,7 @@ const _quat = new THREE.Quaternion();
 function Ground() {
   return (
     <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.01, 0]} receiveShadow={false}>
-      <planeGeometry args={[48, 28]} />
+      <planeGeometry args={[64, 40]} />
       <meshLambertMaterial color="#2a3038" />
     </mesh>
   );
@@ -271,8 +292,7 @@ export function MafyaBattle() {
   const tracerRef = useRef<THREE.InstancedMesh>(null);
   const flashRef = useRef<THREE.InstancedMesh>(null);
   const hitRef = useRef<THREE.InstancedMesh>(null);
-  const shots = useMemo(() => mafyaShots(), []);
-  const shotCursor = useRef(0);
+  const shotsRef = useRef<MafyaShot[]>([]);
 
   useEffect(() => {
     mafyaReset();
@@ -280,45 +300,56 @@ export function MafyaBattle() {
     const loader = new GLTFLoader();
     void (async () => {
       try {
-        const files = await Promise.all(MAFYA_ENTRIES.map((e) => loadGlb(loader, e.url)));
+        const uniqueUrls = [...new Set(MAFYA_ENTRIES.map((e) => e.url))];
+        const loaded = await Promise.all(uniqueUrls.map((url) => loadGlb(loader, url)));
         if (drop || !host.current) return;
+        const byUrl = new Map(uniqueUrls.map((url, i) => [url, loaded[i]]));
+
         const root = host.current;
         root.clear();
         men.current = [];
-        shotCursor.current = 0;
+        shotsRef.current = mafyaShots();
 
-        for (let i = 0; i < files.length; i++) {
+        for (let i = 0; i < MAFYA_ENTRIES.length; i++) {
           const entry = MAFYA_ENTRIES[i];
-          const file = files[i];
-          toLambert(file.scene);
-          if (entry.kind === "car") fitCar(file.scene);
-          else fitMan(file.scene);
+          const src = byUrl.get(entry.url);
+          if (!src) continue;
+
+          const scene = cloneSkinned(src.scene) as THREE.Group;
+          const clips = src.animations;
+
+          toLambert(scene);
+          if (entry.kind === "car") fitCar(scene);
+          else fitMan(scene);
 
           let muzzle: THREE.Object3D | null = null;
           if (entry.kind === "man") {
-            const gun = attachGun(file.scene, mafyaGunFor(entry.num));
+            const gun = attachGun(scene, mafyaGunFor(entry.num));
             muzzle = gun?.getObjectByName("muzzle") ?? gun;
           }
 
           const hold = new THREE.Group();
-          const spot = mafyaSpot(i);
+          const spot = mafyaSpot(i, 0);
           hold.position.set(spot.x, 0, spot.z);
+          hold.rotation.order = "YXZ";
           hold.rotation.y = spot.yaw;
-          hold.add(file.scene);
-          hold.add(numberSprite(entry.num, entry.kind));
+          hold.add(scene);
+          if (entry.role !== "soldier") hold.add(numberSprite(entry.num, entry.kind));
           root.add(hold);
 
           let mix: THREE.AnimationMixer | null = null;
           if (entry.kind === "man") {
-            mix = new THREE.AnimationMixer(file.scene);
-            const clip = pickFireClip(file.animations);
+            mix = new THREE.AnimationMixer(scene);
+            const clip = pickFireClip(clips);
             if (clip) {
               const action = mix.clipAction(clip);
               action.setLoop(THREE.LoopRepeat, Infinity);
+              // koşarken clip'inde adım hissini kıs
+              action.timeScale = /koş|kos|run/i.test(clip.name) ? 0.55 : 1;
               action.play();
             }
           }
-          men.current.push({ mix, hold, muzzle, team: entry.team, kind: entry.kind, baseZ: spot.z });
+          men.current.push({ mix, hold, scene, muzzle, team: entry.team, kind: entry.kind });
         }
         if (!drop) mafyaMarkReady();
       } catch (err) {
@@ -338,7 +369,9 @@ export function MafyaBattle() {
     const t = mafyaT();
     for (let i = 0; i < men.current.length; i++) {
       const man = men.current[i];
-      if (mafyaAlive(i, t)) man.mix?.update(dt);
+      if (!mafyaAlive(i, t)) continue;
+      man.mix?.update(dt);
+      lockHips(man.scene);
     }
 
     const tracers = tracerRef.current;
@@ -356,6 +389,7 @@ export function MafyaBattle() {
       hits.setMatrixAt(i, dummy.matrix);
     }
 
+    const shots = shotsRef.current;
     let slot = 0;
     for (const shot of shots) {
       if (slot >= BULLET_N) break;
@@ -368,13 +402,13 @@ export function MafyaBattle() {
       if (!from || !to) continue;
 
       if (from.muzzle) from.muzzle.getWorldPosition(_muzzle);
-      else _muzzle.set(from.hold.position.x, 1.35, from.hold.position.z);
+      else {
+        const p = mafyaPos(shot.fromI);
+        _muzzle.set(p.x, 1.35, p.z);
+      }
 
-      _target.set(
-        to.hold.position.x + shot.missX,
-        1.25 + shot.missY,
-        to.hold.position.z + shot.missZ
-      );
+      const tp = mafyaPos(shot.toI);
+      _target.set(tp.x + shot.missX, 1.25 + shot.missY, tp.z + shot.missZ);
 
       if (local >= 0 && local < 0.07) {
         dummy.quaternion.identity();
@@ -399,7 +433,7 @@ export function MafyaBattle() {
 
       if (shot.hit && u > 0.88) {
         dummy.quaternion.identity();
-        dummy.position.set(to.hold.position.x, 1.25, to.hold.position.z);
+        dummy.position.set(tp.x, 1.25, tp.z);
         dummy.scale.setScalar(0.1 * (1 - (u - 0.88) / 0.12));
         dummy.updateMatrix();
         hits.setMatrixAt(slot, dummy.matrix);
@@ -411,12 +445,14 @@ export function MafyaBattle() {
     for (let i = 0; i < men.current.length; i++) {
       const man = men.current[i];
       const spot = mafyaSpot(i, t);
+      const aim = mafyaAimTarget(i, t);
+      const yaw = mafyaYawTo(i, aim);
       const dead = !mafyaAlive(i, t);
       const die = mafyaDieAt(i);
       const fall = dead ? Math.min(1, (t - die) / 0.55) : 0;
 
       man.hold.rotation.order = "YXZ";
-      man.hold.rotation.y = spot.yaw;
+      man.hold.rotation.y = yaw;
       man.hold.rotation.x = fall * 1.35;
       man.hold.rotation.z = fall * 0.25 * ((i % 2) * 2 - 1);
 
@@ -433,8 +469,8 @@ export function MafyaBattle() {
           if (local >= 0 && local < 0.1) kick = Math.max(kick, (1 - local / 0.1) * 0.03);
         }
       }
-      const backX = Math.sin(spot.yaw) * -kick;
-      const backZ = Math.cos(spot.yaw) * -kick;
+      const backX = Math.sin(yaw) * -kick;
+      const backZ = Math.cos(yaw) * -kick;
       man.hold.position.set(spot.x + backX, fall * 0.15, spot.z + backZ);
     }
 
@@ -442,8 +478,6 @@ export function MafyaBattle() {
     flashes.instanceMatrix.needsUpdate = true;
     hits.instanceMatrix.needsUpdate = true;
   });
-
-  const labels = useMemo(() => MAFYA_ENTRIES.map((e) => e.num), []);
 
   return (
     <group>
@@ -464,7 +498,6 @@ export function MafyaBattle() {
         <sphereGeometry args={[1, 6, 6]} />
         <meshBasicMaterial color="#ff7a3a" toneMapped={false} transparent opacity={0.85} />
       </instancedMesh>
-      <group visible={false}>{labels.map((n) => <group key={n} />)}</group>
     </group>
   );
 }
