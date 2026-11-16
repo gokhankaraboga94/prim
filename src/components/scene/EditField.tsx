@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import { clone as cloneSkinned } from "three/examples/jsm/utils/SkeletonUtils.js";
 import * as THREE from "three";
-import { TEAMS } from "../../edit/catalog";
+import { TEAMS, characterById, type GroundId } from "../../edit/catalog";
 import { moveSelected, selectNearby, stepUnits, teamLabel, type EditStore, type Unit } from "../../edit/battle";
 import type { CharacterAsset } from "../../edit/loadModel";
 import { MAX_PER_MODEL } from "../../edit/catalog";
@@ -65,28 +65,71 @@ function nameTexture(text: string, anisotropy: number) {
   return tex;
 }
 
-function grassTexture() {
+function groundTexture(id: GroundId) {
   const canvas = document.createElement("canvas");
   const phone = typeof window !== "undefined" && Math.min(window.innerWidth, window.innerHeight) < 860;
   const size = phone ? 512 : 1024;
-  const specks = phone ? 2200 : 8000;
   canvas.width = size;
   canvas.height = size;
   const ctx = canvas.getContext("2d");
   if (!ctx) return null;
-  ctx.fillStyle = "#4e9a38";
+  const base = id === "asphalt" ? "#3a424c" : id === "dirt" ? "#6e5430" : id === "stone" ? "#6a7078" : "#4e9a38";
+  ctx.fillStyle = base;
   ctx.fillRect(0, 0, size, size);
+  const specks = phone ? 1800 : 7000;
   for (let i = 0; i < specks; i++) {
-    const n = i % 7;
-    ctx.fillStyle = n === 0 ? "#7ec85a" : n === 1 ? "#3d8228" : n === 2 ? "#68b448" : n === 3 ? "#357820" : n === 4 ? "#96d868" : n === 5 ? "#5aa838" : "#2c681c";
+    if (id === "grass") {
+      const n = i % 7;
+      ctx.fillStyle = n === 0 ? "#7ec85a" : n === 1 ? "#3d8228" : n === 2 ? "#68b448" : n === 3 ? "#357820" : n === 4 ? "#96d868" : n === 5 ? "#5aa838" : "#2c681c";
+    } else if (id === "asphalt") {
+      ctx.fillStyle = i % 3 === 0 ? "#525a64" : i % 3 === 1 ? "#2e343c" : "#454d56";
+    } else if (id === "dirt") {
+      ctx.fillStyle = i % 3 === 0 ? "#8a6a3e" : i % 3 === 1 ? "#5a4328" : "#7a5a34";
+    } else {
+      ctx.fillStyle = i % 3 === 0 ? "#8a9098" : i % 3 === 1 ? "#5a6068" : "#747a82";
+    }
     ctx.fillRect(Math.random() * size, Math.random() * size, 2 + Math.random() * 7, 2 + Math.random() * 6);
   }
   const tex = new THREE.CanvasTexture(canvas);
   tex.wrapS = THREE.RepeatWrapping;
   tex.wrapT = THREE.RepeatWrapping;
-  tex.repeat.set(12, 12);
+  tex.repeat.set(id === "asphalt" ? 8 : 12, id === "asphalt" ? 8 : 12);
   tex.colorSpace = THREE.SRGBColorSpace;
   return tex;
+}
+
+function findBone(root: THREE.Object3D, names: string[]): THREE.Object3D | null {
+  let found: THREE.Object3D | null = null;
+  root.traverse((obj) => {
+    if (found) return;
+    if (names.some((n) => obj.name === n || obj.name.endsWith(n))) found = obj;
+  });
+  return found;
+}
+
+function attachEditGun(root: THREE.Object3D, pistol: boolean) {
+  const hand = findBone(root, ["mixamorig:RightHand", "RightHand", "mixamorig_RightHand"]);
+  if (!hand) return;
+  const g = new THREE.Group();
+  const steel = new THREE.MeshLambertMaterial({ color: "#c5ccd4" });
+  if (pistol) {
+    const slide = new THREE.Mesh(new THREE.BoxGeometry(0.045, 0.085, 0.18), steel);
+    slide.position.set(0, 0.02, 0.06);
+    g.add(slide);
+    g.scale.setScalar(1.05);
+  } else {
+    const body = new THREE.Mesh(new THREE.BoxGeometry(0.055, 0.075, 0.28), steel);
+    body.position.set(0, 0.02, 0.08);
+    g.add(body);
+    const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.014, 0.32, 6), steel);
+    barrel.rotation.x = Math.PI / 2;
+    barrel.position.set(0, 0.03, 0.3);
+    g.add(barrel);
+    g.scale.setScalar(0.92);
+  }
+  g.rotation.set(-Math.PI / 2, 0, Math.PI / 2);
+  g.position.set(0.02, 0.06, 0.04);
+  hand.add(g);
 }
 
 function placeUnit(unit: Unit) {
@@ -131,6 +174,8 @@ function makeActor(asset: CharacterAsset): Omit<Actor, "id"> {
   const holder = new THREE.Group();
   const model = cloneSkinned(asset.template!) as THREE.Object3D;
   holder.add(model);
+  const def = characterById(asset.id);
+  if (def?.gun) attachEditGun(model, !/1|3|5|7|9/.test(asset.id.slice(-1)));
   const mixer = new THREE.AnimationMixer(model);
   const clips = asset.clips ?? [];
   const play = (clip: THREE.AnimationClip | null) => {
@@ -139,9 +184,14 @@ function makeActor(asset: CharacterAsset): Omit<Actor, "id"> {
     action.setLoop(THREE.LoopRepeat, Infinity);
     return action;
   };
-  const idle = play(clipBy(clips, ["idle", "defensive", "stance"])) ?? play(clips[0] ?? null);
+  const fire =
+    clips.find((c) => c.name === "fire" || c.name === "silah ile ateş ediyor") ??
+    clips.find((c) => /fire|ateş|silah/i.test(c.name) && !/koş|kos|run/i.test(c.name)) ??
+    clips.find((c) => /fire|ateş|silah/i.test(c.name)) ??
+    null;
+  const idle = play(clipBy(clips, ["idle", "defensive", "stance"])) ?? play(fire) ?? play(clips[0] ?? null);
   const move = play(clipBy(clips, ["run", "walk", "sprint"]));
-  const attack = play(clipBy(clips, ["aggress", "sword", "attack", "combo"]));
+  const attack = play(fire) ?? play(clipBy(clips, ["aggress", "sword", "attack", "combo", "fire", "ateş"]));
   idle?.play();
   return { holder, mixer, idle, move, attack, current: idle, mode: "idle", px: 0, pz: 0 };
 }
@@ -151,6 +201,7 @@ function EditRig({ store, assets }: { store: EditStore; assets: Record<string, C
   const bodies = useRef<THREE.Group>(null);
   const rings = useRef<THREE.InstancedMesh>(null);
   const bars = useRef<THREE.InstancedMesh>(null);
+  const bolts = useRef<THREE.InstancedMesh>(null);
   const names = useRef<THREE.Group>(null);
   const maxAniso = useMemo(() => gl.capabilities.getMaxAnisotropy(), [gl]);
   const meshes = useRef(new Map<string, THREE.InstancedMesh>());
@@ -379,7 +430,12 @@ function EditRig({ store, assets }: { store: EditStore; assets: Record<string, C
           store.selected.add(picked.id);
         }
         const mates = picked.team > 0 ? store.units.filter((unit) => unit.alive && unit.team === picked.team).length : 0;
-        store.note = mates > 1 ? `1 asker seçili. Yere tıklayınca ${teamLabel(picked.team)} takımının ${mates} askeri birlikte gider.` : `${store.selected.size} asker seçili. Yere tıklayınca oraya gider.`;
+        store.note =
+          mates > 1
+            ? store.placeMode === "member"
+              ? `1 üye seçili. Üye taşı: yere tıklayınca sadece o konumlanır (takımda kalır).`
+              : `1 asker seçili. Yere tıklayınca ${teamLabel(picked.team)} takımının ${mates} askeri birlikte gider.`
+            : `${store.selected.size} asker seçili. Yere tıklayınca oraya gider.`;
         store.bump();
         return;
       }
@@ -603,6 +659,31 @@ function EditRig({ store, assets }: { store: EditStore; assets: Record<string, C
       if (bar.instanceColor) bar.instanceColor.needsUpdate = true;
     }
 
+    const boltMesh = bolts.current;
+    if (boltMesh) {
+      const active = store.units.filter((unit) => unit.boltAge > 0).slice(0, 256);
+      dummy.scale.setScalar(0.001);
+      dummy.position.set(0, -20, 0);
+      dummy.quaternion.identity();
+      dummy.updateMatrix();
+      for (let i = 0; i < 256; i++) boltMesh.setMatrixAt(i, dummy.matrix);
+      active.forEach((unit, index) => {
+        const u = 1 - unit.boltAge / 0.22;
+        const x = unit.boltX + (unit.boltTX - unit.boltX) * u;
+        const z = unit.boltZ + (unit.boltTZ - unit.boltZ) * u;
+        const dx = unit.boltTX - unit.boltX;
+        const dz = unit.boltTZ - unit.boltZ;
+        const len = Math.hypot(dx, dz) || 1;
+        dummy.position.set(x, 1.3, z);
+        dummy.quaternion.setFromUnitVectors(UP, new THREE.Vector3(dx / len, 0, dz / len));
+        dummy.scale.set(0.012, Math.min(0.35, len * 0.04), 0.012);
+        dummy.updateMatrix();
+        boltMesh.setMatrixAt(index, dummy.matrix);
+      });
+      boltMesh.count = Math.max(1, active.length);
+      boltMesh.instanceMatrix.needsUpdate = true;
+    }
+
     const nameHost = names.current;
     if (nameHost) {
       const have = new Set<number>();
@@ -646,19 +727,25 @@ function EditRig({ store, assets }: { store: EditStore; assets: Record<string, C
     return () => gl.domElement.removeEventListener("wheel", onWheel);
   }, [gl]);
 
+  const boltGeo = useMemo(() => new THREE.CylinderGeometry(1, 1, 1, 4), []);
+  const boltMat = useMemo(() => new THREE.MeshBasicMaterial({ color: "#ffe566", toneMapped: false }), []);
+
   return (
     <group>
       <group ref={bodies} />
       <instancedMesh ref={rings} args={[ringGeo, ringMat, 8192]} frustumCulled={false} />
       <instancedMesh ref={bars} args={[barGeo, barMat, 8192]} frustumCulled={false} renderOrder={2} />
+      <instancedMesh ref={bolts} args={[boltGeo, boltMat, 256]} frustumCulled={false} />
       <group ref={names} />
     </group>
   );
 }
 
 export function EditField({ store, assets }: { store: EditStore; assets: Record<string, CharacterAsset> }) {
-  const grass = useMemo(() => grassTexture(), []);
-  useEffect(() => () => grass?.dispose(), [grass]);
+  const groundId = store.ground;
+  const ground = useMemo(() => groundTexture(groundId), [groundId]);
+  const tint = groundId === "grass" ? "#68b44a" : groundId === "asphalt" ? "#4a5560" : groundId === "dirt" ? "#8a6a3e" : "#7a8088";
+  useEffect(() => () => ground?.dispose(), [ground]);
   return (
     <>
       <color attach="background" args={["#7eb6ee"]} />
@@ -666,9 +753,9 @@ export function EditField({ store, assets }: { store: EditStore; assets: Record<
       <hemisphereLight args={["#d7ecff", "#6d8a45", 0.85]} />
       <ambientLight intensity={0.28} />
       <directionalLight position={[24, 36, 12]} intensity={2.1} color="#fff4e2" />
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
+      <mesh key={groundId} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
         <planeGeometry args={[760, 760]} />
-        <meshLambertMaterial map={grass} color="#68b44a" />
+        <meshLambertMaterial map={ground ?? undefined} color={tint} />
       </mesh>
       <EditRig store={store} assets={assets} />
     </>

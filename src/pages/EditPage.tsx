@@ -3,10 +3,29 @@ import { Canvas } from "@react-three/fiber";
 import { SceneErrorBoundary } from "../components/SceneErrorBoundary";
 import { EditField } from "../components/scene/EditField";
 import { useGame } from "../hooks/useGame";
-import { CHARACTERS, TEAMS, characterById } from "../edit/catalog";
-import { assignNames, assignTeam, clearField, clearNames, createStore, removeSelected, selectAll, selectTeam, spawnUnits, startBattle, unassignTeam } from "../edit/battle";
+import { CHARACTERS, CHARACTERS2, GROUNDS, TEAMS, characterById, type CharacterDef } from "../edit/catalog";
+import {
+  assignNames,
+  assignTeam,
+  clearField,
+  clearNames,
+  createStore,
+  nudgeSelected,
+  removeSelected,
+  resetSlotOffsets,
+  rotateSelected,
+  selectAll,
+  selectTeam,
+  setGround,
+  setPlaceMode,
+  spawnUnits,
+  startBattle,
+  unassignTeam,
+} from "../edit/battle";
 import { disposeAsset, disposeThumbRenderer, letterThumb, loadCharacter, snapshotCharacter, type CharacterAsset } from "../edit/loadModel";
 import { REEL_HEIGHT, REEL_WIDTH, reelWindow } from "../recordCanvas";
+
+type RosterTab = "chars" | "mafya" | "ground" | null;
 
 export function EditPage() {
   const { game } = useGame();
@@ -18,7 +37,7 @@ export function EditPage() {
     return narrow || coarse;
   }, []);
   const [rev, setRev] = useState(0);
-  const [open, setOpen] = useState(false);
+  const [tab, setTab] = useState<RosterTab>(null);
   const [team, setTeam] = useState(1);
   const [counts, setCounts] = useState<Record<string, number>>({});
   const [manual, setManual] = useState("");
@@ -67,7 +86,7 @@ export function EditPage() {
           loaded.current.push(asset);
           let thumb = "";
           try {
-            thumb = phone || asset.template ? letterThumb(def.label) : snapshotCharacter(asset);
+            thumb = phone ? letterThumb(def.label) : snapshotCharacter(asset);
           } catch {
             thumb = letterThumb(def.label);
           }
@@ -90,6 +109,14 @@ export function EditPage() {
     };
   }, [phone]);
 
+  function makeThumb(def: CharacterDef, asset: CharacterAsset) {
+    try {
+      return phone ? letterThumb(def.label) : snapshotCharacter(asset);
+    } catch {
+      return letterThumb(def.label);
+    }
+  }
+
   function loadOne(id: string) {
     const def = characterById(id);
     if (!def || started.current.has(id)) return;
@@ -98,9 +125,15 @@ export function EditPage() {
       .then((asset) => {
         loaded.current.push(asset);
         setAssets((prev) => ({ ...prev, [def.id]: asset }));
-        setThumbs((prev) => ({ ...prev, [def.id]: letterThumb(def.label) }));
+        setThumbs((prev) => ({ ...prev, [def.id]: makeThumb(def, asset) }));
       })
       .catch(() => setFailed((prev) => ({ ...prev, [def.id]: true })));
+  }
+
+  function preloadRoster(list: CharacterDef[]) {
+    for (const def of list) {
+      if (!started.current.has(def.id) && !(phone && def.heavy && !assets[def.id])) loadOne(def.id);
+    }
   }
 
   useEffect(() => {
@@ -223,11 +256,27 @@ export function EditPage() {
     store.bump();
   }
 
+  const rosterList = tab === "mafya" ? CHARACTERS2 : CHARACTERS;
+
+  function toggleTab(next: RosterTab) {
+    setTab((cur) => {
+      const open = cur === next ? null : next;
+      if (open === "mafya") preloadRoster(CHARACTERS2);
+      return open;
+    });
+  }
+
   return (
     <div className="edit-page" data-rev={rev}>
       <header className="edit-bar">
-        <button type="button" className={open ? "on" : ""} onClick={() => setOpen((value) => !value)}>
+        <button type="button" className={tab === "chars" ? "on" : ""} onClick={() => toggleTab("chars")}>
           Karakterler
+        </button>
+        <button type="button" className={tab === "mafya" ? "on" : ""} onClick={() => toggleTab("mafya")}>
+          Karakterler2
+        </button>
+        <button type="button" className={tab === "ground" ? "on" : ""} onClick={() => toggleTab("ground")}>
+          Zemin
         </button>
         <div className="edit-teams" aria-label="Takımlar">
           {TEAMS.map((item) => (
@@ -252,6 +301,43 @@ export function EditPage() {
         </button>
         <button type="button" onClick={() => unassignTeam(store)} disabled={!selectedInTeam}>
           Takımdan çıkar
+        </button>
+        <button
+          type="button"
+          className={store.placeMode === "team" ? "on" : ""}
+          onClick={() => setPlaceMode(store, "team")}
+          title="Tıklayınca bütün takım birlikte gider"
+        >
+          Takım taşı
+        </button>
+        <button
+          type="button"
+          className={store.placeMode === "member" ? "on" : ""}
+          onClick={() => setPlaceMode(store, "member")}
+          title="Seçili tek üyeyi tıklanan yere koy (takımda kalır)"
+        >
+          Üye taşı
+        </button>
+        <button type="button" onClick={() => nudgeSelected(store, 0, 0.9)} disabled={!selected} title="Takımda öne">
+          Öne
+        </button>
+        <button type="button" onClick={() => nudgeSelected(store, 0, -0.9)} disabled={!selected} title="Takımda arkaya">
+          Arkaya
+        </button>
+        <button type="button" onClick={() => nudgeSelected(store, -0.9, 0)} disabled={!selected}>
+          Sola kaydır
+        </button>
+        <button type="button" onClick={() => nudgeSelected(store, 0.9, 0)} disabled={!selected}>
+          Sağa kaydır
+        </button>
+        <button type="button" onClick={() => resetSlotOffsets(store)} disabled={!selected}>
+          Nizam sıfırla
+        </button>
+        <button type="button" onClick={() => rotateSelected(store, -Math.PI / 8)} disabled={!selected}>
+          ↺ Yön
+        </button>
+        <button type="button" onClick={() => rotateSelected(store, Math.PI / 8)} disabled={!selected}>
+          Yön ↻
         </button>
         <button type="button" className="edit-vs" onClick={() => startBattle(store)}>
           {store.battle ? "Savaşı durdur" : "VS"}
@@ -287,14 +373,14 @@ export function EditPage() {
       </header>
 
       <p className="edit-help">
-        Sol tık seçer, sürükleyince kutu olur; Shift ekler. Çift tık, aynı modelden yakındakileri de seçer. Seçili renge ikinci kez tıklayınca o takımın hepsi seçilir; sonra "Takımdan çıkar" ya da "Adı kaldır" bütün takıma uygulanır, tek asker seçince sadece ona. Takımdan birini seçip yere tıklayınca bütün takım askeri nizamda oraya gider. Savaşta vurulan yere düşer, yeri kapanır, kalanlar yeniden dizilir. Kayıt 9:16 kadrajı savaşın olduğu yeri ortalar. Sağ tuş kamerayı döndürür, tekerlek yakınlaştırır, orta tuş ve ok tuşları haritayı kaydırır. Telefonda iki parmak yakınlaştırır ve kaydırır. Ctrl+A hepsini seçer, Delete siler, Esc seçimi bırakır. Takımsız asker savaşmaz.
+        Karakterler2 = mafya modelleri (silah + mermi). Zemin ile harita zemini seç. Yön ↺↻ bakışı çevirir. Takım taşı: tıklayınca bütün takım gider. Üye taşı: tek üyeyi istediğin yere koy (takımda kalır). Öne/Arkaya/Sola/Sağa kaydır ile takım içi konum. Sol tık seçer; Shift ekler. Ctrl+A, Delete, Esc.
       </p>
 
       <div className="edit-stage">
         {recording && <div className="edit-reel-frame" aria-hidden="true" />}
-        {open && (
-          <section className="edit-roster" aria-label="Karakter listesi">
-            {CHARACTERS.map((def) => {
+        {(tab === "chars" || tab === "mafya") && (
+          <section className="edit-roster" aria-label={tab === "mafya" ? "Karakterler2" : "Karakter listesi"}>
+            {rosterList.map((def) => {
               const ready = Boolean(assets[def.id]);
               return (
                 <article key={def.id}>
@@ -320,6 +406,19 @@ export function EditPage() {
                 </article>
               );
             })}
+          </section>
+        )}
+        {tab === "ground" && (
+          <section className="edit-roster edit-grounds" aria-label="Zemin seçimi">
+            {GROUNDS.map((g) => (
+              <article key={g.id}>
+                <div className="edit-thumb" style={{ background: g.color }} />
+                <strong>{g.label}</strong>
+                <button type="button" className={store.ground === g.id ? "on" : ""} onClick={() => setGround(store, g.id)}>
+                  {store.ground === g.id ? "Seçili" : "Seç"}
+                </button>
+              </article>
+            ))}
           </section>
         )}
         <SceneErrorBoundary>

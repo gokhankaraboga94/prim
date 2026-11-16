@@ -270,13 +270,19 @@ export function snapshotCharacter(asset: CharacterAsset) {
   const sun = new THREE.DirectionalLight("#fff2dc", 1.6);
   sun.position.set(3, 5, 4);
   scene.add(sun);
-  const mesh = new THREE.Mesh(asset.geometry, asset.material);
-  scene.add(mesh);
-  const box = new THREE.Box3().setFromObject(mesh);
+  let subject: THREE.Object3D;
+  if (asset.template) {
+    subject = asset.template.clone(true);
+    scene.add(subject);
+  } else {
+    subject = new THREE.Mesh(asset.geometry, asset.material);
+    scene.add(subject);
+  }
+  const box = new THREE.Box3().setFromObject(subject);
   const size = box.getSize(new THREE.Vector3());
   const center = box.getCenter(new THREE.Vector3());
   const cam = new THREE.PerspectiveCamera(28, 1, 0.05, 200);
-  const dist = Math.max(size.x, size.y, size.z) * 1.7;
+  const dist = Math.max(0.4, Math.max(size.x, size.y, size.z) * 1.7);
   cam.position.set(center.x + dist * 0.45, center.y + dist * 0.28, center.z + dist);
   cam.lookAt(center);
   thumbRenderer.render(scene, cam);

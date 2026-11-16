@@ -9,6 +9,9 @@ export type CharacterDef = {
   packed?: boolean;
   /** Full-size file. On a phone it waits until the roster is opened. */
   heavy?: boolean;
+  kind?: "man" | "car";
+  /** Ateşli silah + mermi (mafya). */
+  gun?: boolean;
 };
 
 /**
@@ -37,6 +40,35 @@ export const CHARACTERS: CharacterDef[] = [
   { id: "colossus", label: "Colossus", url: "/models/colossus.glb", height: 15.6, yaw: 0, heavy: true },
 ];
 
+/** Mafya reel modelleri — burnu −X → edit face + π/2. */
+const MAFYA_YAW = Math.PI / 2;
+
+export const CHARACTERS2: CharacterDef[] = [
+  { id: "mafya-1", label: "Mafya 1 (lider)", url: "/models/mafya/m01.glb", height: 1.78, yaw: MAFYA_YAW, kind: "man", gun: true, heavy: true },
+  { id: "mafya-2", label: "Mafya 2", url: "/models/mafya/m02.glb", height: 1.78, yaw: MAFYA_YAW, kind: "man", gun: true, heavy: true },
+  { id: "mafya-3", label: "Mafya 3", url: "/models/mafya/m03.glb", height: 1.78, yaw: MAFYA_YAW, kind: "man", gun: true, heavy: true },
+  { id: "mafya-4", label: "Mafya 4", url: "/models/mafya/m04.glb", height: 1.78, yaw: MAFYA_YAW, kind: "man", gun: true, heavy: true },
+  { id: "mafya-5", label: "Mafya 5", url: "/models/mafya/m05.glb", height: 1.78, yaw: MAFYA_YAW, kind: "man", gun: true, heavy: true },
+  { id: "mafya-6", label: "Mafya 6 (lider)", url: "/models/mafya/m06.glb", height: 1.78, yaw: MAFYA_YAW, kind: "man", gun: true, heavy: true },
+  { id: "mafya-7", label: "Mafya 7", url: "/models/mafya/m07.glb", height: 1.78, yaw: MAFYA_YAW, kind: "man", gun: true, heavy: true },
+  { id: "mafya-8", label: "Mafya 8", url: "/models/mafya/m08.glb", height: 1.78, yaw: MAFYA_YAW, kind: "man", gun: true, heavy: true },
+  { id: "mafya-9", label: "Mafya 9", url: "/models/mafya/m09.glb", height: 1.78, yaw: MAFYA_YAW, kind: "man", gun: true, heavy: true },
+  { id: "mafya-10", label: "Araç 10", url: "/models/mafya/c01.glb", height: 1.35, yaw: 0, kind: "car", heavy: true },
+  { id: "mafya-11", label: "Araç 11", url: "/models/mafya/c02.glb", height: 1.35, yaw: 0, kind: "car", heavy: true },
+  { id: "mafya-12", label: "Araç 12", url: "/models/mafya/c03.glb", height: 1.35, yaw: 0, kind: "car", heavy: true },
+];
+
+export const ALL_CHARACTERS: CharacterDef[] = [...CHARACTERS, ...CHARACTERS2];
+
+export type GroundId = "grass" | "asphalt" | "dirt" | "stone";
+
+export const GROUNDS: { id: GroundId; label: string; color: string }[] = [
+  { id: "grass", label: "Çimen", color: "#68b44a" },
+  { id: "asphalt", label: "Asfalt", color: "#4a5560" },
+  { id: "dirt", label: "Toprak", color: "#8a6a3e" },
+  { id: "stone", label: "Taş", color: "#7a8088" },
+];
+
 export const TEAMS = [
   { id: 1, label: "Kırmızı", color: "#e10600" },
   { id: 2, label: "Mavi", color: "#1a56e8" },
@@ -48,5 +80,5 @@ export const MAX_PER_MODEL = 200;
 export const MAX_UNITS = 1_000_000;
 
 export function characterById(id: string) {
-  return CHARACTERS.find((item) => item.id === id) ?? null;
+  return ALL_CHARACTERS.find((item) => item.id === id) ?? null;
 }

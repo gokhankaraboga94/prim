@@ -1,4 +1,4 @@
-import { MAX_PER_MODEL, MAX_UNITS, TEAMS, characterById, type CharacterDef } from "./catalog";
+import { MAX_PER_MODEL, MAX_UNITS, TEAMS, characterById, type CharacterDef, type GroundId } from "./catalog";
 
 export type Unit = {
   id: number;
@@ -24,8 +24,19 @@ export type Unit = {
   aimX: number;
   aimZ: number;
   rank: number;
+  /** Takım nizamına ek yerel ofset (sağ / ileri). */
+  slotOffR: number;
+  slotOffF: number;
+  /** Mermi izi (saniye). */
+  boltAge: number;
+  boltX: number;
+  boltZ: number;
+  boltTX: number;
+  boltTZ: number;
   gone?: boolean;
 };
+
+export type PlaceMode = "team" | "member";
 
 export type EditStore = {
   units: Unit[];
@@ -40,6 +51,8 @@ export type EditStore = {
   reelV: number;
   nextId: number;
   nameStamp: number;
+  ground: GroundId;
+  placeMode: PlaceMode;
   listeners: Set<() => void>;
   bump: () => void;
 };
@@ -60,6 +73,8 @@ export function createStore(): EditStore {
     reelV: 0.5,
     nextId: 1,
     nameStamp: 0,
+    ground: "grass",
+    placeMode: "team",
     listeners: new Set(),
     bump() {
       for (const fn of store.listeners) fn();
@@ -74,12 +89,13 @@ export function teamLabel(id: number) {
 
 function stats(def: CharacterDef, radius: number) {
   const giant = def.height > 6;
+  const car = def.kind === "car";
   return {
-    radius,
+    radius: car ? Math.max(radius, 1.6) : radius,
     height: def.height,
-    speed: giant ? 4.4 : 3.3,
-    damage: def.id === "savaci" ? 24 : giant ? 26 : 8,
-    maxHp: giant ? 480 : 86,
+    speed: car ? 0 : giant ? 4.4 : def.gun ? 2.8 : 3.3,
+    damage: def.gun ? 14 : def.id === "savaci" ? 24 : giant ? 26 : 8,
+    maxHp: car ? 600 : giant ? 480 : def.gun ? 110 : 86,
   };
 }
 
@@ -131,6 +147,13 @@ export function spawnUnits(store: EditStore, def: CharacterDef, radius: number, 
       aimX: 0,
       aimZ: 1,
       rank: -1,
+      slotOffR: 0,
+      slotOffF: 0,
+      boltAge: 0,
+      boltX: 0,
+      boltZ: 0,
+      boltTX: 0,
+      boltTZ: 0,
     };
     store.units.push(unit);
     store.byId.set(unit.id, unit);
@@ -316,8 +339,10 @@ function putFormation(units: Unit[], face: number, cx: number, cz: number) {
   const { rx, rz, fx, fz } = basis(face);
   ordered.forEach((unit, index) => {
     const slot = locals[index];
-    unit.x = clampMap(cx + slot.right * rx + slot.forward * fx);
-    unit.z = clampMap(cz + slot.right * rz + slot.forward * fz);
+    const right = slot.right + unit.slotOffR;
+    const forward = slot.forward + unit.slotOffF;
+    unit.x = clampMap(cx + right * rx + forward * fx);
+    unit.z = clampMap(cz + right * rz + forward * fz);
     unit.yaw = face + unit.yawOffset;
     unit.aimX = Math.sin(face);
     unit.aimZ = Math.cos(face);
@@ -338,6 +363,36 @@ function formationWidth(units: Unit[]) {
   return Math.max(gap, (front - 1) * gap + gap);
 }
 
+/** Tek takım üyesini tıklanan yere koy; takımda kalır, ofset güncellenir. */
+function moveMemberInTeam(store: EditStore, unit: Unit, x: number, z: number) {
+  const mates = store.units.filter((u) => u.alive && u.team === unit.team);
+  if (mates.length < 2) {
+    unit.x = clampMap(x);
+    unit.z = clampMap(z);
+    store.note = "Üye konumlandı.";
+    store.bump();
+    return;
+  }
+  const face = faceAim(mates);
+  const center = centroid(mates);
+  const ordered = lineUp(mates, face);
+  const { locals } = slotLocals(ordered.length, teamGap(ordered));
+  const idx = ordered.findIndex((u) => u.id === unit.id);
+  const slot = locals[Math.max(0, idx)];
+  const { rx, rz, fx, fz } = basis(face);
+  unit.x = clampMap(x);
+  unit.z = clampMap(z);
+  const worldR = (unit.x - center.x) * rx + (unit.z - center.z) * rz;
+  const worldF = (unit.x - center.x) * fx + (unit.z - center.z) * fz;
+  unit.slotOffR = worldR - slot.right;
+  unit.slotOffF = worldF - slot.forward;
+  unit.yaw = face + unit.yawOffset;
+  unit.aimX = Math.sin(face);
+  unit.aimZ = Math.cos(face);
+  store.note = "Üye takım içinde yeniden konumlandı.";
+  store.bump();
+}
+
 export function moveSelected(store: EditStore, x: number, z: number) {
   if (store.battle) {
     store.note = "Savaş sürüyor. Yerleştirmek için durdur.";
@@ -346,6 +401,12 @@ export function moveSelected(store: EditStore, x: number, z: number) {
   }
   const picked = store.units.filter((unit) => unit.alive && store.selected.has(unit.id));
   if (!picked.length) return;
+
+  if (store.placeMode === "member" && picked.length === 1 && picked[0].team > 0) {
+    moveMemberInTeam(store, picked[0], x, z);
+    return;
+  }
+
   const teamIds = [...new Set(picked.map((unit) => unit.team).filter((team) => team > 0))];
   const packs: { units: Unit[]; form: boolean }[] = teamIds.map((team) => ({
     units: store.units.filter((unit) => unit.alive && unit.team === team),
@@ -376,6 +437,76 @@ export function moveSelected(store: EditStore, x: number, z: number) {
   else if (formed.length && !loose.length) store.note = `${formed.length} takım nizaya girdi.`;
   else if (!formed.length) store.note = `${loose.length} asker konumlandı.`;
   else store.note = "Takımlar nizaya girdi.";
+  store.bump();
+}
+
+export function rotateSelected(store: EditStore, delta: number) {
+  const picked = store.units.filter((unit) => unit.alive && store.selected.has(unit.id));
+  if (!picked.length) {
+    store.note = "Yön için önce seç.";
+    store.bump();
+    return;
+  }
+  for (const unit of picked) {
+    unit.yawOffset += delta;
+    unit.yaw += delta;
+  }
+  store.note = `Yön ${delta > 0 ? "sağa" : "sola"} döndü.`;
+  store.bump();
+}
+
+export function nudgeSelected(store: EditStore, dRight: number, dForward: number) {
+  const picked = store.units.filter((unit) => unit.alive && store.selected.has(unit.id));
+  if (!picked.length) {
+    store.note = "Konum için önce seç.";
+    store.bump();
+    return;
+  }
+  for (const unit of picked) {
+    if (unit.team <= 0) {
+      const face = Math.atan2(unit.aimX, unit.aimZ);
+      const { rx, rz, fx, fz } = basis(face);
+      unit.x = clampMap(unit.x + dRight * rx + dForward * fx);
+      unit.z = clampMap(unit.z + dRight * rz + dForward * fz);
+      continue;
+    }
+    unit.slotOffR += dRight;
+    unit.slotOffF += dForward;
+    const mates = store.units.filter((u) => u.alive && u.team === unit.team);
+    const center = centroid(mates);
+    putFormation(mates, faceAim(mates), center.x, center.z);
+  }
+  store.note = "Üye konumu güncellendi.";
+  store.bump();
+}
+
+export function resetSlotOffsets(store: EditStore) {
+  const picked = store.units.filter((unit) => unit.alive && store.selected.has(unit.id));
+  if (!picked.length) return;
+  const teams = new Set<number>();
+  for (const unit of picked) {
+    unit.slotOffR = 0;
+    unit.slotOffF = 0;
+    if (unit.team > 0) teams.add(unit.team);
+  }
+  for (const team of teams) {
+    const mates = store.units.filter((u) => u.alive && u.team === team);
+    const center = centroid(mates);
+    putFormation(mates, faceAim(mates), center.x, center.z);
+  }
+  store.note = "Nizam sıfırlandı.";
+  store.bump();
+}
+
+export function setGround(store: EditStore, ground: GroundId) {
+  store.ground = ground;
+  store.note = `Zemin: ${ground}`;
+  store.bump();
+}
+
+export function setPlaceMode(store: EditStore, mode: PlaceMode) {
+  store.placeMode = mode;
+  store.note = mode === "member" ? "Tek üye taşı: seçili takım üyesini yere tıkla." : "Takım taşı: tıklayınca bütün takım gider.";
   store.bump();
 }
 
@@ -643,39 +774,68 @@ export function stepUnits(store: EditStore, dt: number) {
     const cz = home.z + fz * advance;
     ordered.forEach((unit, index) => {
       if (!unit.alive) return;
+      if (unit.boltAge > 0) unit.boltAge = Math.max(0, unit.boltAge - step);
+      const def = characterById(unit.model);
+      const gun = Boolean(def?.gun);
+      const car = def?.kind === "car";
       const slot = locals[index];
-      const sx = cx + slot.right * rx + slot.forward * fx;
-      const sz = cz + slot.right * rz + slot.forward * fz;
+      const right = slot.right + unit.slotOffR;
+      const forward = slot.forward + unit.slotOffF;
+      const sx = cx + right * rx + forward * fx;
+      const sz = cz + right * rz + forward * fz;
       let target: Unit | null = null;
       let best = Infinity;
       for (const enemy of foes) {
         if (!enemy.alive) continue;
+        if (characterById(enemy.model)?.kind === "car" && gun) {
+          /* araçlara da ateş */
+        }
         const d2 = (enemy.x - unit.x) ** 2 + (enemy.z - unit.z) ** 2;
         if (d2 < best) {
           best = d2;
           target = enemy;
         }
       }
-      unit.aimX = Math.sin(face);
-      unit.aimZ = Math.cos(face);
-      unit.yaw = face + unit.yawOffset;
-      const dx = sx - unit.x;
-      const dz = sz - unit.z;
-      const dist = Math.hypot(dx, dz);
-      if (dist > 0.03) {
-        const move = Math.min(dist, unit.speed * step);
-        unit.x = clampMap(unit.x + (dx / dist) * move);
-        unit.z = clampMap(unit.z + (dz / dist) * move);
+      if (target) {
+        const tdx = target.x - unit.x;
+        const tdz = target.z - unit.z;
+        const look = Math.atan2(tdx, tdz);
+        unit.aimX = Math.sin(look);
+        unit.aimZ = Math.cos(look);
+        unit.yaw = look + unit.yawOffset;
+      } else {
+        unit.aimX = Math.sin(face);
+        unit.aimZ = Math.cos(face);
+        unit.yaw = face + unit.yawOffset;
       }
-      const reach = target ? unit.radius + target.radius + 0.45 : 0;
-      const engaged = target ? Math.hypot(target.x - unit.x, target.z - unit.z) <= reach : false;
-      if (target && engaged) {
+      if (!car && unit.speed > 0.05) {
+        const dx = sx - unit.x;
+        const dz = sz - unit.z;
+        const dist = Math.hypot(dx, dz);
+        if (dist > 0.03) {
+          const move = Math.min(dist, unit.speed * step);
+          unit.x = clampMap(unit.x + (dx / dist) * move);
+          unit.z = clampMap(unit.z + (dz / dist) * move);
+        }
+      }
+      const meleeReach = target ? unit.radius + target.radius + 0.45 : 0;
+      const gunReach = 18;
+      const distTo = target ? Math.hypot(target.x - unit.x, target.z - unit.z) : 1e9;
+      const engaged = target ? (gun ? distTo <= gunReach : distTo <= meleeReach) : false;
+      if (target && engaged && !car) {
         unit.cooldown -= step;
-        unit.swing = Math.min(1, unit.swing + step * 7);
+        unit.swing = Math.min(1, unit.swing + step * (gun ? 5 : 7));
         if (unit.cooldown <= 0) {
           target.hp -= unit.damage;
-          unit.cooldown = 0.68;
+          unit.cooldown = gun ? 0.55 : 0.68;
           unit.swing = 1;
+          if (gun) {
+            unit.boltAge = 0.22;
+            unit.boltX = unit.x;
+            unit.boltZ = unit.z;
+            unit.boltTX = target.x;
+            unit.boltTZ = target.z;
+          }
           if (target.hp <= 0) {
             target.hp = 0;
             target.alive = false;

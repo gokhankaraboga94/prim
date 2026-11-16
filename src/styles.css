@@ -1137,6 +1137,7 @@ body.edit-route .seo-doc {
 }
 
 .edit-bar button.on,
+.edit-roster button.on,
 .edit-roster button:not(:disabled):hover,
 .edit-bar button:not(:disabled):hover {
   border-color: var(--gold);
