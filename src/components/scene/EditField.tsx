@@ -453,6 +453,16 @@ function EditRig({ store, assets }: { store: EditStore; assets: Record<string, C
         return;
       }
       if (!raycaster.ray.intersectPlane(plane, hit)) return;
+      // Sol+sağ birlikte (biri bırakılırken diğeri basılı): seçimi bırak, taşıma
+      const both =
+        (event.button === 0 && (event.buttons & 2) === 2) || (event.button === 2 && (event.buttons & 1) === 1);
+      if (both && store.selected.size) {
+        store.selected.clear();
+        store.note = "Seçim bırakıldı (sol+sağ).";
+        store.bump();
+        return;
+      }
+      if (event.button !== 0) return;
       if (store.selected.size && !event.shiftKey) {
         moveSelected(store, hit.x, hit.z);
         return;

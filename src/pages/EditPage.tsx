@@ -382,7 +382,7 @@ export function EditPage() {
       </header>
 
       <p className="edit-help">
-        Karakterler2 = mafya. Kayıt açıkken kamera tam kontrol: Ok kaydırır, Q/E döndürür, R/F eğim, +/- yakınlaştırır; sağ tuş da döndürür. 9:16 çerçeve bakış merkezinde. Zemin / yön / takım taşı / üye taşı / Öne-Arkaya.
+        Üye taşı ile konan birim sabitlenir; Nizam sıfırla demeden toplu taşımada kıpırdamaz. Takım taşında 2+ seçiliyse yalnız onlar gider. Sol+sağ tık = seçimi bırak. Kayıt: Ok / Q-E / R-F / +/-.
       </p>
 
       <div className="edit-stage">

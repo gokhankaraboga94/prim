@@ -27,6 +27,8 @@ export type Unit = {
   /** Takım nizamına ek yerel ofset (sağ / ileri). */
   slotOffR: number;
   slotOffF: number;
+  /** Üye taşı ile sabitlendi; nizam sıfırlanana kadar toplu taşımada kıpırdamaz. */
+  pinned: boolean;
   /** Mermi izi (saniye). */
   boltAge: number;
   boltX: number;
@@ -150,6 +152,7 @@ export function spawnUnits(store: EditStore, def: CharacterDef, radius: number, 
       rank: -1,
       slotOffR: 0,
       slotOffF: 0,
+      pinned: false,
       boltAge: 0,
       boltX: 0,
       boltZ: 0,
@@ -326,16 +329,24 @@ function lineUp(units: Unit[], face: number) {
 }
 
 function putFormation(units: Unit[], face: number, cx: number, cz: number) {
-  if (units.length === 1) {
-    units[0].x = clampMap(cx);
-    units[0].z = clampMap(cz);
-    units[0].yaw = face + units[0].yawOffset;
-    units[0].aimX = Math.sin(face);
-    units[0].aimZ = Math.cos(face);
-    units[0].rank = 0;
+  const mobile = units.filter((unit) => !unit.pinned);
+  for (const unit of units) {
+    if (!unit.pinned) continue;
+    unit.yaw = face + unit.yawOffset;
+    unit.aimX = Math.sin(face);
+    unit.aimZ = Math.cos(face);
+  }
+  if (!mobile.length) return;
+  if (mobile.length === 1) {
+    mobile[0].x = clampMap(cx);
+    mobile[0].z = clampMap(cz);
+    mobile[0].yaw = face + mobile[0].yawOffset;
+    mobile[0].aimX = Math.sin(face);
+    mobile[0].aimZ = Math.cos(face);
+    mobile[0].rank = 0;
     return;
   }
-  const ordered = lineUp(units, face);
+  const ordered = lineUp(mobile, face);
   const { locals } = slotLocals(ordered.length, teamGap(ordered));
   const { rx, rz, fx, fz } = basis(face);
   ordered.forEach((unit, index) => {
@@ -364,33 +375,28 @@ function formationWidth(units: Unit[]) {
   return Math.max(gap, (front - 1) * gap + gap);
 }
 
-/** Tek takım üyesini tıklanan yere koy; takımda kalır, ofset güncellenir. */
-function moveMemberInTeam(store: EditStore, unit: Unit, x: number, z: number) {
-  const mates = store.units.filter((u) => u.alive && u.team === unit.team);
-  if (mates.length < 2) {
-    unit.x = clampMap(x);
-    unit.z = clampMap(z);
-    store.note = "Üye konumlandı.";
-    store.bump();
-    return;
+/** Seçili grubu tıklanan noktaya kaydır (göreli düzen korunur). */
+function shiftGroupTo(units: Unit[], x: number, z: number, turn: boolean) {
+  if (!units.length) return;
+  const from = centroid(units);
+  const dx = x - from.x;
+  const dz = z - from.z;
+  const face = Math.hypot(dx, dz) > 0.2 ? Math.atan2(dx, dz) : faceAim(units);
+  for (const unit of units) {
+    unit.x = clampMap(unit.x + dx);
+    unit.z = clampMap(unit.z + dz);
+    if (!turn) continue;
+    unit.yaw = face + unit.yawOffset;
+    unit.aimX = Math.sin(face);
+    unit.aimZ = Math.cos(face);
   }
-  const face = faceAim(mates);
-  const center = centroid(mates);
-  const ordered = lineUp(mates, face);
-  const { locals } = slotLocals(ordered.length, teamGap(ordered));
-  const idx = ordered.findIndex((u) => u.id === unit.id);
-  const slot = locals[Math.max(0, idx)];
-  const { rx, rz, fx, fz } = basis(face);
-  unit.x = clampMap(x);
-  unit.z = clampMap(z);
-  const worldR = (unit.x - center.x) * rx + (unit.z - center.z) * rz;
-  const worldF = (unit.x - center.x) * fx + (unit.z - center.z) * fz;
-  unit.slotOffR = worldR - slot.right;
-  unit.slotOffF = worldF - slot.forward;
-  unit.yaw = face + unit.yawOffset;
-  unit.aimX = Math.sin(face);
-  unit.aimZ = Math.cos(face);
-  store.note = "Üye takım içinde yeniden konumlandı.";
+}
+
+/** Üye taşı: seçilenleri koy ve sabitle (pinned). */
+function placeMembersPinned(store: EditStore, picked: Unit[], x: number, z: number) {
+  shiftGroupTo(picked, x, z, true);
+  for (const unit of picked) unit.pinned = true;
+  store.note = picked.length === 1 ? "Üye sabitlendi. Nizam sıfırla demeden toplu taşımada kıpırdamaz." : `${picked.length} üye sabitlendi. Nizam sıfırla demeden yerleri korunur.`;
   store.bump();
 }
 
@@ -403,29 +409,46 @@ export function moveSelected(store: EditStore, x: number, z: number) {
   const picked = store.units.filter((unit) => unit.alive && store.selected.has(unit.id));
   if (!picked.length) return;
 
-  if (store.placeMode === "member" && picked.length === 1 && picked[0].team > 0) {
-    moveMemberInTeam(store, picked[0], x, z);
+  // Üye taşı: yalnız seçilenler gider ve sabitlenir
+  if (store.placeMode === "member") {
+    placeMembersPinned(store, picked, x, z);
     return;
   }
 
+  // Takım taşı: seçim 1 kişi → o takımın sabitlenmemişleri; seçim 2+ → yalnız seçilenler
   const teamIds = [...new Set(picked.map((unit) => unit.team).filter((team) => team > 0))];
-  const packs: { units: Unit[]; form: boolean }[] = teamIds.map((team) => ({
-    units: store.units.filter((unit) => unit.alive && unit.team === team),
-    form: true,
-  }));
-  const loose = picked.filter((unit) => unit.team <= 0);
+  const packs: { units: Unit[]; form: boolean }[] = [];
+  for (const team of teamIds) {
+    const mates = store.units.filter((unit) => unit.alive && unit.team === team);
+    const sel = picked.filter((unit) => unit.team === team);
+    if (sel.length === 1) {
+      const mobile = mates.filter((unit) => !unit.pinned);
+      if (mobile.length) packs.push({ units: mobile, form: true });
+    } else {
+      packs.push({ units: sel.filter((unit) => !unit.pinned), form: false });
+    }
+  }
+  const loose = picked.filter((unit) => unit.team <= 0 && !unit.pinned);
   if (loose.length) packs.push({ units: loose, form: false });
-  const involved = packs.flatMap((pack) => pack.units);
-  const from = centroid(involved);
+
+  const moving = packs.flatMap((pack) => pack.units);
+  if (!moving.length) {
+    store.note = "Seçililer sabitli (pinned). Nizam sıfırla ile çöz.";
+    store.bump();
+    return;
+  }
+
+  const from = centroid(moving);
   const dx = x - from.x;
   const dz = z - from.z;
-  const face = Math.hypot(dx, dz) > 0.2 ? Math.atan2(dx, dz) : faceAim(involved);
+  const face = Math.hypot(dx, dz) > 0.2 ? Math.atan2(dx, dz) : faceAim(moving);
   const { rx, rz } = basis(face);
   const widths = packs.map((pack) => (pack.form ? formationWidth(pack.units) : Math.max(formationWidth(pack.units), looseSpan(pack.units, face))));
   const gutter = packs.length > 1 ? Math.max(...widths.map((width, index) => (packs[index].form ? teamGap(packs[index].units) : 1.6))) : 0;
   const total = widths.reduce((sum, width) => sum + width, 0) + gutter * Math.max(0, packs.length - 1);
   let cursor = -total / 2;
   packs.forEach((pack, index) => {
+    if (!pack.units.length) return;
     const mid = cursor + widths[index] / 2;
     cursor += widths[index] + gutter;
     const gx = x + rx * mid;
@@ -433,11 +456,11 @@ export function moveSelected(store: EditStore, x: number, z: number) {
     if (pack.form) putFormation(pack.units, face, gx, gz);
     else shiftLoose(pack.units, face, gx, gz, Math.hypot(dx, dz) > 0.2);
   });
-  const formed = packs.filter((pack) => pack.form);
-  if (formed.length === 1 && packs.length === 1) store.note = `${teamLabel(formed[0].units[0].team)} takımı (${formed[0].units.length}) nizaya girdi.`;
-  else if (formed.length && !loose.length) store.note = `${formed.length} takım nizaya girdi.`;
-  else if (!formed.length) store.note = `${loose.length} asker konumlandı.`;
-  else store.note = "Takımlar nizaya girdi.";
+  const formed = packs.filter((pack) => pack.form && pack.units.length);
+  const skipped = picked.filter((unit) => unit.pinned).length;
+  if (formed.length === 1 && packs.length === 1) store.note = `${teamLabel(formed[0].units[0].team)} taşındı (${formed[0].units.length})${skipped ? ` · ${skipped} sabitli kaldı` : ""}.`;
+  else if (formed.length && packs.every((p) => p.form)) store.note = `${formed.length} takım taşındı.`;
+  else store.note = `${moving.length} seçili konumlandı${skipped ? ` · ${skipped} sabitli dokunulmadı` : ""}.`;
   store.bump();
 }
 
@@ -488,14 +511,24 @@ export function resetSlotOffsets(store: EditStore) {
   for (const unit of picked) {
     unit.slotOffR = 0;
     unit.slotOffF = 0;
+    unit.pinned = false;
     if (unit.team > 0) teams.add(unit.team);
   }
   for (const team of teams) {
     const mates = store.units.filter((u) => u.alive && u.team === team);
+    for (const unit of mates) {
+      if (store.selected.has(unit.id)) continue;
+      // Seçili değilse sabitli kalsın; seçililerin kilidi açıldı
+    }
     const center = centroid(mates);
-    putFormation(mates, faceAim(mates), center.x, center.z);
+    putFormation(
+      mates.filter((u) => store.selected.has(u.id) || !u.pinned),
+      faceAim(mates),
+      center.x,
+      center.z
+    );
   }
-  store.note = "Nizam sıfırlandı.";
+  store.note = "Seçili nizam/sabit sıfırlandı.";
   store.bump();
 }
 
@@ -507,7 +540,10 @@ export function setGround(store: EditStore, ground: GroundId) {
 
 export function setPlaceMode(store: EditStore, mode: PlaceMode) {
   store.placeMode = mode;
-  store.note = mode === "member" ? "Tek üye taşı: seçili takım üyesini yere tıkla." : "Takım taşı: tıklayınca bütün takım gider.";
+  store.note =
+    mode === "member"
+      ? "Üye taşı: seçtiklerin (1 veya grup) gider ve sabitlenir; nizam sıfırla ile çözülür."
+      : "Takım taşı: 1 seçiliyse takım (sabitliler hariç); birden fazla seçiliyse yalnız onlar.";
   store.bump();
 }
 
