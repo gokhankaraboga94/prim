@@ -29,7 +29,7 @@ type Gltf = Parameters<Parameters<GLTFLoader["load"]>[1]>[0];
 
 const MAN_H = 1.78;
 const CAR_LEN = 3.8;
-const BULLET_N = 16;
+const BULLET_N = 10;
 
 function loadGlb(loader: GLTFLoader, url: string) {
   const buf = preloadedGlb(url);
@@ -59,6 +59,10 @@ function toLambert(root: THREE.Object3D) {
     mesh.castShadow = false;
     mesh.receiveShadow = false;
     mesh.frustumCulled = true;
+    mesh.matrixAutoUpdate = true;
+    if (mesh.morphTargetInfluences) mesh.morphTargetInfluences.length = 0;
+    const skinned = mesh as THREE.SkinnedMesh;
+    if (skinned.isSkinnedMesh) skinned.frustumCulled = true;
   });
 }
 
@@ -281,7 +285,6 @@ export function MafyaBattle() {
   const men = useRef<Man[]>([]);
   const tracerRef = useRef<THREE.InstancedMesh>(null);
   const flashRef = useRef<THREE.InstancedMesh>(null);
-  const hitRef = useRef<THREE.InstancedMesh>(null);
   const shotsRef = useRef<MafyaShot[]>([]);
   const frameRef = useRef(0);
   const shotCursor = useRef(0);
@@ -366,21 +369,20 @@ export function MafyaBattle() {
   useFrame((_, dt) => {
     const t = mafyaT();
     const frame = ++frameRef.current;
-    const slice = frame % 6;
+    const slice = frame % 8;
     const capped = Math.min(0.05, dt);
 
-    // Animasyonları 6 kareye böl
-    for (let i = slice; i < men.current.length; i += 6) {
+    // Animasyonları 8 kareye böl
+    for (let i = slice; i < men.current.length; i += 8) {
       const man = men.current[i];
       if (!man.mix || !mafyaAlive(i, t) || !man.hold.visible) continue;
-      man.mix.update(capped * 6);
+      man.mix.update(capped * 8);
       if (slice === 0) pinRootMotion(man.scene);
     }
 
     const tracers = tracerRef.current;
     const flashes = flashRef.current;
-    const hits = hitRef.current;
-    if (!tracers || !flashes || !hits) return;
+    if (!tracers || !flashes) return;
 
     const shots = shotsRef.current;
     while (shotCursor.current < shots.length && t - shots[shotCursor.current].t0 > 0.45) {
@@ -407,7 +409,6 @@ export function MafyaBattle() {
         for (let i = 0; i < BULLET_N; i++) {
           tracers.setMatrixAt(i, dummy.matrix);
           flashes.setMatrixAt(i, dummy.matrix);
-          hits.setMatrixAt(i, dummy.matrix);
         }
         anyBullet = true;
       }
@@ -439,8 +440,8 @@ export function MafyaBattle() {
       slot++;
     }
 
-    // Aim 5 karede bir
-    const refreshAim = frame % 5 === 0;
+    // Aim 8 karede bir
+    const refreshAim = frame % 8 === 0;
     for (let i = 0; i < men.current.length; i++) {
       const man = men.current[i];
       const dead = !mafyaAlive(i, t);
@@ -466,27 +467,22 @@ export function MafyaBattle() {
     if (anyBullet) {
       tracers.instanceMatrix.needsUpdate = true;
       flashes.instanceMatrix.needsUpdate = true;
-      hits.instanceMatrix.needsUpdate = true;
     }
   });
 
   return (
     <group>
-      <ambientLight intensity={0.7} color="#e8eef6" />
-      <directionalLight position={[4, 8, 6]} intensity={1.2} color="#ffffff" />
+      <ambientLight intensity={0.85} color="#e8eef6" />
+      <directionalLight position={[4, 8, 6]} intensity={0.9} color="#ffffff" />
       <Ground />
       <group ref={host} />
-      <instancedMesh ref={tracerRef} args={[undefined, undefined, BULLET_N]} frustumCulled={false}>
+      <instancedMesh ref={tracerRef} args={[undefined, undefined, BULLET_N]} frustumCulled>
         <cylinderGeometry args={[1, 1, 1, 3]} />
         <meshBasicMaterial color="#ffe566" toneMapped={false} />
       </instancedMesh>
-      <instancedMesh ref={flashRef} args={[undefined, undefined, BULLET_N]} frustumCulled={false}>
+      <instancedMesh ref={flashRef} args={[undefined, undefined, BULLET_N]} frustumCulled>
         <sphereGeometry args={[1, 4, 4]} />
         <meshBasicMaterial color="#fff2a8" toneMapped={false} />
-      </instancedMesh>
-      <instancedMesh ref={hitRef} args={[undefined, undefined, BULLET_N]} frustumCulled={false}>
-        <sphereGeometry args={[1, 3, 3]} />
-        <meshBasicMaterial color="#ff7a3a" toneMapped={false} />
       </instancedMesh>
     </group>
   );

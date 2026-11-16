@@ -34,7 +34,7 @@ const BY_NUM: Record<number, { url: string; kind: MafyaKind }> = {
   12: { url: "/models/mafya/c03.glb", kind: "car" },
 };
 
-const SOLDIER_SCALE = 3;
+const SOLDIER_SCALE = 2;
 const T1_SOLDIER_MODELS = [2, 8, 9];
 const T2_SOLDIER_MODELS = [3, 4, 5, 7];
 /** Lider 1 → 10+12; lider 6 → yalnız 11. Sayı yarıya. */
