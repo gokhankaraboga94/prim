@@ -92,19 +92,25 @@ function findBone(root: THREE.Object3D, names: string[]): THREE.Object3D | null 
   return found;
 }
 
-function metal(color: string) {
-  return new THREE.MeshLambertMaterial({ color });
+function metal(color: string, metalness = 0.92, roughness = 0.28) {
+  return new THREE.MeshStandardMaterial({
+    color,
+    metalness,
+    roughness,
+    envMapIntensity: 1.2,
+  });
 }
 
 function makePistol() {
   const g = new THREE.Group();
   g.name = "mafyaPistol";
-  const dark = metal("#1a1c1f");
-  const grip = metal("#2a221c");
-  const slide = new THREE.Mesh(new THREE.BoxGeometry(0.045, 0.085, 0.18), dark);
+  const steel = metal("#c5ccd4", 0.95, 0.22);
+  const blue = metal("#8a949e", 0.9, 0.3);
+  const grip = metal("#3a322c", 0.35, 0.65);
+  const slide = new THREE.Mesh(new THREE.BoxGeometry(0.045, 0.085, 0.18), steel);
   slide.position.set(0, 0.02, 0.06);
   g.add(slide);
-  const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.1, 8), dark);
+  const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.1, 8), blue);
   barrel.rotation.x = Math.PI / 2;
   barrel.position.set(0, 0.028, 0.17);
   g.add(barrel);
@@ -121,10 +127,10 @@ function makePistol() {
 function makeM4() {
   const g = new THREE.Group();
   g.name = "mafyaM4";
-  const dark = metal("#17191c");
-  const body = metal("#22262b");
-  const stock = metal("#1c1814");
-  const receiver = new THREE.Mesh(new THREE.BoxGeometry(0.055, 0.075, 0.28), body);
+  const steel = metal("#b8c0c8", 0.94, 0.24);
+  const dark = metal("#6e767e", 0.88, 0.32);
+  const stock = metal("#4a4038", 0.4, 0.55);
+  const receiver = new THREE.Mesh(new THREE.BoxGeometry(0.055, 0.075, 0.28), steel);
   receiver.position.set(0, 0.02, 0.08);
   g.add(receiver);
   const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.014, 0.32, 8), dark);
@@ -134,7 +140,7 @@ function makeM4() {
   const handguard = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.055, 0.16), dark);
   handguard.position.set(0, 0.015, 0.2);
   g.add(handguard);
-  const mag = new THREE.Mesh(new THREE.BoxGeometry(0.035, 0.12, 0.05), dark);
+  const mag = new THREE.Mesh(new THREE.BoxGeometry(0.035, 0.12, 0.05), steel);
   mag.position.set(0, -0.06, 0.06);
   g.add(mag);
   const butt = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.07, 0.14), stock);
@@ -295,6 +301,9 @@ export function MafyaBattle() {
 
   return (
     <group>
+      <ambientLight intensity={0.55} color="#e8eef6" />
+      <directionalLight position={[4, 8, 6]} intensity={1.35} color="#ffffff" />
+      <directionalLight position={[-5, 3, 2]} intensity={0.55} color="#a8c4e8" />
       <Ground />
       <group ref={host} />
       <group visible={false}>{labels.map((n) => <group key={n} />)}</group>

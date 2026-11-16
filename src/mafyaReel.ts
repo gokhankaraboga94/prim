@@ -5,7 +5,7 @@
 export const MAFYA_ID = "mafya" as const;
 export type MafyaId = typeof MAFYA_ID;
 export const MAFYA_MODE = { id: MAFYA_ID, label: "mafya" } as const;
-export const MAFYA_SECONDS = 20;
+export const MAFYA_SECONDS = 40;
 
 export type MafyaKind = "man" | "car";
 export type MafyaEntry = { url: string; kind: MafyaKind; num: number };
@@ -91,26 +91,34 @@ export function mafyaFar() {
 }
 
 export function mafyaHaze() {
-  return { near: 40, far: 95 };
+  return { near: 18, far: 42 };
 }
 
 type Cam = { x: number; y: number; z: number; lx: number; ly: number; lz: number; fov: number };
 
-/** Tüm hattı (adam + araba) gören bakış. */
+function clamp01(u: number) {
+  return Math.max(0, Math.min(1, u));
+}
+function easeInOut(u: number) {
+  const x = clamp01(u);
+  return x * x * (3 - 2 * x);
+}
+
+/** Baştan sona yatay tarama — her model görünür. */
 export function mafyaCam(t: number): Cam {
-  const swing = Math.sin(t * 0.12) * 1.4;
-  let total = 0;
-  for (let k = 0; k < MAFYA_N; k++) {
-    total += MAFYA_ENTRIES[k].kind === "car" ? 4.2 : 1.55;
-  }
-  const half = total / 2;
+  const first = mafyaSpot(0);
+  const last = mafyaSpot(MAFYA_N - 1);
+  const u = easeInOut(clamp01(t / Math.max(0.01, MAFYA_SECONDS - 0.8)));
+  const lx = first.x + (last.x - first.x) * u;
+  const kind = MAFYA_ENTRIES[Math.min(MAFYA_N - 1, Math.floor(u * MAFYA_N))]?.kind ?? "man";
+  const dist = kind === "car" ? 6.2 : 4.4;
   return {
-    x: swing,
-    y: 3.6,
-    z: Math.max(12, half * 0.95 + 8),
-    lx: 0,
-    ly: 1.1,
+    x: lx,
+    y: kind === "car" ? 2.8 : 2.15,
+    z: dist,
+    lx,
+    ly: kind === "car" ? 1.15 : 1.05,
     lz: 0,
-    fov: 40,
+    fov: kind === "car" ? 42 : 36,
   };
 }
