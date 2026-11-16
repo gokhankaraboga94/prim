@@ -721,7 +721,7 @@ export function startBattle(store: EditStore) {
     return;
   }
   store.battle = true;
-  store.note = "Savaş başladı.";
+  store.note = "Savaş başladı — konuşlandıkları yerden ateş.";
   store.bump();
 }
 
@@ -789,50 +789,19 @@ export function stepUnits(store: EditStore, dt: number) {
       }
     }
     const foes = groups.get(foeTeam);
-    const foeCenter = centers.get(foeTeam);
-    if (!foes || !foeCenter) continue;
-    const face = Math.atan2(foeCenter.x - home.x, foeCenter.z - home.z);
-    const ordered = lineUp(members, face);
-    const gap = teamGap(ordered);
-    const { locals } = slotLocals(ordered.length, gap);
-    const { rx, rz, fx, fz } = basis(face);
-    let short = Infinity;
-    for (const unit of ordered) {
-      for (const enemy of foes) {
-        if (!enemy.alive) continue;
-        const dist = Math.hypot(enemy.x - unit.x, enemy.z - unit.z);
-        const reach = unit.radius + enemy.radius + 0.45;
-        short = Math.min(short, dist - reach);
-      }
-    }
-    const pace = ordered.reduce((min, unit) => Math.min(min, unit.speed), ordered[0].speed);
-    const advance = short > 0 ? Math.min(pace * step, short + 0.04) : 0;
-    const cx = home.x + fx * advance;
-    const cz = home.z + fz * advance;
-    ordered.forEach((unit, index) => {
-      if (!unit.alive) return;
+    if (!foes) continue;
+    for (const unit of members) {
+      if (!unit.alive) continue;
       if (unit.boltAge > 0) unit.boltAge = Math.max(0, unit.boltAge - step);
       const def = characterById(unit.model);
       const gun = Boolean(def?.gun);
       const car = def?.kind === "car";
-      const slot = locals[index];
-      const right = slot.right + unit.slotOffR;
-      const forward = slot.forward + unit.slotOffF;
-      const sx = cx + right * rx + forward * fx;
-      const sz = cz + right * rz + forward * fz;
-      unit.aimX = Math.sin(face);
-      unit.aimZ = Math.cos(face);
-      unit.yaw = face + unit.yawOffset;
 
-      // Sabitli üye veya araç: yerinde kalır, saldıramaz
-      if (unit.pinned || car) {
-        if (car && !unit.pinned) {
-          unit.x = clampMap(sx);
-          unit.z = clampMap(sz);
-        }
+      // Araç: yerinde kalır, saldıramaz
+      if (car) {
         unit.swing = 0;
         unit.cooldown = 1;
-        return;
+        continue;
       }
 
       let target: Unit | null = null;
@@ -853,16 +822,19 @@ export function stepUnits(store: EditStore, dt: number) {
         unit.aimZ = Math.cos(look);
         unit.yaw = look + unit.yawOffset;
       }
-      if (unit.speed > 0.05) {
-        const dx = sx - unit.x;
-        const dz = sz - unit.z;
-        const dist = Math.hypot(dx, dz);
-        if (dist > 0.03) {
-          const move = Math.min(dist, unit.speed * step);
-          unit.x = clampMap(unit.x + (dx / dist) * move);
-          unit.z = clampMap(unit.z + (dz / dist) * move);
+
+      // Üye taşı (pinned) veya silahlı: konuşlandırıldığı yerden ateş; nizam kaydırmaz
+      // Yalnızca sabitlenmemiş yakın dövüşçü hedefe yürür
+      if (!unit.pinned && !gun && target && unit.speed > 0.05) {
+        const meleeReach = unit.radius + target.radius + 0.45;
+        const dist = Math.hypot(target.x - unit.x, target.z - unit.z);
+        if (dist > meleeReach) {
+          const move = Math.min(dist - meleeReach + 0.02, unit.speed * step);
+          unit.x = clampMap(unit.x + unit.aimX * move);
+          unit.z = clampMap(unit.z + unit.aimZ * move);
         }
       }
+
       const meleeReach = target ? unit.radius + target.radius + 0.45 : 0;
       const gunReach = 18;
       const distTo = target ? Math.hypot(target.x - unit.x, target.z - unit.z) : 1e9;
@@ -890,14 +862,14 @@ export function stepUnits(store: EditStore, dt: number) {
           }
         }
       } else unit.swing = Math.max(0, unit.swing - step * 3);
-    });
+    }
   }
   for (let i = 0; i < store.units.length; i++) {
     const a = store.units[i];
-    if (!a.alive) continue;
+    if (!a.alive || a.pinned) continue;
     for (let j = i + 1; j < store.units.length; j++) {
       const b = store.units[j];
-      if (!b.alive || (a.team > 0 && a.team === b.team)) continue;
+      if (!b.alive || b.pinned || (a.team > 0 && a.team === b.team)) continue;
       const dx = b.x - a.x;
       const dz = b.z - a.z;
       const min = (a.radius + b.radius) * 0.82;
