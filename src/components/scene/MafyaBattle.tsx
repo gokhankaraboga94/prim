@@ -4,6 +4,7 @@ import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { clone as cloneSkinned } from "three/examples/jsm/utils/SkeletonUtils.js";
 import * as THREE from "three";
 import { preloadedGlb } from "../../arenaPreload";
+import { dropGroundSlab } from "../../groundSlab";
 import {
   MAFYA_ENTRIES,
   mafyaAlive,
@@ -38,6 +39,14 @@ function loadGlb(loader: GLTFLoader, url: string) {
   });
 }
 
+function stripModelSlab(root: THREE.Object3D) {
+  root.traverse((obj) => {
+    const mesh = obj as THREE.Mesh;
+    if (!mesh.isMesh || !mesh.geometry) return;
+    mesh.geometry = dropGroundSlab(mesh.geometry);
+  });
+}
+
 function toLambert(root: THREE.Object3D) {
   root.traverse((obj) => {
     const mesh = obj as THREE.Mesh;
@@ -59,11 +68,21 @@ function fitMan(root: THREE.Object3D) {
   const span = Math.max(0.001, box.max.y - box.min.y);
   const scale = MAN_H / span;
   root.scale.setScalar(scale);
-  root.position.set(
-    -((box.min.x + box.max.x) / 2) * scale,
-    -box.min.y * scale,
-    -((box.min.z + box.max.z) / 2) * scale
-  );
+  root.updateMatrixWorld(true);
+  const box2 = new THREE.Box3().setFromObject(root);
+  root.position.x += -((box2.min.x + box2.max.x) / 2);
+  root.position.y += -box2.min.y;
+  root.position.z += -((box2.min.z + box2.max.z) / 2);
+}
+
+const _footBox = new THREE.Box3();
+
+/** Ayakları hold zemini olan y=0'a bas. */
+function plantFeet(scene: THREE.Object3D, hold: THREE.Object3D) {
+  hold.updateMatrixWorld(true);
+  _footBox.setFromObject(scene);
+  const dy = hold.position.y - _footBox.min.y;
+  if (Math.abs(dy) > 1e-4) scene.position.y += dy;
 }
 
 function fitCar(root: THREE.Object3D) {
@@ -203,13 +222,12 @@ function pickFireClip(clips: THREE.AnimationClip[]) {
   return null;
 }
 
-/** Animasyon kök hareketini ve kalça yaw'ını kilitle — hold yönü bozulmasın. */
-function lockHips(root: THREE.Object3D) {
+/** Sadece kök kaymayı kes — kalça rotasyonuna dokunma (duruş bozulmasın). */
+function pinRootMotion(root: THREE.Object3D) {
   const hips = findBone(root, ["mixamorig:Hips", "Hips", "mixamorig_Hips"]);
   if (!hips) return;
   hips.position.x = 0;
   hips.position.z = 0;
-  hips.rotation.y = 0;
 }
 
 function numberSprite(n: number, kind: MafyaKind) {
@@ -263,10 +281,20 @@ const _quat = new THREE.Quaternion();
 
 function Ground() {
   return (
-    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.01, 0]} receiveShadow={false}>
-      <planeGeometry args={[64, 40]} />
-      <meshLambertMaterial color="#2a3038" />
-    </mesh>
+    <group>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.04, 0]} receiveShadow={false}>
+        <planeGeometry args={[72, 48]} />
+        <meshLambertMaterial color="#1c222a" />
+      </mesh>
+      <mesh position={[0, -0.08, 0]} receiveShadow={false}>
+        <boxGeometry args={[22, 0.16, 18]} />
+        <meshLambertMaterial color="#3a424c" />
+      </mesh>
+      <mesh position={[0, 0.01, 0]} receiveShadow={false}>
+        <boxGeometry args={[20.5, 0.04, 16.5]} />
+        <meshLambertMaterial color="#4a5560" />
+      </mesh>
+    </group>
   );
 }
 
@@ -304,6 +332,10 @@ export function MafyaBattle() {
         const loaded = await Promise.all(uniqueUrls.map((url) => loadGlb(loader, url)));
         if (drop || !host.current) return;
         const byUrl = new Map(uniqueUrls.map((url, i) => [url, loaded[i]]));
+        for (const gltf of loaded) {
+          stripModelSlab(gltf.scene);
+          toLambert(gltf.scene);
+        }
 
         const root = host.current;
         root.clear();
@@ -318,7 +350,6 @@ export function MafyaBattle() {
           const scene = cloneSkinned(src.scene) as THREE.Group;
           const clips = src.animations;
 
-          toLambert(scene);
           if (entry.kind === "car") fitCar(scene);
           else fitMan(scene);
 
@@ -334,7 +365,7 @@ export function MafyaBattle() {
           hold.rotation.order = "YXZ";
           hold.rotation.y = spot.yaw;
           hold.add(scene);
-          if (entry.role !== "soldier") hold.add(numberSprite(entry.num, entry.kind));
+          hold.add(numberSprite(i + 1, entry.kind));
           root.add(hold);
 
           let mix: THREE.AnimationMixer | null = null;
@@ -344,10 +375,12 @@ export function MafyaBattle() {
             if (clip) {
               const action = mix.clipAction(clip);
               action.setLoop(THREE.LoopRepeat, Infinity);
-              // koşarken clip'inde adım hissini kıs
-              action.timeScale = /koş|kos|run/i.test(clip.name) ? 0.55 : 1;
+              action.timeScale = /koş|kos|run/i.test(clip.name) ? 0.45 : 1;
               action.play();
             }
+            mix.update(0);
+            pinRootMotion(scene);
+            plantFeet(scene, hold);
           }
           men.current.push({ mix, hold, scene, muzzle, team: entry.team, kind: entry.kind });
         }
@@ -371,7 +404,7 @@ export function MafyaBattle() {
       const man = men.current[i];
       if (!mafyaAlive(i, t)) continue;
       man.mix?.update(dt);
-      lockHips(man.scene);
+      pinRootMotion(man.scene);
     }
 
     const tracers = tracerRef.current;
@@ -446,7 +479,7 @@ export function MafyaBattle() {
       const man = men.current[i];
       const spot = mafyaSpot(i, t);
       const aim = mafyaAimTarget(i, t);
-      const yaw = mafyaYawTo(i, aim);
+      const yaw = mafyaYawTo(i, aim, t);
       const dead = !mafyaAlive(i, t);
       const die = mafyaDieAt(i);
       const fall = dead ? Math.min(1, (t - die) / 0.55) : 0;
@@ -466,12 +499,13 @@ export function MafyaBattle() {
         for (const shot of shots) {
           if (shot.fromI !== i) continue;
           const local = t - shot.t0;
-          if (local >= 0 && local < 0.1) kick = Math.max(kick, (1 - local / 0.1) * 0.03);
+          if (local >= 0 && local < 0.1) kick = Math.max(kick, (1 - local / 0.1) * 0.025);
         }
       }
       const backX = Math.sin(yaw) * -kick;
       const backZ = Math.cos(yaw) * -kick;
-      man.hold.position.set(spot.x + backX, fall * 0.15, spot.z + backZ);
+      man.hold.position.set(spot.x + backX, fall * 0.12, spot.z + backZ);
+      if (!dead) plantFeet(man.scene, man.hold);
     }
 
     tracers.instanceMatrix.needsUpdate = true;

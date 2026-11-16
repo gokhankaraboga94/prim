@@ -198,33 +198,53 @@ export function mafyaNearestFoe(fromI: number, t = 0): number {
 /** Ateş ettiği hedef varsa ona, yoksa en yakın rakibe bak. */
 export function mafyaAimTarget(fromI: number, t = 0): number {
   const c = ensureCombat();
-  // aktif atışın hedefi
   for (let s = c.shots.length - 1; s >= 0; s--) {
     const shot = c.shots[s];
     if (shot.fromI !== fromI) continue;
-    if (t >= shot.t0 - 0.08 && t <= shot.t0 + shot.dur + 0.25) return shot.toI;
+    // Ateş öncesi/sonrası da o rakibe dönük kalsın
+    if (t >= shot.t0 - 0.35 && t <= shot.t0 + shot.dur + 0.55) return shot.toI;
   }
   return mafyaNearestFoe(fromI, t);
 }
 
-/**
- * Mixamo gövdesi +Z bakıyor. Hedefe yaw = atan2(dx, dz).
- * Bazı Tripo sahneleri -Z; model köküne +PI eklenmez — hold yaw yeterli.
- */
-export function mafyaYawTo(fromI: number, toI: number): number {
-  const a = mafyaPos(fromI);
-  if (toI < 0) {
-    const e = MAFYA_ENTRIES[fromI];
-    return e?.team === 1 ? 0 : Math.PI;
+/** Karşı takımın canlı ortasına bak (yan bakmayı azaltır). */
+function mafyaEnemyCenter(fromI: number, t: number): { x: number; z: number } {
+  const from = MAFYA_ENTRIES[fromI];
+  const c = ensureCombat();
+  let sx = 0;
+  let sz = 0;
+  let n = 0;
+  for (let j = 0; j < MAFYA_N; j++) {
+    const to = MAFYA_ENTRIES[j];
+    if (!from || !to || to.team === from.team || to.kind !== "man") continue;
+    if (t >= c.dieAt[j]) continue;
+    const b = mafyaPos(j);
+    sx += b.x;
+    sz += b.z;
+    n += 1;
   }
-  const b = mafyaPos(toI);
-  return Math.atan2(b.x - a.x, b.z - a.z);
+  if (n > 0) return { x: sx / n, z: sz / n };
+  return { x: 0, z: from?.team === 1 ? 4 : -4 };
+}
+
+/**
+ * Mixamo +Z ileri. Hedefe yaw = atan2(dx, dz).
+ * Ateş anında doğrudan hedef; değilse rakip grubunun ortası.
+ */
+export function mafyaYawTo(fromI: number, toI: number, t = 0): number {
+  const a = mafyaPos(fromI);
+  if (toI >= 0) {
+    const b = mafyaPos(toI);
+    return Math.atan2(b.x - a.x, b.z - a.z);
+  }
+  const mid = mafyaEnemyCenter(fromI, t);
+  return Math.atan2(mid.x - a.x, mid.z - a.z);
 }
 
 export function mafyaSpot(i: number, t = 0): Spot {
   const a = mafyaPos(i);
   const foe = mafyaAimTarget(i, t);
-  return { x: a.x, z: a.z, yaw: mafyaYawTo(i, foe) };
+  return { x: a.x, z: a.z, yaw: mafyaYawTo(i, foe, t) };
 }
 
 export function mafyaDieAt(i: number) {
