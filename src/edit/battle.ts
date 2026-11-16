@@ -811,27 +811,46 @@ function shiftLoose(units: Unit[], face: number, cx: number, cz: number, turn: b
 export function selectNearby(store: EditStore, id: number, additive: boolean) {
   const seed = store.byId.get(id);
   if (!seed || !seed.alive) return;
-  const same = store.units.filter((unit) => unit.alive && unit.model === seed.model);
-  const reach = Math.max(2.6, seed.radius * 3.6);
-  const reach2 = reach * reach;
-  const chosen = new Set<number>([seed.id]);
-  const queue = [seed];
-  while (queue.length) {
-    const current = queue.pop();
-    if (!current) break;
-    for (const other of same) {
-      if (chosen.has(other.id)) continue;
-      const dx = other.x - current.x;
-      const dz = other.z - current.z;
-      if (dx * dx + dz * dz > reach2) continue;
-      chosen.add(other.id);
-      queue.push(other);
+  const label = characterById(seed.model)?.label ?? "asker";
+  const chosen = new Set<number>();
+
+  if (seed.team <= 0) {
+    // Takımsız: aynı modelin tüm takımsızları (10 eklediysen 10'u)
+    for (const unit of store.units) {
+      if (!unit.alive || unit.model !== seed.model || unit.team > 0) continue;
+      chosen.add(unit.id);
+    }
+  } else {
+    // Takımlı: aynı model + aynı takım, yakın küme
+    const same = store.units.filter((unit) => unit.alive && unit.model === seed.model && unit.team === seed.team);
+    const reach = Math.max(2.6, seed.radius * 3.6);
+    const reach2 = reach * reach;
+    chosen.add(seed.id);
+    const queue = [seed];
+    while (queue.length) {
+      const current = queue.pop();
+      if (!current) break;
+      for (const other of same) {
+        if (chosen.has(other.id)) continue;
+        const dx = other.x - current.x;
+        const dz = other.z - current.z;
+        if (dx * dx + dz * dz > reach2) continue;
+        chosen.add(other.id);
+        queue.push(other);
+      }
     }
   }
+
   if (!additive) store.selected.clear();
   for (const pick of chosen) store.selected.add(pick);
-  const label = characterById(seed.model)?.label ?? "asker";
-  store.note = chosen.size > 1 ? `${chosen.size} yakın ${label} seçildi.` : `${store.selected.size} asker seçili. Yere tıklayınca oraya gider.`;
+  store.note =
+    seed.team <= 0
+      ? chosen.size > 1
+        ? `${chosen.size} takımsız ${label} seçildi. Takım olsun.`
+        : `1 ${label} seçili.`
+      : chosen.size > 1
+        ? `${chosen.size} yakın ${label} seçildi.`
+        : `${store.selected.size} asker seçili. Yere tıklayınca oraya gider.`;
   store.bump();
 }
 
