@@ -565,6 +565,17 @@ export function EditPage() {
 
       <div className="edit-stage">
         {recording && recordMode === "reel" && <div className="edit-reel-frame" aria-hidden="true" />}
+        {recording && recordMode === "map" && (
+          <div className="edit-fs-hud" role="toolbar" aria-label="Tam ekran kontroller">
+            <button type="button" className="edit-vs" onClick={() => startBattle(store)}>
+              {store.battle ? "Savaşı durdur" : "VS"}
+            </button>
+            <button type="button" className="edit-rec on" onClick={() => toggleRecord("map")}>
+              Kaydı durdur
+            </button>
+            <span className="edit-fs-hint">WASD / Ok · Q-E · R-F · +/-</span>
+          </div>
+        )}
         {(tab === "chars" || tab === "mafya") && (
           <section className="edit-roster" aria-label={tab === "mafya" ? "Karakterler2" : "Karakter listesi"}>
             {rosterList.map((def) => {

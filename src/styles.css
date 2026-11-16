@@ -1374,6 +1374,39 @@ body.edit-route .seo-doc {
   container-type: size;
 }
 
+.edit-fs-hud {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  z-index: 6;
+  transform: translateX(-50%);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  background: rgba(10, 12, 16, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(6px);
+  pointer-events: auto;
+}
+
+.edit-fs-hud .edit-vs,
+.edit-fs-hud .edit-rec {
+  min-height: 36px;
+  padding: 8px 14px;
+  font-weight: 700;
+}
+
+.edit-fs-hint {
+  color: rgba(230, 230, 230, 0.75);
+  font-size: 12px;
+  padding: 0 6px;
+  white-space: nowrap;
+}
+
 .edit-reel-frame {
   position: absolute;
   left: 50%;
