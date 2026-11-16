@@ -735,7 +735,7 @@ function removeGone(store: EditStore) {
   store.nameStamp += 1;
 }
 
-const FALL_SECONDS = 0.9;
+const FALL_SECONDS = 1.8;
 
 /** A struck soldier pitches forward and sinks before the slot closes. Runs with or without a battle. */
 function advanceFalls(store: EditStore, step: number) {
