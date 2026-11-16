@@ -11,16 +11,19 @@ import {
   mafyaGunFor,
   mafyaMarkReady,
   mafyaReset,
+  mafyaShots,
   mafyaSpot,
   mafyaT,
   type MafyaGun,
   type MafyaKind,
+  type MafyaShot,
 } from "../../mafyaReel";
 
 type Gltf = Parameters<Parameters<GLTFLoader["load"]>[1]>[0];
 
 const MAN_H = 1.78;
-const CAR_LEN = 5.6;
+const CAR_LEN = 4.4;
+const BULLET_N = 48;
 
 function loadGlb(loader: GLTFLoader, url: string) {
   const buf = preloadedGlb(url);
@@ -118,6 +121,11 @@ function makePistol() {
   handle.position.set(0, -0.04, 0.02);
   handle.rotation.x = 0.18;
   g.add(handle);
+  // namlu ucu marker
+  const tip = new THREE.Object3D();
+  tip.name = "muzzle";
+  tip.position.set(0, 0.028, 0.22);
+  g.add(tip);
   g.rotation.set(-Math.PI / 2, 0, Math.PI / 2);
   g.position.set(0.02, 0.06, 0.04);
   g.scale.setScalar(1.05);
@@ -150,9 +158,12 @@ function makeM4() {
   grip.position.set(0, -0.05, 0.0);
   grip.rotation.x = 0.25;
   g.add(grip);
+  const tip = new THREE.Object3D();
+  tip.name = "muzzle";
+  tip.position.set(0, 0.03, 0.48);
+  g.add(tip);
   g.rotation.set(-Math.PI / 2, 0, Math.PI / 2);
   g.position.set(0.03, 0.08, 0.05);
-  // 1 numaradaki M4 uzundu — tüm M4'ler %20 küçültüldü
   g.scale.setScalar(1.15 * 0.8);
   return g;
 }
@@ -161,9 +172,10 @@ function attachGun(root: THREE.Object3D, kind: MafyaGun) {
   const hand =
     findBone(root, ["mixamorig:RightHand", "RightHand", "mixamorig_RightHand"]) ??
     findBone(root, ["mixamorig:LeftHand", "LeftHand"]);
-  if (!hand) return;
+  if (!hand) return null;
   const gun = kind === "m4" ? makeM4() : makePistol();
   hand.add(gun);
+  return gun;
 }
 
 function pickFireClip(clips: THREE.AnimationClip[]) {
@@ -202,18 +214,31 @@ function numberSprite(n: number, kind: MafyaKind) {
   tex.minFilter = THREE.LinearFilter;
   const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false, toneMapped: false });
   const spr = new THREE.Sprite(mat);
-  spr.scale.set(kind === "car" ? 1.1 : 0.55, kind === "car" ? 1.1 : 0.55, 1);
-  spr.position.set(0, kind === "car" ? 3.4 : 2.15, 0);
+  spr.scale.set(kind === "car" ? 0.95 : 0.55, kind === "car" ? 0.95 : 0.55, 1);
+  spr.position.set(0, kind === "car" ? 2.8 : 2.15, 0);
   spr.renderOrder = 50;
   return spr;
 }
 
-type Man = { mix: THREE.AnimationMixer | null; hold: THREE.Group };
+type Man = {
+  mix: THREE.AnimationMixer | null;
+  hold: THREE.Group;
+  muzzle: THREE.Object3D | null;
+  team: 1 | 2;
+  kind: MafyaKind;
+  baseZ: number;
+};
+
+const _muzzle = new THREE.Vector3();
+const _target = new THREE.Vector3();
+const _mid = new THREE.Vector3();
+const _dir = new THREE.Vector3();
+const dummy = new THREE.Object3D();
 
 function Ground() {
   return (
     <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.01, 0]} receiveShadow={false}>
-      <planeGeometry args={[64, 22]} />
+      <planeGeometry args={[48, 28]} />
       <meshLambertMaterial color="#2a3038" />
     </mesh>
   );
@@ -238,6 +263,11 @@ export function MafyaCam() {
 export function MafyaBattle() {
   const host = useRef<THREE.Group>(null);
   const men = useRef<Man[]>([]);
+  const tracerRef = useRef<THREE.InstancedMesh>(null);
+  const flashRef = useRef<THREE.InstancedMesh>(null);
+  const hitRef = useRef<THREE.InstancedMesh>(null);
+  const shots = useMemo(() => mafyaShots(), []);
+  const shotCursor = useRef(0);
 
   useEffect(() => {
     mafyaReset();
@@ -250,6 +280,7 @@ export function MafyaBattle() {
         const root = host.current;
         root.clear();
         men.current = [];
+        shotCursor.current = 0;
 
         for (let i = 0; i < files.length; i++) {
           const entry = MAFYA_ENTRIES[i];
@@ -258,7 +289,11 @@ export function MafyaBattle() {
           if (entry.kind === "car") fitCar(file.scene);
           else fitMan(file.scene);
 
-          if (entry.kind === "man") attachGun(file.scene, mafyaGunFor(entry.num));
+          let muzzle: THREE.Object3D | null = null;
+          if (entry.kind === "man") {
+            const gun = attachGun(file.scene, mafyaGunFor(entry.num));
+            muzzle = gun?.getObjectByName("muzzle") ?? gun;
+          }
 
           const hold = new THREE.Group();
           const spot = mafyaSpot(i);
@@ -278,7 +313,7 @@ export function MafyaBattle() {
               action.play();
             }
           }
-          men.current.push({ mix, hold });
+          men.current.push({ mix, hold, muzzle, team: entry.team, kind: entry.kind, baseZ: spot.z });
         }
         if (!drop) mafyaMarkReady();
       } catch (err) {
@@ -296,6 +331,85 @@ export function MafyaBattle() {
 
   useFrame((_, dt) => {
     for (const man of men.current) man.mix?.update(dt);
+    const t = mafyaT();
+    const tracers = tracerRef.current;
+    const flashes = flashRef.current;
+    const hits = hitRef.current;
+    if (!tracers || !flashes || !hits) return;
+
+    // hide all
+    dummy.scale.setScalar(0.001);
+    dummy.position.set(0, -20, 0);
+    dummy.updateMatrix();
+    for (let i = 0; i < BULLET_N; i++) {
+      tracers.setMatrixAt(i, dummy.matrix);
+      flashes.setMatrixAt(i, dummy.matrix);
+      hits.setMatrixAt(i, dummy.matrix);
+    }
+
+    let slot = 0;
+    for (const shot of shots) {
+      if (slot >= BULLET_N) break;
+      const local = t - shot.t0;
+      if (local < -0.02 || local > shot.dur + 0.12) continue;
+
+      const from = men.current[shot.fromI];
+      const to = men.current[shot.toI];
+      if (!from || !to) continue;
+
+      if (from.muzzle) from.muzzle.getWorldPosition(_muzzle);
+      else _muzzle.set(from.hold.position.x, 1.35, from.hold.position.z);
+      _target.set(to.hold.position.x, 1.25, to.hold.position.z);
+
+      // muzzle flash
+      if (local >= 0 && local < 0.08) {
+        dummy.position.copy(_muzzle);
+        dummy.scale.setScalar(0.18 + local * 2);
+        dummy.rotation.set(0, t * 20, 0);
+        dummy.updateMatrix();
+        flashes.setMatrixAt(slot, dummy.matrix);
+      }
+
+      // tracer
+      const u = Math.max(0, Math.min(1, local / shot.dur));
+      _mid.lerpVectors(_muzzle, _target, u);
+      _dir.subVectors(_target, _muzzle);
+      const len = _dir.length() || 1;
+      dummy.position.copy(_mid);
+      dummy.scale.set(0.04, 0.04, Math.min(0.85, len * 0.12));
+      dummy.lookAt(_target);
+      dummy.rotateX(Math.PI / 2);
+      dummy.updateMatrix();
+      tracers.setMatrixAt(slot, dummy.matrix);
+
+      // hit spark
+      if (u > 0.92) {
+        dummy.position.copy(_target);
+        dummy.scale.setScalar(0.22 * (1 - (u - 0.92) / 0.08));
+        dummy.rotation.set(t * 8, t * 11, 0);
+        dummy.updateMatrix();
+        hits.setMatrixAt(slot, dummy.matrix);
+      }
+
+      slot++;
+    }
+
+    // ateş anında hafif geri tepme (birikmesin)
+    for (let i = 0; i < men.current.length; i++) {
+      const man = men.current[i];
+      if (man.kind !== "man") continue;
+      let kick = 0;
+      for (const shot of shots) {
+        if (shot.fromI !== i) continue;
+        const local = t - shot.t0;
+        if (local >= 0 && local < 0.1) kick = Math.max(kick, (1 - local / 0.1) * 0.04);
+      }
+      man.hold.position.z = man.baseZ + (man.team === 1 ? -kick : kick);
+    }
+
+    tracers.instanceMatrix.needsUpdate = true;
+    flashes.instanceMatrix.needsUpdate = true;
+    hits.instanceMatrix.needsUpdate = true;
   });
 
   const labels = useMemo(() => MAFYA_ENTRIES.map((e) => e.num), []);
@@ -307,6 +421,18 @@ export function MafyaBattle() {
       <directionalLight position={[-5, 3, 2]} intensity={0.55} color="#a8c4e8" />
       <Ground />
       <group ref={host} />
+      <instancedMesh ref={tracerRef} args={[undefined, undefined, BULLET_N]} frustumCulled={false}>
+        <cylinderGeometry args={[1, 1, 1, 6]} />
+        <meshBasicMaterial color="#ffe566" toneMapped={false} />
+      </instancedMesh>
+      <instancedMesh ref={flashRef} args={[undefined, undefined, BULLET_N]} frustumCulled={false}>
+        <sphereGeometry args={[1, 8, 8]} />
+        <meshBasicMaterial color="#fff2a8" toneMapped={false} transparent opacity={0.9} />
+      </instancedMesh>
+      <instancedMesh ref={hitRef} args={[undefined, undefined, BULLET_N]} frustumCulled={false}>
+        <sphereGeometry args={[1, 6, 6]} />
+        <meshBasicMaterial color="#ff7a3a" toneMapped={false} transparent opacity={0.85} />
+      </instancedMesh>
       <group visible={false}>{labels.map((n) => <group key={n} />)}</group>
     </group>
   );

@@ -2021,7 +2021,7 @@ export function AdminPage() {
           )}
           {isMafya(reelShot) && (
             <p className="muted">
-              {MAFYA_SECONDS}s · iki takım karşı karşıya. T1: lider1 + 2/8/9 + araç10/12. T2: lider6 + 3/4/5/7 + araç11. M4 %20 küçük.
+              {MAFYA_SECONDS}s · iki takım karşı karşıya, karşılıklı ateş/mermi. Yüksek kamera tüm sahneyi gösterir.
             </p>
           )}
           {isD14112026(reelShot) && (

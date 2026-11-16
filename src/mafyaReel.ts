@@ -1,5 +1,5 @@
 /**
- * mafya — iki takım karşı karşıya.
+ * mafya — iki takım karşı karşıya, karşılıklı ateş.
  * Takım1: lider 1, asker 2-8-9, araç 10-12
  * Takım2: lider 6, asker 3-4-5-7, araç 11
  */
@@ -33,7 +33,6 @@ const BY_NUM: Record<number, { url: string; kind: MafyaKind }> = {
   12: { url: "/models/mafya/c03.glb", kind: "car" },
 };
 
-/** Takım1 mafya / Takım2 karşı. */
 export const MAFYA_ENTRIES: readonly MafyaEntry[] = [
   { ...BY_NUM[1], num: 1, team: 1, role: "leader" },
   { ...BY_NUM[2], num: 2, team: 1, role: "soldier" },
@@ -52,10 +51,8 @@ export const MAFYA_ENTRIES: readonly MafyaEntry[] = [
 export const MAFYA_N = MAFYA_ENTRIES.length;
 export const MAFYA_URLS = MAFYA_ENTRIES.map((e) => e.url);
 
-/** pistol | m4 — 1 ve aynı M4’lü modeller. */
 export type MafyaGun = "pistol" | "m4";
 
-/** Eski hatta 1 (index0) M4 alıyordu; aynı silah çift index’lerde. Num bazlı: 1,3,5,7,9 → M4. */
 export function mafyaGunFor(num: number): MafyaGun {
   return num % 2 === 1 ? "m4" : "pistol";
 }
@@ -96,121 +93,81 @@ export function mafyaReset() {
 
 type Spot = { x: number; z: number; yaw: number };
 
-/**
- * Takım1 −Z tarafı (yüzü +Z), Takım2 +Z tarafı (yüzü −Z).
- * Lider önde, askerler yanında, araçlar geride.
- */
+/** Daha sıkı kadro — kamera hepsini görsün. */
 export function mafyaSpot(i: number): Spot {
   const e = MAFYA_ENTRIES[i];
   if (!e) return { x: 0, z: 0, yaw: 0 };
 
   if (e.team === 1) {
-    // yüz +Z → yaw 0
-    if (e.role === "leader") return { x: 0, z: -4.2, yaw: 0 };
+    if (e.role === "leader") return { x: 0, z: -3.2, yaw: 0 };
     if (e.role === "soldier") {
       const order = [2, 8, 9];
       const k = Math.max(0, order.indexOf(e.num));
-      const xs = [-2.4, 0, 2.4];
-      return { x: xs[k] ?? 0, z: -6.0, yaw: 0 };
+      const xs = [-2.0, 0, 2.0];
+      return { x: xs[k] ?? 0, z: -4.6, yaw: 0 };
     }
-    // cars
-    return { x: e.num === 10 ? -5.2 : 5.2, z: -9.2, yaw: 0 };
+    return { x: e.num === 10 ? -4.4 : 4.4, z: -7.0, yaw: 0 };
   }
 
-  // team 2 — yüz −Z → yaw PI
-  if (e.role === "leader") return { x: 0, z: 4.2, yaw: Math.PI };
+  if (e.role === "leader") return { x: 0, z: 3.2, yaw: Math.PI };
   if (e.role === "soldier") {
     const order = [3, 4, 5, 7];
     const k = Math.max(0, order.indexOf(e.num));
-    const xs = [-3.2, -1.1, 1.1, 3.2];
-    return { x: xs[k] ?? 0, z: 6.0, yaw: Math.PI };
+    const xs = [-2.7, -0.9, 0.9, 2.7];
+    return { x: xs[k] ?? 0, z: 4.6, yaw: Math.PI };
   }
-  return { x: 0, z: 9.4, yaw: Math.PI };
+  return { x: 0, z: 7.2, yaw: Math.PI };
 }
 
 export function mafyaFar() {
-  return 140;
+  return 160;
 }
 
 export function mafyaHaze() {
-  return { near: 22, far: 55 };
+  return { near: 35, far: 70 };
 }
 
 type Cam = { x: number; y: number; z: number; lx: number; ly: number; lz: number; fov: number };
 
-function clamp01(u: number) {
-  return Math.max(0, Math.min(1, u));
-}
-function easeInOut(u: number) {
-  const x = clamp01(u);
-  return x * x * (3 - 2 * x);
-}
-function lerp(a: number, b: number, u: number) {
-  return a + (b - a) * u;
-}
-
-/** Geniş açılış → takım1 → karşılaşma → takım2 → geniş kapanış. */
+/** Yüksek yan bakış — tüm sahne sürekli kadroda, yavaş döner. */
 export function mafyaCam(t: number): Cam {
-  const u = clamp01(t / Math.max(0.01, MAFYA_SECONDS - 0.6));
-  const a = mafyaSpot(0); // lider1
-  const b = mafyaSpot(6); // lider6 (index in ENTRIES)
-
-  if (u < 0.18) {
-    const p = easeInOut(u / 0.18);
-    return {
-      x: lerp(0, 0, p),
-      y: lerp(9.5, 7.5, p),
-      z: lerp(0.2, 0.2, p),
-      lx: 0,
-      ly: 1.1,
-      lz: 0,
-      fov: lerp(48, 42, p),
-    };
-  }
-  if (u < 0.4) {
-    const p = easeInOut((u - 0.18) / 0.22);
-    return {
-      x: lerp(0, a.x - 1.2, p),
-      y: lerp(7.5, 2.3, p),
-      z: lerp(0.2, a.z + 5.2, p),
-      lx: lerp(0, a.x, p),
-      ly: 1.15,
-      lz: lerp(0, a.z, p),
-      fov: lerp(42, 36, p),
-    };
-  }
-  if (u < 0.55) {
-    const p = easeInOut((u - 0.4) / 0.15);
-    return {
-      x: lerp(a.x - 1.2, 8.5, p),
-      y: lerp(2.3, 5.2, p),
-      z: lerp(a.z + 5.2, 0.5, p),
-      lx: 0,
-      ly: 1.2,
-      lz: 0,
-      fov: lerp(36, 40, p),
-    };
-  }
-  if (u < 0.78) {
-    const p = easeInOut((u - 0.55) / 0.23);
-    return {
-      x: lerp(8.5, b.x + 1.2, p),
-      y: lerp(5.2, 2.3, p),
-      z: lerp(0.5, b.z - 5.2, p),
-      lx: lerp(0, b.x, p),
-      ly: 1.15,
-      lz: lerp(0, b.z, p),
-      fov: lerp(40, 36, p),
-    };
-  }
-  const p = easeInOut((u - 0.78) / 0.22);
+  const ang = -0.55 + Math.sin(t * 0.09) * 0.35;
+  const r = 16.5;
   return {
-    x: lerp(b.x + 1.2, 0, p),
-    y: lerp(2.3, 8.8, p),
-    z: lerp(b.z - 5.2, 0.2, p),
+    x: Math.sin(ang) * r,
+    y: 12.5,
+    z: Math.cos(ang) * r * 0.35,
     lx: 0,
-    ly: 1.1,
+    ly: 1.0,
     lz: 0,
-    fov: lerp(36, 46, p),
+    fov: 42,
   };
+}
+
+/** Ateş: her adam karşı takımdan bir hedefe mermi. */
+export type MafyaShot = {
+  fromI: number;
+  toI: number;
+  t0: number;
+  dur: number;
+};
+
+export function mafyaShots(): MafyaShot[] {
+  const men = MAFYA_ENTRIES.map((e, i) => ({ e, i })).filter((x) => x.e.kind === "man");
+  const t1 = men.filter((x) => x.e.team === 1);
+  const t2 = men.filter((x) => x.e.team === 2);
+  const out: MafyaShot[] = [];
+  let t = 0.6;
+  while (t < MAFYA_SECONDS - 0.8) {
+    for (const shooter of t1) {
+      const foe = t2[Math.floor((t * 7 + shooter.i * 3) % t2.length)];
+      out.push({ fromI: shooter.i, toI: foe.i, t0: t + (shooter.i % 5) * 0.05, dur: 0.28 });
+    }
+    for (const shooter of t2) {
+      const foe = t1[Math.floor((t * 5 + shooter.i * 2) % t1.length)];
+      out.push({ fromI: shooter.i, toI: foe.i, t0: t + 0.12 + (shooter.i % 5) * 0.05, dur: 0.28 });
+    }
+    t += 0.55;
+  }
+  return out;
 }
