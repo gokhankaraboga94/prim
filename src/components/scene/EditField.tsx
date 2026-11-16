@@ -731,8 +731,8 @@ function EditRig({ store, assets }: { store: EditStore; assets: Record<string, C
 
     const ring = rings.current;
     if (ring) {
-      // VS'te halka yok (mermi kalsın). Araç halkası yalnız seçiliyken.
-      if (store.battle) {
+      // VS / Kayıt2: halka yok. Araç halkası yalnız seçiliyken.
+      if (store.battle || store.recordMode === "map") {
         ring.count = 0;
       } else {
         const shown = store.units
@@ -766,7 +766,8 @@ function EditRig({ store, assets }: { store: EditStore; assets: Record<string, C
 
     const bar = bars.current;
     if (bar) {
-      if (!store.battle) {
+      // VS veya Kayıt2: sağlık barı
+      if (!store.battle && store.recordMode !== "map") {
         bar.count = 0;
       } else {
         const shown = store.units.filter((unit) => unit.alive && unit.team > 0).slice(0, 4096);
