@@ -12,6 +12,7 @@ import {
   createStore,
   hasSavedScene,
   loadScene,
+  peekSavedModels,
   nudgeSelected,
   removeSelected,
   resetSlotOffsets,
@@ -123,7 +124,7 @@ export function EditPage() {
 
   function loadOne(id: string) {
     const def = characterById(id);
-    if (!def || started.current.has(id)) return;
+    if (!def || started.current.has(id) || assets[id]) return;
     started.current.add(id);
     setThumbs((prev) => (prev[def.id] ? prev : { ...prev, [def.id]: letterThumb(def.label) }));
     void loadCharacter(def)
@@ -139,6 +140,10 @@ export function EditPage() {
       });
   }
 
+  function ensureModels(ids: string[]) {
+    for (const id of ids) loadOne(id);
+  }
+
   function preloadRoster(list: CharacterDef[]) {
     for (const def of list) {
       setThumbs((prev) => (prev[def.id] ? prev : { ...prev, [def.id]: letterThumb(def.label) }));
@@ -147,6 +152,12 @@ export function EditPage() {
       loadOne(def.id);
     }
   }
+
+  // Kayıtlı sahnedeki GLB'leri önceden çek — Load'da yalnız daire kalmasın
+  useEffect(() => {
+    ensureModels(peekSavedModels());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -366,7 +377,17 @@ export function EditPage() {
         <button
           type="button"
           className="edit-load"
-          onClick={() => loadScene(store)}
+          onClick={() => {
+            const ids = peekSavedModels();
+            ensureModels(ids);
+            if (!loadScene(store)) return;
+            ensureModels([...new Set(store.units.map((unit) => unit.model))]);
+            const pending = store.units.some((unit) => unit.alive && !assets[unit.model]);
+            if (pending) {
+              store.note = `${store.note} · modeller yükleniyor…`;
+              store.bump();
+            }
+          }}
           disabled={recording || !hasSavedScene()}
           title="Son kaydedilen sahneyi yükle"
         >

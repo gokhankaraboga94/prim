@@ -282,6 +282,23 @@ export function hasSavedScene() {
   }
 }
 
+/** Save içindeki model id'leri (Load öncesi GLB ön yükleme için). */
+export function peekSavedModels(): string[] {
+  try {
+    const raw = localStorage.getItem(SAVE_KEY);
+    if (!raw) return [];
+    const data = JSON.parse(raw) as SavedScene;
+    if (!data || data.v !== 1 || !Array.isArray(data.units)) return [];
+    const ids = new Set<string>();
+    for (const row of data.units) {
+      if (row && typeof row.model === "string" && characterById(row.model)) ids.add(row.model);
+    }
+    return [...ids];
+  } catch {
+    return [];
+  }
+}
+
 export function saveScene(store: EditStore) {
   if (store.recording) {
     store.note = "Kayıt sürerken Save yok. Önce kaydı durdur.";
