@@ -58,6 +58,8 @@ export function EditPage() {
   const [saveList, setSaveList] = useState<SaveListItem[]>([]);
   const recorder = useRef<MediaRecorder | null>(null);
   const loaded = useRef<CharacterAsset[]>([]);
+  const assetsRef = useRef<Record<string, CharacterAsset>>({});
+  const pendingAdd = useRef(new Map<string, number>());
 
   useEffect(() => {
     const fn = () => setRev((n) => n + 1);
@@ -95,6 +97,7 @@ export function EditPage() {
             return;
           }
           loaded.current.push(asset);
+          assetsRef.current = { ...assetsRef.current, [def.id]: asset };
           let thumb = "";
           try {
             thumb = phone ? letterThumb(def.label) : snapshotCharacter(asset);
@@ -103,8 +106,12 @@ export function EditPage() {
           }
           setAssets((prev) => ({ ...prev, [def.id]: asset }));
           if (thumb) setThumbs((prev) => ({ ...prev, [def.id]: thumb }));
+          flushPendingAdd(def.id);
         } catch {
-          if (!stop) setFailed((prev) => ({ ...prev, [def.id]: true }));
+          if (!stop) {
+            started.current.delete(def.id);
+            setFailed((prev) => ({ ...prev, [def.id]: true }));
+          }
         }
         if (phone) await new Promise((resolve) => window.setTimeout(resolve, 40));
       }
@@ -129,21 +136,40 @@ export function EditPage() {
     }
   }
 
+  function flushPendingAdd(id: string) {
+    const def = characterById(id);
+    const asset = assetsRef.current[id];
+    const want = pendingAdd.current.get(id) ?? 0;
+    if (!def || !asset || want <= 0) return;
+    pendingAdd.current.delete(id);
+    spawnUnits(store, def, asset.radius, want);
+  }
+
   function loadOne(id: string) {
     const def = characterById(id);
-    if (!def || started.current.has(id) || assets[id]) return;
+    if (!def) return;
+    if (assetsRef.current[id]) {
+      flushPendingAdd(id);
+      return;
+    }
+    if (started.current.has(id)) return;
     started.current.add(id);
     setThumbs((prev) => (prev[def.id] ? prev : { ...prev, [def.id]: letterThumb(def.label) }));
     void loadCharacter(def)
       .then((asset) => {
         loaded.current.push(asset);
+        assetsRef.current = { ...assetsRef.current, [def.id]: asset };
         const thumb = makeThumb(def, asset);
         setAssets((prev) => ({ ...prev, [def.id]: asset }));
         setThumbs((prev) => ({ ...prev, [def.id]: thumb }));
+        flushPendingAdd(id);
       })
       .catch(() => {
         started.current.delete(id);
+        pendingAdd.current.delete(id);
         setFailed((prev) => ({ ...prev, [def.id]: true }));
+        store.note = `${def.label} yüklenemedi.`;
+        store.bump();
       });
   }
 
@@ -154,10 +180,36 @@ export function EditPage() {
   function preloadRoster(list: CharacterDef[]) {
     for (const def of list) {
       setThumbs((prev) => (prev[def.id] ? prev : { ...prev, [def.id]: letterThumb(def.label) }));
-      if (started.current.has(def.id) || assets[def.id]) continue;
+      if (started.current.has(def.id) || assetsRef.current[def.id]) continue;
       if (phone && def.heavy) continue;
       loadOne(def.id);
     }
+  }
+
+  /** İlk tık: hazırsa hemen ekle; değilse yükle, bitince otomatik ekle. */
+  function addOrFetch(id: string) {
+    if (store.battle) {
+      store.note = "Savaş sürüyor. Durdurunca eklenir.";
+      store.bump();
+      return;
+    }
+    const def = characterById(id);
+    if (!def) return;
+    if (failed[id]) {
+      store.note = "Bu model açılmadı.";
+      store.bump();
+      return;
+    }
+    const n = Math.max(1, counts[id] ?? 1);
+    const asset = assetsRef.current[id];
+    if (asset) {
+      spawnUnits(store, def, asset.radius, n);
+      return;
+    }
+    pendingAdd.current.set(id, (pendingAdd.current.get(id) ?? 0) + n);
+    store.note = `${def.label} yükleniyor → ${n} eklenecek…`;
+    store.bump();
+    loadOne(id);
   }
 
   // Kayıtlı sahnedeki GLB'leri önceden çek — Load'da yalnız daire kalmasın
@@ -200,17 +252,6 @@ export function EditPage() {
     ...item,
     n: store.units.filter((unit) => unit.alive && unit.team === item.id).length,
   }));
-
-  function add(id: string) {
-    const def = characterById(id);
-    const asset = assets[id];
-    if (!def || !asset) {
-      store.note = failed[id] ? "Bu model açılmadı." : "Model yükleniyor.";
-      store.bump();
-      return;
-    }
-    spawnUnits(store, def, asset.radius, counts[id] ?? 1);
-  }
 
   function stopRecord() {
     if (recorder.current && recorder.current.state === "recording") recorder.current.stop();
@@ -544,10 +585,10 @@ export function EditPage() {
                   </label>
                   <button
                     type="button"
-                    disabled={store.battle || (!ready && !failed[def.id] && !(phone && def.heavy))}
-                    onClick={() => (ready ? add(def.id) : loadOne(def.id))}
+                    disabled={store.battle || Boolean(failed[def.id])}
+                    onClick={() => addOrFetch(def.id)}
                   >
-                    {ready ? "Ekle" : failed[def.id] ? "Yok" : phone && def.heavy ? "Getir" : "Yükleniyor"}
+                    {ready ? "Ekle" : failed[def.id] ? "Yok" : started.current.has(def.id) ? "Yüklenip eklenecek…" : "Getir / Ekle"}
                   </button>
                 </article>
               );
