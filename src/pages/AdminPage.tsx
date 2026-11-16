@@ -2021,7 +2021,7 @@ export function AdminPage() {
           )}
           {isMafya(reelShot) && (
             <p className="muted">
-              {MAFYA_SECONDS}s · kamera 1→12 tarar. 1–9 adam (metal silah), 10–12 araba. Geri bildirimle taşı/çoğalt/kaldır.
+              {MAFYA_SECONDS}s · iki takım karşı karşıya. T1: lider1 + 2/8/9 + araç10/12. T2: lider6 + 3/4/5/7 + araç11. M4 %20 küçük.
             </p>
           )}
           {isD14112026(reelShot) && (

@@ -152,7 +152,8 @@ function makeM4() {
   g.add(grip);
   g.rotation.set(-Math.PI / 2, 0, Math.PI / 2);
   g.position.set(0.03, 0.08, 0.05);
-  g.scale.setScalar(1.15);
+  // 1 numaradaki M4 uzundu — tüm M4'ler %20 küçültüldü
+  g.scale.setScalar(1.15 * 0.8);
   return g;
 }
 
@@ -257,7 +258,7 @@ export function MafyaBattle() {
           if (entry.kind === "car") fitCar(file.scene);
           else fitMan(file.scene);
 
-          if (entry.kind === "man") attachGun(file.scene, mafyaGunFor(i));
+          if (entry.kind === "man") attachGun(file.scene, mafyaGunFor(entry.num));
 
           const hold = new THREE.Group();
           const spot = mafyaSpot(i);
