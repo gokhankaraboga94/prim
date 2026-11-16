@@ -10,9 +10,12 @@ import {
   clearField,
   clearNames,
   createStore,
+  deleteSave,
   hasSavedScene,
+  listSaves,
   loadScene,
   peekSavedModels,
+  peekSavedModelsFor,
   nudgeSelected,
   removeSelected,
   resetSlotOffsets,
@@ -25,6 +28,7 @@ import {
   spawnUnits,
   startBattle,
   unassignTeam,
+  type SaveListItem,
 } from "../edit/battle";
 import { disposeAsset, disposeThumbRenderer, letterThumb, loadCharacter, snapshotCharacter, type CharacterAsset } from "../edit/loadModel";
 import { REEL_HEIGHT, REEL_WIDTH, reelWindow } from "../recordCanvas";
@@ -50,6 +54,8 @@ export function EditPage() {
   const [failed, setFailed] = useState<Record<string, boolean>>({});
   const [recording, setRecording] = useState(false);
   const [recordMode, setRecordMode] = useState<"reel" | "map" | null>(null);
+  const [loadOpen, setLoadOpen] = useState(false);
+  const [saveList, setSaveList] = useState<SaveListItem[]>([]);
   const recorder = useRef<MediaRecorder | null>(null);
   const loaded = useRef<CharacterAsset[]>([]);
 
@@ -391,9 +397,12 @@ export function EditPage() {
         <button
           type="button"
           className="edit-save"
-          onClick={() => saveScene(store)}
+          onClick={() => {
+            saveScene(store);
+            setSaveList(listSaves());
+          }}
           disabled={recording}
-          title="Sahneyi bu tarayıcıya kaydet"
+          title="Sahneyi bu tarayıcıya kaydet (yeni kayıt)"
         >
           Save
         </button>
@@ -401,18 +410,11 @@ export function EditPage() {
           type="button"
           className="edit-load"
           onClick={() => {
-            const ids = peekSavedModels();
-            ensureModels(ids);
-            if (!loadScene(store)) return;
-            ensureModels([...new Set(store.units.map((unit) => unit.model))]);
-            const pending = store.units.some((unit) => unit.alive && !assets[unit.model]);
-            if (pending) {
-              store.note = `${store.note} · modeller yükleniyor…`;
-              store.bump();
-            }
+            setSaveList(listSaves());
+            setLoadOpen(true);
           }}
           disabled={recording || !hasSavedScene()}
-          title="Son kaydedilen sahneyi yükle"
+          title="Kayıtlardan birini seçip yükle"
         >
           Load
         </button>
@@ -461,8 +463,64 @@ export function EditPage() {
       </header>
 
       <p className="edit-help">
-        Üye taşı ile konan birim sabitlenir; Nizam sıfırla demeden toplu taşımada kıpırdamaz. Save/Load aynı tarayıcıda sahneyi saklar. Kayıt2: tam harita ekranda, indirme 9:16. Sol+sağ tık = seçimi bırak.
+        Üye taşı ile konan birim sabitlenir; Nizam sıfırla demeden toplu taşımada kıpırdamaz. Save her seferinde yeni kayıt ekler; Load listeden seçer (yeniden eskiye). Kayıt2: tam harita, indirme 9:16.
       </p>
+
+      {loadOpen && (
+        <div className="edit-modal" role="dialog" aria-modal="true" aria-label="Kayıt seç">
+          <div className="edit-modal-card">
+            <header>
+              <strong>Kayıt seç</strong>
+              <button type="button" onClick={() => setLoadOpen(false)}>
+                Kapat
+              </button>
+            </header>
+            <p className="edit-modal-hint">Yeniden eskiye · tıkla yükle</p>
+            <ul className="edit-save-list">
+              {saveList.length === 0 ? (
+                <li className="empty">Kayıt yok.</li>
+              ) : (
+                saveList.map((item) => (
+                  <li key={item.id}>
+                    <button
+                      type="button"
+                      className="edit-save-pick"
+                      onClick={() => {
+                        ensureModels(peekSavedModelsFor(item.id));
+                        if (!loadScene(store, item.id)) return;
+                        ensureModels([...new Set(store.units.map((unit) => unit.model))]);
+                        const pending = store.units.some((unit) => unit.alive && !assets[unit.model]);
+                        if (pending) {
+                          store.note = `${store.note} · modeller yükleniyor…`;
+                          store.bump();
+                        }
+                        setLoadOpen(false);
+                      }}
+                    >
+                      <span>{item.label}</span>
+                      <em>{item.units} birim</em>
+                    </button>
+                    <button
+                      type="button"
+                      className="edit-save-del"
+                      title="Bu kaydı sil"
+                      onClick={() => {
+                        deleteSave(item.id);
+                        const next = listSaves();
+                        setSaveList(next);
+                        if (!next.length) setLoadOpen(false);
+                        store.bump();
+                      }}
+                    >
+                      Sil
+                    </button>
+                  </li>
+                ))
+              )}
+            </ul>
+          </div>
+        </div>
+      )}
 
       <div className="edit-stage">
         {recording && recordMode === "reel" && <div className="edit-reel-frame" aria-hidden="true" />}

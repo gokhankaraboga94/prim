@@ -255,7 +255,9 @@ export function clearField(store: EditStore) {
   store.bump();
 }
 
-const SAVE_KEY = "wargame-edit-scene-v1";
+const SAVE_LIB_KEY = "wargame-edit-saves-v2";
+const SAVE_KEY_LEGACY = "wargame-edit-scene-v1";
+const MAX_SAVES = 40;
 
 type SavedUnit = {
   id: number;
@@ -284,6 +286,7 @@ type SavedUnit = {
 
 type SavedScene = {
   v: 1;
+  id: string;
   at: string;
   ground: GroundId;
   viewX: number;
@@ -294,6 +297,15 @@ type SavedScene = {
   units: SavedUnit[];
 };
 
+export type SaveListItem = {
+  id: string;
+  at: string;
+  label: string;
+  units: number;
+};
+
+type SaveLibrary = { v: 2; saves: SavedScene[] };
+
 function num(value: unknown, fallback: number) {
   return typeof value === "number" && Number.isFinite(value) ? value : fallback;
 }
@@ -302,28 +314,90 @@ function bool(value: unknown, fallback: boolean) {
   return typeof value === "boolean" ? value : fallback;
 }
 
-export function hasSavedScene() {
-  try {
-    return Boolean(localStorage.getItem(SAVE_KEY));
-  } catch {
-    return false;
-  }
+function newSaveId() {
+  return `s-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
 }
 
-/** Save içindeki model id'leri (Load öncesi GLB ön yükleme için). */
-export function peekSavedModels(): string[] {
+function sortSavesNewest(saves: SavedScene[]) {
+  return saves.slice().sort((a, b) => (a.at < b.at ? 1 : a.at > b.at ? -1 : 0));
+}
+
+function readLibrary(): SaveLibrary {
   try {
-    const raw = localStorage.getItem(SAVE_KEY);
-    if (!raw) return [];
-    const data = JSON.parse(raw) as SavedScene;
-    if (!data || data.v !== 1 || !Array.isArray(data.units)) return [];
-    const ids = new Set<string>();
-    for (const row of data.units) {
+    const raw = localStorage.getItem(SAVE_LIB_KEY);
+    if (raw) {
+      const data = JSON.parse(raw) as SaveLibrary;
+      if (data && data.v === 2 && Array.isArray(data.saves)) {
+        return { v: 2, saves: sortSavesNewest(data.saves.filter((s) => s && s.v === 1 && Array.isArray(s.units))) };
+      }
+    }
+  } catch {
+    /* ignore */
+  }
+  // Eski tek slot → kütüphaneye taşı
+  try {
+    const legacy = localStorage.getItem(SAVE_KEY_LEGACY);
+    if (legacy) {
+      const old = JSON.parse(legacy) as SavedScene;
+      if (old && old.v === 1 && Array.isArray(old.units)) {
+        const migrated: SavedScene = { ...old, id: old.id || newSaveId(), at: old.at || new Date().toISOString() };
+        const lib: SaveLibrary = { v: 2, saves: [migrated] };
+        localStorage.setItem(SAVE_LIB_KEY, JSON.stringify(lib));
+        return lib;
+      }
+    }
+  } catch {
+    /* ignore */
+  }
+  return { v: 2, saves: [] };
+}
+
+function writeLibrary(lib: SaveLibrary) {
+  localStorage.setItem(SAVE_LIB_KEY, JSON.stringify({ v: 2, saves: sortSavesNewest(lib.saves).slice(0, MAX_SAVES) }));
+}
+
+export function listSaves(): SaveListItem[] {
+  return readLibrary().saves.map((save) => ({
+    id: save.id,
+    at: save.at,
+    label: new Date(save.at).toLocaleString("tr-TR"),
+    units: save.units.length,
+  }));
+}
+
+export function hasSavedScene() {
+  return listSaves().length > 0;
+}
+
+/** Tüm save'lerdeki model id'leri (Load öncesi GLB). */
+export function peekSavedModels(): string[] {
+  const ids = new Set<string>();
+  for (const save of readLibrary().saves) {
+    for (const row of save.units) {
       if (row && typeof row.model === "string" && characterById(row.model)) ids.add(row.model);
     }
-    return [...ids];
+  }
+  return [...ids];
+}
+
+export function peekSavedModelsFor(id: string): string[] {
+  const save = readLibrary().saves.find((item) => item.id === id);
+  if (!save) return [];
+  const ids = new Set<string>();
+  for (const row of save.units) {
+    if (row && typeof row.model === "string" && characterById(row.model)) ids.add(row.model);
+  }
+  return [...ids];
+}
+
+export function deleteSave(id: string) {
+  const lib = readLibrary();
+  lib.saves = lib.saves.filter((save) => save.id !== id);
+  try {
+    writeLibrary(lib);
+    return true;
   } catch {
-    return [];
+    return false;
   }
 }
 
@@ -335,6 +409,7 @@ export function saveScene(store: EditStore) {
   }
   const payload: SavedScene = {
     v: 1,
+    id: newSaveId(),
     at: new Date().toISOString(),
     ground: store.ground,
     viewX: store.viewX,
@@ -368,47 +443,35 @@ export function saveScene(store: EditStore) {
     })),
   };
   try {
-    localStorage.setItem(SAVE_KEY, JSON.stringify(payload));
+    const lib = readLibrary();
+    lib.saves.unshift(payload);
+    writeLibrary(lib);
   } catch {
     store.note = "Save başarısız (tarayıcı depolama dolu olabilir).";
     store.bump();
     return false;
   }
   const when = new Date(payload.at).toLocaleString("tr-TR");
-  store.note = `Save OK · ${payload.units.length} birim · ${when}`;
+  store.note = `Save OK · ${payload.units.length} birim · ${when} · ${listSaves().length} kayıt`;
   store.bump();
   return true;
 }
 
-export function loadScene(store: EditStore) {
+export function loadScene(store: EditStore, saveId?: string) {
   if (store.recording) {
     store.note = "Kayıt sürerken Load yok. Önce kaydı durdur.";
     store.bump();
     return false;
   }
-  let raw = "";
-  try {
-    raw = localStorage.getItem(SAVE_KEY) ?? "";
-  } catch {
-    store.note = "Load başarısız (tarayıcı depolama okunamadı).";
-    store.bump();
-    return false;
-  }
-  if (!raw) {
+  const lib = readLibrary();
+  if (!lib.saves.length) {
     store.note = "Kayıtlı sahne yok. Önce Save.";
     store.bump();
     return false;
   }
-  let data: SavedScene;
-  try {
-    data = JSON.parse(raw) as SavedScene;
-  } catch {
-    store.note = "Kayıt bozuk, Load iptal.";
-    store.bump();
-    return false;
-  }
+  const data = saveId ? lib.saves.find((save) => save.id === saveId) : lib.saves[0];
   if (!data || data.v !== 1 || !Array.isArray(data.units)) {
-    store.note = "Kayıt sürümü uyumsuz.";
+    store.note = "Kayıt bulunamadı veya uyumsuz.";
     store.bump();
     return false;
   }

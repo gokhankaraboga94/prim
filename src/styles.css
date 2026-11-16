@@ -1173,6 +1173,102 @@ body.edit-route .seo-doc {
   border-color: #5a7a9a;
 }
 
+.edit-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  background: rgba(8, 10, 14, 0.62);
+  padding: 16px;
+}
+
+.edit-modal-card {
+  width: min(420px, 100%);
+  max-height: min(70vh, 520px);
+  overflow: auto;
+  background: #161a22;
+  border: 1px solid #3a4558;
+  border-radius: 12px;
+  padding: 14px 14px 10px;
+  color: var(--ink);
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.45);
+}
+
+.edit-modal-card header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.edit-modal-card header strong {
+  font-size: 1.05rem;
+}
+
+.edit-modal-hint {
+  margin: 0 0 10px;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.edit-save-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.edit-save-list li {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 6px;
+  align-items: stretch;
+}
+
+.edit-save-list li.empty {
+  display: block;
+  color: var(--muted);
+  padding: 10px 4px;
+}
+
+.edit-save-pick {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  text-align: left;
+  width: 100%;
+  background: #1e2530;
+  border: 1px solid #465266;
+  border-radius: 8px;
+  padding: 10px 12px;
+  color: inherit;
+  cursor: pointer;
+}
+
+.edit-save-pick:hover {
+  border-color: #7a93b8;
+  background: #252e3c;
+}
+
+.edit-save-pick em {
+  font-style: normal;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.edit-save-del {
+  background: #2a1c1c;
+  border: 1px solid #6a3a3a;
+  border-radius: 8px;
+  color: #f0c8c8;
+  padding: 0 12px;
+  cursor: pointer;
+}
+
 .edit-vs {
   background: #6d1410 !important;
   border-color: #e10600 !important;
