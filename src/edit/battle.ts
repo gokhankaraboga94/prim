@@ -788,13 +788,13 @@ export function stepUnits(store: EditStore, dt: number) {
       unit.aimZ = Math.cos(face);
       unit.yaw = face + unit.yawOffset;
 
-      // Araç: yerinde kalır, saldırmas, sadece hasar yer
+      // Araç: yerinde kalır, saldıramaz, sadece hasar yer
       if (car) {
         unit.x = clampMap(sx);
         unit.z = clampMap(sz);
         unit.swing = 0;
         unit.cooldown = 1;
-        continue;
+        return;
       }
 
       let target: Unit | null = null;
