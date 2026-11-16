@@ -332,28 +332,28 @@ export function mafyaShots(): MafyaShot[] {
 }
 
 export function mafyaFar() {
-  return 180;
+  return 220;
 }
 
 export function mafyaHaze() {
-  return { near: 45, far: 95 };
+  return { near: 55, far: 120 };
 }
 
 type Cam = { x: number; y: number; z: number; lx: number; ly: number; lz: number; fov: number };
 
 /**
- * Yüksek orbit: ~60s'de bir tam 360° — tüm hat görünür, kesme yok.
+ * Daha geriden, hızlı orbit: ~60s'de 2 tam tur.
  */
 export function mafyaCam(t: number): Cam {
-  const ang = (t / MAFYA_SECONDS) * Math.PI * 2;
-  const rad = 26;
+  const ang = (t / MAFYA_SECONDS) * Math.PI * 4;
+  const rad = 34;
   return {
     x: Math.sin(ang) * rad,
-    y: 18.5,
+    y: 22,
     z: Math.cos(ang) * rad,
     lx: 0,
-    ly: 0.6,
+    ly: 0.5,
     lz: 0,
-    fov: 42,
+    fov: 40,
   };
 }

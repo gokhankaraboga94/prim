@@ -376,14 +376,14 @@ export function MafyaBattle() {
   useFrame((_, dt) => {
     const t = mafyaT();
     const frame = ++frameRef.current;
-    const parity = frame & 1;
+    const slice = frame % 3;
 
-    // Animasyonları iki kareye böl — CPU yükü düşer
-    for (let i = parity; i < men.current.length; i += 2) {
+    // Animasyonları 3 kareye böl
+    for (let i = slice; i < men.current.length; i += 3) {
       const man = men.current[i];
       if (!man.mix || !mafyaAlive(i, t) || !man.hold.visible) continue;
-      man.mix.update(dt * 2);
-      pinRootMotion(man.scene);
+      man.mix.update(dt * 3);
+      if ((frame & 1) === 0) pinRootMotion(man.scene);
     }
 
     const tracers = tracerRef.current;
@@ -454,6 +454,8 @@ export function MafyaBattle() {
       slot++;
     }
 
+    // Yön/ölüm: her kare; ağır aim araması 2 karede bir
+    const refreshAim = (frame & 1) === 0;
     for (let i = 0; i < men.current.length; i++) {
       const man = men.current[i];
       const dead = !mafyaAlive(i, t);
@@ -462,13 +464,13 @@ export function MafyaBattle() {
       man.hold.visible = !gone;
       if (gone) continue;
 
-      const aim = mafyaAimTarget(i, t);
-      const yaw = mafyaYawTo(i, aim, t);
       const spot = mafyaPos(i);
       const fall = dead ? Math.min(1, (t - die) / 0.45) : 0;
-
+      if (refreshAim || dead) {
+        const aim = mafyaAimTarget(i, t);
+        man.hold.rotation.y = mafyaYawTo(i, aim, t);
+      }
       man.hold.rotation.order = "YXZ";
-      man.hold.rotation.y = yaw;
       man.hold.rotation.x = fall * 1.35;
       man.hold.rotation.z = fall * 0.25 * ((i % 2) * 2 - 1);
       man.hold.position.set(spot.x, fall * 0.12, spot.z);
