@@ -69,13 +69,8 @@ export const MAFYA_ENTRIES: readonly MafyaEntry[] = buildEntries();
 export const MAFYA_N = MAFYA_ENTRIES.length;
 export const MAFYA_URLS = [...new Set(MAFYA_ENTRIES.map((e) => e.url))];
 
-export type MafyaGun = "pistol" | "m4";
-
-export function mafyaGunFor(num: number): MafyaGun {
-  // 8: tabanca yerine M4
-  if (num === 8) return "m4";
-  return num % 2 === 1 ? "m4" : "pistol";
-}
+export type { MafyaGun } from "./mafyaGuns";
+export { mafyaGunKind as mafyaGunFor } from "./mafyaGuns";
 
 export function isMafya(id: string | null | undefined): id is MafyaId {
   return id === MAFYA_ID;

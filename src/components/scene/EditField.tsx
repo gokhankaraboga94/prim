@@ -7,6 +7,7 @@ import { moveSelected, selectNearby, stepUnits, teamLabel, type EditStore, type 
 import type { CharacterAsset } from "../../edit/loadModel";
 import { MAX_PER_MODEL } from "../../edit/catalog";
 import { reelWindow } from "../../recordCanvas";
+import { mafyaGunKind, makeMafyaGun } from "../../mafyaGuns";
 
 const teamColor = new Map<number, THREE.Color>(TEAMS.map((team) => [team.id, new THREE.Color(team.color)]));
 const white = new THREE.Color("#ffffff");
@@ -112,29 +113,13 @@ function findBone(root: THREE.Object3D, names: string[]): THREE.Object3D | null 
   return found;
 }
 
-function attachEditGun(root: THREE.Object3D, pistol: boolean) {
+function attachEditGun(root: THREE.Object3D, modelId: string) {
   const hand = findBone(root, ["mixamorig:RightHand", "RightHand", "mixamorig_RightHand"]);
   if (!hand) return;
-  const g = new THREE.Group();
-  const steel = new THREE.MeshLambertMaterial({ color: "#c5ccd4" });
-  if (pistol) {
-    const slide = new THREE.Mesh(new THREE.BoxGeometry(0.045, 0.085, 0.18), steel);
-    slide.position.set(0, 0.02, 0.06);
-    g.add(slide);
-    g.scale.setScalar(1.05);
-  } else {
-    const body = new THREE.Mesh(new THREE.BoxGeometry(0.055, 0.075, 0.28), steel);
-    body.position.set(0, 0.02, 0.08);
-    g.add(body);
-    const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.014, 0.32, 6), steel);
-    barrel.rotation.x = Math.PI / 2;
-    barrel.position.set(0, 0.03, 0.3);
-    g.add(barrel);
-    g.scale.setScalar(0.92);
-  }
-  g.rotation.set(-Math.PI / 2, 0, Math.PI / 2);
-  g.position.set(0.02, 0.06, 0.04);
-  hand.add(g);
+  const n = Number(modelId.replace(/\D/g, "").slice(-2)) || Number(modelId.slice(-1)) || 0;
+  const kind = /mafya/i.test(modelId) ? mafyaGunKind(n) : n % 2 === 1 ? "m4" : "pistol";
+  // Edit: lambert/simple parçalar — FPS
+  hand.add(makeMafyaGun(kind, true));
 }
 
 function placeUnit(unit: Unit) {
@@ -188,12 +173,7 @@ function makeActor(asset: CharacterAsset): Omit<Actor, "id"> {
   const model = cloneSkinned(asset.template!) as THREE.Object3D;
   holder.add(model);
   const def = characterById(asset.id);
-  if (def?.gun) {
-    // Tek: 1,3,5,7,9 → M4; 8 de M4; diğer çift → tabanca
-    const n = Number(asset.id.replace(/\D/g, "").slice(-2)) || Number(asset.id.slice(-1));
-    const pistol = !(n === 8 || n % 2 === 1);
-    attachEditGun(model, pistol);
-  }
+  if (def?.gun) attachEditGun(model, asset.id);
   const mixer = new THREE.AnimationMixer(model);
   const clips = asset.clips ?? [];
   const play = (clip: THREE.AnimationClip | null) => {

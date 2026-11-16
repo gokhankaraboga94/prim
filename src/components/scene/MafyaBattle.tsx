@@ -24,6 +24,7 @@ import {
   type MafyaKind,
   type MafyaShot,
 } from "../../mafyaReel";
+import { makeMafyaGun } from "../../mafyaGuns";
 
 type Gltf = Parameters<Parameters<GLTFLoader["load"]>[1]>[0];
 
@@ -123,84 +124,12 @@ function findBone(root: THREE.Object3D, names: string[]): THREE.Object3D | null 
   return found;
 }
 
-function metal(color: string, metalness = 0.92, roughness = 0.28) {
-  return new THREE.MeshStandardMaterial({
-    color,
-    metalness,
-    roughness,
-    envMapIntensity: 1.2,
-  });
-}
-
-function makePistol() {
-  const g = new THREE.Group();
-  g.name = "mafyaPistol";
-  const steel = metal("#c5ccd4", 0.95, 0.22);
-  const blue = metal("#8a949e", 0.9, 0.3);
-  const grip = metal("#3a322c", 0.35, 0.65);
-  const slide = new THREE.Mesh(new THREE.BoxGeometry(0.045, 0.085, 0.18), steel);
-  slide.position.set(0, 0.02, 0.06);
-  g.add(slide);
-  const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.1, 8), blue);
-  barrel.rotation.x = Math.PI / 2;
-  barrel.position.set(0, 0.028, 0.17);
-  g.add(barrel);
-  const handle = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.1, 0.055), grip);
-  handle.position.set(0, -0.04, 0.02);
-  handle.rotation.x = 0.18;
-  g.add(handle);
-  const tip = new THREE.Object3D();
-  tip.name = "muzzle";
-  tip.position.set(0, 0.028, 0.22);
-  g.add(tip);
-  g.rotation.set(-Math.PI / 2, 0, Math.PI / 2);
-  g.position.set(0.02, 0.06, 0.04);
-  g.scale.setScalar(1.05);
-  return g;
-}
-
-function makeM4() {
-  const g = new THREE.Group();
-  g.name = "mafyaM4";
-  const steel = metal("#b8c0c8", 0.94, 0.24);
-  const dark = metal("#6e767e", 0.88, 0.32);
-  const stock = metal("#4a4038", 0.4, 0.55);
-  const receiver = new THREE.Mesh(new THREE.BoxGeometry(0.055, 0.075, 0.28), steel);
-  receiver.position.set(0, 0.02, 0.08);
-  g.add(receiver);
-  const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.014, 0.32, 8), dark);
-  barrel.rotation.x = Math.PI / 2;
-  barrel.position.set(0, 0.03, 0.3);
-  g.add(barrel);
-  const handguard = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.055, 0.16), dark);
-  handguard.position.set(0, 0.015, 0.2);
-  g.add(handguard);
-  const mag = new THREE.Mesh(new THREE.BoxGeometry(0.035, 0.12, 0.05), steel);
-  mag.position.set(0, -0.06, 0.06);
-  g.add(mag);
-  const butt = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.07, 0.14), stock);
-  butt.position.set(0, 0.01, -0.12);
-  g.add(butt);
-  const grip = new THREE.Mesh(new THREE.BoxGeometry(0.035, 0.09, 0.045), stock);
-  grip.position.set(0, -0.05, 0.0);
-  grip.rotation.x = 0.25;
-  g.add(grip);
-  const tip = new THREE.Object3D();
-  tip.name = "muzzle";
-  tip.position.set(0, 0.03, 0.48);
-  g.add(tip);
-  g.rotation.set(-Math.PI / 2, 0, Math.PI / 2);
-  g.position.set(0.03, 0.08, 0.05);
-  g.scale.setScalar(1.15 * 0.8);
-  return g;
-}
-
 function attachGun(root: THREE.Object3D, kind: MafyaGun) {
   const hand =
     findBone(root, ["mixamorig:RightHand", "RightHand", "mixamorig_RightHand"]) ??
     findBone(root, ["mixamorig:LeftHand", "LeftHand"]);
   if (!hand) return null;
-  const gun = kind === "m4" ? makeM4() : makePistol();
+  const gun = makeMafyaGun(kind, false);
   hand.add(gun);
   return gun;
 }
