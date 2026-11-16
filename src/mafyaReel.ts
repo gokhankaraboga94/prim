@@ -1,5 +1,5 @@
 /**
- * mafya — iki takım karşı karşıya, karşılıklı ateş.
+ * mafya — iki takım çatışma: en yakın hedefe ateş, isabet/sekme, ölüm.
  * Takım1: lider 1, asker 2-8-9, araç 10-12
  * Takım2: lider 6, asker 3-4-5-7, araç 11
  */
@@ -89,11 +89,12 @@ export function mafyaT() {
 export function mafyaReset() {
   ready = false;
   playAt = 0;
+  COMBAT = null;
 }
 
 type Spot = { x: number; z: number; yaw: number };
 
-function mafyaPos(i: number): { x: number; z: number } {
+export function mafyaPos(i: number): { x: number; z: number } {
   const e = MAFYA_ENTRIES[i];
   if (!e) return { x: 0, z: 0 };
   if (e.team === 1) {
@@ -116,16 +117,53 @@ function mafyaPos(i: number): { x: number; z: number } {
   return { x: 0, z: 5.6 };
 }
 
-/** En yakın karşı takım adamı (yoksa araç). */
-export function mafyaNearestFoe(fromI: number): number {
+function hpFor(i: number) {
+  const e = MAFYA_ENTRIES[i];
+  if (!e || e.kind !== "man") return 99;
+  return e.role === "leader" ? 5 : 3;
+}
+
+export type MafyaShot = {
+  fromI: number;
+  toI: number;
+  t0: number;
+  dur: number;
+  hit: boolean;
+  /** Sekme / kaçırma ofseti (hedefe göre). */
+  missX: number;
+  missY: number;
+  missZ: number;
+};
+
+type Combat = {
+  dieAt: Float32Array;
+  shots: MafyaShot[];
+};
+
+let COMBAT: Combat | null = null;
+
+function hash01(n: number) {
+  const x = Math.sin(n * 127.1 + 311.7) * 43758.5453;
+  return x - Math.floor(x);
+}
+
+export function mafyaAlive(i: number, t: number) {
+  const c = ensureCombat();
+  return t < c.dieAt[i];
+}
+
+/** En yakın canlı rakip adam. */
+export function mafyaNearestFoe(fromI: number, t = 0): number {
   const from = MAFYA_ENTRIES[fromI];
   const a = mafyaPos(fromI);
+  const c = ensureCombat();
   let best = -1;
   let bestD = 1e9;
   for (let j = 0; j < MAFYA_N; j++) {
     const to = MAFYA_ENTRIES[j];
     if (!from || !to || to.team === from.team) continue;
-    if (from.kind === "man" && to.kind !== "man") continue;
+    if (to.kind !== "man") continue;
+    if (t >= c.dieAt[j]) continue;
     const b = mafyaPos(j);
     const d = Math.hypot(b.x - a.x, b.z - a.z);
     if (d < bestD) {
@@ -133,27 +171,94 @@ export function mafyaNearestFoe(fromI: number): number {
       best = j;
     }
   }
-  if (best >= 0) return best;
-  for (let j = 0; j < MAFYA_N; j++) {
-    const to = MAFYA_ENTRIES[j];
-    if (!from || !to || to.team === from.team) continue;
-    const b = mafyaPos(j);
-    const d = Math.hypot(b.x - a.x, b.z - a.z);
-    if (d < bestD) {
-      bestD = d;
-      best = j;
-    }
-  }
-  return Math.max(0, best);
+  return best;
 }
 
-/** Pozisyon + en yakın düşmana yaw. */
-export function mafyaSpot(i: number): Spot {
+/** Mixamo: gövde +Z bakıyor. Hedefe yaw. */
+export function mafyaSpot(i: number, t = 0): Spot {
   const a = mafyaPos(i);
-  const foe = mafyaNearestFoe(i);
+  const foe = mafyaNearestFoe(i, t);
+  if (foe < 0) {
+    // rakip kalmadı — takım yönüne bak
+    const e = MAFYA_ENTRIES[i];
+    return { x: a.x, z: a.z, yaw: e?.team === 1 ? 0 : Math.PI };
+  }
   const b = mafyaPos(foe);
   const yaw = Math.atan2(b.x - a.x, b.z - a.z);
   return { x: a.x, z: a.z, yaw };
+}
+
+export function mafyaDieAt(i: number) {
+  return ensureCombat().dieAt[i];
+}
+
+export function mafyaDead(i: number, t: number) {
+  return !mafyaAlive(i, t);
+}
+
+function ensureCombat(): Combat {
+  if (COMBAT) return COMBAT;
+
+  const dieAt = new Float32Array(MAFYA_N);
+  dieAt.fill(1e9);
+  const hits = new Int16Array(MAFYA_N);
+  const shots: MafyaShot[] = [];
+  const men = MAFYA_ENTRIES.map((e, i) => ({ e, i })).filter((x) => x.e.kind === "man");
+
+  let t = 0.5;
+  let salt = 1;
+  while (t < MAFYA_SECONDS - 1.0) {
+    for (const shooter of men) {
+      if (t >= dieAt[shooter.i]) continue;
+      // bu anda en yakın canlı hedef
+      let best = -1;
+      let bestD = 1e9;
+      const a = mafyaPos(shooter.i);
+      for (const foe of men) {
+        if (foe.e.team === shooter.e.team) continue;
+        if (t >= dieAt[foe.i]) continue;
+        const b = mafyaPos(foe.i);
+        const d = Math.hypot(b.x - a.x, b.z - a.z);
+        if (d < bestD) {
+          bestD = d;
+          best = foe.i;
+        }
+      }
+      if (best < 0) continue;
+
+      const h = hash01(salt++);
+      const hit = h < 0.68; // çoğu isabet, bir kısmı sekme/kaçırma
+      const missAng = hash01(salt++) * Math.PI * 2;
+      const missR = 0.55 + hash01(salt++) * 1.1;
+      const shot: MafyaShot = {
+        fromI: shooter.i,
+        toI: best,
+        t0: t + (shooter.i % 5) * 0.035,
+        dur: 0.2,
+        hit,
+        missX: hit ? 0 : Math.cos(missAng) * missR,
+        missY: hit ? 0 : 0.15 + hash01(salt++) * 0.45,
+        missZ: hit ? 0 : Math.sin(missAng) * missR,
+      };
+      shots.push(shot);
+
+      if (hit) {
+        const impact = shot.t0 + shot.dur;
+        hits[best] += 1;
+        if (hits[best] >= hpFor(best) && dieAt[best] > 1e8) {
+          dieAt[best] = impact;
+        }
+      }
+    }
+    t += 0.42;
+  }
+
+  COMBAT = { dieAt, shots };
+  return COMBAT;
+}
+
+export function mafyaShots(): MafyaShot[] {
+  return ensureCombat().shots;
 }
 
 export function mafyaFar() {
@@ -166,7 +271,6 @@ export function mafyaHaze() {
 
 type Cam = { x: number; y: number; z: number; lx: number; ly: number; lz: number; fov: number };
 
-/** Yüksek geniş bakış — 9:16 kadroda herkes sığsın, hafif salınım. */
 export function mafyaCam(t: number): Cam {
   const ang = Math.sin(t * 0.08) * 0.22;
   return {
@@ -178,31 +282,4 @@ export function mafyaCam(t: number): Cam {
     lz: 0,
     fov: 50,
   };
-}
-
-/** Ateş: her adam en yakın düşmana. */
-export type MafyaShot = {
-  fromI: number;
-  toI: number;
-  t0: number;
-  dur: number;
-};
-
-export function mafyaShots(): MafyaShot[] {
-  const men = MAFYA_ENTRIES.map((e, i) => ({ e, i })).filter((x) => x.e.kind === "man");
-  const out: MafyaShot[] = [];
-  let t = 0.55;
-  while (t < MAFYA_SECONDS - 0.8) {
-    for (const shooter of men) {
-      const toI = mafyaNearestFoe(shooter.i);
-      out.push({
-        fromI: shooter.i,
-        toI,
-        t0: t + (shooter.i % 7) * 0.04,
-        dur: 0.22,
-      });
-    }
-    t += 0.48;
-  }
-  return out;
 }

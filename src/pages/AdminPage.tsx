@@ -2021,7 +2021,7 @@ export function AdminPage() {
           )}
           {isMafya(reelShot) && (
             <p className="muted">
-              {MAFYA_SECONDS}s · iki takım karşı karşıya, karşılıklı ateş/mermi. Yüksek kamera tüm sahneyi gösterir.
+              {MAFYA_SECONDS}s · çatışma: en yakın hedefe ateş, isabet/sekme, kurşunla düşme. Koşu animasyonu yok.
             </p>
           )}
           {isD14112026(reelShot) && (

@@ -6,7 +6,9 @@ import { preloadedGlb } from "../../arenaPreload";
 import {
   MAFYA_ENTRIES,
   MAFYA_N,
+  mafyaAlive,
   mafyaCam,
+  mafyaDieAt,
   mafyaFar,
   mafyaGunFor,
   mafyaMarkReady,
@@ -16,7 +18,6 @@ import {
   mafyaT,
   type MafyaGun,
   type MafyaKind,
-  type MafyaShot,
 } from "../../mafyaReel";
 
 type Gltf = Parameters<Parameters<GLTFLoader["load"]>[1]>[0];
@@ -179,13 +180,15 @@ function attachGun(root: THREE.Object3D, kind: MafyaGun) {
 }
 
 function pickFireClip(clips: THREE.AnimationClip[]) {
-  const prefer = ["fire", "silah ile ateş ediyor", "silah ile ateş ediyor koşarken"];
+  const noRun = clips.filter((c) => !/run|koş|kos|walk/i.test(c.name));
+  const pool = noRun.length ? noRun : clips;
+  const prefer = ["fire", "silah ile ateş ediyor"];
   for (const name of prefer) {
-    const hit = clips.find((c) => c.name === name || c.name.toLowerCase() === name);
+    const hit = pool.find((c) => c.name === name || c.name.toLowerCase() === name);
     if (hit) return hit;
   }
-  const soft = clips.find((c) => /fire|ateş|silah/i.test(c.name));
-  return soft ?? clips.find((c) => /run|walk/i.test(c.name)) ?? clips[0];
+  const soft = pool.find((c) => /fire|ateş|silah/i.test(c.name) && !/koş|kos|run/i.test(c.name));
+  return soft ?? pool[0] ?? clips[0];
 }
 
 function numberSprite(n: number, kind: MafyaKind) {
@@ -332,16 +335,20 @@ export function MafyaBattle() {
   }, []);
 
   useFrame((_, dt) => {
-    for (const man of men.current) man.mix?.update(dt);
     const t = mafyaT();
+    for (let i = 0; i < men.current.length; i++) {
+      const man = men.current[i];
+      if (mafyaAlive(i, t)) man.mix?.update(dt);
+    }
+
     const tracers = tracerRef.current;
     const flashes = flashRef.current;
     const hits = hitRef.current;
     if (!tracers || !flashes || !hits) return;
 
-    // hide all
     dummy.scale.setScalar(0.001);
     dummy.position.set(0, -20, 0);
+    dummy.quaternion.identity();
     dummy.updateMatrix();
     for (let i = 0; i < BULLET_N; i++) {
       tracers.setMatrixAt(i, dummy.matrix);
@@ -353,7 +360,8 @@ export function MafyaBattle() {
     for (const shot of shots) {
       if (slot >= BULLET_N) break;
       const local = t - shot.t0;
-      if (local < -0.02 || local > shot.dur + 0.12) continue;
+      if (local < -0.02 || local > shot.dur + 0.15) continue;
+      if (!mafyaAlive(shot.fromI, shot.t0)) continue;
 
       const from = men.current[shot.fromI];
       const to = men.current[shot.toI];
@@ -361,36 +369,38 @@ export function MafyaBattle() {
 
       if (from.muzzle) from.muzzle.getWorldPosition(_muzzle);
       else _muzzle.set(from.hold.position.x, 1.35, from.hold.position.z);
-      _target.set(to.hold.position.x, 1.25, to.hold.position.z);
 
-      // muzzle flash (küçük)
+      _target.set(
+        to.hold.position.x + shot.missX,
+        1.25 + shot.missY,
+        to.hold.position.z + shot.missZ
+      );
+
       if (local >= 0 && local < 0.07) {
         dummy.quaternion.identity();
         dummy.position.copy(_muzzle);
-        dummy.scale.setScalar(0.06 + local * 0.5);
+        dummy.scale.setScalar(0.05 + local * 0.4);
         dummy.updateMatrix();
         flashes.setMatrixAt(slot, dummy.matrix);
       }
 
-      // tracer — silindir Y ekseni uçuş yönüne; ince ve kısa
       const u = Math.max(0, Math.min(1, local / shot.dur));
       _dir.subVectors(_target, _muzzle);
-      const len = _dir.length() || 1;
+      const len = Math.max(0.01, _dir.length());
       _dir.multiplyScalar(1 / len);
       _mid.copy(_muzzle).addScaledVector(_dir, len * u);
       _quat.setFromUnitVectors(_up, _dir);
       dummy.position.copy(_mid);
       dummy.quaternion.copy(_quat);
-      const streak = Math.min(0.32, Math.max(0.12, len * 0.035));
-      dummy.scale.set(0.012, streak, 0.012);
+      const streak = Math.min(0.28, Math.max(0.1, len * 0.03));
+      dummy.scale.set(0.01, streak, 0.01);
       dummy.updateMatrix();
       tracers.setMatrixAt(slot, dummy.matrix);
 
-      // hit spark
-      if (u > 0.9) {
+      if (shot.hit && u > 0.88) {
         dummy.quaternion.identity();
-        dummy.position.copy(_target);
-        dummy.scale.setScalar(0.08 * (1 - (u - 0.9) / 0.1));
+        dummy.position.set(to.hold.position.x, 1.25, to.hold.position.z);
+        dummy.scale.setScalar(0.1 * (1 - (u - 0.88) / 0.12));
         dummy.updateMatrix();
         hits.setMatrixAt(slot, dummy.matrix);
       }
@@ -398,25 +408,34 @@ export function MafyaBattle() {
       slot++;
     }
 
-    // en yakın düşmana dön + hafif geri tepme
     for (let i = 0; i < men.current.length; i++) {
       const man = men.current[i];
-      const spot = mafyaSpot(i);
+      const spot = mafyaSpot(i, t);
+      const dead = !mafyaAlive(i, t);
+      const die = mafyaDieAt(i);
+      const fall = dead ? Math.min(1, (t - die) / 0.55) : 0;
+
+      man.hold.rotation.order = "YXZ";
       man.hold.rotation.y = spot.yaw;
+      man.hold.rotation.x = fall * 1.35;
+      man.hold.rotation.z = fall * 0.25 * ((i % 2) * 2 - 1);
+
       if (man.kind !== "man") {
-        man.hold.position.z = man.baseZ;
+        man.hold.position.set(spot.x, 0, spot.z);
         continue;
       }
+
       let kick = 0;
-      for (const shot of shots) {
-        if (shot.fromI !== i) continue;
-        const local = t - shot.t0;
-        if (local >= 0 && local < 0.1) kick = Math.max(kick, (1 - local / 0.1) * 0.035);
+      if (!dead) {
+        for (const shot of shots) {
+          if (shot.fromI !== i) continue;
+          const local = t - shot.t0;
+          if (local >= 0 && local < 0.1) kick = Math.max(kick, (1 - local / 0.1) * 0.03);
+        }
       }
       const backX = Math.sin(spot.yaw) * -kick;
       const backZ = Math.cos(spot.yaw) * -kick;
-      man.hold.position.x = spot.x + backX;
-      man.hold.position.z = spot.z + backZ;
+      man.hold.position.set(spot.x + backX, fall * 0.15, spot.z + backZ);
     }
 
     tracers.instanceMatrix.needsUpdate = true;
