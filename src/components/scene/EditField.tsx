@@ -179,6 +179,8 @@ type Actor = {
   mode: string;
   px: number;
   pz: number;
+  /** mafya-8: yerinde bekle, koşu/yürüme yok */
+  stay: boolean;
 };
 
 function makeActor(asset: CharacterAsset): Omit<Actor, "id"> {
@@ -208,20 +210,26 @@ function makeActor(asset: CharacterAsset): Omit<Actor, "id"> {
     clips.find((c) => c.name === "silah ile ateş ediyor koşarken") ??
     clips.find((c) => /ateş|fire|silah/i.test(c.name) && /koş|kos|run|walk/i.test(c.name)) ??
     null;
-  // mafya-8: saf koşu yok; idle asla run olmasın
+  // mafya-8: "ateş ederken koş" idle olursa yerinde yürüyor — duruşta don, yalnız ateşte oyna
   const noRun = asset.id === "mafya-8";
   const walk = noRun ? null : clipBy(clips, ["walk", "run", "sprint"]);
-  const idleClip =
-    clipBy(clips, ["idle", "defensive", "stance"]) ??
-    fireStand ??
-    clips.find((c) => !isPureLocoClip(c.name)) ??
-    null;
+  const idleClip = noRun
+    ? clipBy(clips, ["idle", "defensive", "stance"]) ?? fireStand
+    : clipBy(clips, ["idle", "defensive", "stance"]) ?? fireStand ?? clips.find((c) => !isPureLocoClip(c.name)) ?? null;
   const idle = play(idleClip);
   const move = noRun ? null : play(walk);
-  const attack = play(fireStand) ?? play(clipBy(clips, ["aggress", "sword", "attack", "combo", "fire", "ateş"]));
-  const fireWalk = noRun ? attack : play(fireRun) ?? attack;
-  idle?.play();
-  return { holder, mixer, idle, move, attack, fireWalk, current: idle, mode: "idle", px: 0, pz: 0 };
+  const attack = noRun
+    ? play(fireStand) ?? play(fireRun)
+    : play(fireStand) ?? play(clipBy(clips, ["aggress", "sword", "attack", "combo", "fire", "ateş"]));
+  const fireWalk = noRun ? null : play(fireRun) ?? attack;
+  if (idle) idle.play();
+  else if (noRun && attack) {
+    // Bind yerine ilk karede don — bacaklar koşmasın
+    attack.play();
+    attack.paused = true;
+    attack.time = 0;
+  }
+  return { holder, mixer, idle, move, attack, fireWalk, current: idle, mode: "idle", px: 0, pz: 0, stay: noRun };
 }
 
 function EditRig({ store, assets }: { store: EditStore; assets: Record<string, CharacterAsset> }) {
@@ -641,11 +649,24 @@ function EditRig({ store, assets }: { store: EditStore; assets: Record<string, C
           actor.holder.quaternion.copy(dummy.quaternion);
           actor.holder.scale.copy(dummy.scale);
         }
-        const moved = Math.hypot(unit.x - actor.px, unit.z - actor.pz) > 0.02;
+        const moved = !actor.stay && Math.hypot(unit.x - actor.px, unit.z - actor.pz) > 0.02;
         actor.px = unit.x;
         actor.pz = unit.z;
         const shooting = unit.swing > 0.08;
-        const mode = !unit.alive ? "dead" : shooting && moved ? "fireWalk" : shooting ? "attack" : moved ? "move" : "idle";
+        // stay (mafya-8): sadece idle / ateş — yürüyüş yok
+        const mode = !unit.alive
+          ? "dead"
+          : actor.stay
+            ? shooting
+              ? "attack"
+              : "idle"
+            : shooting && moved
+              ? "fireWalk"
+              : shooting
+                ? "attack"
+                : moved
+                  ? "move"
+                  : "idle";
         if (mode !== actor.mode) {
           const next =
             mode === "fireWalk"
@@ -655,8 +676,20 @@ function EditRig({ store, assets }: { store: EditStore; assets: Record<string, C
                 : mode === "move"
                   ? actor.move ?? actor.idle
                   : actor.idle;
-          if (actor.current && actor.current !== next) actor.current.fadeOut(0.08);
-          if (next && next !== actor.current) next.reset().fadeIn(0.08).play();
+          if (actor.current && actor.current !== next) {
+            actor.current.fadeOut(0.08);
+            actor.current.paused = false;
+          }
+          if (next && next !== actor.current) {
+            next.reset().fadeIn(0.08).play();
+            next.paused = false;
+          } else if (actor.stay && !next && actor.attack && mode === "idle") {
+            // Ateş bitince koşu klibini dondur
+            actor.attack.reset();
+            actor.attack.play();
+            actor.attack.paused = true;
+            actor.attack.time = 0;
+          }
           actor.current = next;
           actor.mode = mode;
         }

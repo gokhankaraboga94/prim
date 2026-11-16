@@ -351,6 +351,11 @@ export function MafyaBattle() {
               action.setLoop(THREE.LoopRepeat, Infinity);
               action.timeScale = 1;
               action.play();
+              // m08: tek klip koşarak ateş — loop yerinde yürütür, ilk karede don
+              if (entry.num === 8) {
+                action.paused = true;
+                action.time = 0;
+              }
             }
             mix.update(0);
             pinRootMotion(scene);
