@@ -19,10 +19,12 @@ const qYaw = new THREE.Quaternion();
 const qPitch = new THREE.Quaternion();
 const tint = new THREE.Color();
 const aim = new THREE.Vector3();
+const boltDir = new THREE.Vector3();
 const ndc = new THREE.Vector2();
 const hit = new THREE.Vector3();
 const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
 const raycaster = new THREE.Raycaster();
+const ANIM_SLICE = 4;
 const nameCache = new Map<string, THREE.Texture>();
 const NAME_PX = 128;
 const NAME_H = 192;
@@ -68,8 +70,7 @@ function nameTexture(text: string, anisotropy: number) {
 
 function groundTexture(id: GroundId) {
   const canvas = document.createElement("canvas");
-  const phone = typeof window !== "undefined" && Math.min(window.innerWidth, window.innerHeight) < 860;
-  const size = phone ? 512 : 1024;
+  const size = 256;
   canvas.width = size;
   canvas.height = size;
   const ctx = canvas.getContext("2d");
@@ -77,14 +78,12 @@ function groundTexture(id: GroundId) {
   const baseFixed = id === "asphalt" ? "#7a8490" : id === "dirt" ? "#b08a55" : id === "stone" ? "#a8b0b8" : "#6ec84a";
   ctx.fillStyle = baseFixed;
   ctx.fillRect(0, 0, size, size);
-  // Hafif parlak örtü
-  ctx.fillStyle = "rgba(255,255,255,0.14)";
+  ctx.fillStyle = "rgba(255,255,255,0.12)";
   ctx.fillRect(0, 0, size, size);
-  const specks = phone ? 1800 : 7000;
-  for (let i = 0; i < specks; i++) {
+  for (let i = 0; i < 400; i++) {
     if (id === "grass") {
-      const n = i % 7;
-      ctx.fillStyle = n === 0 ? "#a8e878" : n === 1 ? "#5aaa38" : n === 2 ? "#88d060" : n === 3 ? "#4a9830" : n === 4 ? "#b8f088" : n === 5 ? "#78c850" : "#3e8828";
+      const n = i % 5;
+      ctx.fillStyle = n === 0 ? "#a8e878" : n === 1 ? "#5aaa38" : n === 2 ? "#88d060" : n === 3 ? "#4a9830" : "#78c850";
     } else if (id === "asphalt") {
       ctx.fillStyle = i % 3 === 0 ? "#9aa4b0" : i % 3 === 1 ? "#6a7480" : "#8a949e";
     } else if (id === "dirt") {
@@ -92,13 +91,15 @@ function groundTexture(id: GroundId) {
     } else {
       ctx.fillStyle = i % 3 === 0 ? "#c8d0d8" : i % 3 === 1 ? "#9098a0" : "#b0b8c0";
     }
-    ctx.fillRect(Math.random() * size, Math.random() * size, 2 + Math.random() * 7, 2 + Math.random() * 6);
+    ctx.fillRect(Math.random() * size, Math.random() * size, 2 + Math.random() * 5, 2 + Math.random() * 4);
   }
   const tex = new THREE.CanvasTexture(canvas);
   tex.wrapS = THREE.RepeatWrapping;
   tex.wrapT = THREE.RepeatWrapping;
-  tex.repeat.set(id === "asphalt" ? 8 : 12, id === "asphalt" ? 8 : 12);
+  tex.repeat.set(id === "asphalt" ? 6 : 10, id === "asphalt" ? 6 : 10);
   tex.colorSpace = THREE.SRGBColorSpace;
+  tex.generateMipmaps = false;
+  tex.minFilter = THREE.LinearFilter;
   return tex;
 }
 
@@ -231,9 +232,11 @@ function EditRig({ store, assets }: { store: EditStore; assets: Record<string, C
   const keys = useRef(new Set<string>());
   const look = useRef({ yaw: 0.45, pitch: 0.78, dist: 38 });
   const drag = useRef<{ x: number; y: number; button: number; moved: boolean; sx: number; sy: number; touch: boolean } | null>(null);
-  const ringGeo = useMemo(() => new THREE.RingGeometry(0.78, 1, 28), []);
+  const frameRef = useRef(0);
+  const fovLocked = useRef(false);
+  const ringGeo = useMemo(() => new THREE.RingGeometry(0.78, 1, 16), []);
   const barGeo = useMemo(() => new THREE.PlaneGeometry(1, 1), []);
-  const ringMat = useMemo(() => new THREE.MeshBasicMaterial({ color: "#ffffff", transparent: true, opacity: 0.9, side: THREE.DoubleSide, depthWrite: false }), []);
+  const ringMat = useMemo(() => new THREE.MeshBasicMaterial({ color: "#ffffff", transparent: true, opacity: 0.88, side: THREE.DoubleSide, depthWrite: false }), []);
   const barMat = useMemo(() => new THREE.MeshBasicMaterial({ color: "#ffffff", transparent: true, opacity: 0.95, depthTest: false }), []);
 
   useEffect(() => {
@@ -554,31 +557,43 @@ function EditRig({ store, assets }: { store: EditStore; assets: Record<string, C
     );
     camera.lookAt(store.viewX, 0, store.viewZ);
     if (camera instanceof THREE.PerspectiveCamera) {
-      camera.fov = store.recording ? 44 : 42;
-      camera.near = 0.2;
-      camera.far = 900;
-      camera.updateProjectionMatrix();
+      const wantFov = store.recording ? 44 : 42;
+      if (!fovLocked.current || camera.fov !== wantFov) {
+        camera.fov = wantFov;
+        camera.near = 0.25;
+        camera.far = 420;
+        camera.updateProjectionMatrix();
+        fovLocked.current = true;
+      }
     }
-    camera.updateMatrixWorld();
-    // 9:16 kadraj kamera bakış merkezinde
     store.reelU = 0.5;
     store.reelV = 0.5;
-    const frame = document.querySelector(".edit-reel-frame") as HTMLElement | null;
-    if (frame) {
-      const rect = gl.domElement.getBoundingClientRect();
-      const crop = reelWindow(rect.width, rect.height, store.reelU, store.reelV);
-      frame.style.left = `${(crop.cx / rect.width) * 100}%`;
-      frame.style.top = `${(crop.cy / rect.height) * 100}%`;
+    if (store.recording) {
+      const frame = document.querySelector(".edit-reel-frame") as HTMLElement | null;
+      if (frame) {
+        const rect = gl.domElement.getBoundingClientRect();
+        const crop = reelWindow(rect.width, rect.height, store.reelU, store.reelV);
+        frame.style.left = `${(crop.cx / rect.width) * 100}%`;
+        frame.style.top = `${(crop.cy / rect.height) * 100}%`;
+      }
     }
 
-    // Sub-step so a slow phone still fights in real time instead of slow motion; cap keeps tab-switch jumps sane.
-    let left = Math.min(0.25, Math.max(0, dt));
+    const frame = ++frameRef.current;
+    const animSlice = frame % ANIM_SLICE;
+    const capped = Math.min(0.05, Math.max(0, dt));
+
+    // Savaş yokken tek adım; savaşta kısa alt adım
     let changed = false;
-    do {
-      const slice = Math.min(0.05, left);
-      left -= slice;
-      changed = stepUnits(store, slice) || changed;
-    } while (left > 1e-4);
+    if (store.battle) {
+      let left = Math.min(0.12, Math.max(0, dt));
+      while (left > 1e-4) {
+        const slice = Math.min(0.05, left);
+        left -= slice;
+        changed = stepUnits(store, slice) || changed;
+      }
+    } else {
+      changed = stepUnits(store, capped);
+    }
     if (changed) store.bump();
 
     const grouped = new Map<string, Unit[]>();
@@ -590,13 +605,11 @@ function EditRig({ store, assets }: { store: EditStore; assets: Record<string, C
     for (const [id, mesh] of meshes.current) {
       const list = grouped.get(id) ?? [];
       mesh.count = list.length;
-      list.forEach((unit, index) => {
-        placeUnit(unit);
+      for (let index = 0; index < list.length; index++) {
+        placeUnit(list[index]);
         mesh.setMatrixAt(index, dummy.matrix);
-        mesh.setColorAt(index, white);
-      });
+      }
       mesh.instanceMatrix.needsUpdate = true;
-      if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
     }
 
     const host = bodies.current;
@@ -637,12 +650,15 @@ function EditRig({ store, assets }: { store: EditStore; assets: Record<string, C
                 : mode === "move"
                   ? actor.move ?? actor.idle
                   : actor.idle;
-          if (actor.current && actor.current !== next) actor.current.fadeOut(0.12);
-          if (next && next !== actor.current) next.reset().fadeIn(0.12).play();
+          if (actor.current && actor.current !== next) actor.current.fadeOut(0.08);
+          if (next && next !== actor.current) next.reset().fadeIn(0.08).play();
           actor.current = next;
           actor.mode = mode;
         }
-        actor.mixer.update(Math.min(0.05, Math.max(0, dt)));
+        // Mixer'ı karelere böl — FPS
+        if (unit.id % ANIM_SLICE === animSlice) {
+          actor.mixer.update(capped * ANIM_SLICE);
+        }
       }
     }
     for (const [id, actor] of actors.current) {
@@ -654,11 +670,11 @@ function EditRig({ store, assets }: { store: EditStore; assets: Record<string, C
 
     const ring = rings.current;
     if (ring) {
-      const shown = store.units.filter((unit) => unit.alive).slice(0, 8192);
+      const shown = store.units.filter((unit) => unit.alive).slice(0, 4096);
       ring.count = shown.length;
-      // Seçili daire yanıp sönsün — kimi seçtiğin net görünsün
       const blink = 0.5 + 0.5 * Math.sin(performance.now() * 0.01);
-      shown.forEach((unit, index) => {
+      for (let index = 0; index < shown.length; index++) {
+        const unit = shown[index];
         const picked = store.selected.has(unit.id);
         const base = Math.max(0.45, unit.radius);
         const scale = picked ? base * (0.92 + 0.28 * blink) : base;
@@ -670,38 +686,39 @@ function EditRig({ store, assets }: { store: EditStore; assets: Record<string, C
         if (picked) tint.copy(gold).lerp(goldHot, blink);
         else tint.copy(teamColor.get(unit.team) ?? white);
         ring.setColorAt(index, tint);
-      });
+      }
       ring.instanceMatrix.needsUpdate = true;
       if (ring.instanceColor) ring.instanceColor.needsUpdate = true;
     }
 
     const bar = bars.current;
     if (bar) {
-      const shown = store.battle ? store.units.filter((unit) => unit.alive && unit.team > 0).slice(0, 8192) : [];
-      bar.count = shown.length;
-      shown.forEach((unit, index) => {
-        aim.set(unit.x, unit.height + 0.28, unit.z);
-        dummy.position.copy(aim);
-        dummy.quaternion.copy(camera.quaternion);
-        const width = Math.min(2.4, Math.max(0.7, unit.height * 0.16)) * Math.max(0.05, unit.hp / unit.maxHp);
-        dummy.scale.set(width, 0.08, 1);
-        dummy.updateMatrix();
-        bar.setMatrixAt(index, dummy.matrix);
-        bar.setColorAt(index, teamColor.get(unit.team) ?? white);
-      });
-      bar.instanceMatrix.needsUpdate = true;
-      if (bar.instanceColor) bar.instanceColor.needsUpdate = true;
+      if (!store.battle) {
+        bar.count = 0;
+      } else {
+        const shown = store.units.filter((unit) => unit.alive && unit.team > 0).slice(0, 4096);
+        bar.count = shown.length;
+        for (let index = 0; index < shown.length; index++) {
+          const unit = shown[index];
+          aim.set(unit.x, unit.height + 0.28, unit.z);
+          dummy.position.copy(aim);
+          dummy.quaternion.copy(camera.quaternion);
+          const width = Math.min(2.4, Math.max(0.7, unit.height * 0.16)) * Math.max(0.05, unit.hp / unit.maxHp);
+          dummy.scale.set(width, 0.08, 1);
+          dummy.updateMatrix();
+          bar.setMatrixAt(index, dummy.matrix);
+          bar.setColorAt(index, teamColor.get(unit.team) ?? white);
+        }
+        bar.instanceMatrix.needsUpdate = true;
+        if (bar.instanceColor) bar.instanceColor.needsUpdate = true;
+      }
     }
 
     const boltMesh = bolts.current;
     if (boltMesh) {
-      const active = store.units.filter((unit) => unit.boltAge > 0).slice(0, 256);
-      dummy.scale.setScalar(0.001);
-      dummy.position.set(0, -20, 0);
-      dummy.quaternion.identity();
-      dummy.updateMatrix();
-      for (let i = 0; i < 256; i++) boltMesh.setMatrixAt(i, dummy.matrix);
-      active.forEach((unit, index) => {
+      const active = store.battle ? store.units.filter((unit) => unit.boltAge > 0).slice(0, 64) : [];
+      for (let index = 0; index < active.length; index++) {
+        const unit = active[index];
         const u = 1 - unit.boltAge / 0.22;
         const x = unit.boltX + (unit.boltTX - unit.boltX) * u;
         const z = unit.boltZ + (unit.boltTZ - unit.boltZ) * u;
@@ -709,13 +726,14 @@ function EditRig({ store, assets }: { store: EditStore; assets: Record<string, C
         const dz = unit.boltTZ - unit.boltZ;
         const len = Math.hypot(dx, dz) || 1;
         dummy.position.set(x, 1.3, z);
-        dummy.quaternion.setFromUnitVectors(UP, new THREE.Vector3(dx / len, 0, dz / len));
+        boltDir.set(dx / len, 0, dz / len);
+        dummy.quaternion.setFromUnitVectors(UP, boltDir);
         dummy.scale.set(0.012, Math.min(0.35, len * 0.04), 0.012);
         dummy.updateMatrix();
         boltMesh.setMatrixAt(index, dummy.matrix);
-      });
-      boltMesh.count = Math.max(1, active.length);
-      boltMesh.instanceMatrix.needsUpdate = true;
+      }
+      boltMesh.count = active.length;
+      if (active.length) boltMesh.instanceMatrix.needsUpdate = true;
     }
 
     const nameHost = names.current;
@@ -761,15 +779,15 @@ function EditRig({ store, assets }: { store: EditStore; assets: Record<string, C
     return () => gl.domElement.removeEventListener("wheel", onWheel);
   }, [gl]);
 
-  const boltGeo = useMemo(() => new THREE.CylinderGeometry(1, 1, 1, 4), []);
+  const boltGeo = useMemo(() => new THREE.CylinderGeometry(1, 1, 1, 3), []);
   const boltMat = useMemo(() => new THREE.MeshBasicMaterial({ color: "#ffe566", toneMapped: false }), []);
 
   return (
     <group>
       <group ref={bodies} />
-      <instancedMesh ref={rings} args={[ringGeo, ringMat, 8192]} frustumCulled={false} />
-      <instancedMesh ref={bars} args={[barGeo, barMat, 8192]} frustumCulled={false} renderOrder={2} />
-      <instancedMesh ref={bolts} args={[boltGeo, boltMat, 256]} frustumCulled={false} />
+      <instancedMesh ref={rings} args={[ringGeo, ringMat, 4096]} frustumCulled />
+      <instancedMesh ref={bars} args={[barGeo, barMat, 4096]} frustumCulled renderOrder={2} />
+      <instancedMesh ref={bolts} args={[boltGeo, boltMat, 64]} frustumCulled />
       <group ref={names} />
     </group>
   );
@@ -783,12 +801,11 @@ export function EditField({ store, assets }: { store: EditStore; assets: Record<
   return (
     <>
       <color attach="background" args={["#8ec4f0"]} />
-      <fog attach="fog" args={["#d5e4f2", 80, 440]} />
-      <hemisphereLight args={["#e8f4ff", "#8aaa58", 1.05]} />
-      <ambientLight intensity={0.55} />
-      <directionalLight position={[24, 36, 12]} intensity={2.6} color="#fff8ee" />
+      <fog attach="fog" args={["#d5e4f2", 60, 280]} />
+      <ambientLight intensity={0.85} />
+      <directionalLight position={[18, 28, 10]} intensity={1.35} color="#fff8ee" />
       <mesh key={groundId} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
-        <planeGeometry args={[760, 760]} />
+        <planeGeometry args={[420, 420]} />
         <meshLambertMaterial map={ground ?? undefined} color={tint} />
       </mesh>
       <EditRig store={store} assets={assets} />

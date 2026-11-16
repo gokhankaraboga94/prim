@@ -474,9 +474,10 @@ export function EditPage() {
         )}
         <SceneErrorBoundary>
           <Canvas
-            dpr={phone ? 1 : [1, 1.25]}
-            gl={{ antialias: !phone, alpha: false, powerPreference: phone ? "default" : "high-performance", preserveDrawingBuffer: true, stencil: false }}
-            camera={{ fov: 42, near: 0.2, far: 900, position: [16, 24, 30] }}
+            dpr={1}
+            gl={{ antialias: false, alpha: false, powerPreference: "high-performance", preserveDrawingBuffer: true, stencil: false, depth: true }}
+            camera={{ fov: 42, near: 0.25, far: 420, position: [16, 24, 30] }}
+            performance={{ min: 0.5 }}
           >
             <EditField store={store} assets={assets} />
           </Canvas>
