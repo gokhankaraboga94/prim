@@ -2021,7 +2021,7 @@ export function AdminPage() {
           )}
           {isMafya(reelShot) && (
             <p className="muted">
-              {MAFYA_SECONDS}s · lineup. Modeller yan yana, üstte 1–9, ateş animasyonu + tabanca/M4. Geri bildirimle taşı/çoğalt/kaldır.
+              {MAFYA_SECONDS}s · lineup. 1–9 adam (ateş + silah), 10–12 araba (mavi numara). Geri bildirimle taşı/çoğalt/kaldır.
             </p>
           )}
           {isD14112026(reelShot) && (

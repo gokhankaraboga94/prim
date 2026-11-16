@@ -4,7 +4,7 @@ import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import * as THREE from "three";
 import { preloadedGlb } from "../../arenaPreload";
 import {
-  MAFYA_MODELS,
+  MAFYA_ENTRIES,
   MAFYA_N,
   mafyaCam,
   mafyaFar,
@@ -14,11 +14,13 @@ import {
   mafyaSpot,
   mafyaT,
   type MafyaGun,
+  type MafyaKind,
 } from "../../mafyaReel";
 
 type Gltf = Parameters<Parameters<GLTFLoader["load"]>[1]>[0];
 
-const HEIGHT = 1.78;
+const MAN_H = 1.78;
+const CAR_LEN = 3.4;
 
 function loadGlb(loader: GLTFLoader, url: string) {
   const buf = preloadedGlb(url);
@@ -43,11 +45,26 @@ function toLambert(root: THREE.Object3D) {
   });
 }
 
-function fit(root: THREE.Object3D) {
+function fitMan(root: THREE.Object3D) {
   root.updateMatrixWorld(true);
   const box = new THREE.Box3().setFromObject(root);
   const span = Math.max(0.001, box.max.y - box.min.y);
-  const scale = HEIGHT / span;
+  const scale = MAN_H / span;
+  root.scale.setScalar(scale);
+  root.position.set(
+    -((box.min.x + box.max.x) / 2) * scale,
+    -box.min.y * scale,
+    -((box.min.z + box.max.z) / 2) * scale
+  );
+}
+
+function fitCar(root: THREE.Object3D) {
+  root.updateMatrixWorld(true);
+  const box = new THREE.Box3().setFromObject(root);
+  const sx = Math.max(0.001, box.max.x - box.min.x);
+  const sz = Math.max(0.001, box.max.z - box.min.z);
+  const len = Math.max(sx, sz);
+  const scale = CAR_LEN / len;
   root.scale.setScalar(scale);
   root.position.set(
     -((box.min.x + box.max.x) / 2) * scale,
@@ -79,7 +96,6 @@ function metal(color: string) {
   return new THREE.MeshLambertMaterial({ color });
 }
 
-/** Basit tabanca — RightHand'e takılır. */
 function makePistol() {
   const g = new THREE.Group();
   g.name = "mafyaPistol";
@@ -96,14 +112,12 @@ function makePistol() {
   handle.position.set(0, -0.04, 0.02);
   handle.rotation.x = 0.18;
   g.add(handle);
-  // Mixamo RightHand: namlu ileri (+Z yerel ayar)
   g.rotation.set(-Math.PI / 2, 0, Math.PI / 2);
   g.position.set(0.02, 0.06, 0.04);
   g.scale.setScalar(1.05);
   return g;
 }
 
-/** Basit M4 — iki elle tutuşa yakın. */
 function makeM4() {
   const g = new THREE.Group();
   g.name = "mafyaM4";
@@ -155,7 +169,7 @@ function pickFireClip(clips: THREE.AnimationClip[]) {
   return soft ?? clips.find((c) => /run|walk/i.test(c.name)) ?? clips[0];
 }
 
-function numberSprite(n: number) {
+function numberSprite(n: number, kind: MafyaKind) {
   const c = document.createElement("canvas");
   c.width = 256;
   c.height = 256;
@@ -167,10 +181,10 @@ function numberSprite(n: number) {
     ctx.fillStyle = "rgba(8,8,10,0.88)";
     ctx.fill();
     ctx.lineWidth = 10;
-    ctx.strokeStyle = "#ffe14a";
+    ctx.strokeStyle = kind === "car" ? "#6ec8ff" : "#ffe14a";
     ctx.stroke();
-    ctx.fillStyle = "#ffe14a";
-    ctx.font = "900 140px Inter, Segoe UI, sans-serif";
+    ctx.fillStyle = kind === "car" ? "#6ec8ff" : "#ffe14a";
+    ctx.font = "900 120px Inter, Segoe UI, sans-serif";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.fillText(String(n), 128, 138);
@@ -181,18 +195,18 @@ function numberSprite(n: number) {
   tex.minFilter = THREE.LinearFilter;
   const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false, toneMapped: false });
   const spr = new THREE.Sprite(mat);
-  spr.scale.set(0.55, 0.55, 1);
-  spr.position.set(0, 2.15, 0);
+  spr.scale.set(kind === "car" ? 0.85 : 0.55, kind === "car" ? 0.85 : 0.55, 1);
+  spr.position.set(0, kind === "car" ? 2.6 : 2.15, 0);
   spr.renderOrder = 50;
   return spr;
 }
 
-type Man = { mix: THREE.AnimationMixer; hold: THREE.Group };
+type Man = { mix: THREE.AnimationMixer | null; hold: THREE.Group };
 
 function Ground() {
   return (
     <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.01, 0]} receiveShadow={false}>
-      <planeGeometry args={[40, 16]} />
+      <planeGeometry args={[64, 22]} />
       <meshLambertMaterial color="#2a3038" />
     </mesh>
   );
@@ -224,30 +238,38 @@ export function MafyaBattle() {
     const loader = new GLTFLoader();
     void (async () => {
       try {
-        const files = await Promise.all(MAFYA_MODELS.map((url) => loadGlb(loader, url)));
+        const files = await Promise.all(MAFYA_ENTRIES.map((e) => loadGlb(loader, e.url)));
         if (drop || !host.current) return;
         const root = host.current;
         root.clear();
         men.current = [];
 
         for (let i = 0; i < files.length; i++) {
+          const entry = MAFYA_ENTRIES[i];
           const file = files[i];
           toLambert(file.scene);
-          fit(file.scene);
-          attachGun(file.scene, mafyaGunFor(i));
+          if (entry.kind === "car") fitCar(file.scene);
+          else fitMan(file.scene);
+
+          if (entry.kind === "man") attachGun(file.scene, mafyaGunFor(i));
+
           const hold = new THREE.Group();
           const spot = mafyaSpot(i);
           hold.position.set(spot.x, 0, spot.z);
           hold.rotation.y = spot.yaw;
           hold.add(file.scene);
-          hold.add(numberSprite(i + 1));
+          hold.add(numberSprite(entry.num, entry.kind));
           root.add(hold);
-          const mix = new THREE.AnimationMixer(file.scene);
-          const clip = pickFireClip(file.animations);
-          if (clip) {
-            const action = mix.clipAction(clip);
-            action.setLoop(THREE.LoopRepeat, Infinity);
-            action.play();
+
+          let mix: THREE.AnimationMixer | null = null;
+          if (entry.kind === "man") {
+            mix = new THREE.AnimationMixer(file.scene);
+            const clip = pickFireClip(file.animations);
+            if (clip) {
+              const action = mix.clipAction(clip);
+              action.setLoop(THREE.LoopRepeat, Infinity);
+              action.play();
+            }
           }
           men.current.push({ mix, hold });
         }
@@ -258,7 +280,7 @@ export function MafyaBattle() {
     })();
     return () => {
       drop = true;
-      for (const man of men.current) man.mix.stopAllAction();
+      for (const man of men.current) man.mix?.stopAllAction();
       men.current = [];
       host.current?.clear();
       mafyaReset();
@@ -266,16 +288,15 @@ export function MafyaBattle() {
   }, []);
 
   useFrame((_, dt) => {
-    for (const man of men.current) man.mix.update(dt);
+    for (const man of men.current) man.mix?.update(dt);
   });
 
-  const labels = useMemo(() => Array.from({ length: MAFYA_N }, (_, i) => i + 1), []);
+  const labels = useMemo(() => MAFYA_ENTRIES.map((e) => e.num), []);
 
   return (
     <group>
       <Ground />
       <group ref={host} />
-      {/* erişim için numara listesi (HUD değil) */}
       <group visible={false}>{labels.map((n) => <group key={n} />)}</group>
     </group>
   );

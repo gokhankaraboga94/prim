@@ -1,34 +1,38 @@
 /**
- * mafya — yeni_Modeller lineup inceleme.
- * Yan yana 1..N numaralı modeller; ateş animasyonu + el silahı.
+ * mafya — lineup inceleme: adamlar + arabalar, numaralı.
  * Geri bildirimle eleme / çoğaltma için.
  */
 export const MAFYA_ID = "mafya" as const;
 export type MafyaId = typeof MAFYA_ID;
 export const MAFYA_MODE = { id: MAFYA_ID, label: "mafya" } as const;
-export const MAFYA_SECONDS = 18;
+export const MAFYA_SECONDS = 20;
 
-/** public/models/mafya/m01..m09 — sıra = numara. */
-export const MAFYA_MODELS = [
-  "/models/mafya/m01.glb",
-  "/models/mafya/m02.glb",
-  "/models/mafya/m03.glb",
-  "/models/mafya/m04.glb",
-  "/models/mafya/m05.glb",
-  "/models/mafya/m06.glb",
-  "/models/mafya/m07.glb",
-  "/models/mafya/m08.glb",
-  "/models/mafya/m09.glb",
+export type MafyaKind = "man" | "car";
+export type MafyaEntry = { url: string; kind: MafyaKind; num: number };
+
+/** 1–9 adam, 10–12 araba. */
+export const MAFYA_ENTRIES: readonly MafyaEntry[] = [
+  { url: "/models/mafya/m01.glb", kind: "man", num: 1 },
+  { url: "/models/mafya/m02.glb", kind: "man", num: 2 },
+  { url: "/models/mafya/m03.glb", kind: "man", num: 3 },
+  { url: "/models/mafya/m04.glb", kind: "man", num: 4 },
+  { url: "/models/mafya/m05.glb", kind: "man", num: 5 },
+  { url: "/models/mafya/m06.glb", kind: "man", num: 6 },
+  { url: "/models/mafya/m07.glb", kind: "man", num: 7 },
+  { url: "/models/mafya/m08.glb", kind: "man", num: 8 },
+  { url: "/models/mafya/m09.glb", kind: "man", num: 9 },
+  { url: "/models/mafya/c01.glb", kind: "car", num: 10 },
+  { url: "/models/mafya/c02.glb", kind: "car", num: 11 },
+  { url: "/models/mafya/c03.glb", kind: "car", num: 12 },
 ] as const;
 
-export const MAFYA_N = MAFYA_MODELS.length;
-export const MAFYA_URLS = [...MAFYA_MODELS] as const;
+export const MAFYA_N = MAFYA_ENTRIES.length;
+export const MAFYA_URLS = MAFYA_ENTRIES.map((e) => e.url);
 
 /** pistol | m4 — ateş animasyonuna göre. */
 export type MafyaGun = "pistol" | "m4";
 
 export function mafyaGunFor(i: number): MafyaGun {
-  // Çift numaralar M4 (koşarak ateş), tekler tabanca — görsel çeşit.
   return i % 2 === 0 ? "m4" : "pistol";
 }
 
@@ -66,36 +70,47 @@ export function mafyaReset() {
   playAt = 0;
 }
 
-/** Yan yana, kameraya bakacak şekilde. */
+/** Yan yana; arabalar daha geniş aralık. */
 export function mafyaSpot(i: number) {
-  const n = MAFYA_N;
-  const gap = 1.55;
-  const x = (i - (n - 1) / 2) * gap;
-  return { x, z: 0, yaw: Math.PI };
+  let x = 0;
+  for (let k = 0; k < i; k++) {
+    x += MAFYA_ENTRIES[k].kind === "car" ? 4.2 : 1.55;
+  }
+  const kind = MAFYA_ENTRIES[i]?.kind ?? "man";
+  x += kind === "car" ? 2.1 : 0.75;
+
+  let total = 0;
+  for (let k = 0; k < MAFYA_N; k++) {
+    total += MAFYA_ENTRIES[k].kind === "car" ? 4.2 : 1.55;
+  }
+  return { x: x - total / 2, z: kind === "car" ? 0.4 : 0, yaw: Math.PI };
 }
 
 export function mafyaFar() {
-  return 80;
+  return 120;
 }
 
 export function mafyaHaze() {
-  return { near: 28, far: 70 };
+  return { near: 40, far: 95 };
 }
 
 type Cam = { x: number; y: number; z: number; lx: number; ly: number; lz: number; fov: number };
 
-/** Tüm hattı gören sabit bakış. */
+/** Tüm hattı (adam + araba) gören bakış. */
 export function mafyaCam(t: number): Cam {
-  const swing = Math.sin(t * 0.15) * 0.8;
-  const n = MAFYA_N;
-  const half = ((n - 1) / 2) * 1.55;
+  const swing = Math.sin(t * 0.12) * 1.4;
+  let total = 0;
+  for (let k = 0; k < MAFYA_N; k++) {
+    total += MAFYA_ENTRIES[k].kind === "car" ? 4.2 : 1.55;
+  }
+  const half = total / 2;
   return {
     x: swing,
-    y: 2.35,
-    z: Math.max(7.5, half * 1.15 + 5.2),
+    y: 3.6,
+    z: Math.max(12, half * 0.95 + 8),
     lx: 0,
-    ly: 1.05,
+    ly: 1.1,
     lz: 0,
-    fov: 38,
+    fov: 40,
   };
 }
