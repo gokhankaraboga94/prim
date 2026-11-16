@@ -482,7 +482,11 @@ export function MafyaBattle() {
       const yaw = mafyaYawTo(i, aim, t);
       const dead = !mafyaAlive(i, t);
       const die = mafyaDieAt(i);
-      const fall = dead ? Math.min(1, (t - die) / 0.55) : 0;
+      const gone = dead && t >= die + 1;
+      const fall = dead ? Math.min(1, (t - die) / 0.45) : 0;
+
+      man.hold.visible = !gone;
+      if (gone) continue;
 
       man.hold.rotation.order = "YXZ";
       man.hold.rotation.y = yaw;
@@ -502,8 +506,9 @@ export function MafyaBattle() {
           if (local >= 0 && local < 0.1) kick = Math.max(kick, (1 - local / 0.1) * 0.025);
         }
       }
-      const backX = Math.sin(yaw) * -kick;
-      const backZ = Math.cos(yaw) * -kick;
+      // +X ileri: geri tepme local -X yönünde
+      const backX = Math.cos(yaw) * -kick;
+      const backZ = Math.sin(yaw) * kick;
       man.hold.position.set(spot.x + backX, fall * 0.12, spot.z + backZ);
       if (!dead) plantFeet(man.scene, man.hold);
     }

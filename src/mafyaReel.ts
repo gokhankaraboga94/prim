@@ -228,17 +228,21 @@ function mafyaEnemyCenter(fromI: number, t: number): { x: number; z: number } {
 }
 
 /**
- * Mixamo +Z ileri. Hedefe yaw = atan2(dx, dz).
- * Ateş anında doğrudan hedef; değilse rakip grubunun ortası.
+ * Tripo/Mixamo kalça bind'i -90° Y → model burnu local +X.
+ * Hedefe dönmek: yaw = atan2(-dz, dx)  (atan2(dx,dz) sağa/sola bakıyordu).
  */
+function yawToward(ax: number, az: number, tx: number, tz: number) {
+  return Math.atan2(-(tz - az), tx - ax);
+}
+
 export function mafyaYawTo(fromI: number, toI: number, t = 0): number {
   const a = mafyaPos(fromI);
   if (toI >= 0) {
     const b = mafyaPos(toI);
-    return Math.atan2(b.x - a.x, b.z - a.z);
+    return yawToward(a.x, a.z, b.x, b.z);
   }
   const mid = mafyaEnemyCenter(fromI, t);
-  return Math.atan2(mid.x - a.x, mid.z - a.z);
+  return yawToward(a.x, a.z, mid.x, mid.z);
 }
 
 export function mafyaSpot(i: number, t = 0): Spot {
