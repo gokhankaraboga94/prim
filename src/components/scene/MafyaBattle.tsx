@@ -1,0 +1,282 @@
+import { useEffect, useMemo, useRef } from "react";
+import { useFrame } from "@react-three/fiber";
+import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+import * as THREE from "three";
+import { preloadedGlb } from "../../arenaPreload";
+import {
+  MAFYA_MODELS,
+  MAFYA_N,
+  mafyaCam,
+  mafyaFar,
+  mafyaGunFor,
+  mafyaMarkReady,
+  mafyaReset,
+  mafyaSpot,
+  mafyaT,
+  type MafyaGun,
+} from "../../mafyaReel";
+
+type Gltf = Parameters<Parameters<GLTFLoader["load"]>[1]>[0];
+
+const HEIGHT = 1.78;
+
+function loadGlb(loader: GLTFLoader, url: string) {
+  const buf = preloadedGlb(url);
+  return new Promise<Gltf>((ok, fail) => {
+    if (buf) loader.parse(buf.slice(0), "", ok, fail);
+    else loader.load(url, ok, undefined, fail);
+  });
+}
+
+function toLambert(root: THREE.Object3D) {
+  root.traverse((obj) => {
+    const mesh = obj as THREE.Mesh;
+    if (!mesh.isMesh) return;
+    const src = (Array.isArray(mesh.material) ? mesh.material[0] : mesh.material) as THREE.MeshStandardMaterial;
+    mesh.material = new THREE.MeshLambertMaterial({
+      map: src?.map ?? null,
+      color: src?.color ? src.color.clone() : new THREE.Color("#ffffff"),
+    });
+    mesh.castShadow = false;
+    mesh.receiveShadow = false;
+    mesh.frustumCulled = false;
+  });
+}
+
+function fit(root: THREE.Object3D) {
+  root.updateMatrixWorld(true);
+  const box = new THREE.Box3().setFromObject(root);
+  const span = Math.max(0.001, box.max.y - box.min.y);
+  const scale = HEIGHT / span;
+  root.scale.setScalar(scale);
+  root.position.set(
+    -((box.min.x + box.max.x) / 2) * scale,
+    -box.min.y * scale,
+    -((box.min.z + box.max.z) / 2) * scale
+  );
+}
+
+function findBone(root: THREE.Object3D, names: string[]): THREE.Object3D | null {
+  const want = new Set(names);
+  let found: THREE.Object3D | null = null;
+  root.traverse((obj) => {
+    if (found) return;
+    if (want.has(obj.name)) {
+      found = obj;
+      return;
+    }
+    for (const n of names) {
+      if (obj.name.endsWith(n)) {
+        found = obj;
+        return;
+      }
+    }
+  });
+  return found;
+}
+
+function metal(color: string) {
+  return new THREE.MeshLambertMaterial({ color });
+}
+
+/** Basit tabanca — RightHand'e takılır. */
+function makePistol() {
+  const g = new THREE.Group();
+  g.name = "mafyaPistol";
+  const dark = metal("#1a1c1f");
+  const grip = metal("#2a221c");
+  const slide = new THREE.Mesh(new THREE.BoxGeometry(0.045, 0.085, 0.18), dark);
+  slide.position.set(0, 0.02, 0.06);
+  g.add(slide);
+  const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.1, 8), dark);
+  barrel.rotation.x = Math.PI / 2;
+  barrel.position.set(0, 0.028, 0.17);
+  g.add(barrel);
+  const handle = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.1, 0.055), grip);
+  handle.position.set(0, -0.04, 0.02);
+  handle.rotation.x = 0.18;
+  g.add(handle);
+  // Mixamo RightHand: namlu ileri (+Z yerel ayar)
+  g.rotation.set(-Math.PI / 2, 0, Math.PI / 2);
+  g.position.set(0.02, 0.06, 0.04);
+  g.scale.setScalar(1.05);
+  return g;
+}
+
+/** Basit M4 — iki elle tutuşa yakın. */
+function makeM4() {
+  const g = new THREE.Group();
+  g.name = "mafyaM4";
+  const dark = metal("#17191c");
+  const body = metal("#22262b");
+  const stock = metal("#1c1814");
+  const receiver = new THREE.Mesh(new THREE.BoxGeometry(0.055, 0.075, 0.28), body);
+  receiver.position.set(0, 0.02, 0.08);
+  g.add(receiver);
+  const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.014, 0.32, 8), dark);
+  barrel.rotation.x = Math.PI / 2;
+  barrel.position.set(0, 0.03, 0.3);
+  g.add(barrel);
+  const handguard = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.055, 0.16), dark);
+  handguard.position.set(0, 0.015, 0.2);
+  g.add(handguard);
+  const mag = new THREE.Mesh(new THREE.BoxGeometry(0.035, 0.12, 0.05), dark);
+  mag.position.set(0, -0.06, 0.06);
+  g.add(mag);
+  const butt = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.07, 0.14), stock);
+  butt.position.set(0, 0.01, -0.12);
+  g.add(butt);
+  const grip = new THREE.Mesh(new THREE.BoxGeometry(0.035, 0.09, 0.045), stock);
+  grip.position.set(0, -0.05, 0.0);
+  grip.rotation.x = 0.25;
+  g.add(grip);
+  g.rotation.set(-Math.PI / 2, 0, Math.PI / 2);
+  g.position.set(0.03, 0.08, 0.05);
+  g.scale.setScalar(1.15);
+  return g;
+}
+
+function attachGun(root: THREE.Object3D, kind: MafyaGun) {
+  const hand =
+    findBone(root, ["mixamorig:RightHand", "RightHand", "mixamorig_RightHand"]) ??
+    findBone(root, ["mixamorig:LeftHand", "LeftHand"]);
+  if (!hand) return;
+  const gun = kind === "m4" ? makeM4() : makePistol();
+  hand.add(gun);
+}
+
+function pickFireClip(clips: THREE.AnimationClip[]) {
+  const prefer = ["fire", "silah ile ateş ediyor", "silah ile ateş ediyor koşarken"];
+  for (const name of prefer) {
+    const hit = clips.find((c) => c.name === name || c.name.toLowerCase() === name);
+    if (hit) return hit;
+  }
+  const soft = clips.find((c) => /fire|ateş|silah/i.test(c.name));
+  return soft ?? clips.find((c) => /run|walk/i.test(c.name)) ?? clips[0];
+}
+
+function numberSprite(n: number) {
+  const c = document.createElement("canvas");
+  c.width = 256;
+  c.height = 256;
+  const ctx = c.getContext("2d");
+  if (ctx) {
+    ctx.clearRect(0, 0, 256, 256);
+    ctx.beginPath();
+    ctx.arc(128, 128, 110, 0, Math.PI * 2);
+    ctx.fillStyle = "rgba(8,8,10,0.88)";
+    ctx.fill();
+    ctx.lineWidth = 10;
+    ctx.strokeStyle = "#ffe14a";
+    ctx.stroke();
+    ctx.fillStyle = "#ffe14a";
+    ctx.font = "900 140px Inter, Segoe UI, sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(String(n), 128, 138);
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.generateMipmaps = false;
+  tex.minFilter = THREE.LinearFilter;
+  const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false, toneMapped: false });
+  const spr = new THREE.Sprite(mat);
+  spr.scale.set(0.55, 0.55, 1);
+  spr.position.set(0, 2.15, 0);
+  spr.renderOrder = 50;
+  return spr;
+}
+
+type Man = { mix: THREE.AnimationMixer; hold: THREE.Group };
+
+function Ground() {
+  return (
+    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.01, 0]} receiveShadow={false}>
+      <planeGeometry args={[40, 16]} />
+      <meshLambertMaterial color="#2a3038" />
+    </mesh>
+  );
+}
+
+export function MafyaCam() {
+  useFrame(({ camera }) => {
+    const persp = camera as THREE.PerspectiveCamera;
+    if (!persp.isPerspectiveCamera) return;
+    const shot = mafyaCam(mafyaT());
+    persp.fov = shot.fov;
+    persp.near = 0.12;
+    persp.far = mafyaFar();
+    persp.updateProjectionMatrix();
+    persp.position.set(shot.x, shot.y, shot.z);
+    persp.up.set(0, 1, 0);
+    persp.lookAt(shot.lx, shot.ly, shot.lz);
+  });
+  return null;
+}
+
+export function MafyaBattle() {
+  const host = useRef<THREE.Group>(null);
+  const men = useRef<Man[]>([]);
+
+  useEffect(() => {
+    mafyaReset();
+    let drop = false;
+    const loader = new GLTFLoader();
+    void (async () => {
+      try {
+        const files = await Promise.all(MAFYA_MODELS.map((url) => loadGlb(loader, url)));
+        if (drop || !host.current) return;
+        const root = host.current;
+        root.clear();
+        men.current = [];
+
+        for (let i = 0; i < files.length; i++) {
+          const file = files[i];
+          toLambert(file.scene);
+          fit(file.scene);
+          attachGun(file.scene, mafyaGunFor(i));
+          const hold = new THREE.Group();
+          const spot = mafyaSpot(i);
+          hold.position.set(spot.x, 0, spot.z);
+          hold.rotation.y = spot.yaw;
+          hold.add(file.scene);
+          hold.add(numberSprite(i + 1));
+          root.add(hold);
+          const mix = new THREE.AnimationMixer(file.scene);
+          const clip = pickFireClip(file.animations);
+          if (clip) {
+            const action = mix.clipAction(clip);
+            action.setLoop(THREE.LoopRepeat, Infinity);
+            action.play();
+          }
+          men.current.push({ mix, hold });
+        }
+        if (!drop) mafyaMarkReady();
+      } catch (err) {
+        console.warn("mafya", err);
+      }
+    })();
+    return () => {
+      drop = true;
+      for (const man of men.current) man.mix.stopAllAction();
+      men.current = [];
+      host.current?.clear();
+      mafyaReset();
+    };
+  }, []);
+
+  useFrame((_, dt) => {
+    for (const man of men.current) man.mix.update(dt);
+  });
+
+  const labels = useMemo(() => Array.from({ length: MAFYA_N }, (_, i) => i + 1), []);
+
+  return (
+    <group>
+      <Ground />
+      <group ref={host} />
+      {/* erişim için numara listesi (HUD değil) */}
+      <group visible={false}>{labels.map((n) => <group key={n} />)}</group>
+    </group>
+  );
+}

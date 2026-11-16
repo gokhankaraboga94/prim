@@ -27,6 +27,8 @@ import { OrduBattle, OrduCam } from "./OrduBattle";
 import { ORDU_ID, orduForm, orduHaze, type OrduId } from "../../orduReel";
 import { D14112026Battle, D14112026Cam } from "./D14112026Battle";
 import { d1411Form, d1411Haze, type D14112026Id } from "../../d14112026Reel";
+import { MafyaBattle, MafyaCam } from "./MafyaBattle";
+import { mafyaHaze, type MafyaId } from "../../mafyaReel";
 import { karsiField, karsiHaze, makeKarsiLayout, type Rival } from "../../karsiReel";
 import { KarsiBattle, KarsiCam } from "./KarsiBattle";
 import { OkBattle, OkCam } from "./OkBattle";
@@ -159,6 +161,7 @@ type BattleSceneProps = {
   wars?: WarsId | null;
   ordu?: OrduId | null;
   d14112026?: D14112026Id | null;
+  mafya?: MafyaId | null;
   karsi?: Rival | null;
   ok?: OkId | null;
   elf?: ElfId | null;
@@ -992,6 +995,7 @@ function SceneContent({
   wars = null,
   ordu: orduIn = null,
   d14112026: d1411In = null,
+  mafya = null,
   karsi = null,
   ok = null,
   elf = null,
@@ -1053,6 +1057,7 @@ function SceneContent({
   const orduFog = karsi ? karsiHaze(makeKarsiLayout(soldiers, karsi.foes, Boolean(karsi.invite))) : ordu ? orduHaze(soldiers) : null;
   const orduField = karsi ? karsiField(soldiers, karsi.foes, Boolean(karsi.invite)) : ordu ? orduForm(soldiers) : null;
   const d1411Fog = d14112026 ? d1411Haze(soldiers) : null;
+  const mafyaFog = mafya ? mafyaHaze() : null;
   const d1411Field = d14112026 ? d1411Form(soldiers) : null;
   const field = isVs(vs);
   const climb = isVs2(vs);
@@ -1087,14 +1092,14 @@ function SceneContent({
   return (
     <>
       <color attach="background" args={[(ekran || ekran1 || ekran2 || ekran3 || ekran4 || ekran5) ? "#000000" : (dance2 || dance3) ? "#07090f" : dance ? "#1a1c22" : run ? "#8eabbe" : tek2 || tek3 ? "#7eb6ee" : tek ? "#6a5344" : kuyular || dovus || aragorn || baska || kirmizi ? "#7eb6ee" : savas ? "#b7c6d4" : devKong ? "#9eb6cc" : d1311 ? "#7eb6ee" : kare ? "#8ea4b8" : magdur ? "#2c3644" : kuyu ? "#1a1614" : gecme ? "#6a5848" : kurtar ? "#3a322a" : loop ? "#2ea2ff" : pit ? "#8ec6f4" : hero ? "#7eb6ee" : kalkan ? "#07080d" : elf ? "#4a3728" : dragon ? "#7f97ad" : film ? "#9eb4c8" : maze ? "#9eb0c4" : slaughter ? "#8f9aa0" : "#7eb6ee"]} />
-      <fog attach="fog" args={(ekran || ekran1 || ekran2 || ekran3 || ekran4 || ekran5) ? ["#000000", 40, 200] : (dance2 || dance3) ? ["#07090f", 18, 55] : dance ? ["#1a1c22", 16, 36] : run ? ["#9aafbf", 7, 24] : kale ? ["#b7cbe0", 48, 190] : tek3 ? ["#b7d4ee", 30, 120] : tek2 ? ["#b7d4ee", 22, 90] : tek ? ["#c9b396", 14, 60] : kuyular || dovus || aragorn || baska ? ["#b7d4ee", 28, 90] : kirmizi ? ["#b7d4ee", 48, 180] : savas ? ["#b7c6d4", 55, 160] : devKong ? ["#9eb6cc", 70, 190] : d1311 ? ["#9ec8ee", 90, 260] : kare ? ["#8ea4b8", 150, 280] : magdur ? ["#2c3644", 18, 52] : kuyu ? ["#1a1614", 5, 16] : gecme ? ["#c4ad96", 14, 46] : kurtar ? ["#6d5e50", 26, 82] : loop ? ["#9ed6ff", 70, 200] : kayit ? ["#9ec8ee", 28000, 70000] : pit ? ["#c5e4f8", 40, 180] : hero ? ["#b9d6f2", 36, 150] : kalkan ? ["#07080d", 24, 72] : elf ? ["#c8b089", 40, 220] : ok ? ["#c5dff2", 140, 820] : wars ? ["#c8c4ba", 180 * warsScale, 780 * warsScale] : d14112026 ? ["#d5e4f2", d1411Fog?.near ?? 70, d1411Fog?.far ?? 380] : ordu ? ["#d5e4f2", orduFog?.near ?? 78, orduFog?.far ?? 420] : dragon ? ["#c5d4e2", 70, 420] : film ? ["#d5e4f2", 80, 460] : giant || bout ? ["#d5e4f2", 90, 520] : maze ? ["#c6d0da", 340, 720] : slaughter ? ["#c4b89a", 240, 980] : defend ? (isDefend3(defend) ? ["#9ec8ee", 1100, 3200] : sortie ? ["#9ec8ee", 600, 2200] : ["#9ec8ee", 1400, 4200]) : field ? ["#9ec8ee", 140, 720] : ["#9ec8ee", 380, 1500]} />
+      <fog attach="fog" args={(ekran || ekran1 || ekran2 || ekran3 || ekran4 || ekran5) ? ["#000000", 40, 200] : (dance2 || dance3) ? ["#07090f", 18, 55] : dance ? ["#1a1c22", 16, 36] : run ? ["#9aafbf", 7, 24] : kale ? ["#b7cbe0", 48, 190] : tek3 ? ["#b7d4ee", 30, 120] : tek2 ? ["#b7d4ee", 22, 90] : tek ? ["#c9b396", 14, 60] : kuyular || dovus || aragorn || baska ? ["#b7d4ee", 28, 90] : kirmizi ? ["#b7d4ee", 48, 180] : savas ? ["#b7c6d4", 55, 160] : devKong ? ["#9eb6cc", 70, 190] : d1311 ? ["#9ec8ee", 90, 260] : kare ? ["#8ea4b8", 150, 280] : magdur ? ["#2c3644", 18, 52] : kuyu ? ["#1a1614", 5, 16] : gecme ? ["#c4ad96", 14, 46] : kurtar ? ["#6d5e50", 26, 82] : loop ? ["#9ed6ff", 70, 200] : kayit ? ["#9ec8ee", 28000, 70000] : pit ? ["#c5e4f8", 40, 180] : hero ? ["#b9d6f2", 36, 150] : kalkan ? ["#07080d", 24, 72] : elf ? ["#c8b089", 40, 220] : ok ? ["#c5dff2", 140, 820] : wars ? ["#c8c4ba", 180 * warsScale, 780 * warsScale] : mafya ? ["#1a1f28", mafyaFog?.near ?? 28, mafyaFog?.far ?? 70] : d14112026 ? ["#d5e4f2", d1411Fog?.near ?? 70, d1411Fog?.far ?? 380] : ordu ? ["#d5e4f2", orduFog?.near ?? 78, orduFog?.far ?? 420] : dragon ? ["#c5d4e2", 70, 420] : film ? ["#d5e4f2", 80, 460] : giant || bout ? ["#d5e4f2", 90, 520] : maze ? ["#c6d0da", 340, 720] : slaughter ? ["#c4b89a", 240, 980] : defend ? (isDefend3(defend) ? ["#9ec8ee", 1100, 3200] : sortie ? ["#9ec8ee", 600, 2200] : ["#9ec8ee", 1400, 4200]) : field ? ["#9ec8ee", 140, 720] : ["#9ec8ee", 380, 1500]} />
       {!maze && !kalkan && !hero && !loop && !kurtar && !gecme && !kuyu && !magdur && !kare && !d1311 && !devKong && !savas && !pit && !elf && !dance && !dance2 && !dance3 && !ekran && !ekran1 && !ekran2 && !ekran3 && !ekran4 && !ekran5 && <SkyDome cheap={Boolean(defend) && !isDefend3(defend)} />}
       {!maze && !kalkan && !hero && !loop && !kurtar && !gecme && !kuyu && !magdur && !kare && !d1311 && !devKong && !savas && !kirmizi && !baska && !aragorn && !dovus && !vsss && !epik && !dance && !dance2 && !dance3 && !ekran && !ekran1 && !ekran2 && !ekran3 && !ekran4 && !ekran5 && !kuyular && !tek && !tek2 && !tek3 && !run && !pit && !elf && <SteelSky />}
       {!maze && !kalkan && !hero && !loop && !kurtar && !gecme && !kuyu && !magdur && !kare && !d1311 && !devKong && !savas && !kirmizi && !baska && !aragorn && !dovus && !vsss && !epik && !dance && !dance2 && !dance3 && !ekran && !ekran1 && !ekran2 && !ekran3 && !ekran4 && !ekran5 && !kuyular && !tek && !tek2 && !tek3 && !run && !pit && !elf && <DayLights cinematic={cinematic} slim={Boolean(defend) && !isDefend3(defend)} warm={slaughter || Boolean(dragon)} />}
       {orduField && <GrassField span={Math.max(2400, orduField.width * 8 + orduField.depth * 8)} />}
       {d1411Field && <GrassField span={Math.max(2400, d1411Field.width * 8 + d1411Field.depth * 8)} />}
-      {kayit ? <GrassField span={KAYIT_FIELD} y={-0.04} depthWrite={false} /> : !wars && !ordu && !d14112026 && !ok && !elf && !kalkan && !hero && !loop && !kurtar && !gecme && !kuyu && !magdur && !kare && !d1311 && !devKong && !savas && !kirmizi && !baska && !aragorn && !dovus && !vsss && !epik && !dance && !dance2 && !dance3 && !ekran && !ekran1 && !ekran2 && !ekran3 && !ekran4 && !ekran5 && !kuyular && !tek && !tek2 && !tek3 && !run && !pit && (grass ? <GrassField /> : isDevSmall(giant) ? <BlackGround /> : film || dragon || giant ? <New1Terrain /> : maze ? <Maze soldiers={soldiers} /> : cross ? <New6Cross /> : chase ? <New5Bridge /> : new4 ? <New4Peak /> : slaughter || isDefend4(defend) ? <New1Terrain /> : <Terrain road={!defend && !field} cheap={Boolean(defend)} />)}
-      {!wars && !ordu && !d14112026 && !ok && !elf && !kalkan && !hero && !loop && !kurtar && !gecme && !kuyu && !kapi && !magdur && !kare && !d1311 && !devKong && !savas && !kirmizi && !baska && !aragorn && !dovus && !vsss && !epik && !dance && !dance2 && !dance3 && !ekran && !ekran1 && !ekran2 && !ekran3 && !ekran4 && !ekran5 && !kuyular && !tek && !tek2 && !tek3 && !kale && !run && !pit && !defend && !field && !slaughter && !maze && !film && !dragon && !giant && !bout && <Castle level={level} pressure={pressure} gateClosed={Boolean(countdown) || split || climb || Boolean(xxx)} wallFight={climb} />}
+      {kayit ? <GrassField span={KAYIT_FIELD} y={-0.04} depthWrite={false} /> : !wars && !ordu && !d14112026 && !mafya && !ok && !elf && !kalkan && !hero && !loop && !kurtar && !gecme && !kuyu && !magdur && !kare && !d1311 && !devKong && !savas && !kirmizi && !baska && !aragorn && !dovus && !vsss && !epik && !dance && !dance2 && !dance3 && !ekran && !ekran1 && !ekran2 && !ekran3 && !ekran4 && !ekran5 && !kuyular && !tek && !tek2 && !tek3 && !run && !pit && (grass ? <GrassField /> : isDevSmall(giant) ? <BlackGround /> : film || dragon || giant ? <New1Terrain /> : maze ? <Maze soldiers={soldiers} /> : cross ? <New6Cross /> : chase ? <New5Bridge /> : new4 ? <New4Peak /> : slaughter || isDefend4(defend) ? <New1Terrain /> : <Terrain road={!defend && !field} cheap={Boolean(defend)} />)}
+      {!wars && !ordu && !d14112026 && !mafya && !ok && !elf && !kalkan && !hero && !loop && !kurtar && !gecme && !kuyu && !kapi && !magdur && !kare && !d1311 && !devKong && !savas && !kirmizi && !baska && !aragorn && !dovus && !vsss && !epik && !dance && !dance2 && !dance3 && !ekran && !ekran1 && !ekran2 && !ekran3 && !ekran4 && !ekran5 && !kuyular && !tek && !tek2 && !tek3 && !kale && !run && !pit && !defend && !field && !slaughter && !maze && !film && !dragon && !giant && !bout && <Castle level={level} pressure={pressure} gateClosed={Boolean(countdown) || split || climb || Boolean(xxx)} wallFight={climb} />}
       {sortie && (
         <TimedVisible until={DEFEND2_SORTIE + 0.85}>
           <Castle level={level} pressure={pressure} forceGateOpen />
@@ -1107,16 +1112,17 @@ function SceneContent({
       ) : slaughter ? (
         <New1Foes soldiers={soldiers} duel={duel} swords={blades} bridge={chase} cross={cross} wide={wide} packed={Boolean(new5)} />
       ) : (
-        !wars && !ordu && !d14112026 && !ok && !elf && !kalkan && !hero && !loop && !kurtar && !gecme && !kuyu && !kapi && !magdur && !kare && !d1311 && !devKong && !savas && !kirmizi && !baska && !aragorn && !dovus && !vsss && !epik && !dance && !dance2 && !dance3 && !ekran && !ekran1 && !ekran2 && !ekran3 && !ekran4 && !ekran5 && !kuyular && !tek && !tek2 && !tek3 && !kale && !run && !pit && !roster && !split && !countdown && !vs && !xxx && !film && !dragon && !giant && !bout && !kayit && <SallyRaid soldiers={soldiers} commanders={chiefN} />
+        !wars && !ordu && !d14112026 && !mafya && !ok && !elf && !kalkan && !hero && !loop && !kurtar && !gecme && !kuyu && !kapi && !magdur && !kare && !d1311 && !devKong && !savas && !kirmizi && !baska && !aragorn && !dovus && !vsss && !epik && !dance && !dance2 && !dance3 && !ekran && !ekran1 && !ekran2 && !ekran3 && !ekran4 && !ekran5 && !kuyular && !tek && !tek2 && !tek3 && !kale && !run && !pit && !roster && !split && !countdown && !vs && !xxx && !film && !dragon && !giant && !bout && !kayit && <SallyRaid soldiers={soldiers} commanders={chiefN} />
       )}
       {climb && <VsLadders level={level} />}
       {film && <FilmFoes />}
       {dragon && <Dragon soldiers={Math.max(1, soldiers)} />}
       {giant && <Giant soldiers={isDevAll(giant) ? Math.max(1, soldiers) : Math.min(giant === DEV2_ID ? DEV2_N : DEV_N, Math.max(1, soldiers))} big={isDevBig(giant)} sword={isDevSword(giant)} dread={isDevDread(giant)} flesh={isDev7(giant)} ape={isDev8(giant)} demon={isDev9(giant)} orc={isDev10(giant)} hulk={isKicker(giant)} kickModel={kickModel(giant)} fast={isDevFast(giant)} small={isDevSmall(giant)} snake={isSnake(giant)} devs={isDevs(giant)} crown={devLive} />}
-      {!wars && !ordu && !d14112026 && !ok && !elf && !kalkan && !hero && !loop && !kurtar && !gecme && !kuyu && !kapi && !magdur && !kare && !d1311 && !devKong && !savas && !kirmizi && !baska && !aragorn && !dovus && !vsss && !epik && !dance && !dance2 && !dance3 && !ekran && !ekran1 && !ekran2 && !ekran3 && !ekran4 && !ekran5 && !kuyular && !tek && !tek2 && !tek3 && !kale && !run && !pit && !bout && <Army count={friendN} names={names} commanders={commanders} cinematic={cinematic} duration={duration} skipCommander={hideCmd} roster={roster} discover={discover} countdown={Boolean(countdown)} defend={Boolean(defend)} defend2={sortie} defend3={isDefend3(defend)} loose={isDefend5(defend)} blue={isDefend4(defend) || isDefend5(defend)} vs={field} vs2={climb} new1={Boolean(new1)} new2={duel} blade={blades || Boolean(maze)} bridge={chase} cross={cross} wide={wide} relief={relief} maze={Boolean(maze)} film={Boolean(film)} dragon={Boolean(dragon)} giant={Boolean(giant)} giantBig={isDevBig(giant)} giantAll={isDevAll(giant)} giantSword={isDevSword(giant)} giantSnake={isSnake(giant)} giantDevs={isDevs(giant)} giantKnight={isDev7(giant) || isDev8(giant) || isDev9(giant) || isDev10(giant) || isKicker(giant)} giantKick={isKicker(giant)} giantFast={isDevFast(giant)} giantSmall={isDevSmall(giant)} troopScale={isDev17(giant) ? 3.1 : 1} knight={!cinematic} nameGold={isDev17(giant) ? false : isDevDread(giant) || isSnake(giant) || isDevs(giant)} nameAlert={isDev17(giant) ? false : devLive || isDefend5(defend)} namePlate={Boolean(kayit)} mix={split} mixSlow={isMix9(mix)} nameHunt={Boolean(xxx)} quiet={Boolean(xxx && xxxQuiet(xxx)) || slaughter || Boolean(maze) || Boolean(film) || Boolean(dragon) || Boolean(giant) || Boolean(kayit)} square={Boolean(kayit) || Boolean(xxx && xxxSquare(xxx))} readNames={Boolean(xxx && xxxCloseNames(xxx))} scanHunt={Boolean(xxx && xxxScanHunt(xxx))} level={level} rosterIds={rosterIds} home={home || isDev17(giant)} />}
+      {!wars && !ordu && !d14112026 && !mafya && !ok && !elf && !kalkan && !hero && !loop && !kurtar && !gecme && !kuyu && !kapi && !magdur && !kare && !d1311 && !devKong && !savas && !kirmizi && !baska && !aragorn && !dovus && !vsss && !epik && !dance && !dance2 && !dance3 && !ekran && !ekran1 && !ekran2 && !ekran3 && !ekran4 && !ekran5 && !kuyular && !tek && !tek2 && !tek3 && !kale && !run && !pit && !bout && <Army count={friendN} names={names} commanders={commanders} cinematic={cinematic} duration={duration} skipCommander={hideCmd} roster={roster} discover={discover} countdown={Boolean(countdown)} defend={Boolean(defend)} defend2={sortie} defend3={isDefend3(defend)} loose={isDefend5(defend)} blue={isDefend4(defend) || isDefend5(defend)} vs={field} vs2={climb} new1={Boolean(new1)} new2={duel} blade={blades || Boolean(maze)} bridge={chase} cross={cross} wide={wide} relief={relief} maze={Boolean(maze)} film={Boolean(film)} dragon={Boolean(dragon)} giant={Boolean(giant)} giantBig={isDevBig(giant)} giantAll={isDevAll(giant)} giantSword={isDevSword(giant)} giantSnake={isSnake(giant)} giantDevs={isDevs(giant)} giantKnight={isDev7(giant) || isDev8(giant) || isDev9(giant) || isDev10(giant) || isKicker(giant)} giantKick={isKicker(giant)} giantFast={isDevFast(giant)} giantSmall={isDevSmall(giant)} troopScale={isDev17(giant) ? 3.1 : 1} knight={!cinematic} nameGold={isDev17(giant) ? false : isDevDread(giant) || isSnake(giant) || isDevs(giant)} nameAlert={isDev17(giant) ? false : devLive || isDefend5(defend)} namePlate={Boolean(kayit)} mix={split} mixSlow={isMix9(mix)} nameHunt={Boolean(xxx)} quiet={Boolean(xxx && xxxQuiet(xxx)) || slaughter || Boolean(maze) || Boolean(film) || Boolean(dragon) || Boolean(giant) || Boolean(kayit)} square={Boolean(kayit) || Boolean(xxx && xxxSquare(xxx))} readNames={Boolean(xxx && xxxCloseNames(xxx))} scanHunt={Boolean(xxx && xxxScanHunt(xxx))} level={level} rosterIds={rosterIds} home={home || isDev17(giant)} />}
       {wars && <WarsBattle names={names} soldiers={soldiers} />}
       {ordu && (karsi ? <KarsiBattle names={names} soldiers={soldiers} rival={karsi} /> : <OrduBattle names={names} soldiers={soldiers} />)}
       {d14112026 && <D14112026Battle names={names} soldiers={soldiers} day={day} />}
+      {mafya && <MafyaBattle />}
       {ok && <OkBattle names={names} />}
       {elf && <ElfBattle />}
       {hero && <HeroBattle names={names} />}
@@ -1164,6 +1170,8 @@ function SceneContent({
       {Boolean(xxx && xxxScanHunt(xxx)) && <NameScanBeam soldiers={soldiers} />}
       {wars ? (
         <WarsCam soldiers={soldiers} />
+      ) : mafya ? (
+        <MafyaCam />
       ) : d14112026 ? (
         <D14112026Cam soldiers={soldiers} />
       ) : ordu ? (
@@ -1292,10 +1300,10 @@ function SceneContent({
           <LiveDrive />
         </>
       )}
-      {cinematic && !wars && !ordu && !d14112026 && !ok && !elf && !kalkan && !hero && !loop && !kurtar && !gecme && !kuyu && !kapi && !magdur && !kare && !d1311 && !devKong && !savas && !kirmizi && !baska && !aragorn && !dovus && !vsss && !epik && !dance && !dance2 && !dance3 && !ekran && !ekran1 && !ekran2 && !ekran3 && !ekran4 && !ekran5 && !kuyular && !tek && !tek2 && !tek3 && !kale && !run && !pit && !bout && !kayit && !split && !countdown && !defend && !vs && !slaughter && !xxx && maxHp != null && hp != null && (
+      {cinematic && !wars && !ordu && !d14112026 && !mafya && !ok && !elf && !kalkan && !hero && !loop && !kurtar && !gecme && !kuyu && !kapi && !magdur && !kare && !d1311 && !devKong && !savas && !kirmizi && !baska && !aragorn && !dovus && !vsss && !epik && !dance && !dance2 && !dance3 && !ekran && !ekran1 && !ekran2 && !ekran3 && !ekran4 && !ekran5 && !kuyular && !tek && !tek2 && !tek3 && !kale && !run && !pit && !bout && !kayit && !split && !countdown && !defend && !vs && !slaughter && !xxx && maxHp != null && hp != null && (
         <CaptureHpHud hp={hp} maxHp={maxHp} soldiers={soldiers} duration={duration ?? 8} skipCommander={hideCmd} cinema={cinema} roster={roster} discover={discover} />
       )}
-      {cinematic && !wars && !ordu && !d14112026 && !ok && !elf && !kalkan && !hero && !loop && !kurtar && !gecme && !kuyu && !kapi && !magdur && !kare && !d1311 && !devKong && !savas && !kirmizi && !baska && !aragorn && !dovus && !vsss && !epik && !dance && !dance2 && !dance3 && !ekran && !ekran1 && !ekran2 && !ekran3 && !ekran4 && !ekran5 && !kuyular && !tek && !tek2 && !tek3 && !kale && !run && !pit && !bout && !kayit && showTitles && !split && !vs && !slaughter && !xxx && (
+      {cinematic && !wars && !ordu && !d14112026 && !mafya && !ok && !elf && !kalkan && !hero && !loop && !kurtar && !gecme && !kuyu && !kapi && !magdur && !kare && !d1311 && !devKong && !savas && !kirmizi && !baska && !aragorn && !dovus && !vsss && !epik && !dance && !dance2 && !dance3 && !ekran && !ekran1 && !ekran2 && !ekran3 && !ekran4 && !ekran5 && !kuyular && !tek && !tek2 && !tek3 && !kale && !run && !pit && !bout && !kayit && showTitles && !split && !vs && !slaughter && !xxx && (
         <ReelTitles soldiers={soldiers} duration={duration ?? 8} day={day} skipCommander={hideCmd} cinema={cinema} roster={roster} saga={saga} discover={discover} countdown={countdown} defend={defend} names={names} rosterIds={rosterIds} />
       )}
       {cinematic && xxx && xxxHasHook(xxx) && (
@@ -1307,7 +1315,7 @@ function SceneContent({
       {cinematic && giant && <DevHealthBar soldiers={isDevAll(giant) ? Math.max(1, soldiers) : Math.min(giant === DEV2_ID ? DEV2_N : DEV_N, Math.max(1, soldiers))} big={isDevBig(giant)} sword={isDevSword(giant)} snake={isSnake(giant) || isDevs(giant)} devs={isDevs(giant)} kick={isKicker(giant)} fast={isDevFast(giant)} small={isDevSmall(giant)} />}
       {cinematic && !split && !kayit && !loop && !kurtar && !gecme && !kuyu && !kapi && !magdur && !kare && !d1311 && !devKong && !savas && !kirmizi && !baska && !aragorn && !dovus && !vsss && !epik && !dance && !dance2 && !dance3 && !ekran && !ekran1 && !ekran2 && !ekran3 && !ekran4 && !ekran5 && !kuyular && !tek && !tek2 && !tek3 && !kale && !run && <ReelVignette />}
       {countdown && <CountdownFlash />}
-      {cinematic && !wars && !ordu && !d14112026 && !ok && !kalkan && !hero && !loop && !kurtar && !gecme && !kuyu && !kapi && !magdur && !kare && !d1311 && !devKong && !savas && !kirmizi && !baska && !aragorn && !dovus && !vsss && !epik && !dance && !dance2 && !dance3 && !ekran && !ekran1 && !ekran2 && !ekran3 && !ekran4 && !ekran5 && !kuyular && !tek && !tek2 && !tek3 && !kale && !run && !pit && !bout && !kayit && !discover && !countdown && !defend && !vs && !slaughter && !split && <ReelFade duration={duration ?? 8} />}
+      {cinematic && !wars && !ordu && !d14112026 && !mafya && !ok && !kalkan && !hero && !loop && !kurtar && !gecme && !kuyu && !kapi && !magdur && !kare && !d1311 && !devKong && !savas && !kirmizi && !baska && !aragorn && !dovus && !vsss && !epik && !dance && !dance2 && !dance3 && !ekran && !ekran1 && !ekran2 && !ekran3 && !ekran4 && !ekran5 && !kuyular && !tek && !tek2 && !tek3 && !kale && !run && !pit && !bout && !kayit && !discover && !countdown && !defend && !vs && !slaughter && !split && <ReelFade duration={duration ?? 8} />}
     </>
   );
 }
@@ -1369,6 +1377,7 @@ function BattleSceneInner({
   wars = null,
   ordu = null,
   d14112026 = null,
+  mafya = null,
   karsi = null,
   ok = null,
   elf = null,
@@ -1546,6 +1555,7 @@ function BattleSceneInner({
         wars={wars}
         ordu={ordu}
         d14112026={d14112026}
+        mafya={mafya}
         karsi={karsi}
         ok={ok}
         elf={elf}
