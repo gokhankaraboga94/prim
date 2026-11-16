@@ -342,18 +342,18 @@ export function mafyaHaze() {
 type Cam = { x: number; y: number; z: number; lx: number; ly: number; lz: number; fov: number };
 
 /**
- * Sabit 3/4 yüksek açı — çok yavaş drift, kesme yok.
+ * Yüksek orbit: ~60s'de bir tam 360° — tüm hat görünür, kesme yok.
  */
 export function mafyaCam(t: number): Cam {
-  const ang = 0.42 + Math.sin(t * 0.035) * 0.06;
-  const rad = 24 + Math.sin(t * 0.028) * 0.9;
+  const ang = (t / MAFYA_SECONDS) * Math.PI * 2;
+  const rad = 26;
   return {
     x: Math.sin(ang) * rad,
-    y: 17.5 + Math.sin(t * 0.04) * 0.35,
-    z: Math.cos(ang) * rad * 0.92,
-    lx: Math.sin(t * 0.025) * 0.6,
-    ly: 0.7,
-    lz: Math.cos(t * 0.02) * 0.4,
-    fov: 40,
+    y: 18.5,
+    z: Math.cos(ang) * rad,
+    lx: 0,
+    ly: 0.6,
+    lz: 0,
+    fov: 42,
   };
 }
