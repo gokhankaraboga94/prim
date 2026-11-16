@@ -731,26 +731,37 @@ function EditRig({ store, assets }: { store: EditStore; assets: Record<string, C
 
     const ring = rings.current;
     if (ring) {
-      const shown = store.units.filter((unit) => unit.alive).slice(0, 4096);
-      ring.count = shown.length;
-      const blink = 0.5 + 0.5 * Math.sin(performance.now() * 0.01);
-      for (let index = 0; index < shown.length; index++) {
-        const unit = shown[index];
-        const picked = store.selected.has(unit.id);
-        const base = Math.max(0.45, unit.radius);
-        const scale = picked ? base * (0.92 + 0.28 * blink) : base;
-        // Yakın kamerada zemine gömülmesin / kaybolmasın
-        dummy.position.set(unit.x, picked ? 0.14 : 0.11, unit.z);
-        dummy.rotation.set(-Math.PI / 2, 0, 0);
-        dummy.scale.set(scale, scale, 1);
-        dummy.updateMatrix();
-        ring.setMatrixAt(index, dummy.matrix);
-        if (picked) tint.copy(gold).lerp(goldHot, blink);
-        else tint.copy(teamColor.get(unit.team) ?? white);
-        ring.setColorAt(index, tint);
+      // VS'te halka yok (mermi kalsın). Araç halkası yalnız seçiliyken.
+      if (store.battle) {
+        ring.count = 0;
+      } else {
+        const shown = store.units
+          .filter((unit) => {
+            if (!unit.alive) return false;
+            const car = characterById(unit.model)?.kind === "car";
+            if (car) return store.selected.has(unit.id);
+            return true;
+          })
+          .slice(0, 4096);
+        ring.count = shown.length;
+        const blink = 0.5 + 0.5 * Math.sin(performance.now() * 0.01);
+        for (let index = 0; index < shown.length; index++) {
+          const unit = shown[index];
+          const picked = store.selected.has(unit.id);
+          const base = Math.max(0.45, unit.radius);
+          const scale = picked ? base * (0.92 + 0.28 * blink) : base;
+          dummy.position.set(unit.x, picked ? 0.14 : 0.11, unit.z);
+          dummy.rotation.set(-Math.PI / 2, 0, 0);
+          dummy.scale.set(scale, scale, 1);
+          dummy.updateMatrix();
+          ring.setMatrixAt(index, dummy.matrix);
+          if (picked) tint.copy(gold).lerp(goldHot, blink);
+          else tint.copy(teamColor.get(unit.team) ?? white);
+          ring.setColorAt(index, tint);
+        }
+        ring.instanceMatrix.needsUpdate = true;
+        if (ring.instanceColor) ring.instanceColor.needsUpdate = true;
       }
-      ring.instanceMatrix.needsUpdate = true;
-      if (ring.instanceColor) ring.instanceColor.needsUpdate = true;
     }
 
     const bar = bars.current;
