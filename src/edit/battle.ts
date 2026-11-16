@@ -1122,9 +1122,16 @@ export function startBattle(store: EditStore) {
     store.bump();
     return;
   }
-  // Ateşleri senkron kopar — toplu ölüm olmasın
+  // Can/hasar güncelle + ateşleri senkron kopar — toplu ölüm olmasın
   for (const unit of store.units) {
     if (!unit.alive) continue;
+    const def = characterById(unit.model);
+    if (def) {
+      const fit = stats(def, unit.radius);
+      unit.maxHp = fit.maxHp;
+      unit.damage = fit.damage;
+      unit.speed = fit.speed;
+    }
     unit.hp = unit.maxHp;
     unit.cooldown = 0.5 + Math.random() * 2.4;
     unit.swing = 0;
