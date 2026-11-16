@@ -139,19 +139,19 @@ export function mafyaPos(i: number): { x: number; z: number } {
   const e = MAFYA_ENTRIES[i];
   if (!e) return { x: 0, z: 0 };
   if (e.team === 1) {
-    if (e.role === "leader") return { x: 0, z: -6.5 };
+    if (e.role === "leader") return { x: 0, z: -3.2 };
     if (e.role === "soldier") {
       const n = T1_SOLDIER_MODELS.length * SOLDIER_SCALE;
-      return soldierGrid(e.slot, n, -9.2, 7.5);
+      return soldierGrid(e.slot, n, -5.0, 6.2);
     }
-    return carLine(e.slot, T1_CAR_MODELS.length, -13.5, 9);
+    return carLine(e.slot, T1_CAR_MODELS.length, -7.8, 7.5);
   }
-  if (e.role === "leader") return { x: 0, z: 6.5 };
+  if (e.role === "leader") return { x: 0, z: 3.2 };
   if (e.role === "soldier") {
     const n = T2_SOLDIER_MODELS.length * SOLDIER_SCALE;
-    return soldierGrid(e.slot, n, 9.2, 8);
+    return soldierGrid(e.slot, n, 5.0, 6.6);
   }
-  return carLine(e.slot, T2_CAR_MODELS.length, 13.5, 9);
+  return carLine(e.slot, T2_CAR_MODELS.length, 7.8, 7.5);
 }
 
 function hpFor(i: number) {
@@ -342,18 +342,18 @@ export function mafyaHaze() {
 type Cam = { x: number; y: number; z: number; lx: number; ly: number; lz: number; fov: number };
 
 /**
- * Sabit yüksek açı + çok yavaş pan (~60s'de yarım tur).
+ * Daha geriden + geniş FOV; yavaş pan. Tüm hat kadraja sığsın.
  */
 export function mafyaCam(t: number): Cam {
   const ang = 0.55 + (t / MAFYA_SECONDS) * Math.PI;
-  const rad = 32;
+  const rad = 38;
   return {
     x: Math.sin(ang) * rad,
-    y: 20,
+    y: 26,
     z: Math.cos(ang) * rad,
     lx: 0,
-    ly: 0.5,
+    ly: 0.4,
     lz: 0,
-    fov: 40,
+    fov: 52,
   };
 }
