@@ -72,6 +72,8 @@ export const MAFYA_URLS = [...new Set(MAFYA_ENTRIES.map((e) => e.url))];
 export type MafyaGun = "pistol" | "m4";
 
 export function mafyaGunFor(num: number): MafyaGun {
+  // 8: tabanca yerine M4
+  if (num === 8) return "m4";
   return num % 2 === 1 ? "m4" : "pistol";
 }
 

@@ -186,7 +186,12 @@ function makeActor(asset: CharacterAsset): Omit<Actor, "id"> {
   const model = cloneSkinned(asset.template!) as THREE.Object3D;
   holder.add(model);
   const def = characterById(asset.id);
-  if (def?.gun) attachEditGun(model, !/1|3|5|7|9/.test(asset.id.slice(-1)));
+  if (def?.gun) {
+    // Tek: 1,3,5,7,9 → M4; 8 de M4; diğer çift → tabanca
+    const n = Number(asset.id.replace(/\D/g, "").slice(-2)) || Number(asset.id.slice(-1));
+    const pistol = !(n === 8 || n % 2 === 1);
+    attachEditGun(model, pistol);
+  }
   const mixer = new THREE.AnimationMixer(model);
   const clips = asset.clips ?? [];
   const play = (clip: THREE.AnimationClip | null) => {
