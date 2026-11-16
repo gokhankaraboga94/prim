@@ -257,11 +257,15 @@ function EditRig({ store, assets }: { store: EditStore; assets: Record<string, C
     const down = (event: KeyboardEvent) => {
       const tag = (event.target as HTMLElement | null)?.tagName;
       if (tag === "INPUT" || tag === "TEXTAREA") return;
-      if (!event.key.startsWith("Arrow")) return;
+      const rec = ["KeyQ", "KeyE", "KeyR", "KeyF", "Equal", "Minus", "NumpadAdd", "NumpadSubtract"].includes(event.code);
+      if (!event.key.startsWith("Arrow") && !rec) return;
       event.preventDefault();
-      keysRef.add(event.key);
+      keysRef.add(event.code.startsWith("Key") || event.code.startsWith("Numpad") || event.code === "Equal" || event.code === "Minus" ? event.code : event.key);
     };
-    const up = (event: KeyboardEvent) => keysRef.delete(event.key);
+    const up = (event: KeyboardEvent) => {
+      keysRef.delete(event.key);
+      keysRef.delete(event.code);
+    };
     window.addEventListener("keydown", down);
     window.addEventListener("keyup", up);
     return () => {
@@ -481,7 +485,10 @@ function EditRig({ store, assets }: { store: EditStore; assets: Record<string, C
 
   useFrame((_, dt) => {
     const shot = look.current;
-    const speed = (18 + shot.dist * 0.35) * Math.min(0.05, dt);
+    const step = Math.min(0.05, Math.max(0, dt));
+    const pan = (22 + shot.dist * 0.4) * step;
+    const turn = 1.15 * step;
+    const zoom = Math.exp(1.1 * step);
     const e = camera.matrixWorld.elements;
     const rx = e[0];
     const rz = e[2];
@@ -489,36 +496,32 @@ function EditRig({ store, assets }: { store: EditStore; assets: Record<string, C
     const fz = -e[10];
     const fl = Math.hypot(fx, fz) || 1;
     const rl = Math.hypot(rx, rz) || 1;
-    if (keys.current.has("ArrowUp")) {
-      store.viewX += (fx / fl) * speed;
-      store.viewZ += (fz / fl) * speed;
+    const held = keys.current;
+    // Kayıt dahil: ok = kaydır, Q/E = yaw, R/F = pitch, +/- = zoom
+    if (held.has("ArrowUp")) {
+      store.viewX += (fx / fl) * pan;
+      store.viewZ += (fz / fl) * pan;
     }
-    if (keys.current.has("ArrowDown")) {
-      store.viewX -= (fx / fl) * speed;
-      store.viewZ -= (fz / fl) * speed;
+    if (held.has("ArrowDown")) {
+      store.viewX -= (fx / fl) * pan;
+      store.viewZ -= (fz / fl) * pan;
     }
-    if (keys.current.has("ArrowLeft")) {
-      store.viewX -= (rx / rl) * speed;
-      store.viewZ -= (rz / rl) * speed;
+    if (held.has("ArrowLeft")) {
+      store.viewX -= (rx / rl) * pan;
+      store.viewZ -= (rz / rl) * pan;
     }
-    if (keys.current.has("ArrowRight")) {
-      store.viewX += (rx / rl) * speed;
-      store.viewZ += (rz / rl) * speed;
+    if (held.has("ArrowRight")) {
+      store.viewX += (rx / rl) * pan;
+      store.viewZ += (rz / rl) * pan;
     }
-    const fighters = store.units.filter((unit) => unit.alive && unit.team > 0);
-    if (store.recording && fighters.length) {
-      let cx = 0;
-      let cz = 0;
-      for (const unit of fighters) {
-        cx += unit.x;
-        cz += unit.z;
-      }
-      cx /= fighters.length;
-      cz /= fighters.length;
-      const glide = 1 - Math.exp(-Math.min(0.05, Math.max(0, dt)) * 2.4);
-      store.viewX += (cx - store.viewX) * glide;
-      store.viewZ += (cz - store.viewZ) * glide;
-    }
+    if (held.has("KeyQ")) shot.yaw += turn;
+    if (held.has("KeyE")) shot.yaw -= turn;
+    if (held.has("KeyR")) shot.pitch = Math.min(1.35, shot.pitch + turn * 0.75);
+    if (held.has("KeyF")) shot.pitch = Math.max(0.12, shot.pitch - turn * 0.75);
+    if (held.has("Equal") || held.has("NumpadAdd")) shot.dist = Math.max(5, shot.dist / zoom);
+    if (held.has("Minus") || held.has("NumpadSubtract")) shot.dist = Math.min(170, shot.dist * zoom);
+
+    // Kayıtta otomatik takip yok — kullanıcı hakim
     store.viewX = Math.max(-320, Math.min(320, store.viewX));
     store.viewZ = Math.max(-320, Math.min(320, store.viewZ));
     camera.position.set(
@@ -528,29 +531,15 @@ function EditRig({ store, assets }: { store: EditStore; assets: Record<string, C
     );
     camera.lookAt(store.viewX, 0, store.viewZ);
     if (camera instanceof THREE.PerspectiveCamera) {
-      camera.fov = 42;
+      camera.fov = store.recording ? 44 : 42;
       camera.near = 0.2;
       camera.far = 900;
       camera.updateProjectionMatrix();
     }
     camera.updateMatrixWorld();
-    if (fighters.length) {
-      let px = 0;
-      let py = 0;
-      let pz = 0;
-      for (const unit of fighters) {
-        px += unit.x;
-        py += unit.height * 0.45;
-        pz += unit.z;
-      }
-      aim.set(px / fighters.length, py / fighters.length, pz / fighters.length);
-      aim.project(camera);
-      store.reelU = aim.x * 0.5 + 0.5;
-      store.reelV = -aim.y * 0.5 + 0.5;
-    } else {
-      store.reelU = 0.5;
-      store.reelV = 0.5;
-    }
+    // 9:16 kadraj kamera bakış merkezinde
+    store.reelU = 0.5;
+    store.reelV = 0.5;
     const frame = document.querySelector(".edit-reel-frame") as HTMLElement | null;
     if (frame) {
       const rect = gl.domElement.getBoundingClientRect();

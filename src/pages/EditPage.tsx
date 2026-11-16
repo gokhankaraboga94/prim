@@ -261,7 +261,7 @@ export function EditPage() {
     recorder.current = rec;
     store.recording = true;
     setRecording(true);
-    store.note = "9:16 kayıt savaşın ortasında.";
+    store.note = "Kayıt: Ok kaydır · Q/E dön · R/F eğim · +/- zoom. Çerçeve senin kameran.";
     store.bump();
   }
 
@@ -382,7 +382,7 @@ export function EditPage() {
       </header>
 
       <p className="edit-help">
-        Karakterler2 = mafya modelleri (silah + mermi). Zemin ile harita zemini seç. Yön ↺↻ bakışı çevirir. Takım taşı: tıklayınca bütün takım gider. Üye taşı: tek üyeyi istediğin yere koy (takımda kalır). Öne/Arkaya/Sola/Sağa kaydır ile takım içi konum. Sol tık seçer; Shift ekler. Ctrl+A, Delete, Esc.
+        Karakterler2 = mafya. Kayıt açıkken kamera tam kontrol: Ok kaydırır, Q/E döndürür, R/F eğim, +/- yakınlaştırır; sağ tuş da döndürür. 9:16 çerçeve bakış merkezinde. Zemin / yön / takım taşı / üye taşı / Öne-Arkaya.
       </p>
 
       <div className="edit-stage">
