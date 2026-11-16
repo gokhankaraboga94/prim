@@ -229,7 +229,18 @@ function EditRig({ store, assets }: { store: EditStore; assets: Record<string, C
   const fovLocked = useRef(false);
   const ringGeo = useMemo(() => new THREE.RingGeometry(0.78, 1, 16), []);
   const barGeo = useMemo(() => new THREE.PlaneGeometry(1, 1), []);
-  const ringMat = useMemo(() => new THREE.MeshBasicMaterial({ color: "#ffffff", transparent: true, opacity: 0.88, side: THREE.DoubleSide, depthWrite: false }), []);
+  const ringMat = useMemo(
+    () =>
+      new THREE.MeshBasicMaterial({
+        color: "#ffffff",
+        transparent: true,
+        opacity: 0.92,
+        side: THREE.DoubleSide,
+        depthWrite: false,
+        depthTest: false,
+      }),
+    []
+  );
   const barMat = useMemo(() => new THREE.MeshBasicMaterial({ color: "#ffffff", transparent: true, opacity: 0.95, depthTest: false }), []);
 
   useEffect(() => {
@@ -662,20 +673,23 @@ function EditRig({ store, assets }: { store: EditStore; assets: Record<string, C
         actor.px = unit.x;
         actor.pz = unit.z;
         const shooting = unit.swing > 0.08;
-        // stay (mafya-8): sadece idle / ateş — yürüyüş yok
+        const gunUnit = Boolean(characterById(unit.model)?.gun);
+        // Uzaktan yaklaşırken ateş-yürüyüşü; mafya-8 stay yalnız yerinde ateş
         const mode = !unit.alive
           ? "dead"
           : actor.stay
             ? shooting
               ? "attack"
               : "idle"
-            : shooting && moved
+            : gunUnit && moved
               ? "fireWalk"
-              : shooting
-                ? "attack"
-                : moved
-                  ? "move"
-                  : "idle";
+              : shooting && moved
+                ? "fireWalk"
+                : shooting
+                  ? "attack"
+                  : moved
+                    ? "move"
+                    : "idle";
         if (mode !== actor.mode) {
           const next =
             mode === "fireWalk"
@@ -725,7 +739,8 @@ function EditRig({ store, assets }: { store: EditStore; assets: Record<string, C
         const picked = store.selected.has(unit.id);
         const base = Math.max(0.45, unit.radius);
         const scale = picked ? base * (0.92 + 0.28 * blink) : base;
-        dummy.position.set(unit.x, picked ? 0.08 : 0.06, unit.z);
+        // Yakın kamerada zemine gömülmesin / kaybolmasın
+        dummy.position.set(unit.x, picked ? 0.14 : 0.11, unit.z);
         dummy.rotation.set(-Math.PI / 2, 0, 0);
         dummy.scale.set(scale, scale, 1);
         dummy.updateMatrix();
@@ -832,9 +847,9 @@ function EditRig({ store, assets }: { store: EditStore; assets: Record<string, C
   return (
     <group>
       <group ref={bodies} />
-      <instancedMesh ref={rings} args={[ringGeo, ringMat, 4096]} frustumCulled />
-      <instancedMesh ref={bars} args={[barGeo, barMat, 4096]} frustumCulled renderOrder={2} />
-      <instancedMesh ref={bolts} args={[boltGeo, boltMat, 64]} frustumCulled />
+      <instancedMesh ref={rings} args={[ringGeo, ringMat, 4096]} frustumCulled={false} renderOrder={4} />
+      <instancedMesh ref={bars} args={[barGeo, barMat, 4096]} frustumCulled={false} renderOrder={5} />
+      <instancedMesh ref={bolts} args={[boltGeo, boltMat, 64]} frustumCulled={false} />
       <group ref={names} />
     </group>
   );

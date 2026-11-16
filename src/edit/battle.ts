@@ -1243,20 +1243,28 @@ export function stepUnits(store: EditStore, dt: number) {
         unit.yaw = look + unit.yawOffset;
       }
 
-      // Yalnızca sabitlenmemiş yakın dövüşçü hedefe yürür
-      if (!unit.pinned && !gun && target && unit.speed > 0.05) {
-        const meleeReach = unit.radius + target.radius + 0.45;
-        const dist = Math.hypot(target.x - unit.x, target.z - unit.z);
-        if (dist > meleeReach) {
-          const move = Math.min(dist - meleeReach + 0.02, unit.speed * step * 0.85);
+      const meleeReach = target ? unit.radius + target.radius + 0.45 : 0;
+      const gunReach = 16;
+      const distTo = target ? Math.hypot(target.x - unit.x, target.z - unit.z) : 1e9;
+
+      // Silahlı uzaksa ateş-yürüyüşüyle yaklaş; yakın dövüşçü de menzile girsin
+      if (target && unit.speed > 0.05) {
+        if (gun) {
+          const prefer = gunReach * 0.7;
+          if (distTo > prefer) {
+            const move = Math.min(distTo - prefer + 0.04, unit.speed * step * 0.95);
+            unit.x = clampMap(unit.x + unit.aimX * move);
+            unit.z = clampMap(unit.z + unit.aimZ * move);
+            // EditField fireWalk için swing işaretle
+            unit.swing = Math.max(unit.swing, 0.4);
+          }
+        } else if (!unit.pinned && distTo > meleeReach) {
+          const move = Math.min(distTo - meleeReach + 0.02, unit.speed * step * 0.85);
           unit.x = clampMap(unit.x + unit.aimX * move);
           unit.z = clampMap(unit.z + unit.aimZ * move);
         }
       }
 
-      const meleeReach = target ? unit.radius + target.radius + 0.45 : 0;
-      const gunReach = 16;
-      const distTo = target ? Math.hypot(target.x - unit.x, target.z - unit.z) : 1e9;
       const engaged = target ? (gun ? distTo <= gunReach : distTo <= meleeReach) : false;
       if (target && engaged && unit.damage > 0) {
         unit.cooldown -= step;
