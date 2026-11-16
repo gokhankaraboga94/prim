@@ -127,7 +127,7 @@ export function spawnUnits(store: EditStore, def: CharacterDef, radius: number, 
   const cols = Math.ceil(Math.sqrt(n));
   const rows = Math.ceil(n / cols);
   const gap = Math.max(1.15, radius * 2.2);
-  // Aynı model peş peşe → aynı nokta; takım varsa ondan uzak ama kendi aralarında üst üste OK
+  // Aynı model peş peşe → yakına ama üst üste değil; farklı modeller / takım aralıklı
   const origin = spawnOrigin(store, def.id, (cols - 1) * gap + radius * 2, (rows - 1) * gap + radius * 2);
   // The fresh block becomes the selection so a team button applies to it straight away.
   store.selected.clear();
@@ -183,37 +183,70 @@ function clampMap(value: number) {
   return Math.max(-MAP_LIMIT, Math.min(MAP_LIMIT, value));
 }
 
-/** Aynı takımsız modelin merkezi — peş peşe Ekle aynı noktaya yığılır. */
+function blockClear(blockers: Unit[], x: number, z: number, w: number, d: number, pad: number) {
+  for (const unit of blockers) {
+    if (Math.abs(unit.x - x) < w / 2 + unit.radius + pad && Math.abs(unit.z - z) < d / 2 + unit.radius + pad) return false;
+  }
+  return true;
+}
+
+/** Aynı model peş peşe: kümenin yanına, hafif boşlukla — üst üste değil. */
 function spawnOrigin(store: EditStore, modelId: string, w: number, d: number) {
   const loose = store.units.filter((unit) => unit.alive && unit.model === modelId && unit.team <= 0);
   if (loose.length) {
-    let x = 0;
-    let z = 0;
+    let minX = Infinity;
+    let maxX = -Infinity;
+    let minZ = Infinity;
+    let maxZ = -Infinity;
     for (const unit of loose) {
-      x += unit.x;
-      z += unit.z;
+      minX = Math.min(minX, unit.x - unit.radius);
+      maxX = Math.max(maxX, unit.x + unit.radius);
+      minZ = Math.min(minZ, unit.z - unit.radius);
+      maxZ = Math.max(maxZ, unit.z + unit.radius);
     }
-    return { x: x / loose.length, z: z / loose.length };
+    const cx = (minX + maxX) / 2;
+    const cz = (minZ + maxZ) / 2;
+    const gap = Math.max(2.4, Math.max(w, d) * 0.28 + 1.8);
+    const all = store.units.filter((unit) => unit.alive);
+    const pad = Math.max(1.2, Math.max(w, d) * 0.12 + 0.8);
+    const candidates: { x: number; z: number }[] = [
+      { x: maxX + gap + w / 2, z: cz },
+      { x: minX - gap - w / 2, z: cz },
+      { x: cx, z: maxZ + gap + d / 2 },
+      { x: cx, z: minZ - gap - d / 2 },
+      { x: maxX + gap + w / 2, z: maxZ + gap + d / 2 },
+      { x: minX - gap - w / 2, z: minZ - gap - d / 2 },
+      { x: maxX + gap + w / 2, z: minZ - gap - d / 2 },
+      { x: minX - gap - w / 2, z: maxZ + gap + d / 2 },
+    ];
+    for (const c of candidates) {
+      const x = clampMap(c.x);
+      const z = clampMap(c.z);
+      if (blockClear(all, x, z, w, d, pad)) return { x, z };
+    }
+    // Küme etrafında spiral
+    const step = Math.max(w, d) + gap;
+    for (let ring = 1; ring <= 10; ring++) {
+      for (let k = 0; k < 8; k++) {
+        const ang = (k / 8) * Math.PI * 2 + ring * 0.2;
+        const x = clampMap(cx + Math.sin(ang) * step * ring);
+        const z = clampMap(cz + Math.cos(ang) * step * ring);
+        if (blockClear(all, x, z, w, d, pad)) return { x, z };
+      }
+    }
   }
-  // Farklı model / ilk parti: diğer kümelerden ve takımlardan boşluklu yer
   return freeSpotWithGap(store, w, d, modelId);
 }
 
 /**
  * Yeni model: takımlar + diğer modeller üstüne binmesin, arada boşluk olsun.
- * Aynı model takımsızlar engel sayılmaz (spawnOrigin onları birleştirir).
  */
 function freeSpotWithGap(store: EditStore, w: number, d: number, modelId: string) {
   const blockers = store.units.filter((unit) => unit.alive && !(unit.model === modelId && unit.team <= 0));
   if (!blockers.length) return { x: clampMap(store.viewX), z: clampMap(store.viewZ) };
 
   const pad = Math.max(12, Math.max(w, d) * 0.65 + 10);
-  const clear = (x: number, z: number) => {
-    for (const unit of blockers) {
-      if (Math.abs(unit.x - x) < w / 2 + unit.radius + pad && Math.abs(unit.z - z) < d / 2 + unit.radius + pad) return false;
-    }
-    return true;
-  };
+  const clear = (x: number, z: number) => blockClear(blockers, x, z, w, d, pad);
 
   // Mevcut kümelerin merkezlerinden uzak tarafa yerleştir
   const clusters = new Map<string, { x: number; z: number; n: number }>();
