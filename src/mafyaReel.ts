@@ -228,11 +228,11 @@ function mafyaEnemyCenter(fromI: number, t: number): { x: number; z: number } {
 }
 
 /**
- * Tripo/Mixamo kalça bind'i -90° Y → model burnu local +X.
- * Hedefe dönmek: yaw = atan2(-dz, dx)  (atan2(dx,dz) sağa/sola bakıyordu).
+ * Tripo/Mixamo: bind -90° Y; burnu local -X (önceki +X sırtları çeviriyordu).
+ * Hedefe: atan2(-dz, dx) + π
  */
 function yawToward(ax: number, az: number, tx: number, tz: number) {
-  return Math.atan2(-(tz - az), tx - ax);
+  return Math.atan2(-(tz - az), tx - ax) + Math.PI;
 }
 
 export function mafyaYawTo(fromI: number, toI: number, t = 0): number {

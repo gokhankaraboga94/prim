@@ -506,9 +506,9 @@ export function MafyaBattle() {
           if (local >= 0 && local < 0.1) kick = Math.max(kick, (1 - local / 0.1) * 0.025);
         }
       }
-      // +X ileri: geri tepme local -X yönünde
-      const backX = Math.cos(yaw) * -kick;
-      const backZ = Math.sin(yaw) * kick;
+      // -X ileri: geri tepme local +X
+      const backX = Math.cos(yaw) * kick;
+      const backZ = Math.sin(yaw) * -kick;
       man.hold.position.set(spot.x + backX, fall * 0.12, spot.z + backZ);
       if (!dead) plantFeet(man.scene, man.hold);
     }
