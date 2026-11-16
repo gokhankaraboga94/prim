@@ -824,10 +824,12 @@ export function stepUnits(store: EditStore, dt: number) {
       unit.aimZ = Math.cos(face);
       unit.yaw = face + unit.yawOffset;
 
-      // Araç: yerinde kalır, saldıramaz, sadece hasar yer
-      if (car) {
-        unit.x = clampMap(sx);
-        unit.z = clampMap(sz);
+      // Sabitli üye veya araç: yerinde kalır, saldıramaz
+      if (unit.pinned || car) {
+        if (car && !unit.pinned) {
+          unit.x = clampMap(sx);
+          unit.z = clampMap(sz);
+        }
         unit.swing = 0;
         unit.cooldown = 1;
         return;
