@@ -787,10 +787,10 @@ function EditRig({ store, assets }: { store: EditStore; assets: Record<string, C
         const dx = unit.boltTX - unit.boltX;
         const dz = unit.boltTZ - unit.boltZ;
         const len = Math.hypot(dx, dz) || 1;
-        dummy.position.set(x, 1.3, z);
+        dummy.position.set(x, 1.45, z);
         boltDir.set(dx / len, 0, dz / len);
         dummy.quaternion.setFromUnitVectors(UP, boltDir);
-        dummy.scale.set(0.012, Math.min(0.35, len * 0.04), 0.012);
+        dummy.scale.set(0.02, Math.min(0.4, len * 0.045), 0.02);
         dummy.updateMatrix();
         boltMesh.setMatrixAt(index, dummy.matrix);
       }
@@ -842,14 +842,25 @@ function EditRig({ store, assets }: { store: EditStore; assets: Record<string, C
   }, [gl]);
 
   const boltGeo = useMemo(() => new THREE.CylinderGeometry(1, 1, 1, 3), []);
-  const boltMat = useMemo(() => new THREE.MeshBasicMaterial({ color: "#ffe566", toneMapped: false }), []);
+  const boltMat = useMemo(
+    () =>
+      new THREE.MeshBasicMaterial({
+        color: "#ffe566",
+        toneMapped: false,
+        depthTest: false,
+        depthWrite: false,
+        transparent: true,
+        opacity: 0.95,
+      }),
+    []
+  );
 
   return (
     <group>
       <group ref={bodies} />
       <instancedMesh ref={rings} args={[ringGeo, ringMat, 4096]} frustumCulled={false} renderOrder={4} />
       <instancedMesh ref={bars} args={[barGeo, barMat, 4096]} frustumCulled={false} renderOrder={5} />
-      <instancedMesh ref={bolts} args={[boltGeo, boltMat, 64]} frustumCulled={false} />
+      <instancedMesh ref={bolts} args={[boltGeo, boltMat, 64]} frustumCulled={false} renderOrder={6} />
       <group ref={names} />
     </group>
   );
