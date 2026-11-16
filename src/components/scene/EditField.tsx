@@ -11,6 +11,7 @@ import { reelWindow } from "../../recordCanvas";
 const teamColor = new Map<number, THREE.Color>(TEAMS.map((team) => [team.id, new THREE.Color(team.color)]));
 const white = new THREE.Color("#ffffff");
 const gold = new THREE.Color("#ffe08a");
+const goldHot = new THREE.Color("#fff7c2");
 const dummy = new THREE.Object3D();
 const UP = new THREE.Vector3(0, 1, 0);
 const sideAxis = new THREE.Vector3();
@@ -643,14 +644,19 @@ function EditRig({ store, assets }: { store: EditStore; assets: Record<string, C
     if (ring) {
       const shown = store.units.filter((unit) => unit.alive).slice(0, 8192);
       ring.count = shown.length;
+      // Seçili daire yanıp sönsün — kimi seçtiğin net görünsün
+      const blink = 0.5 + 0.5 * Math.sin(performance.now() * 0.01);
       shown.forEach((unit, index) => {
-        const scale = Math.max(0.45, unit.radius);
-        dummy.position.set(unit.x, 0.06, unit.z);
+        const picked = store.selected.has(unit.id);
+        const base = Math.max(0.45, unit.radius);
+        const scale = picked ? base * (0.92 + 0.28 * blink) : base;
+        dummy.position.set(unit.x, picked ? 0.08 : 0.06, unit.z);
         dummy.rotation.set(-Math.PI / 2, 0, 0);
         dummy.scale.set(scale, scale, 1);
         dummy.updateMatrix();
         ring.setMatrixAt(index, dummy.matrix);
-        tint.copy(store.selected.has(unit.id) ? gold : teamColor.get(unit.team) ?? white);
+        if (picked) tint.copy(gold).lerp(goldHot, blink);
+        else tint.copy(teamColor.get(unit.team) ?? white);
         ring.setColorAt(index, tint);
       });
       ring.instanceMatrix.needsUpdate = true;
