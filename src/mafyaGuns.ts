@@ -37,28 +37,64 @@ function addCyl(parent: THREE.Object3D, rTop: number, rBot: number, len: number,
   return mesh;
 }
 
-/** Glock tarzı kısa tabanca */
+/** 1911 / modern yarı otomatik — mafya-4 vb. tabanca */
 export function makePistol(simple = false) {
   const g = new THREE.Group();
   g.name = "mafyaPistol";
-  const steel = simple ? matte("#c5ccd4") : metal("#c8d0d8", 0.95, 0.2);
-  const dark = simple ? matte("#6a727a") : metal("#5a626a", 0.88, 0.32);
-  const grip = simple ? matte("#2e2824") : metal("#2a2420", 0.25, 0.7);
+  const seg = simple ? 6 : 12;
+  const slide = simple ? matte("#b8c0c8") : metal("#b8c0c8", 0.96, 0.16);
+  const frame = simple ? matte("#3a3e44") : metal("#2e3238", 0.82, 0.34);
+  const black = simple ? matte("#1a1c20") : metal("#16181c", 0.7, 0.42);
+  const chrome = simple ? matte("#d4dae0") : metal("#d8dee4", 0.98, 0.1);
+  const grip = simple ? matte("#3a2a20") : metal("#342418", 0.22, 0.68);
 
-  addBox(g, 0.038, 0.072, 0.155, steel, 0, 0.028, 0.055); // slide
-  addBox(g, 0.036, 0.04, 0.12, dark, 0, 0.002, 0.04); // frame
-  addCyl(g, 0.009, 0.01, 0.09, simple ? 6 : 10, dark, 0, 0.03, 0.155);
-  addBox(g, 0.034, 0.095, 0.048, grip, 0, -0.045, 0.015, 0.22);
-  addBox(g, 0.02, 0.018, 0.035, dark, 0, 0.055, 0.11); // rear sight
-  addBox(g, 0.012, 0.014, 0.02, dark, 0, 0.055, 0.12); // front sight nub
+  // Slide
+  addBox(g, 0.042, 0.055, 0.178, slide, 0, 0.042, 0.06);
+  // Slide serrations (rear)
+  for (let i = 0; i < 6; i++) {
+    addBox(g, 0.044, 0.04, 0.006, black, 0, 0.042, -0.01 + i * 0.01);
+  }
+  // Ejection port
+  addBox(g, 0.01, 0.028, 0.055, black, 0.018, 0.048, 0.05);
+  // Barrel in port + muzzle
+  addCyl(g, 0.01, 0.01, 0.12, seg, chrome, 0, 0.04, 0.14);
+  addCyl(g, 0.013, 0.011, 0.028, seg, chrome, 0, 0.04, 0.205);
+  // Frame / dust cover
+  addBox(g, 0.04, 0.038, 0.14, frame, 0, 0.01, 0.045);
+  addBox(g, 0.038, 0.022, 0.06, frame, 0, 0.0, 0.12); // dust cover forward
+  // Trigger guard + trigger
+  addBox(g, 0.032, 0.004, 0.045, frame, 0, -0.012, 0.035);
+  addBox(g, 0.004, 0.028, 0.035, frame, 0.014, -0.024, 0.035);
+  addBox(g, 0.004, 0.028, 0.035, frame, -0.014, -0.024, 0.035);
+  addBox(g, 0.012, 0.028, 0.01, chrome, 0, -0.008, 0.04, 0.15);
+  // Mag well + magazine
+  addBox(g, 0.036, 0.02, 0.04, frame, 0, -0.02, 0.01);
+  addBox(g, 0.032, 0.1, 0.038, black, 0, -0.07, 0.008, 0.08);
+  addBox(g, 0.034, 0.012, 0.04, chrome, 0, -0.12, 0.005); // mag floor
+  // Grip panels
+  addBox(g, 0.038, 0.1, 0.05, grip, 0, -0.055, 0.0, 0.2);
+  addBox(g, 0.006, 0.08, 0.042, black, 0.018, -0.055, 0.0, 0.2);
+  addBox(g, 0.006, 0.08, 0.042, black, -0.018, -0.055, 0.0, 0.2);
+  // Beavertail / backstrap
+  addBox(g, 0.034, 0.04, 0.02, frame, 0, -0.02, -0.028, -0.25);
+  // Hammer
+  addBox(g, 0.014, 0.022, 0.018, chrome, 0, 0.055, -0.03);
+  // Sights
+  addBox(g, 0.024, 0.016, 0.022, black, 0, 0.072, -0.015); // rear
+  addBox(g, 0.008, 0.014, 0.014, chrome, 0.008, 0.078, -0.012);
+  addBox(g, 0.008, 0.014, 0.014, chrome, -0.008, 0.078, -0.012);
+  addBox(g, 0.01, 0.016, 0.018, chrome, 0, 0.072, 0.135); // front
+  // Slide stop / safety hints
+  addBox(g, 0.008, 0.01, 0.028, chrome, 0.022, 0.02, 0.02);
+  addBox(g, 0.006, 0.012, 0.016, black, 0.022, 0.035, -0.02);
 
   const tip = new THREE.Object3D();
   tip.name = "muzzle";
-  tip.position.set(0, 0.03, 0.21);
+  tip.position.set(0, 0.04, 0.23);
   g.add(tip);
   g.rotation.set(-Math.PI / 2, 0, Math.PI / 2);
   g.position.set(0.02, 0.06, 0.04);
-  g.scale.setScalar(1.05);
+  g.scale.setScalar(1.12);
   return g;
 }
 

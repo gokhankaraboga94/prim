@@ -195,49 +195,63 @@ function spawnOrigin(store: EditStore, modelId: string, w: number, d: number) {
     }
     return { x: x / loose.length, z: z / loose.length };
   }
-  return freeSpotAwayFromTeams(store, w, d);
+  // Farklı model / ilk parti: diğer kümelerden ve takımlardan boşluklu yer
+  return freeSpotWithGap(store, w, d, modelId);
 }
 
 /**
- * İlk parti: takımlı birimlerden uzak boş yer.
- * Takımsız aynı model üzerine binmeye izin var (spawnOrigin).
+ * Yeni model: takımlar + diğer modeller üstüne binmesin, arada boşluk olsun.
+ * Aynı model takımsızlar engel sayılmaz (spawnOrigin onları birleştirir).
  */
-function freeSpotAwayFromTeams(store: EditStore, w: number, d: number) {
-  const teams = store.units.filter((unit) => unit.alive && unit.team > 0);
-  if (!teams.length) return { x: clampMap(store.viewX), z: clampMap(store.viewZ) };
+function freeSpotWithGap(store: EditStore, w: number, d: number, modelId: string) {
+  const blockers = store.units.filter((unit) => unit.alive && !(unit.model === modelId && unit.team <= 0));
+  if (!blockers.length) return { x: clampMap(store.viewX), z: clampMap(store.viewZ) };
 
-  const pad = Math.max(10, Math.max(w, d) * 0.55 + 8);
+  const pad = Math.max(12, Math.max(w, d) * 0.65 + 10);
   const clear = (x: number, z: number) => {
-    for (const unit of teams) {
+    for (const unit of blockers) {
       if (Math.abs(unit.x - x) < w / 2 + unit.radius + pad && Math.abs(unit.z - z) < d / 2 + unit.radius + pad) return false;
     }
     return true;
   };
 
+  // Mevcut kümelerin merkezlerinden uzak tarafa yerleştir
+  const clusters = new Map<string, { x: number; z: number; n: number }>();
+  for (const unit of blockers) {
+    const key = unit.team > 0 ? `t${unit.team}` : `m${unit.model}`;
+    const cur = clusters.get(key);
+    if (cur) {
+      cur.x += unit.x;
+      cur.z += unit.z;
+      cur.n += 1;
+    } else clusters.set(key, { x: unit.x, z: unit.z, n: 1 });
+  }
   let mx = 0;
   let mz = 0;
-  for (const unit of teams) {
-    mx += unit.x;
-    mz += unit.z;
+  let cn = 0;
+  for (const c of clusters.values()) {
+    mx += c.x / c.n;
+    mz += c.z / c.n;
+    cn += 1;
   }
-  mx /= teams.length;
-  mz /= teams.length;
+  mx /= Math.max(1, cn);
+  mz /= Math.max(1, cn);
 
-  const base = Math.max(w, d) + pad + 6;
-  for (let ring = 1; ring <= 18; ring++) {
-    const dist = base * ring * 0.85;
-    const dirs = 8 + (ring > 3 ? 4 : 0);
+  const base = Math.max(w, d) + pad + 8;
+  for (let ring = 1; ring <= 20; ring++) {
+    const dist = base * ring * 0.9;
+    const dirs = 8 + (ring > 2 ? 4 : 0);
     for (let k = 0; k < dirs; k++) {
-      const ang = (k / dirs) * Math.PI * 2 + ring * 0.31;
+      const ang = (k / dirs) * Math.PI * 2 + ring * 0.37;
       const x = clampMap(mx + Math.sin(ang) * dist);
       const z = clampMap(mz + Math.cos(ang) * dist);
       if (clear(x, z)) return { x, z };
     }
   }
 
-  const stepX = Math.max(w + 6, 14);
-  const stepZ = Math.max(d + 6, 14);
-  for (let ring = 1; ring < 14; ring++) {
+  const stepX = Math.max(w + 8, 16);
+  const stepZ = Math.max(d + 8, 16);
+  for (let ring = 1; ring < 16; ring++) {
     for (let i = -ring; i <= ring; i++) {
       for (let j = -ring; j <= ring; j++) {
         if (Math.max(Math.abs(i), Math.abs(j)) !== ring) continue;
@@ -247,7 +261,7 @@ function freeSpotAwayFromTeams(store: EditStore, w: number, d: number) {
       }
     }
   }
-  return { x: clampMap(mx + base * 2), z: clampMap(mz) };
+  return { x: clampMap(mx + base * 2.2), z: clampMap(mz + base * 0.6) };
 }
 
 export function selectAll(store: EditStore) {
