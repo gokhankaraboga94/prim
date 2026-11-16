@@ -112,14 +112,22 @@ export function mafyaReset() {
 
 type Spot = { x: number; z: number; yaw: number };
 
+function hash01(n: number) {
+  const x = Math.sin(n * 127.1 + 311.7) * 43758.5453;
+  return x - Math.floor(x);
+}
+
+/** Hafif dağınık hat — grid + küçük jitter. */
 function soldierGrid(slot: number, count: number, z: number, halfW: number) {
-  const cols = Math.ceil(Math.sqrt(count * 1.2));
+  const cols = Math.ceil(Math.sqrt(count * 1.15));
   const rows = Math.ceil(count / cols);
   const col = slot % cols;
   const row = Math.floor(slot / cols);
   const x = cols <= 1 ? 0 : -halfW + (col / (cols - 1)) * halfW * 2;
-  const depth = rows <= 1 ? 0 : (row - (rows - 1) / 2) * 1.35;
-  return { x, z: z + depth };
+  const depth = rows <= 1 ? 0 : (row - (rows - 1) / 2) * 1.45;
+  const jx = (hash01(slot * 19.3 + 2.1) - 0.5) * 1.15;
+  const jz = (hash01(slot * 11.7 + 5.4) - 0.5) * 0.95;
+  return { x: x + jx, z: z + depth + jz };
 }
 
 function carLine(slot: number, count: number, z: number, halfW: number) {
@@ -171,11 +179,6 @@ type Combat = {
 };
 
 let COMBAT: Combat | null = null;
-
-function hash01(n: number) {
-  const x = Math.sin(n * 127.1 + 311.7) * 43758.5453;
-  return x - Math.floor(x);
-}
 
 export function mafyaAlive(i: number, t: number) {
   const c = ensureCombat();
@@ -329,144 +332,28 @@ export function mafyaShots(): MafyaShot[] {
 }
 
 export function mafyaFar() {
-  return 320;
+  return 180;
 }
 
 export function mafyaHaze() {
-  return { near: 70, far: 150 };
+  return { near: 45, far: 95 };
 }
 
 type Cam = { x: number; y: number; z: number; lx: number; ly: number; lz: number; fov: number };
 
-function lerp(a: number, b: number, u: number) {
-  return a + (b - a) * u;
-}
-
-function smoothstep(u: number) {
-  const x = Math.max(0, Math.min(1, u));
-  return x * x * (3 - 2 * x);
-}
-
-/** Aktif ateş eden canlı nişancı (TPS için). */
-function mafyaCamHero(t: number): { from: number; to: number } {
-  const c = ensureCombat();
-  let best = -1;
-  let bestTo = -1;
-  let bestScore = -1;
-  for (const shot of c.shots) {
-    if (t < shot.t0 - 0.4 || t > shot.t0 + 1.2) continue;
-    if (t >= c.dieAt[shot.fromI]) continue;
-    const score = 1.2 - Math.abs(t - shot.t0);
-    if (score > bestScore) {
-      bestScore = score;
-      best = shot.fromI;
-      bestTo = shot.toI;
-    }
-  }
-  if (best >= 0) return { from: best, to: bestTo };
-  // fallback: canlı lider veya ilk canlı
-  for (let i = 0; i < MAFYA_N; i++) {
-    if (MAFYA_ENTRIES[i].role === "leader" && t < c.dieAt[i]) {
-      return { from: i, to: mafyaNearestFoe(i, t) };
-    }
-  }
-  for (let i = 0; i < MAFYA_N; i++) {
-    if (MAFYA_ENTRIES[i].kind === "man" && t < c.dieAt[i]) {
-      return { from: i, to: mafyaNearestFoe(i, t) };
-    }
-  }
-  return { from: 0, to: -1 };
-}
-
 /**
- * Film/oyun kamerası: TPS omuz + tepeden crane + yan dolly, yumuşak kesmeler.
- * Segment ~6–7s.
+ * Sabit 3/4 yüksek açı — çok yavaş drift, kesme yok.
  */
 export function mafyaCam(t: number): Cam {
-  const seg = Math.floor(t / 6.5) % 5;
-  const u = smoothstep((t % 6.5) / 6.5);
-  const hero = mafyaCamHero(t);
-  const a = mafyaPos(hero.from);
-  const b = hero.to >= 0 ? mafyaPos(hero.to) : { x: -a.x, z: -a.z };
-  const dx = b.x - a.x;
-  const dz = b.z - a.z;
-  const len = Math.max(0.01, Math.hypot(dx, dz));
-  const fx = dx / len;
-  const fz = dz / len;
-  const rx = -fz;
-  const rz = fx;
-
-  if (seg === 0) {
-    // TPS omuz arkası
-    const back = 4.2 + u * 0.6;
-    const side = 1.1;
-    return {
-      x: a.x - fx * back + rx * side,
-      y: 1.65 + Math.sin(t * 0.9) * 0.04,
-      z: a.z - fz * back + rz * side,
-      lx: lerp(b.x, (a.x + b.x) * 0.5, 0.25),
-      ly: 1.25,
-      lz: lerp(b.z, (a.z + b.z) * 0.5, 0.25),
-      fov: 42,
-    };
-  }
-  if (seg === 1) {
-    // Tepeden crane
-    const ang = -0.4 + u * 0.55;
-    const rad = 18 + u * 4;
-    return {
-      x: Math.sin(ang) * rad,
-      y: 26 - u * 4,
-      z: Math.cos(ang) * rad,
-      lx: 0,
-      ly: 0.4,
-      lz: 0,
-      fov: 46,
-    };
-  }
-  if (seg === 2) {
-    // Yan dolly — hat boyunca
-    const along = -8 + u * 16;
-    return {
-      x: rx * 11 + fx * along * 0.15,
-      y: 3.2,
-      z: rz * 11 + fz * along * 0.15,
-      lx: 0,
-      ly: 1.1,
-      lz: 0,
-      fov: 44,
-    };
-  }
-  if (seg === 3) {
-    // Rakip taraf TPS
-    const foe = hero.to >= 0 ? hero.to : hero.from;
-    const p = mafyaPos(foe);
-    const aim = mafyaNearestFoe(foe, t);
-    const q = aim >= 0 ? mafyaPos(aim) : a;
-    const ex = q.x - p.x;
-    const ez = q.z - p.z;
-    const el = Math.max(0.01, Math.hypot(ex, ez));
-    const efx = ex / el;
-    const efz = ez / el;
-    return {
-      x: p.x - efx * 3.8 + efz * 1.2,
-      y: 1.7,
-      z: p.z - efz * 3.8 - efx * 1.2,
-      lx: q.x,
-      ly: 1.3,
-      lz: q.z,
-      fov: 40,
-    };
-  }
-  // Geniş hero — alçak + yavaş orbit
-  const ang = t * 0.12;
+  const ang = 0.42 + Math.sin(t * 0.035) * 0.06;
+  const rad = 24 + Math.sin(t * 0.028) * 0.9;
   return {
-    x: Math.sin(ang) * 14,
-    y: 8 + Math.sin(t * 0.15) * 1.2,
-    z: Math.cos(ang) * 16,
-    lx: 0,
-    ly: 1,
-    lz: 0,
-    fov: 48,
+    x: Math.sin(ang) * rad,
+    y: 17.5 + Math.sin(t * 0.04) * 0.35,
+    z: Math.cos(ang) * rad * 0.92,
+    lx: Math.sin(t * 0.025) * 0.6,
+    ly: 0.7,
+    lz: Math.cos(t * 0.02) * 0.4,
+    fov: 40,
   };
 }
