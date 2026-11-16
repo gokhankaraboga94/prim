@@ -1,6 +1,6 @@
 /**
  * mafya — iki takım çatışma (film/oyun sahnesi).
- * Lider 1+6 tek; askerler çoğaltılır; araçlar 10+12 (11/c02 yok).
+ * Lider 1+6 tek; askerler çoğaltılır; T1 araç=11, T2 araç=10+12.
  * Bakış: atan2(-dz, dx)+π — dokunma (mafya-facing kuralı).
  */
 export const MAFYA_ID = "mafya" as const;
@@ -30,16 +30,16 @@ const BY_NUM: Record<number, { url: string; kind: MafyaKind }> = {
   8: { url: "/models/mafya/m08.glb", kind: "man" },
   9: { url: "/models/mafya/m09.glb", kind: "man" },
   10: { url: "/models/mafya/c01.glb", kind: "car" },
+  11: { url: "/models/mafya/c02.glb", kind: "car" },
   12: { url: "/models/mafya/c03.glb", kind: "car" },
 };
 
-/** 11 / c02 bilerek yok — yerine 12. */
 const SOLDIER_SCALE = 7;
 const T1_SOLDIER_MODELS = [2, 8, 9];
 const T2_SOLDIER_MODELS = [3, 4, 5, 7];
-/** Takım başı araç: 10 ve 12 karışık, 11 yok. */
-const T1_CAR_MODELS = [10, 12, 10, 12, 12];
-const T2_CAR_MODELS = [12, 10, 12, 10, 12];
+/** T1: yalnız 11. T2: 10 ve 12. */
+const T1_CAR_MODELS = [11, 11, 11, 11, 11];
+const T2_CAR_MODELS = [10, 12, 10, 12, 10];
 
 function buildEntries(): MafyaEntry[] {
   const out: MafyaEntry[] = [];
