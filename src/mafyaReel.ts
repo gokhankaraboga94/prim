@@ -34,7 +34,7 @@ const BY_NUM: Record<number, { url: string; kind: MafyaKind }> = {
   12: { url: "/models/mafya/c03.glb", kind: "car" },
 };
 
-const SOLDIER_SCALE = 5;
+const SOLDIER_SCALE = 3;
 const T1_SOLDIER_MODELS = [2, 8, 9];
 const T2_SOLDIER_MODELS = [3, 4, 5, 7];
 /** Lider 1 → 10+12; lider 6 → yalnız 11. Sayı yarıya. */
@@ -320,7 +320,7 @@ function ensureCombat(): Combat {
         }
       }
     }
-    t += 0.9;
+    t += 1.15;
   }
 
   COMBAT = { dieAt, shots, aimAt: [], aimTimes: new Float32Array(0) };
@@ -332,28 +332,28 @@ export function mafyaShots(): MafyaShot[] {
 }
 
 export function mafyaFar() {
-  return 220;
+  return 140;
 }
 
 export function mafyaHaze() {
-  return { near: 55, far: 120 };
+  return { near: 40, far: 90 };
 }
 
 type Cam = { x: number; y: number; z: number; lx: number; ly: number; lz: number; fov: number };
 
 /**
- * Daha geriden + geniş FOV; yavaş pan. Tüm hat kadraja sığsın.
+ * %25 daha yakın; yavaş pan.
  */
 export function mafyaCam(t: number): Cam {
   const ang = 0.55 + (t / MAFYA_SECONDS) * Math.PI;
-  const rad = 38;
+  const rad = 28.5;
   return {
     x: Math.sin(ang) * rad,
-    y: 26,
+    y: 19.5,
     z: Math.cos(ang) * rad,
     lx: 0,
     ly: 0.4,
     lz: 0,
-    fov: 52,
+    fov: 48,
   };
 }
