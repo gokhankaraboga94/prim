@@ -6,7 +6,7 @@
 export const MAFYA_ID = "mafya" as const;
 export type MafyaId = typeof MAFYA_ID;
 export const MAFYA_MODE = { id: MAFYA_ID, label: "mafya" } as const;
-export const MAFYA_SECONDS = 55;
+export const MAFYA_SECONDS = 60;
 
 export type MafyaKind = "man" | "car";
 export type MafyaTeam = 1 | 2;
