@@ -73,20 +73,23 @@ function groundTexture(id: GroundId) {
   canvas.height = size;
   const ctx = canvas.getContext("2d");
   if (!ctx) return null;
-  const base = id === "asphalt" ? "#3a424c" : id === "dirt" ? "#6e5430" : id === "stone" ? "#6a7078" : "#4e9a38";
-  ctx.fillStyle = base;
+  const baseFixed = id === "asphalt" ? "#7a8490" : id === "dirt" ? "#b08a55" : id === "stone" ? "#a8b0b8" : "#6ec84a";
+  ctx.fillStyle = baseFixed;
+  ctx.fillRect(0, 0, size, size);
+  // Hafif parlak örtü
+  ctx.fillStyle = "rgba(255,255,255,0.14)";
   ctx.fillRect(0, 0, size, size);
   const specks = phone ? 1800 : 7000;
   for (let i = 0; i < specks; i++) {
     if (id === "grass") {
       const n = i % 7;
-      ctx.fillStyle = n === 0 ? "#7ec85a" : n === 1 ? "#3d8228" : n === 2 ? "#68b448" : n === 3 ? "#357820" : n === 4 ? "#96d868" : n === 5 ? "#5aa838" : "#2c681c";
+      ctx.fillStyle = n === 0 ? "#a8e878" : n === 1 ? "#5aaa38" : n === 2 ? "#88d060" : n === 3 ? "#4a9830" : n === 4 ? "#b8f088" : n === 5 ? "#78c850" : "#3e8828";
     } else if (id === "asphalt") {
-      ctx.fillStyle = i % 3 === 0 ? "#525a64" : i % 3 === 1 ? "#2e343c" : "#454d56";
+      ctx.fillStyle = i % 3 === 0 ? "#9aa4b0" : i % 3 === 1 ? "#6a7480" : "#8a949e";
     } else if (id === "dirt") {
-      ctx.fillStyle = i % 3 === 0 ? "#8a6a3e" : i % 3 === 1 ? "#5a4328" : "#7a5a34";
+      ctx.fillStyle = i % 3 === 0 ? "#c8a06a" : i % 3 === 1 ? "#9a7848" : "#b89860";
     } else {
-      ctx.fillStyle = i % 3 === 0 ? "#8a9098" : i % 3 === 1 ? "#5a6068" : "#747a82";
+      ctx.fillStyle = i % 3 === 0 ? "#c8d0d8" : i % 3 === 1 ? "#9098a0" : "#b0b8c0";
     }
     ctx.fillRect(Math.random() * size, Math.random() * size, 2 + Math.random() * 7, 2 + Math.random() * 6);
   }
@@ -164,6 +167,7 @@ type Actor = {
   idle: THREE.AnimationAction | null;
   move: THREE.AnimationAction | null;
   attack: THREE.AnimationAction | null;
+  fireWalk: THREE.AnimationAction | null;
   current: THREE.AnimationAction | null;
   mode: string;
   px: number;
@@ -184,16 +188,21 @@ function makeActor(asset: CharacterAsset): Omit<Actor, "id"> {
     action.setLoop(THREE.LoopRepeat, Infinity);
     return action;
   };
-  const fire =
+  const fireStand =
     clips.find((c) => c.name === "fire" || c.name === "silah ile ateş ediyor") ??
-    clips.find((c) => /fire|ateş|silah/i.test(c.name) && !/koş|kos|run/i.test(c.name)) ??
-    clips.find((c) => /fire|ateş|silah/i.test(c.name)) ??
+    clips.find((c) => /fire|ateş|silah/i.test(c.name) && !/koş|kos|run|walk/i.test(c.name)) ??
     null;
-  const idle = play(clipBy(clips, ["idle", "defensive", "stance"])) ?? play(fire) ?? play(clips[0] ?? null);
-  const move = play(clipBy(clips, ["run", "walk", "sprint"]));
-  const attack = play(fire) ?? play(clipBy(clips, ["aggress", "sword", "attack", "combo", "fire", "ateş"]));
+  const fireRun =
+    clips.find((c) => c.name === "silah ile ateş ediyor koşarken") ??
+    clips.find((c) => /ateş|fire|silah/i.test(c.name) && /koş|kos|run|walk/i.test(c.name)) ??
+    null;
+  const walk = clipBy(clips, ["walk", "run", "sprint"]);
+  const idle = play(clipBy(clips, ["idle", "defensive", "stance"])) ?? play(fireStand) ?? play(clips[0] ?? null);
+  const move = play(walk);
+  const attack = play(fireStand) ?? play(clipBy(clips, ["aggress", "sword", "attack", "combo", "fire", "ateş"]));
+  const fireWalk = play(fireRun) ?? attack;
   idle?.play();
-  return { holder, mixer, idle, move, attack, current: idle, mode: "idle", px: 0, pz: 0 };
+  return { holder, mixer, idle, move, attack, fireWalk, current: idle, mode: "idle", px: 0, pz: 0 };
 }
 
 function EditRig({ store, assets }: { store: EditStore; assets: Record<string, CharacterAsset> }) {
@@ -605,11 +614,19 @@ function EditRig({ store, assets }: { store: EditStore; assets: Record<string, C
         const moved = Math.hypot(unit.x - actor.px, unit.z - actor.pz) > 0.02;
         actor.px = unit.x;
         actor.pz = unit.z;
-        const mode = !unit.alive ? "dead" : unit.swing > 0.08 ? "attack" : moved ? "move" : "idle";
+        const shooting = unit.swing > 0.08;
+        const mode = !unit.alive ? "dead" : shooting && moved ? "fireWalk" : shooting ? "attack" : moved ? "move" : "idle";
         if (mode !== actor.mode) {
-          const next = mode === "attack" ? actor.attack ?? actor.idle : mode === "move" ? actor.move ?? actor.idle : actor.idle;
-          if (actor.current && actor.current !== next) actor.current.fadeOut(0.15);
-          if (next && next !== actor.current) next.reset().fadeIn(0.15).play();
+          const next =
+            mode === "fireWalk"
+              ? actor.fireWalk ?? actor.attack ?? actor.move ?? actor.idle
+              : mode === "attack"
+                ? actor.attack ?? actor.idle
+                : mode === "move"
+                  ? actor.move ?? actor.idle
+                  : actor.idle;
+          if (actor.current && actor.current !== next) actor.current.fadeOut(0.12);
+          if (next && next !== actor.current) next.reset().fadeIn(0.12).play();
           actor.current = next;
           actor.mode = mode;
         }
@@ -744,15 +761,15 @@ function EditRig({ store, assets }: { store: EditStore; assets: Record<string, C
 export function EditField({ store, assets }: { store: EditStore; assets: Record<string, CharacterAsset> }) {
   const groundId = store.ground;
   const ground = useMemo(() => groundTexture(groundId), [groundId]);
-  const tint = groundId === "grass" ? "#68b44a" : groundId === "asphalt" ? "#4a5560" : groundId === "dirt" ? "#8a6a3e" : "#7a8088";
+  const tint = groundId === "grass" ? "#9ad86a" : groundId === "asphalt" ? "#9aa4b0" : groundId === "dirt" ? "#c8a06a" : "#b8c0c8";
   useEffect(() => () => ground?.dispose(), [ground]);
   return (
     <>
-      <color attach="background" args={["#7eb6ee"]} />
-      <fog attach="fog" args={["#d5e4f2", 70, 420]} />
-      <hemisphereLight args={["#d7ecff", "#6d8a45", 0.85]} />
-      <ambientLight intensity={0.28} />
-      <directionalLight position={[24, 36, 12]} intensity={2.1} color="#fff4e2" />
+      <color attach="background" args={["#8ec4f0"]} />
+      <fog attach="fog" args={["#d5e4f2", 80, 440]} />
+      <hemisphereLight args={["#e8f4ff", "#8aaa58", 1.05]} />
+      <ambientLight intensity={0.55} />
+      <directionalLight position={[24, 36, 12]} intensity={2.6} color="#fff8ee" />
       <mesh key={groundId} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
         <planeGeometry args={[760, 760]} />
         <meshLambertMaterial map={ground ?? undefined} color={tint} />

@@ -63,10 +63,10 @@ export const ALL_CHARACTERS: CharacterDef[] = [...CHARACTERS, ...CHARACTERS2];
 export type GroundId = "grass" | "asphalt" | "dirt" | "stone";
 
 export const GROUNDS: { id: GroundId; label: string; color: string }[] = [
-  { id: "grass", label: "Çimen", color: "#68b44a" },
-  { id: "asphalt", label: "Asfalt", color: "#4a5560" },
-  { id: "dirt", label: "Toprak", color: "#8a6a3e" },
-  { id: "stone", label: "Taş", color: "#7a8088" },
+  { id: "grass", label: "Çimen", color: "#9ad86a" },
+  { id: "asphalt", label: "Asfalt", color: "#9aa4b0" },
+  { id: "dirt", label: "Toprak", color: "#c8a06a" },
+  { id: "stone", label: "Taş", color: "#b8c0c8" },
 ];
 
 export const TEAMS = [
