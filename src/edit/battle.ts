@@ -104,8 +104,8 @@ function stats(def: CharacterDef, radius: number) {
     height: def.height,
     speed: car ? 0 : giant ? 4.4 : def.gun ? 2.8 : 3.3,
     /** Araç saldıramaz; sadece hasar yer. */
-    // VS uzun sürsün: yüksek can, düşük hasar
-    damage: car ? 0 : def.gun ? 5 : def.id === "savaci" ? 9 : giant ? 11 : 4,
+    // Can yüksek; hasar 2x (TTK ~yarıya)
+    damage: car ? 0 : def.gun ? 10 : def.id === "savaci" ? 18 : giant ? 22 : 8,
     maxHp: car ? 1100 : giant ? 900 : def.gun ? 320 : 260,
   };
 }
