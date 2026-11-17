@@ -41,6 +41,8 @@ export type Unit = {
 export type PlaceMode = "team" | "member";
 /** reel = 9:16 çerçeveli; map = tam harita ekranda, dosya yine 9:16 */
 export type RecordMode = "reel" | "map";
+/** Mobil tek parmak: bak=döndür, kutu=toplu seç, yer=taşı/yerleştir */
+export type TouchTool = "look" | "box" | "place";
 
 export type EditStore = {
   units: Unit[];
@@ -60,6 +62,9 @@ export type EditStore = {
   nameStamp: number;
   ground: GroundId;
   placeMode: PlaceMode;
+  touchTool: TouchTool;
+  /** Mobil: seçime ekle (web'deki Shift) */
+  touchAdd: boolean;
   listeners: Set<() => void>;
   bump: () => void;
 };
@@ -84,12 +89,37 @@ export function createStore(): EditStore {
     nameStamp: 0,
     ground: "grass",
     placeMode: "team",
+    touchTool: "look",
+    touchAdd: false,
     listeners: new Set(),
     bump() {
       for (const fn of store.listeners) fn();
     },
   };
   return store;
+}
+
+export function setTouchTool(store: EditStore, tool: TouchTool) {
+  store.touchTool = tool;
+  store.note =
+    tool === "box"
+      ? "Mobil: Kutu — parmağı sürükleyerek toplu seç."
+      : tool === "place"
+        ? "Mobil: Yer — seçiliyi yere dokunarak taşı."
+        : "Mobil: Bak — sürükle bak, çift dokun yakın seç.";
+  store.bump();
+}
+
+export function setTouchAdd(store: EditStore, on: boolean) {
+  store.touchAdd = on;
+  store.note = on ? "Seçime ekle açık (+)." : "Seçime ekle kapalı.";
+  store.bump();
+}
+
+export function clearSelection(store: EditStore) {
+  store.selected.clear();
+  store.note = "Seçim bırakıldı.";
+  store.bump();
 }
 
 export function teamLabel(id: number) {

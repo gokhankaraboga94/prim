@@ -1521,6 +1521,52 @@ body.edit-route .seo-doc {
   }
 }
 
+.edit-touch-bar {
+  display: none;
+}
+
+@media (max-width: 860px) {
+  .edit-touch-bar {
+    display: flex;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    gap: 6px;
+    padding: 6px 8px;
+    flex-shrink: 0;
+    background: rgba(12, 14, 18, 0.94);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    touch-action: pan-x;
+  }
+
+  .edit-touch-bar button {
+    flex: 0 0 auto;
+    min-height: 40px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 1px solid #465266;
+    background: #1a2028;
+    color: #f0f2f5;
+    font-weight: 650;
+    touch-action: manipulation;
+  }
+
+  .edit-touch-bar button.on {
+    border-color: #e8c36a;
+    background: #3a3020;
+    color: #f6e7b2;
+  }
+
+  .edit-touch-count {
+    flex: 0 0 auto;
+    align-self: center;
+    color: #c8d0d8;
+    font-size: 13px;
+    padding: 0 6px;
+    white-space: nowrap;
+  }
+}
+
 .edit-marquee {
   display: none;
   position: fixed;

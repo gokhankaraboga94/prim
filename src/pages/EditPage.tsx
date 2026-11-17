@@ -9,6 +9,7 @@ import {
   assignTeam,
   clearField,
   clearNames,
+  clearSelection,
   createStore,
   deleteSave,
   hasSavedScene,
@@ -25,6 +26,8 @@ import {
   selectTeam,
   setGround,
   setPlaceMode,
+  setTouchAdd,
+  setTouchTool,
   spawnUnits,
   startBattle,
   unassignTeam,
@@ -503,8 +506,32 @@ export function EditPage() {
         </span>
       </header>
 
+      {phone && (
+        <div className="edit-touch-bar" role="toolbar" aria-label="Mobil dokunma araçları">
+          <button type="button" className={store.touchTool === "look" ? "on" : ""} onClick={() => setTouchTool(store, "look")}>
+            Bak
+          </button>
+          <button type="button" className={store.touchTool === "box" ? "on" : ""} onClick={() => setTouchTool(store, "box")}>
+            Kutu seç
+          </button>
+          <button type="button" className={store.touchTool === "place" ? "on" : ""} onClick={() => setTouchTool(store, "place")}>
+            Yerleştir
+          </button>
+          <button type="button" className={store.touchAdd ? "on" : ""} onClick={() => setTouchAdd(store, !store.touchAdd)}>
+            +Seç
+          </button>
+          <button type="button" onClick={() => clearSelection(store)} disabled={!selected}>
+            Bırak
+          </button>
+          <button type="button" onClick={() => selectAll(store)} disabled={!standing}>
+            Hepsi
+          </button>
+          <span className="edit-touch-count">Seçili {selected}</span>
+        </div>
+      )}
+
       <p className="edit-help">
-        Üye taşı ile konan birim sabitlenir; Nizam sıfırla demeden toplu taşımada kıpırdamaz. Save her seferinde yeni kayıt ekler; Load listeden seçer (yeniden eskiye). Kayıt2: tam harita, indirme 9:16.
+        Üye taşı ile konan birim sabitlenir; Nizam sıfırla demeden toplu taşımada kıpırdamaz. Save her seferinde yeni kayıt ekler; Load listeden seçer (yeniden eskiye). Kayıt2: tam harita, indirme 9:16. Mobil: Kutu seç / Bak / Yerleştir.
       </p>
 
       {loadOpen && (

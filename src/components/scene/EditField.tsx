@@ -306,7 +306,8 @@ function EditRig({ store, assets }: { store: EditStore; assets: Record<string, C
       const top = Math.min(box.sy, event.clientY);
       const bottom = Math.max(box.sy, event.clientY);
       const rect = canvas.getBoundingClientRect();
-      if (!event.shiftKey) store.selected.clear();
+      const additive = event.shiftKey || store.touchAdd;
+      if (!additive) store.selected.clear();
       for (const unit of store.units) {
         if (!unit.alive) continue;
         aim.set(unit.x, unit.height * 0.55, unit.z).project(camera);
@@ -351,7 +352,9 @@ function EditRig({ store, assets }: { store: EditStore; assets: Record<string, C
           pinched = true;
           return;
         }
-        drag.current = { x: event.clientX, y: event.clientY, button: 2, moved: false, sx: event.clientX, sy: event.clientY, touch: true };
+        // Mobil araç: kutu=sol seçim, yer=orta kaydır, bak=sağ bakış
+        const button = store.touchTool === "box" ? 0 : store.touchTool === "place" ? 1 : 2;
+        drag.current = { x: event.clientX, y: event.clientY, button, moved: false, sx: event.clientX, sy: event.clientY, touch: true };
         return;
       }
       if (event.button === 0 || event.button === 1 || event.button === 2) {
@@ -422,8 +425,13 @@ function EditRig({ store, assets }: { store: EditStore; assets: Record<string, C
       const box = drag.current;
       if (!box) return;
       if (box.touch) {
+        if (box.button === 0 && box.moved) {
+          finishBox(event);
+          drag.current = null;
+          return;
+        }
         drag.current = null;
-        if (box.moved) return;
+        if (box.moved) return; // bak / kaydır bitti
       } else if (box.button === 0 && box.moved) {
         finishBox(event);
         return;
@@ -432,6 +440,7 @@ function EditRig({ store, assets }: { store: EditStore; assets: Record<string, C
         return;
       }
       drag.current = null;
+      const additive = event.shiftKey || (box.touch && store.touchAdd);
       const rect = canvas.getBoundingClientRect();
       ndc.set(((event.clientX - rect.left) / rect.width) * 2 - 1, -((event.clientY - rect.top) / rect.height) * 2 + 1);
       raycaster.setFromCamera(ndc, camera);
@@ -453,10 +462,10 @@ function EditRig({ store, assets }: { store: EditStore; assets: Record<string, C
         const dbl = lastTap.id === picked.id && now - lastTap.t < 380;
         lastTap = { id: picked.id, t: now };
         if (dbl) {
-          selectNearby(store, picked.id, event.shiftKey);
+          selectNearby(store, picked.id, additive);
           return;
         }
-        if (event.shiftKey) {
+        if (additive) {
           if (store.selected.has(picked.id)) store.selected.delete(picked.id);
           else store.selected.add(picked.id);
         } else {
@@ -483,12 +492,14 @@ function EditRig({ store, assets }: { store: EditStore; assets: Record<string, C
         store.bump();
         return;
       }
-      if (event.button !== 0) return;
-      if (store.selected.size && !event.shiftKey) {
+      // Mobil yer aracı veya web sol tık: seçiliyi taşı
+      const canPlace = box.touch ? store.touchTool === "place" || store.touchTool === "box" : event.button === 0;
+      if (!canPlace) return;
+      if (store.selected.size && !additive) {
         moveSelected(store, hit.x, hit.z);
         return;
       }
-      if (!event.shiftKey && store.selected.size) {
+      if (!additive && store.selected.size) {
         store.selected.clear();
         store.bump();
       }
